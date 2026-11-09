@@ -1,0 +1,20 @@
+{
+ "payload": {
+  "v": 1,
+  "t": "2026-11-09T14:09:53.499Z",
+  "users": [
+   {
+    "u": "ahmet",
+    "ad": "Ahmet ATAŞ",
+    "plan": "tam",
+    "rol": "yonetici",
+    "bit": "2031-12-31",
+    "on": true,
+    "s": "UKlfdEk490uvojUO6wC8Aw==",
+    "it": 150000,
+    "h": "c94bdc621c1d210e26863b2b5403abd9b7256d2371e5aa1826bba6d62948b65c"
+   }
+  ]
+ },
+ "sig": "WBcrAFHOqW2Kl5QtUnssv2Y8cvvHmc5NQx8YiSAbxFiGe3hY/nnIwFKf0zvUIZfI2v0BAm36SGwn+a9iYmZTeA=="
+}
