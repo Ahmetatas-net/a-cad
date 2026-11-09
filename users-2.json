@@ -1,0 +1,31 @@
+{
+ "payload": {
+  "v": 1,
+  "t": "2026-11-09T15:57:33.836Z",
+  "users": [
+   {
+    "u": "ahmet",
+    "ad": "Ahmet ATAŞ",
+    "plan": "tam",
+    "rol": "yonetici",
+    "bit": "2031-12-31",
+    "on": true,
+    "s": "2LSQ3ZaEuluFxg1rMlkQWA==",
+    "it": 150000,
+    "h": "d64eec4eb94da38fd0c4d0cf6f7bd42ef8ae156680c3bf11a963804e56226251"
+   },
+   {
+    "u": "kastamonu",
+    "ad": "",
+    "plan": "deneme",
+    "rol": "",
+    "bit": "2026-12-08",
+    "on": true,
+    "s": "p4ghHQaHmgEflsX5lCR4xw==",
+    "it": 150000,
+    "h": "68794f605c92405848581fa72874df99c0418f6ff393aea29061cf3b1420e475"
+   }
+  ]
+ },
+ "sig": "/LLWo9PS78LngX/JFdHDn42NKQiSnicH5LTsJirtJeffef461PoMm4WmdfaK8kUzVE7WesJf9zwkiBrmdzTZ2g=="
+}
