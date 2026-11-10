@@ -733,6 +733,28 @@ body.wide:has(#kubSub:not([hidden])) #planBox{top:94px!important}
     </div>
   </section>
   <section id="v-bk" class="view" hidden style="flex-direction:column;gap:14px">
+    <div class="card" id="tkCard">
+      <h2>🧱 Tip kesit kübajı — bina temel kazısı / dolgusu (hakediş)</h2>
+      <p class="note" style="margin:2px 0 8px">Ölçülmüş <b>şev üstü</b> (kapalı çizgi: ALAN ya da SEV_SEVUST tabakası) ve <b>şev altı</b> (ŞEVALT / SEV_SEVALT) ile kotlu noktaları içeren DXF / NCZ'yi seç ya da CAD çiziminden al. Kenarlar köşelerden ölçülür, karşılıklı kenarlar ortalanır. Kübaj = Yükseklik ortalaması × (Üst Alan + Alt Alan) ÷ 2. Kazı ve dolgu ayrı kalemdir.</p>
+      <div class="row" style="gap:6px;flex-wrap:wrap;align-items:center"><label class="filebtn" style="display:inline-block"><input type="file" id="tkF" accept=".dxf,.DXF,.ncz,.NCZ"><span>📂 Ölçü dosyası (DXF / NCZ)</span></label><button type="button" id="tkCad">✏️ CAD çiziminden al</button>
+        <label id="tkSelW" hidden style="flex-direction:row;align-items:center;gap:6px">Çukur <select id="tkSel"></select></label></div>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px;margin-top:8px">
+        <label>Bina no<input id="tkBina" placeholder="B 317 - B318"></label><label>Tip<input id="tkTip" placeholder="T1B S03"></label>
+        <label>Kalem<select id="tkTur"><option value="kazi">Kazı (PAÇAL K)</option><option value="dolgu">Dolgu (DOLGU 1)</option></select></label>
+        <label>Kübaj (Netcad, varsa)<input id="tkNet" inputmode="decimal" placeholder="ör. 428,92"></label><label>Yükseklik ort. (elle, varsa)<input id="tkH" inputmode="decimal"></label></div>
+      <details style="margin-top:6px"><summary><b>Elle ölçü</b> <span class="note">(dosya yoksa: kenarları yaz, yükseklik ya da kübaj yeter)</span></summary>
+        <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px;margin-top:6px"><label>Uzun kenar şev üstü<input id="tkA" inputmode="decimal"></label><label>Kısa kenar şev üstü<input id="tkB" inputmode="decimal"></label><label>Uzun kenar şev altı<input id="tkC" inputmode="decimal"></label><label>Kısa kenar şev altı<input id="tkD" inputmode="decimal"></label></div></details>
+      <div class="row" style="gap:6px;flex-wrap:wrap;align-items:flex-end;margin-top:8px"><label style="flex:1;min-width:180px">Tip kesit şablonu (projenin temel kesiti)<select id="tkSab"></select></label><label class="filebtn" style="display:inline-block"><input type="file" id="tkSabF" accept=".dxf,.DXF" multiple><span>➕ Şablon ekle (önceki tip kesit DXF'i)</span></label><button type="button" id="tkSabDel">Şablonu sil</button></div>
+      <p class="note" style="margin:4px 0 0">Şablon: proje temel planı + 1-1 / 2-2 kesitleri olan tip kesit DXF'i. Çıktıda proje çizimi aynen kalır; kübaj tablosu, ROL_CEPHE ölçüleri, yükseklikler ve antet (tarih, hakediş no, bina no, tip) yeni değerlerle yazılır. Dolgunun bina numarası kazı binasında geçiyorsa (B318 ⊂ B317-B318) dolgu tablosu aynı paftaya eklenir. Şablon her binaya listeye eklerken seçili olanla bağlanır.</p>
+      <div id="tkRes" style="margin-top:8px;overflow:auto"></div>
+      <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px"><button type="button" class="primary" id="tkAdd">➕ Listeye ekle</button><button type="button" id="tkClr">Listeyi temizle</button></div>
+      <div id="tkList" style="margin-top:8px;overflow:auto"></div>
+      <details style="margin-top:8px"><summary><b>Hakediş anteti ve imzalar</b> <span class="note">(bu cihazda saklanır)</span></summary>
+        <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:6px;margin-top:6px"><label>İşin adı<input id="tkIs"></label><label>İşveren<input id="tkIsv"></label><label>Müteahhit<input id="tkMut"></label><label>Hakediş tarihi<input id="tkHT" placeholder="06.11.2026"></label><label>Hakediş no<input id="tkHN" placeholder="03"></label><label>Parsel no<input id="tkPar" placeholder="261/1"></label>
+          <label>Müteahhit (ad soyad)<input id="tkS1"></label><label>Harita mühendisi<input id="tkS2"></label><label>Kontrol mühendisi<input id="tkS3"></label><label>Dosya adı<input id="tkDosya" placeholder="261-1 KT Blok Bina Temel Kübajı"></label></div></details>
+      <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:10px"><button type="button" class="primary" id="tkXls">📊 Hakediş Excel'i</button><button type="button" id="tkDxf">📐 Tip kesit DXF</button><button type="button" id="tkPdf">📄 Tip kesit PDF</button></div>
+      <p class="msg" id="tkMsg"></p>
+    </div>
     <div class="card">
       <h2>Hızlı hesap: ilk kot · son kot · alan</h2>
       <p class="note" style="margin-bottom:8px">Fark = Son kot − İlk kot. Eksi kazı, artı dolgu. Alana çarpım da yazılabilir (örn. 10.70*14.10). Tablodan yüklerken satırlar "Ad Alan İlkKot SonKot" ya da "Alan İlkKot SonKot" sırasında olmalı.</p>
@@ -4707,19 +4729,28 @@ function legend(g, px, y, full) { const it = [[KAZ, `kazı (tam renk ≥ ${tr(fu
 /* sayfa 2: plan + kotlar */
 function pageTwo(C, full) { const px = 6, W = 210, H = 297; const c = document.createElement("canvas"); c.width = W * px; c.height = H * px; c.pw = 595.28; c.ph = 841.89; const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height);
   header(g, px, C, W, "Sayfa 2 / 2", "PLAN · KOTLAR");
-  const V = view(C.poly, 15, 40, W - 30, 228, 6, true); g.save(); g.beginPath(); g.rect(V.bx * px, V.by * px, V.bw * px, V.bh * px); g.clip();
+  /* alanın dışında 10 m'lik şerit: oradaki kotlar ve üçgenler de gösterilir (çevre okunsun) */
+  const BUF = 10, M0 = C.mevcut, sd = (p, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy; let t = L2 ? ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L2 : 0; t = Math.max(0, Math.min(1, t)); return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy); };
+  const yakin = (x, y) => K.inPoly(C.poly, x, y) || C.poly.some((a, i) => sd([x, y], a, C.poly[(i + 1) % C.poly.length]) <= BUF);
+  const seritP = M0.pts.map(p => !!p && yakin(p.e, p.y)), disP = M0.pts.map((p, i) => seritP[i] && !K.inPoly(C.poly, p.e, p.y));
+  /* alana ya da 10 m şeride değen üçgenler kesilmeden, tam çizilir; köşe kotları da yazılır */
+  const TT = M0.tri, triOk = []; const gorP = M0.pts.map(() => false); for (let t = 0; t + 2 < TT.length; t += 3) { const a = M0.pts[TT[t]], b = M0.pts[TT[t + 1]], d = M0.pts[TT[t + 2]]; if (!a || !b || !d) continue; if (C.ortakMod || seritP[TT[t]] || seritP[TT[t + 1]] || seritP[TT[t + 2]] || yakin((a.e + b.e + d.e) / 3, (a.y + b.y + d.y) / 3)) { triOk.push(t); gorP[TT[t]] = gorP[TT[t + 1]] = gorP[TT[t + 2]] = true; } }
+  const kapsa = [...C.poly, ...M0.pts.filter((p, i) => gorP[i] && !C.ortakMod).map(p => [p.e, p.y])];
+  const V = view(kapsa, 15, 40, W - 30, 228, 6, true); g.save(); g.beginPath(); g.rect(V.bx * px, V.by * px, V.bw * px, V.bh * px); g.clip();
   raster(g, px, V, C, full, 0.45, 2.5);
-  const M = C.mevcut, P = M.pts, T = M.tri; g.save(); if (!C.ortakMod) { g.beginPath(); C.poly.forEach((q, i) => i ? g.lineTo(V.X(q[0]) * px, V.Y(q[1]) * px) : g.moveTo(V.X(q[0]) * px, V.Y(q[1]) * px)); g.closePath(); g.clip(); } g.strokeStyle = "rgba(90,90,90,.35)"; g.lineWidth = 0.1 * px; g.beginPath();
-  for (let t = 0; t + 2 < T.length; t += 3) { const a = P[T[t]], b = P[T[t + 1]], d = P[T[t + 2]]; if (!a || !b || !d) continue; const xs = [a, b, d].map(p => V.X(p.e)), ys = [a, b, d].map(p => V.Y(p.y)); if (Math.max(...xs) < V.bx || Math.min(...xs) > V.bx + V.bw || Math.max(...ys) < V.by || Math.min(...ys) > V.by + V.bh) continue; g.moveTo(xs[0] * px, ys[0] * px); g.lineTo(xs[1] * px, ys[1] * px); g.lineTo(xs[2] * px, ys[2] * px); g.closePath(); }
-  g.stroke(); g.restore(); drawPoly(g, px, V, C, 0.5);
+  const M = C.mevcut, P = M.pts, T = M.tri; const oc = document.createElement("canvas"); oc.width = c.width; oc.height = c.height; const og = oc.getContext("2d"), g0 = g; { const g = og; g.strokeStyle = "rgba(90,90,90,.35)"; g.lineWidth = 0.1 * px; g.beginPath();
+  for (const t of triOk) { const a = P[T[t]], b = P[T[t + 1]], d = P[T[t + 2]]; const xs = [a, b, d].map(p => V.X(p.e)), ys = [a, b, d].map(p => V.Y(p.y)); if (Math.max(...xs) < V.bx || Math.min(...xs) > V.bx + V.bw || Math.max(...ys) < V.by || Math.min(...ys) > V.by + V.bh) continue; g.moveTo(xs[0] * px, ys[0] * px); g.lineTo(xs[1] * px, ys[1] * px); g.lineTo(xs[2] * px, ys[2] * px); g.closePath(); }
+  g.stroke();
+    }
+  g.drawImage(oc, 0, 0); drawPoly(g, px, V, C, 0.5);
   // koordinat ağı
   const gs = nice(40 / V.k); g.strokeStyle = "#777"; g.lineWidth = 0.15 * px; g.font = `${2.2 * px}px Arial`; g.fillStyle = "#555";
   for (let x = Math.ceil(V.iX(V.bx) / gs) * gs; x <= V.iX(V.bx + V.bw); x += gs) for (let yy = Math.ceil(V.iY(V.by + V.bh) / gs) * gs; yy <= V.iY(V.by); yy += gs) { const u = V.X(x) * px, v = V.Y(yy) * px; g.beginPath(); g.moveTo(u - 1.5 * px, v); g.lineTo(u + 1.5 * px, v); g.moveTo(u, v - 1.5 * px); g.lineTo(u, v + 1.5 * px); g.stroke(); }
   // kotlar (çakışmasın diye kâğıtta seyreltilir)
-  const cell = 10, used = new Map(), lab = []; const inside = P.map(p => p && K.inPoly(C.poly, p.e, p.y));
-  P.forEach((p, i) => { if (!inside[i]) return; const u = V.X(p.e), v = V.Y(p.y); if (u < V.bx + 2 || u > V.bx + V.bw - 12 || v < V.by + 2 || v > V.by + V.bh - 6) return; const bw = 10.5, bh = C.baz != null ? 3.2 : 5.2, r = [u - 0.6, v - 2.6, u + bw, v + bh - 2.6]; const ci = Math.floor(u / cell), cj = Math.floor(v / cell); for (let a = ci - 2; a <= ci + 2; a++) for (let b = cj - 2; b <= cj + 2; b++) for (const q of (used.get(a + "," + b) || [])) if (r[0] < q[2] && q[0] < r[2] && r[1] < q[3] && q[1] < r[3]) return; const k = ci + "," + cj; if (!used.has(k)) used.set(k, []); used.get(k).push(r); lab.push([p, u, v]); });
-  for (const [p, u, v] of lab) { g.fillStyle = "#000"; g.beginPath(); g.arc(u * px, v * px, 0.35 * px, 0, 7); g.fill(); g.font = `${2.1 * px}px Arial`; g.textAlign = "left"; g.textBaseline = "alphabetic"; g.fillText(tr(p.z, 2), (u + 0.7) * px, (v - 0.3) * px);
-    const zh = C.baz != null ? null : C.zHed(p.e, p.y); if (zh != null) { g.fillStyle = "#c0392b"; g.textBaseline = "top"; g.fillText(tr(zh, 2), (u + 0.7) * px, (v + 0.3) * px); } }
+  const cell = 10, used = new Map(), lab = []; const inside = P.map(p => p && K.inPoly(C.poly, p.e, p.y)), goster = P.map((p, i) => inside[i] || (!C.ortakMod && gorP[i]));
+  [...P.keys()].sort((x, y) => (inside[y] ? 1 : 0) - (inside[x] ? 1 : 0)).forEach(i => { const p = P[i]; if (!goster[i]) return; const u = V.X(p.e), v = V.Y(p.y); if (u < V.bx + 2 || u > V.bx + V.bw - 12 || v < V.by + 2 || v > V.by + V.bh - 6) return; const bw = 10.5, bh = C.baz != null ? 3.2 : 5.2, r = [u - 0.6, v - 2.6, u + bw, v + bh - 2.6]; const ci = Math.floor(u / cell), cj = Math.floor(v / cell); for (let a = ci - 2; a <= ci + 2; a++) for (let b = cj - 2; b <= cj + 2; b++) for (const q of (used.get(a + "," + b) || [])) if (r[0] < q[2] && q[0] < r[2] && r[1] < q[3] && q[1] < r[3]) return; const k = ci + "," + cj; if (!used.has(k)) used.set(k, []); used.get(k).push(r); lab.push([p, u, v]); });
+  for (const [p, u, v] of lab) { const dis = !K.inPoly(C.poly, p.e, p.y); g.fillStyle = "#000"; g.beginPath(); g.arc(u * px, v * px, 0.35 * px, 0, 7); g.fill(); g.font = `${2.1 * px}px Arial`; g.textAlign = "left"; g.textBaseline = "alphabetic"; g.fillText(tr(p.z, 2), (u + 0.7) * px, (v - 0.3) * px);
+    const zh = C.baz != null || dis ? null : C.zHed(p.e, p.y); if (zh != null) { g.fillStyle = "#c0392b"; g.textBaseline = "top"; g.fillText(tr(zh, 2), (u + 0.7) * px, (v + 0.3) * px); } }
   // sınır köşe numaraları
   g.restore(); g.strokeStyle = "#111"; g.lineWidth = 0.3 * px; g.strokeRect(V.bx * px, V.by * px, V.bw * px, V.bh * px);
   // ağ değerleri kenarda
@@ -4730,7 +4761,7 @@ function pageTwo(C, full) { const px = 6, W = 210, H = 297; const c = document.c
   const yb = V.by + V.bh + 7; const sl = nice(30 / V.k), sw = sl * V.k; g.fillStyle = "#111"; g.fillRect(15 * px, yb * px, sw / 2 * px, 1.4 * px); g.strokeStyle = "#111"; g.lineWidth = 0.25 * px; g.strokeRect(15 * px, yb * px, sw * px, 1.4 * px);
   g.font = `${2.6 * px}px Arial`; g.textAlign = "left"; g.textBaseline = "top"; g.fillText(`0        ${tr(sl, sl < 1 ? 1 : 0)} m      Ölçek 1/${V.S}`, 15 * px, (yb + 2) * px);
   g.textAlign = "left"; g.fillStyle = "#111"; g.fillText("Siyah yazı: mevcut kot", 90 * px, yb * px); g.fillStyle = "#c0392b"; g.fillText(C.baz != null ? `Baz kotu: ${tr(C.baz, 2)} m` : "Kırmızı yazı: hedef (son) kot", 90 * px, (yb + 3.6) * px);
-  g.fillStyle = "#555"; g.fillText(`Zemin: kazı/dolgu farkı (açık renk). ${lab.length} / ${inside.filter(Boolean).length} nokta yazıldı.`, 90 * px, (yb + 7.2) * px);
+  g.fillStyle = "#555"; g.fillText(`Zemin: kazı/dolgu farkı (açık renk). ${lab.length} / ${goster.filter(Boolean).length} nokta yazıldı.`, 90 * px, (yb + 7.2) * px);
   return c; }
 
 async function pdf(kind) { const el = kind === "baz" ? "bzMsg" : "sdMsg"; const C = ctx(kind); if (C.err) return say(el, C.err, true); say(el, "PDF hazırlanıyor…"); await new Promise(r => setTimeout(r, 30));
@@ -5184,6 +5215,292 @@ if (typeof window !== "undefined") window.HHK = HHK;
     if (!(QC || []).length) Kk.set("A2", "Sorun bulunmadı", tx);
     X.order(["NOKTALAR", "PAFTALAR", "KONTROL"].filter(n => n !== "PAFTALAR" || PF.length)); await saveFile(`${D.ad}_NOKTA_LISTESI.xlsx`, X.build(), $("hhMsg")); });
   window.HHUI = { get D() { return D; }, get M() { return M; }, get EG() { return EG; }, get PF() { return PF; }, get QC() { return QC; }, model, egri, pafta, kontrol, sayfa, indeks };
+})();
+
+</script>
+<script data-src="tk.js">
+/* ===== TİP KESİT KÜBAJI (Ortalama Alan Yöntemi) — bina temel kazısı / dolgusu hakediş çıktısı =====
+   Ölçülmüş şev üstü (kapalı çizgi) ve şev altı (çizgi/kapalı çizgi) + kotlu noktalar → kenarlar, alanlar, yükseklik ortalaması,
+   kübaj; hakediş Excel'i (ÖZET + bina sayfaları; kazı ve dolgu ayrı), tip kesit DXF'i ve PDF'i. Koordinatlar değiştirilmez. */
+(() => {
+const $ = id => document.getElementById(id); if (!$("tkCard")) return;
+const tr = (v, n = 2) => Number(v).toLocaleString("tr-TR", { minimumFractionDigits: n, maximumFractionDigits: n });
+const msg = (t, bad) => { const e = $("tkMsg"); e.className = "msg" + (bad ? " err" : ""); e.innerHTML = t; };
+const POZ = { kazi: "PAÇAL K: Her Cins ve Zeminde ve Her Derinlikte Serbest Tesviye ve Derin Temel Kazısı Yapılması", dolgu: "DOLGU 1: Her cins ve klasdaki zeminde dolguda kullanılan kazı malzemesinin sulama ve sıkıştırılmasının yapılması" };
+const KEY = "acad-tk", AKEY = "acad-tk-antet";
+const AF = [["tkIs", "İŞİN ADI"], ["tkIsv", "İŞVEREN"], ["tkMut", "MÜTEAHHİT"], ["tkHT", "HAKEDİŞ TARİHİ"], ["tkHN", "HAKEDİŞ NO"], ["tkPar", "PARSEL NO"]];
+const SF = [["tkS1", "MÜTEAHHİT"], ["tkS2", "HARİTA MÜHENDİSİ"], ["tkS3", "KONTROL MÜHENDİSİ"]];
+const ld = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) || d; } catch (e) { return d; } }, sv = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+let LIST = ld(KEY, []), SRC = null, CUR = null;
+{ const a = ld(AKEY, {}); [...AF, ...SF, ["tkDosya"]].forEach(([id]) => { if ($(id) && a[id] != null) $(id).value = a[id]; $(id) && $(id).addEventListener("change", () => { const o = ld(AKEY, {}); o[id] = $(id).value; sv(AKEY, o); }); }); }
+
+/* ---------- geometri ---------- */
+const area = P => { let s = 0; for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length]; s += a[0] * b[1] - b[0] * a[1]; } return s / 2; };
+const hull = P => { const p = [...P].sort((a, b) => a[0] - b[0] || a[1] - b[1]); if (p.length < 3) return p; const cr = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]); const lo = [], up = [];
+  for (const q of p) { while (lo.length >= 2 && cr(lo[lo.length - 2], lo[lo.length - 1], q) <= 0) lo.pop(); lo.push(q); } for (const q of p.slice().reverse()) { while (up.length >= 2 && cr(up[up.length - 2], up[up.length - 1], q) <= 0) up.pop(); up.push(q); } return lo.slice(0, -1).concat(up.slice(0, -1)); };
+const quad = P => { let H = hull(P); if (H.length <= 4) return H; if (H.length > 40) H = H.filter((_, i) => i % Math.ceil(H.length / 40) === 0); let best = null, ba = -1; const n = H.length;
+  for (let a = 0; a < n; a++) for (let b = a + 1; b < n; b++) for (let c = b + 1; c < n; c++) for (let d = c + 1; d < n; d++) { const A = Math.abs(area([H[a], H[b], H[c], H[d]])); if (A > ba) { ba = A; best = [H[a], H[b], H[c], H[d]]; } } return best; };
+const len = (a, b) => Math.hypot(b[0] - a[0], b[1] - a[1]);
+const kenar = Q => { const e = [0, 1, 2, 3].map(i => [Q[i], Q[(i + 1) % 4]]), L = e.map(([a, b]) => len(a, b)); const p1 = (L[0] + L[2]) / 2, p2 = (L[1] + L[3]) / 2;
+  const ang = ([a, b]) => Math.atan2(b[1] - a[1], b[0] - a[0]); return p1 >= p2 ? { uzun: p1, kisa: p2, ang: ang(e[0]) } : { uzun: p2, kisa: p1, ang: ang(e[1]) }; };
+const segD = (p, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy; let t = L2 ? ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L2 : 0; t = Math.max(0, Math.min(1, t)); return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy); };
+const dPoly = (p, Q) => Math.min(...Q.map((a, i) => segD(p, a, Q[(i + 1) % Q.length])));
+const inQ = (Q, x, y) => K.inPoly(Q, x, y);
+
+/* ---------- veri okuma ---------- */
+const U = s => String(s || "").toLocaleUpperCase("tr").replace(/İ/g, "I").replace(/Ş/g, "S").replace(/Ü/g, "U").replace(/Ğ/g, "G").replace(/Ö/g, "O").replace(/Ç/g, "C");
+const isUst = l => /ALAN|SEV.?UST|USTSEV|SEVUST|DOLGU.?UST/.test(U(l)), isAlt = l => /SEV.?ALT|SEVALT|DOLGU.?ALT/.test(U(l));
+function hazirla(D, ad) { // D: {polys:[{lay,closed,pts}], lines:[{lay,pts}], points:[{e,y,z,lay,n}]}
+  const cl = D.polys.filter(p => p.closed && p.pts.length >= 3).map(p => ({ ...p, P: p.pts.map(q => [q[0], q[1]]), A: Math.abs(area(p.pts.map(q => [q[0], q[1]]))) }));
+  let ust = cl.filter(p => isUst(p.lay)); if (!ust.length) ust = cl.filter(p => !isAlt(p.lay) && p.A > 20);
+  const altSeg = [...D.polys.filter(p => isAlt(p.lay)), ...D.lines.filter(l => isAlt(l.lay))];
+  const kuyular = ust.sort((a, b) => b.A - a.A).map(u => { const Qu = quad(u.P); const altP = []; for (const s of altSeg) for (const q of s.pts) if (inQ(Qu, q[0], q[1]) || dPoly([q[0], q[1]], Qu) < 0.5) altP.push([q[0], q[1]]);
+    let Qa = altP.length >= 4 ? quad(altP) : null; if (!Qa) { const ic = cl.filter(p => p !== u && p.A < u.A && p.P.every(q => inQ(u.P, q[0], q[1]) || dPoly(q, u.P) < 0.5)).sort((a, b) => b.A - a.A)[0]; if (ic) Qa = quad(ic.P); }
+    const c = u.P.reduce((s, q) => [s[0] + q[0] / u.P.length, s[1] + q[1] / u.P.length], [0, 0]); return { Qu, Qa, c, A: u.A, lay: u.lay }; }).filter(k => k.Qa);
+  SRC = { ad, D, kuyular }; $("tkSel").innerHTML = kuyular.map((k, i) => `<option value="${i}">${i + 1}. şev üstü ${tr(k.A, 1)} m² · Y ${k.c[0].toFixed(1)} X ${k.c[1].toFixed(1)}</option>`).join("");
+  $("tkSelW").hidden = kuyular.length < 2; if (!kuyular.length) return msg("Şev üstü (kapalı çizgi, ör. ALAN / SEV_SEVUST tabakası) ve içinde şev altı (ŞEVALT / SEV_SEVALT) bulunamadı.", true);
+  msg(`✓ ${esc(ad)}: ${kuyular.length} kazı/dolgu çukuru bulundu${kuyular.length > 1 ? " — listeden seç" : ""}.`); hesap(); }
+$("tkF").addEventListener("change", async e => { const f = e.target.files[0]; if (!f) return; e.target.value = ""; try { let D;
+  if (/\.ncz$/i.test(f.name)) { const R = K.parseNCZ(new Uint8Array(await f.arrayBuffer())); D = { polys: R.polys, lines: R.lines, points: R.points }; }
+  else { const buf = new Uint8Array(await f.arrayBuffer()); let t; try { t = new TextDecoder("utf-8", { fatal: true }).decode(buf); } catch (er) { t = new TextDecoder("windows-1254").decode(buf); } const R = K.parseDXF(t); D = { polys: R.polys, lines: R.lines, points: R.points }; }
+  if (!$("tkBina").value) { const m = f.name.match(/B\s?\d{3}(?:\s?-\s?B?\s?\d{3})?/i); if (m) $("tkBina").value = m[0].toUpperCase(); }
+  hazirla(D, f.name); } catch (er) { console.error(er); msg("Dosya okunamadı: " + er.message, true); } });
+$("tkCad").addEventListener("click", () => { if (!window.CADX) return msg("CAD modülü yok.", true); const d = CADX.data(); const polys = [], lines = [], points = [];
+  for (const e of d.ents) { if (e.t === "pline") polys.push({ lay: e.lay, closed: !!e.closed, pts: e.pts }); else if (e.t === "line") lines.push({ lay: e.lay, pts: e.pts }); else if (e.t === "point") points.push({ lay: e.lay, n: e.n, e: e.pts[0][0], y: e.pts[0][1], z: +e.pts[0][2] || 0 }); }
+  hazirla({ polys, lines, points }, "CAD çizimi"); });
+$("tkSel").addEventListener("change", hesap); ["tkNet", "tkH", "tkTur", "tkA", "tkB", "tkC", "tkD", "tkBina", "tkTip"].forEach(id => $(id) && $(id).addEventListener("input", hesap));
+
+/* ---------- hesap ---------- */
+function hesap() { const gn = id => +String(($(id) || {}).value || "").replace(",", "."), M4 = ["tkA", "tkB", "tkC", "tkD"].map(gn), elle = M4.every(v => v > 0);
+  if (!elle && (!SRC || !SRC.kuyular.length)) { CUR = null; $("tkRes").innerHTML = ""; return; }
+  const rect = (L_, S_) => [[-L_ / 2, -S_ / 2], [L_ / 2, -S_ / 2], [L_ / 2, S_ / 2], [-L_ / 2, S_ / 2]];
+  const k = elle ? { Qu: rect(M4[0], M4[1]), Qa: rect(M4[2], M4[3]) } : SRC.kuyular[+$("tkSel").value || 0]; const eu = kenar(k.Qu), ea0 = kenar(k.Qa);
+  /* şev altının "uzun" kenarı şev üstünün uzun kenarıyla aynı yönde olan kenardır (iki çukur arasında kalan kazıda alt uzun olabilir) */
+  const da = Math.abs(Math.sin(ea0.ang - eu.ang)); const ea = da < 0.5 ? ea0 : { uzun: ea0.kisa, kisa: ea0.uzun, ang: ea0.ang + Math.PI / 2 };
+  const a = elle ? M4[0] : +eu.uzun.toFixed(2), b = elle ? M4[1] : +eu.kisa.toFixed(2), c = elle ? M4[2] : +ea.uzun.toFixed(2), d = elle ? M4[3] : +ea.kisa.toFixed(2), Au = a * b, Aa = c * d, Am = (Au + Aa) / 2;
+  /* noktalardan yükseklik: şev üstü çizgisine yakın noktalar ile şev altı çizgisine yakın / içindeki noktaların ortalama kot farkı */
+  const P = elle ? [] : SRC.D.points.filter(p => Math.abs(p.z) > 0.001 && (inQ(k.Qu, p.e, p.y) || dPoly([p.e, p.y], k.Qu) < 0.5)); const zu = [], za = [];
+  for (const p of P) { const du = dPoly([p.e, p.y], k.Qu), dd = inQ(k.Qa, p.e, p.y) ? 0 : dPoly([p.e, p.y], k.Qa); if (du < 0.35 && du < dd) zu.push(p.z); else if (dd < 0.35) za.push(p.z); }
+  const m = A => A.reduce((s, v) => s + v, 0) / A.length; const hp = zu.length && za.length ? Math.abs(m(zu) - m(za)) : null;
+  const net = +String($("tkNet").value).replace(",", "."), hm = +String($("tkH").value).replace(",", ".");
+  let h, kay; if (net > 0) { for (const n of [2, 3, 4, 5]) { h = +(net / Am).toFixed(n); if (Math.abs(+(h * Am).toFixed(2) - net) < 0.005) break; } kay = "girilen kübajdan geri hesap"; }
+  else if (hm > 0) { h = hm; kay = "elle girildi"; } else if (hp) { h = +hp.toFixed(2); kay = `noktalardan (üst ${zu.length}, alt ${za.length} nokta)`; } else { h = 0; kay = "yükseklik yok: kübaj ya da yükseklik yaz"; }
+  const V = h * Am; CUR = { bina: $("tkBina").value.trim() || "B ?", tip: $("tkTip").value.trim(), tur: $("tkTur").value, a, b, c, d, h, kay, hp, Qu: k.Qu, Qa: k.Qa, ang: eu.ang, pts: P.map(p => [p.e, p.y, p.z]), zu: zu.length ? m(zu) : null, za: za.length ? m(za) : null };
+  $("tkRes").innerHTML = `<table class="t"><tr><th>Ölçü</th><th>Değer (m)</th></tr><tr><td>Uzun kenar şev üstü</td><td>${tr(a)}</td></tr><tr><td>Kısa kenar şev üstü</td><td>${tr(b)}</td></tr><tr><td>Uzun kenar şev altı</td><td>${tr(c)}</td></tr><tr><td>Kısa kenar şev altı</td><td>${tr(d)}</td></tr><tr><td>Yükseklik ortalaması</td><td><b>${String(h).replace(".", ",")}</b> <small>(${kay})</small></td></tr><tr><td>Üst Alan (m²)</td><td>${tr(Au, 4)}</td></tr><tr><td>Alt Alan (m²)</td><td>${tr(Aa, 4)}</td></tr><tr><td><b>Kübaj (m³)</b></td><td><b>${tr(V)}</b></td></tr></table>`
+    + (hp && (net > 0 || hm > 0) ? `<p class="note">Kontrol: noktalardan ortalama kot farkı ${tr(hp, 3)} m (üst ort. ${tr(m(zu), 3)}, alt ort. ${tr(m(za), 3)}).</p>` : ""); }
+$("tkAdd").addEventListener("click", () => { if (!CUR || !(CUR.h > 0)) return msg("Önce dosya seç ve yüksekliği ya da kübajı gir.", true); const e = { ...CUR, id: Date.now(), sab: ($("tkSab") || {}).value || "" }; const i = LIST.findIndex(x => x.bina === e.bina && x.tur === e.tur);
+  if (i >= 0) LIST[i] = e; else LIST.push(e); sv(KEY, LIST); liste(); msg(`✓ ${esc(e.bina)} ${e.tur === "kazi" ? "kazısı" : "dolgusu"} listeye ${i >= 0 ? "yeniden yazıldı" : "eklendi"}.`); });
+const vol = e => e.h * (e.a * e.b + e.c * e.d) / 2;
+function liste() { const T = { kazi: 0, dolgu: 0 }; LIST.forEach(e => T[e.tur] += vol(e)); $("tkList").innerHTML = LIST.length ? `<table class="t"><tr><th>Bina</th><th>Kalem</th><th>Üst × Alt</th><th>h</th><th>Kübaj m³</th><th></th></tr>${LIST.map((e, i) => `<tr><td>${esc(e.bina)}</td><td>${e.tur === "kazi" ? "Kazı" : "Dolgu"}</td><td><small>${tr(e.a)}×${tr(e.b)} / ${tr(e.c)}×${tr(e.d)}</small></td><td>${String(e.h).replace(".", ",")}</td><td style="text-align:right"><b>${tr(vol(e))}</b></td><td><button type="button" data-tkdel="${i}">✕</button></td></tr>`).join("")}<tr><td colspan="4"><b>Toplam kazı</b></td><td style="text-align:right"><b>${tr(T.kazi)}</b></td><td></td></tr>${T.dolgu ? `<tr><td colspan="4"><b>Toplam dolgu</b></td><td style="text-align:right"><b>${tr(T.dolgu)}</b></td><td></td></tr>` : ""}</table>` : `<p class="note">Liste boş.</p>`;
+  $("tkList").querySelectorAll("[data-tkdel]").forEach(b => b.onclick = () => { LIST.splice(+b.dataset.tkdel, 1); sv(KEY, LIST); liste(); }); }
+liste();
+$("tkClr").addEventListener("click", () => { if (!LIST.length || !confirm("Liste silinsin mi?")) return; LIST = []; sv(KEY, LIST); liste(); });
+
+/* ---------- hakediş Excel'i ---------- */
+const antet = () => AF.map(([id, l]) => [l, $(id).value.trim()]);
+const imza = () => SF.map(([id, l]) => [l, $(id).value.trim()]);
+function excel() { const X = O.xlsx(), th = { b: true, border: "thin", h: "center", wrap: true, fill: "F2F2F2", sz: 11 }, td = { border: "thin", h: "center", wrap: true, sz: 11 }, tl = { border: "thin", h: "left", wrap: true, sz: 11 }, tb = { border: "thin", h: "left", wrap: true, sz: 11, b: true, fill: "F2F2F2" }, kb = { border: "thin", h: "center", sz: 12, b: true, fill: "D9D9D9", wrap: true };
+  const A = antet(), S = imza(), tarih = (A.find(x => x[0] === "HAKEDİŞ TARİHİ") || [])[1] || "", hasD = LIST.some(e => e.tur === "dolgu");
+  const sign = (W, r, groups, last) => { ["", "ADI SOYADI", "TARİH", "İMZA"].forEach((l, k) => W.set("A" + (r + k), l, { border: "thin", b: true, h: "center", sz: 11, ...(k ? {} : { fill: "F2F2F2" }) }));
+    groups.forEach(([c1, c2], j) => { const [t, n] = S[j]; [t, n, tarih, ""].forEach((v, k) => { W.set(c1 + (r + k), v, { border: "thin", h: "center", sz: 11, wrap: true, ...(k ? {} : { b: true, fill: "F2F2F2" }) }); if (c1 !== c2) W.merge(`${c1}${r + k}:${c2}${r + k}`, { border: "thin" }); }); }); W.row(r + 3, 55); };
+  const head = (W, title, rows, last, split) => { W.set("A1", title, { b: true, sz: 14, h: "center" }); W.merge(`A1:${last}1`); W.row(1, 28);
+    rows.forEach(([a, b], k) => { const r = 3 + k; W.set("A" + r, a, tb); if (split > 1) W.merge(`A${r}:${String.fromCharCode(64 + split)}${r}`, tb); const c = String.fromCharCode(65 + split); W.set(c + r, b, tl); W.merge(`${c}${r}:${last}${r}`, tl); W.row(r, String(b).length > 45 ? 30 : 22); }); return 3 + rows.length; };
+  const byB = new Map(); LIST.forEach(e => { if (!byB.has(e.bina)) byB.set(e.bina, []); byB.get(e.bina).push(e); }); const REF = [];
+  for (const [bina, L] of byB) { const W = X.sheet(bina.replace(/\s+/g, "")); [17, 30, 14, 9, 46].forEach((w, i) => W.col(i, w)); L.sort((x, y) => (x.tur === "kazi" ? 0 : 1) - (y.tur === "kazi" ? 0 : 1)); const tek = L.length === 1;
+    let r = head(W, `${(L[0].tip || "").split(" ")[0]} KÜBAJ HESABI`.trim(), [...A, ["BİNA NO", bina], ["TİP", L[0].tip || ""], ...(tek ? [["POZ NO / AÇKL", POZ[L[0].tur]]] : [])], "E", 1) + 1;
+    for (const e of L) { if (!tek) { W.set("A" + r, "POZ NO / AÇKL", tb); W.set("B" + r, POZ[e.tur], tl); W.merge(`B${r}:E${r}`, tl); W.row(r, 30); r++; }
+      W.set("A" + r, `${e.tur === "kazi" ? (tek ? "" : "KAZI — ") : "DOLGU — "}KÜBAJ HESABI  (Ortalama Alan Yöntemi)`, { b: true, sz: 12, fill: "D9D9D9", border: "thin", h: "center" }); W.merge(`A${r}:E${r}`, { border: "thin" }); r++;
+      ["Sıra", "Ölçü", "Değer", "Birim", "Hesap / Açıklama"].forEach((t, i) => W.set(String.fromCharCode(65 + i) + r, t, th)); r++; const r0 = r, hf = +e.h.toFixed(2) === e.h ? "0.00" : "0.00000"; const D_ = e.tur === "dolgu";
+      const rows = [["Uzun kenar şev üstü", e.a, "m", `Tip kesit 1-1, ${D_ ? "dolgu üstü" : "şev üstü"} ölçüsü`, "0.00"], ["Kısa kenar şev üstü", e.b, "m", `Tip kesit 2-2, ${D_ ? "dolgu üstü" : "şev üstü"} ölçüsü`, "0.00"], ["Uzun kenar şev altı", e.c, "m", `Tip kesit 1-1, ${D_ ? "dolgu tabanı" : "şev altı"} ölçüsü`, "0.00"], ["Kısa kenar şev altı", e.d, "m", `Tip kesit 2-2, ${D_ ? "dolgu tabanı" : "şev altı"} ölçüsü`, "0.00"], ["Yükseklik ortalaması", e.h, "m", D_ ? "Ortalama dolgu yüksekliği" : "Ortalama kazı yüksekliği", hf],
+        ["Üst Alan", null, "m²", "Uzun kenar şev üstü × Kısa kenar şev üstü", "0.0000", `C${r0}*C${r0 + 1}`, e.a * e.b], ["Alt Alan", null, "m²", "Uzun kenar şev altı × Kısa kenar şev altı", "0.0000", `C${r0 + 2}*C${r0 + 3}`, e.c * e.d], ["KÜBAJ", null, "m³", "Yükseklik ortalaması × (Üst Alan + Alt Alan) ÷ 2", "0.00", `C${r0 + 4}*(C${r0 + 5}+C${r0 + 6})/2`, vol(e)]];
+      rows.forEach(([l, v, u, ex, nf, f, fv], k) => { const rr = r0 + k, last = k === 7, st = last ? kb : td; W.set("A" + rr, k + 1, st); W.set("B" + rr, l, last ? { ...kb, h: "left" } : tl); W.set("C" + rr, f ? fv : v, { ...st, nf }, f); W.set("D" + rr, u, st); W.set("E" + rr, ex, last ? { ...kb, h: "left" } : tl); W.row(rr, last ? 30 : 20); });
+      REF.push({ e, sh: W.name, r0, hf }); r = r0 + 9; }
+    W.set("A" + r, "FORMÜL:  Kübaj = Yükseklik ortalaması × (Üst Alan + Alt Alan) ÷ 2", { b: true, border: "thin", h: "left", sz: 11 }); W.merge(`A${r}:E${r}`, { border: "thin" }); r += 2;
+    sign(W, r, [["B", "B"], ["C", "D"], ["E", "E"]], "E"); W.page({ land: false, fitW: true, fitH: 1, pa: `A1:E${r + 3}` }); }
+  const Z = X.sheet("ÖZET"), cols = hasD ? ["Sıra", "Bina No", "Kalem", "Üst Alan (m²)", "Alt Alan (m²)", "Yükseklik ortalaması (m)", "Kübaj (m³)"] : ["Sıra", "Bina No", "Üst Alan (m²)", "Alt Alan (m²)", "Yükseklik ortalaması (m)", "Kübaj (m³)"], N = cols.length, last = String.fromCharCode(64 + N);
+  (hasD ? [8, 16, 10, 15, 15, 16, 15] : [14, 18, 16, 16, 17, 16]).forEach((w, i) => Z.col(i, w));
+  let r = head(Z, "KÜBAJ HESABI ÖZETİ", [...A, ...(hasD ? [["POZ NO (KAZI)", POZ.kazi], ["POZ NO (DOLGU)", POZ.dolgu]] : [["POZ NO / AÇKL", POZ.kazi]])], last, 2) + 1;
+  cols.forEach((t, i) => Z.set(String.fromCharCode(65 + i) + r, t, th)); Z.row(r, 32); r++; const s0 = r;
+  REF.forEach(({ e, sh, r0, hf }, k) => { const q = `'${sh}'!`; let c = 0; const put = (v, st, f) => Z.set(String.fromCharCode(65 + c++) + r, v, st, f);
+    put(k + 1, td); put(e.bina, td); if (hasD) put(e.tur === "kazi" ? "Kazı" : "Dolgu", td); put(e.a * e.b, { ...td, nf: "0.0000" }, `${q}C${r0 + 5}`); put(e.c * e.d, { ...td, nf: "0.0000" }, `${q}C${r0 + 6}`); put(e.h, { ...td, nf: hf }, `${q}C${r0 + 4}`); put(vol(e), { ...td, nf: "0.00" }, `${q}C${r0 + 7}`); Z.row(r, 20); r++; });
+  const kc = last; const tot = (lbl, tur) => { Z.set("A" + r, lbl, kb); Z.merge(`A${r}:${String.fromCharCode(63 + N)}${r}`, kb); const v = LIST.filter(e => !tur || e.tur === tur).reduce((s, e) => s + vol(e), 0);
+    Z.set(kc + r, v, { ...kb, nf: "0.00" }, hasD ? `SUMIF(C${s0}:C${r - 1 - (tur === "dolgu" ? 1 : 0)},"${tur === "kazi" ? "Kazı" : "Dolgu"}",${kc}${s0}:${kc}${r - 1 - (tur === "dolgu" ? 1 : 0)})` : `SUM(${kc}${s0}:${kc}${r - 1})`); Z.row(r, 26); r++; };
+  if (hasD) { tot("TOPLAM KAZI KÜBAJI", "kazi"); tot("TOPLAM DOLGU KÜBAJI", "dolgu"); } else tot("TOPLAM KÜBAJ");
+  r++; Z.set("A" + r, "Kübaj = Yükseklik ortalaması × (Üst Alan + Alt Alan) ÷ 2   (Ortalama Alan Yöntemi). Her binanın ayrıntılı hesabı kendi sayfasındadır." + (hasD ? " Kazı ve dolgu ayrı kalemdir, birbirinden düşülmez." : ""), { sz: 10, h: "left", wrap: true }); Z.merge(`A${r}:${last}${r}`); Z.row(r, 30); r += 2;
+  sign(Z, r, hasD ? [["B", "C"], ["D", "E"], ["F", "G"]] : [["B", "B"], ["C", "D"], ["E", "F"]], last); Z.page({ land: false, fitW: true, fitH: 1, pa: `A1:${last}${r + 3}` });
+  X.order(["ÖZET", ...[...byB.keys()].map(b => b.replace(/\s+/g, ""))]); return X.build(); }
+const fad = () => ($("tkDosya").value.trim() || "BINA TEMEL KUBAJI").replace(/[\\/:*?"<>|]/g, "-");
+$("tkXls").addEventListener("click", async () => { if (!LIST.length) return msg("Liste boş: önce hesapları listeye ekle.", true); await saveFile(fad() + ".xlsx", excel(), $("tkMsg")); });
+
+/* ---------- tip kesit çizimi (model birimi m, A3 yatay 1/200: 84 × 59,4 m) ---------- */
+function cizim(e) { const G = []; const L = (lay, a, b, w = 0.25) => G.push({ t: "l", lay, a, b, w }), PL = (lay, pts, cl, w = 0.25) => G.push({ t: "p", lay, pts, cl, w }), T = (lay, x, y, h, s, rot = 0, al = "l") => G.push({ t: "x", lay, x, y, h, s: String(s), rot, al });
+  const W = 84, H = 59.4, D_ = e.tur === "dolgu", nm = D_ ? "DOLGU" : "KAZI";
+  PL("SABLON", [[0, 0], [W, 0], [W, H], [0, H]], true, 0.5); PL("SABLON", [[2, 2], [W - 2, 2], [W - 2, H - 2], [2, H - 2]], true, 0.35);
+  /* plan: uzun kenar yatay olacak şekilde döndürülür */
+  const c0 = e.Qu.reduce((s, q) => [s[0] + q[0] / 4, s[1] + q[1] / 4], [0, 0]), ca = Math.cos(-e.ang), sa = Math.sin(-e.ang); const R = q => [(q[0] - c0[0]) * ca - (q[1] - c0[1]) * sa, (q[0] - c0[0]) * sa + (q[1] - c0[1]) * ca];
+  const qu = e.Qu.map(R), qa = e.Qa.map(R), all = [...qu, ...qa]; const bx0 = Math.min(...all.map(p => p[0])), bx1 = Math.max(...all.map(p => p[0])), by0 = Math.min(...all.map(p => p[1])), by1 = Math.max(...all.map(p => p[1]));
+  const box = [4, 30, 40, 55], k = Math.min(1, (box[2] - box[0] - 6) / (bx1 - bx0), (box[3] - box[1] - 6) / (by1 - by0)), ox = (box[0] + box[2]) / 2 - (bx0 + bx1) / 2 * k, oy = (box[1] + box[3]) / 2 - (by0 + by1) / 2 * k; const Pm = q => [ox + q[0] * k, oy + q[1] * k];
+  T("YAZI", box[0], box[3] + 0.6, 0.55, `PLAN${k < 1 ? ` (ölçek 1/${Math.round(200 / k)})` : " (1/200)"}`);
+  PL(D_ ? "DOLGU_UST" : "ALAN", qu.map(Pm), true, 0.4); PL(D_ ? "DOLGU_ALT" : "SEVALT", qa.map(Pm), true, 0.3);
+  for (let i = 0; i < 4; i++) { const a = Pm(qu[i]), b = Pm(qa[i % 4]); } // köşe bağları çizilmez (şev yönü belirsiz olabilir)
+  for (const p of e.pts) { const q = Pm(R(p)); G.push({ t: "o", lay: "NOKTA", x: q[0], y: q[1] }); T("NOKTA", q[0] + 0.25, q[1] + 0.15, 0.3, tr(p[2], 2)); }
+  const cx = (bx0 + bx1) / 2, cy = (by0 + by1) / 2; const s1 = [Pm([bx0 - 1.5, cy]), Pm([bx1 + 1.5, cy])], s2 = [Pm([cx, by0 - 1.5]), Pm([cx, by1 + 1.5])];
+  L("KESIT", s1[0], s1[1], 0.18); L("KESIT", s2[0], s2[1], 0.18); T("KESIT", s1[0][0] - 0.3, s1[0][1], 0.55, "1", 0, "r"); T("KESIT", s1[1][0] + 0.3, s1[1][1], 0.55, "1"); T("KESIT", s2[0][0], s2[0][1] - 0.8, 0.55, "2", 0, "c"); T("KESIT", s2[1][0], s2[1][1] + 0.3, 0.55, "2", 0, "c");
+  const ty = Math.max(...qu.map(p => p[1])), by = Math.min(...qu.map(p => p[1])); T("ROL_CEPHE", ox + cx * k, oy + ty * k + 0.6, 0.45, tr(e.a), 0, "c"); T("ROL_CEPHE", ox + cx * k, oy + by * k - 1.0, 0.45, `${tr(e.c)} (alt)`, 0, "c");
+  const rx = Math.max(...qu.map(p => p[0])); T("ROL_CEPHE", ox + rx * k + 0.6, oy + cy * k, 0.45, tr(e.b), 90, "c"); const lx = Math.min(...qu.map(p => p[0])); T("ROL_CEPHE", ox + lx * k - 0.8, oy + cy * k, 0.45, `${tr(e.d)} (alt)`, 90, "c");
+  /* kesitler: yatay 1/200, düşey 1/100 (×2) */
+  const kes = (x0, y0, ust, alt, h, ad) => { const ex = 2, hh = h * ex, w = Math.min(36 / ust, 1); const u2 = ust * w / 2, a2 = alt * w / 2, gx = x0;
+    T("YAZI", gx - u2, y0 + hh + 2.2, 0.55, `${ad}-${ad} KESİTİ  (yatay 1/${Math.round(200 / w)}, düşey 1/${Math.round(200 / w / ex)})`);
+    L("ZEMIN", [gx - u2 - 3, y0 + hh], [gx - u2, y0 + hh], 0.35); L("ZEMIN", [gx + u2, y0 + hh], [gx + u2 + 3, y0 + hh], 0.35);
+    const poly = [[gx - u2, y0 + hh], [gx - a2, y0], [gx + a2, y0], [gx + u2, y0 + hh]]; PL(D_ ? "DOLGU" : "KAZI", poly, D_, 0.45); if (D_) L("DOLGU", [gx - u2, y0 + hh], [gx + u2, y0 + hh], 0.45); else L("ZEMIN", [gx - u2, y0 + hh], [gx + u2, y0 + hh], 0.18);
+    for (let x = -u2 + 0.8; x < u2 - 0.3; x += 0.8) { const yb = y0 + Math.max(0, (Math.abs(x) - a2) / Math.max(1e-6, u2 - a2)) * hh * (Math.abs(x) > a2 ? 1 : 0); if (yb < y0 + hh - 0.05) L("TARAMA", [gx + x, yb], [gx + x - 0.5, Math.min(y0 + hh, yb + 0.5)], 0.1); }
+    const d = y0 - 1.6; L("OLCUDIS", [gx - a2, y0], [gx - a2, d - 0.3], 0.13); L("OLCUDIS", [gx + a2, y0], [gx + a2, d - 0.3], 0.13); L("ROL_CEPHE", [gx - a2, d], [gx + a2, d], 0.18); T("ROL_CEPHE", gx, d + 0.25, 0.4, tr(alt), 0, "c");
+    const d2 = y0 + hh + 1.0; L("OLCUDIS", [gx - u2, y0 + hh], [gx - u2, d2 + 0.3], 0.13); L("OLCUDIS", [gx + u2, y0 + hh], [gx + u2, d2 + 0.3], 0.13); L("ROL_CEPHE", [gx - u2, d2], [gx + u2, d2], 0.18); T("ROL_CEPHE", gx, d2 + 0.25, 0.4, tr(ust), 0, "c");
+    T("YUKSEKLIK", gx - a2 + 0.3, y0 + hh / 2, 0.45, String(+h.toFixed(2)).replace(".", ","), 90, "c"); T("YUKSEKLIK", gx + a2 - 0.3, y0 + hh / 2, 0.45, String(+h.toFixed(2)).replace(".", ","), 90, "c"); };
+  kes(24, 18, e.a, e.c, e.h, 1); kes(24, 6.5, e.b, e.d, e.h, 2);
+  /* kübaj tablosu (sağ üst) */
+  const tx = 47, tw = 33, rh = 1.6; let y = H - 4; const Au = e.a * e.b, Aa = e.c * e.d, V = vol(e);
+  const rows = [[`${nm} — KÜBAJ HESABI  (Ortalama Alan Yöntemi)`, ""], ["Ölçü", "Değer (m)"], ["Uzun kenar şev üstü", tr(e.a)], ["Kısa kenar şev üstü", tr(e.b)], ["Uzun kenar şev altı", tr(e.c)], ["Kısa kenar şev altı", tr(e.d)], ["Yükseklik ortalaması", String(e.h).replace(".", ",")], ["Üst Alan (m²)", tr(Au, 4)], ["Alt Alan (m²)", tr(Aa, 4)], ["Formül:  Kübaj = Yükseklik ortalaması × (Üst Alan + Alt Alan) ÷ 2", ""], ["Kübaj (m³)", `${String(e.h).replace(".", ",")} × (${tr(Au, 4)} + ${tr(Aa, 4)}) ÷ 2 = ${tr(V)}`]];
+  rows.forEach(([a, b], i) => { const y1 = y - rh; PL("KUBAJ", [[tx, y1], [tx + tw, y1], [tx + tw, y], [tx, y]], true, 0.18); if (b && i !== 10 && i) L("KUBAJ", [tx + tw * 0.62, y1], [tx + tw * 0.62, y], 0.18); const big = i === 0 || i === 10;
+    if (i === 10) { T("KUBAJ", tx + 0.4, y1 + 0.5, 0.55, a); T("KUBAJ", tx + tw - 0.4, y1 + 0.5, 0.55, b, 0, "r"); } else if (b) { T("KUBAJ", tx + 0.4, y1 + 0.5, big ? 0.55 : 0.48, a); T("KUBAJ", tx + tw - 0.4, y1 + 0.5, 0.48, b, 0, "r"); } else T("KUBAJ", i ? tx + 0.4 : tx + tw / 2, y1 + 0.5, big ? 0.55 : 0.45, a, 0, i ? "l" : "c"); y = y1; });
+  /* antet (sağ alt) */
+  const A = antet(), ay0 = 4, aw = 33, ax = W - 4 - aw; const ar = [...A.filter(([, v]) => v), ["BİNA NO", e.bina], ["TİP", e.tip || ""], ["POZ", POZ[e.tur].split(":")[0]], ["ÖLÇEK", "1/200"]].filter(([, v]) => v); let yy = ay0 + ar.length * 1.5 + 2.2;
+  PL("SABLON", [[ax, ay0], [ax + aw, ay0], [ax + aw, yy], [ax, yy]], true, 0.35); T("SABLON", ax + aw / 2, yy - 1.4, 0.7, `${e.tip ? e.tip.split(" ")[0] + " " : ""}${nm} KÜBAJ KESİTİ`, 0, "c"); yy -= 2.2;
+  ar.forEach(([k2, v]) => { L("SABLON", [ax, yy], [ax + aw, yy], 0.13); T("SABLON", ax + 0.4, yy - 1.05, 0.42, k2); const s = String(v); T("SABLON", ax + 9, yy - 1.05, s.length > 48 ? 0.3 : 0.42, s); yy -= 1.5; });
+  return G; }
+function dxf(e, X) { const G = cizim(e); const ly = {}; const lay = n => ly[n] || (ly[n] = X.lay(n, { ALAN: 1, SEVALT: 3, DOLGU_UST: 5, DOLGU_ALT: 4, KUBAJ: 7, ROL_CEPHE: 2, YUKSEKLIK: 6, KESIT: 1, NOKTA: 7, SABLON: 7, OLCUDIS: 8, TARAMA: 8, ZEMIN: 7, KAZI: 1, DOLGU: 5 }[n] || 7));
+  for (const g of G) { if (g.t === "l") X.line(lay(g.lay), g.a, g.b); else if (g.t === "p") X.poly(lay(g.lay), g.pts, g.cl); else if (g.t === "x") X.text(lay(g.lay), g.x, g.y, g.h, g.s, g.rot, g.al); else if (g.t === "o") X.point(lay(g.lay), g.x, g.y, 0); } }
+function sayfa(e) { const G = cizim(e), PX = 5 * 5, c = document.createElement("canvas"); c.width = Math.round(84 * PX); c.height = Math.round(59.4 * PX); c.pw = 1190.55; c.ph = 841.89; const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); g.strokeStyle = "#000"; g.fillStyle = "#000"; g.lineCap = "round";
+  const X = x => x * PX, Y = y => (59.4 - y) * PX;
+  for (const o of G) { if (o.t === "l") { g.lineWidth = o.w * PX / 5; g.beginPath(); g.moveTo(X(o.a[0]), Y(o.a[1])); g.lineTo(X(o.b[0]), Y(o.b[1])); g.stroke(); }
+    else if (o.t === "p") { g.lineWidth = o.w * PX / 5; g.beginPath(); o.pts.forEach((q, i) => i ? g.lineTo(X(q[0]), Y(q[1])) : g.moveTo(X(q[0]), Y(q[1]))); if (o.cl) g.closePath(); g.stroke(); }
+    else if (o.t === "o") { g.beginPath(); g.arc(X(o.x), Y(o.y), 0.08 * PX, 0, 7); g.fill(); }
+    else { g.save(); g.translate(X(o.x), Y(o.y)); g.rotate(-o.rot * Math.PI / 180); g.font = `${o.h * PX / 0.72}px Arial`; g.textAlign = o.al === "c" ? "center" : o.al === "r" ? "right" : "left"; g.textBaseline = "middle"; g.fillText(o.s, 0, 0); g.restore(); } }
+  return c; }
+const secili = () => { const s = LIST.length ? LIST : (CUR && CUR.h > 0 ? [CUR] : []); return s; };
+
+/* ---------- ŞABLON TİP KESİT: projenin kendi temel planı / kesitleri üzerine ----------
+   Önceki hakedişte verilmiş tip kesit DXF'i (proje çizimi + ROL_CEPHE ölçüleri + KUBAJ tablosu + antet) şablon olarak saklanır.
+   Yeni bina için: tablo değerleri, ROL_CEPHE ölçü yazıları ve yükseklikler, antet (tarih, hakediş no, bina no, tip) değiştirilir;
+   proje çizimine dokunulmaz. Kazı + dolgu aynı paftaya düşerse dolgu tablosu kazı tablosunun altına eklenir. */
+const SDB = (() => { let p; const op = () => p || (p = new Promise((ok, no) => { const r = indexedDB.open("acad-tk-sablon", 1); r.onupgradeneeded = () => r.result.createObjectStore("s"); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); }));
+  const tx = async (m, f) => { const d = await op(); return new Promise((ok, no) => { const t = d.transaction("s", m), r = f(t.objectStore("s")); t.oncomplete = () => ok(r && r.result); t.onerror = () => no(t.error); }); };
+  return { put: (k, v) => tx("readwrite", s => s.put(v, k)), get: k => tx("readonly", s => s.get(k)), del: k => tx("readwrite", s => s.delete(k)), keys: () => tx("readonly", s => s.getAllKeys()) }; })();
+const dec = buf => { try { return { t: new TextDecoder("utf-8", { fatal: true }).decode(buf), enc: "utf-8" }; } catch (e) { return { t: new TextDecoder("windows-1254").decode(buf), enc: "windows-1254" }; } };
+const C1254 = (() => { let m; return s => { if (!m) { m = new Map(); const d = new TextDecoder("windows-1254"); for (let i = 0; i < 256; i++) m.set(d.decode(Uint8Array.of(i)), i); } const o = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) { const v = m.get(s[i]); o[i] = v == null ? 63 : v; } return o; }; })();
+const encOut = (t, enc) => enc === "utf-8" ? new TextEncoder().encode(t) : C1254(t);
+
+function dxParse(text) { const nl = text.indexOf("\r\n") >= 0 ? "\r\n" : "\n", L = text.split(nl); let s = -1;
+  for (let i = 0; i < L.length - 3; i++) if (L[i].trim() === "0" && L[i + 1].trim() === "SECTION" && L[i + 3].trim() === "ENTITIES") { s = i + 4; break; }
+  if (s < 0) throw new Error("DXF'te ENTITIES bölümü yok");
+  const E = []; let i = s; while (i < L.length - 1 && L[i + 1].trim() !== "ENDSEC") { let j = i + 2; while (j < L.length && L[j].trim() !== "0") j += 2; const g = []; for (let k = i + 2; k < j; k += 2) g.push([L[k].trim(), k + 1]); E.push({ t: L[i + 1].trim(), i, j, g }); i = j; }
+  const hv = n => { const k = L.findIndex(x => x.trim() === n); return k >= 0 ? { k: k + 2, v: (L[k + 2] || "").trim() } : null; };
+  const lc = {}; { let inL = false, nm = null; const a = L.findIndex(x => x.trim() === "TABLES"); for (let k = a; k > 0 && k < s; k += 2) { const c = L[k].trim(), v = (L[k + 1] || "").trim(); if (c === "0") { inL = v === "LAYER"; nm = null; if (v === "ENDSEC") break; } else if (inL && c === "2") nm = v; else if (inL && c === "62" && nm) lc[nm] = +v; } }
+  return { L, nl, E, end: i, ver: (hv("$ACADVER") || {}).v || "AC1009", seed: hv("$HANDSEED"), lc }; }
+const gk = (D, e, c) => { const x = e.g.find(q => q[0] === c); return x ? x[1] : -1; };
+const gv = (D, e, c) => { const k = gk(D, e, c); return k < 0 ? null : D.L[k]; };
+const gn = (D, e, c) => +gv(D, e, c) || 0;
+const metinler = D => D.E.filter(e => e.t === "TEXT" || e.t === "MTEXT").map(e => ({ e, lay: gv(D, e, "8") || "0", s: gv(D, e, "1") || "", x: gn(D, e, "10"), y: gn(D, e, "20"), h: gn(D, e, "40") || 0.3 }));
+const sayi = s => { const m = String(s).replace(/\^I/g, " ").trim().match(/^-?\d+(?:[.,]\d+)?$/); return m ? +m[0].replace(",", ".") : NaN; };
+const yanDeger = (T, l, tol) => T.filter(t => t !== l && Math.abs(t.y - l.y) < (tol || Math.max(0.35, l.h)) && t.x > l.x + 0.5 && String(t.s).replace(/\^I/g, "").trim()).sort((a, b) => a.x - b.x)[0];
+const TROW = [["a", /UZUN KENAR SEV UST/], ["b", /KISA KENAR SEV UST/], ["c", /UZUN KENAR SEV ALT/], ["d", /KISA KENAR SEV ALT/], ["h", /YUKSEKLIK/], ["au", /^UST ALAN/], ["aa", /^ALT ALAN/], ["v", /^KUBAJ\s*\(/]];
+function sabOku(D) { const T = metinler(D), r = { tablo: {}, ant: {} };
+  for (const [k, re] of TROW) { const l = T.find(t => re.test(U(t.s).trim())); if (l) { const v = yanDeger(T, l, 0.1); if (v) r.tablo[k] = { l, v, n: sayi(String(v.s).split("=").pop()) }; } }
+  const bas = T.find(t => /KUBAJ HESABI/.test(U(t.s))); if (bas) r.bas = bas;
+  for (const [k, re] of [["tarih", /^HAKEDIS TARIHI/], ["no", /^HAKEDIS NO/], ["par", /^PARSEL NO/], ["tip", /^TIP\b/]]) { const l = T.find(t => re.test(U(t.s).replace(/\^I/g, "").trim())); if (l) { const v = yanDeger(T, l); if (v) r.ant[k] = v; } }
+  r.baslik = T.find(t => /KUBAJ KESITI/.test(U(t.s)));
+  const kl = D.E.filter(e => e.t === "LINE" && r.tablo.a && gv(D, e, "8") === r.tablo.a.l.lay); if (kl.length) { const xs = kl.flatMap(e => [gn(D, e, "10"), gn(D, e, "11")]), ys = kl.flatMap(e => [gn(D, e, "20"), gn(D, e, "21")]); r.kutu = [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]; }
+  r.T = T; return r; }
+const fmt = (v, n = 2) => (+v).toFixed(n).replace(".", ","), fh = h => String(+(+h).toFixed(4)).replace(".", ",");
+function tabloSatir(e) { const Au = +(e.a * e.b).toFixed(4), Aa = +(e.c * e.d).toFixed(4), V = e.h * (Au + Aa) / 2;
+  return { a: fmt(e.a), b: fmt(e.b), c: fmt(e.c), d: fmt(e.d), h: fh(e.h), au: `${fmt(e.a)} × ${fmt(e.b)} = ${fmt(Au, 4)}`, aa: `${fmt(e.c)} × ${fmt(e.d)} = ${fmt(Aa, 4)}`, v: `${fh(e.h)} × (${fmt(Au, 4)} + ${fmt(Aa, 4)}) ÷ 2 = ${fmt(V)}`, V }; }
+/* yeni varlık yazıcı (sürüme uygun: R2000+ için tutamak + alt sınıf) */
+function yazici(D) { const yeni = +String(D.ver).replace(/\D/g, "") >= 1015; let h = D.seed ? parseInt(D.seed.v, 16) || 0x100000 : 0x100000; const own = (() => { const e = D.E.find(x => gv(D, x, "330")); return e ? gv(D, e, "330").trim() : "1F"; })();
+  const P = (c, v) => [String(c).padStart(3, " "), String(v)]; const out = [];
+  const bas = (tip, lay, sub) => { const a = [...P(0, tip)]; if (yeni) a.push(...P(5, (h++).toString(16).toUpperCase()), ...P(330, own), ...P(100, "AcDbEntity")); a.push(...P(8, lay)); if (yeni) a.push(...P(100, sub)); return a; };
+  return { line(lay, x1, y1, x2, y2) { out.push(...bas("LINE", lay, "AcDbLine"), ...P(10, x1), ...P(20, y1), ...P(30, "0.0"), ...P(11, x2), ...P(21, y2), ...P(31, "0.0")); },
+    text(lay, x, y, hh, s) { out.push(...bas("TEXT", lay, "AcDbText"), ...P(10, x), ...P(20, y), ...P(30, "0.0"), ...P(40, hh), ...P(1, s)); if (yeni) out.push(...P(100, "AcDbText")); },
+    bitir() { if (D.seed) D.L[D.seed.k] = h.toString(16).toUpperCase(); return out; } }; }
+/* şablon düzeninde kübaj tablosu (26,5 × 9,9 birim; satır 0,9) */
+function tabloCiz(W, lay, x0, yT, baslik, r, s) { const w = 26.5 * s, rh = 0.9 * s, sp = 14 * s, th = 0.3 * s, tb = 0.35 * s; let y = yT;
+  const rows = [["Ölçü", "Değer (m)"], ["Uzun kenar şev üstü", r.a], ["Kısa kenar şev üstü", r.b], ["Uzun kenar şev altı", r.c], ["Kısa kenar şev altı", r.d], ["Yükseklik ortalaması", r.h], ["Üst Alan (m²)", r.au], ["Alt Alan (m²)", r.aa], ["Formül:  Kübaj = Yükseklik ortalaması × (Üst Alan + Alt Alan) ÷ 2", null], ["Kübaj (m³)", r.v]];
+  W.line(lay, x0, y, x0 + w, y); W.text(lay, x0 + 0.3 * s, y - rh + 0.275 * s, tb, baslik); y -= rh; W.line(lay, x0, y, x0 + w, y);
+  rows.forEach(([l, v], i) => { const y1 = y - rh, big = i === rows.length - 1; if (v != null) W.line(lay, x0 + sp, y, x0 + sp, y1); W.text(lay, x0 + 0.3 * s, y1 + (big ? 0.275 : 0.3) * s, big ? tb : th, l); if (v != null) W.text(lay, x0 + sp + 0.3 * s, y1 + (big ? 0.275 : 0.3) * s, big ? tb : th, v); W.line(lay, x0, y1, x0 + w, y1); y = y1; });
+  W.line(lay, x0, yT, x0, y); W.line(lay, x0 + w, yT, x0 + w, y); return yT - y; }
+const binaNo = s => String(s || "").match(/\d{3}/g) || [];
+/* paftalar: dolgu, numarası kazı binasının içinde geçiyorsa (B318 ⊂ B317-B318) o kazının paftasına eklenir */
+function paftala(S) { const out = S.filter(e => e.tur === "kazi").map(e => ({ ana: e, ek: [] })); for (const e of S.filter(e => e.tur !== "kazi")) { const n = binaNo(e.bina); const p = out.find(o => n.length && n.every(x => binaNo(o.ana.bina).includes(x))); if (p) p.ek.push(e); else out.push({ ana: e, ek: [] }); } return out; }
+function sablonUygula(tpl, pf, A) { const D = dxParse(tpl.t), R = sabOku(D), e = pf.ana, set = (t, v) => { const k = gk(D, t.e, "1"); if (k >= 0) D.L[k] = v; };
+  const r = tabloSatir(e), eski = {}; for (const [k] of TROW) if (R.tablo[k]) eski[k] = R.tablo[k].n;
+  const dolguAna = e.tur !== "kazi", karisik = pf.ek.length > 0; let degisen = 0;
+  if (R.tablo.a) { for (const [k] of TROW) if (R.tablo[k]) { set(R.tablo[k].v, r[k]); degisen++; } if (R.bas && (karisik || dolguAna)) set(R.bas, `${dolguAna ? "DOLGU" : "KAZI"} KÜBAJ HESABI${karisik ? " — " + e.bina : ""}  (Ortalama Alan Yöntemi)`); }
+  /* proje üzerindeki ölçü yazıları: eski değer → yeni değer (yalnız ölçü tabakaları) */
+  const yeni = { a: e.a, b: e.b, c: e.c, d: e.d, h: e.h }; let olc = 0;
+  for (const t of R.T) { if (!/ROL|CEPHE|SEV|ŞEV|KUBAJ_OLCU/i.test(t.lay) || /KUBAJ$/i.test(t.lay)) continue; const n = sayi(t.s); if (!isFinite(n)) continue;
+    for (const k of ["a", "b", "c", "d", "h"]) if (eski[k] != null && Math.abs(n - eski[k]) < 0.0051) { const sep = /,/.test(t.s) ? "," : "."; const s2 = k === "h" ? String(+(+yeni.h).toFixed(4)) : (+yeni[k]).toFixed(2); set(t, s2.replace(".", sep)); olc++; break; } }
+  /* antet */
+  const at = R.ant; if (at.tarih && A.tarih) { const old = String(at.tarih.s).trim(); for (const t of R.T) if (String(t.s).trim() === old) set(t, A.tarih); }
+  if (at.no && A.no) set(at.no, A.no);
+  if (at.par) { let s = String(at.par.s); if (/BİNA NO|BINA NO/i.test(s)) s = s.replace(/((?:BİNA|BINA) NO\s*:\s*).*$/i, "$1" + e.bina); else s = e.bina; if (A.par) s = s.replace(/^\s*\d+\s*\/\s*\d+/, A.par); set(at.par, s); }
+  if (at.tip && e.tip) { const old = String(at.tip.s).trim(); set(at.tip, e.tip); if (R.baslik) { const kok = x => x.replace(/[\s-]*S\s*\d+\s*$/i, "").trim(), p0 = kok(old), p1 = kok(e.tip); let s = String(R.baslik.s); if (p0 && s.includes(p0)) s = s.replace(p0, p1); if (dolguAna && !/DOLGU/.test(s)) s = s.replace(/KÜBAJ KESİTİ/, "DOLGU KÜBAJ KESİTİ"); set(R.baslik, s); } }
+  /* ek tablolar (dolgu) ya da şablonda tablo yoksa yeni tablo */
+  const W = yazici(D); const lay = R.tablo.a ? R.tablo.a.l.lay : "KUBAJ"; let s = 1, x0, yT;
+  if (R.kutu) { s = (R.kutu[2] - R.kutu[0]) / 26.5 || 1; x0 = R.kutu[0]; yT = R.kutu[1] - 0.8 * s; }
+  else { const xs = [], ys = []; for (const q of D.E) { const x = gn(D, q, "10"), y = gn(D, q, "20"); if (Math.abs(x) > 1 && Math.abs(y) > 1) { xs.push(x); ys.push(y); } } xs.sort((a, b) => a - b); ys.sort((a, b) => a - b); x0 = xs[xs.length - 1] + 2; yT = ys[ys.length - 1]; s = Math.max(0.5, (ys[ys.length - 1] - ys[0]) / 55); tabloCiz(W, lay, x0, yT, `${dolguAna ? "DOLGU" : "KAZI"} KÜBAJ HESABI — ${e.bina}  (Ortalama Alan Yöntemi)`, r, s); yT -= 10.7 * s; }
+  /* ek tablo yeri: ana tablonun altı, sağa yaslı; proje çizimiyle çakışırsa küçültülür */
+  const dolu = []; for (const q of D.E) { if (R.tablo.a && gv(D, q, "8") === lay) continue; for (const [c, k] of q.g) if (c === "10" || c === "11") { const x = +D.L[k], yk = q.g.find(z => z[0] === (c === "10" ? "20" : "21")); if (yk) dolu.push([x, +D.L[yk[1]]]); } }
+  const bos = (bx0, by0, bx1, by1) => !dolu.some(([x, y]) => x > bx0 - 0.3 && x < bx1 + 0.3 && y > by0 - 0.3 && y < by1 + 0.3);
+  for (const d of pf.ek) { let ss = s, xx = x0; if (R.kutu) { for (const k of [1, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7]) { ss = s * k; xx = R.kutu[2] - 26.5 * ss; if (bos(xx, yT - 9.9 * ss, xx + 26.5 * ss, yT)) break; } }
+    const h = tabloCiz(W, lay, xx, yT, `${d.tur === "kazi" ? "KAZI" : "DOLGU"} KÜBAJ HESABI — ${d.bina}  (Ortalama Alan Yöntemi)`, tabloSatir(d), ss); yT -= h + 0.8 * s; }
+  const add = W.bitir(); if (add.length) D.L.splice(D.end, 0, ...add);
+  return { text: D.L.join(D.nl), D: add.length ? dxParse(D.L.join(D.nl)) : D, bilgi: { degisen, olc, tablo: !!R.tablo.a } }; }
+
+/* ---------- şablon çizimini PDF sayfasına (A4/A3, sığdır) ---------- */
+const ACI = c => { const b = { 1: "#e00000", 2: "#b09000", 3: "#00a000", 4: "#008b8b", 5: "#0000e0", 6: "#c000c0", 7: "#000000", 8: "#707070", 9: "#a0a0a0" }; if (b[c]) return b[c]; if (c >= 250) return ["#333", "#505050", "#696969", "#828282", "#bebebe", "#e0e0e0"][c - 250] || "#000";
+  if (c >= 10 && c < 250) { const hue = Math.floor((c - 10) / 10) * 15, v = [1, 0.8, 0.6, 0.5, 0.3][Math.floor((c % 10) / 2)], sat = c % 2 ? 0.5 : 1; const f = n => { const k = (n + hue / 60) % 6; return v - v * sat * Math.max(0, Math.min(k, 4 - k, 1)); }; const h = x => Math.round(Math.min(1, x) * 200).toString(16).padStart(2, "0"); return "#" + h(f(5)) + h(f(3)) + h(f(1)); } return "#000"; };
+const metinTemiz = s => String(s).replace(/\^I/g, " ").replace(/%%[cC]/g, "Ø").replace(/%%[dD]/g, "°").replace(/%%[pP]/g, "±").replace(/%%[uUoO]/g, "").replace(/\\P/g, " ").replace(/\{\\[^;]*;|\}/g, "").replace(/\\[A-Za-z][^;]*;/g, "");
+function cizimTopla(D) { const G = [], col = e => { let c = +gv(D, e, "62"); if (!c || c === 256) c = Math.abs(D.lc[gv(D, e, "8")] || 7); return ACI(c); };
+  const arcP = (cx, cy, r, a0, a1) => { while (a1 < a0) a1 += 360; const n = Math.max(6, Math.ceil((a1 - a0) / 10)), o = []; for (let i = 0; i <= n; i++) { const a = (a0 + (a1 - a0) * i / n) * Math.PI / 180; o.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); } return o; };
+  const bul = (p, q, b) => { if (!b) return [q]; const th = 4 * Math.atan(b), dx = q[0] - p[0], dy = q[1] - p[1], L = Math.hypot(dx, dy); if (L < 1e-9) return [q]; const dd = L / 2 / Math.tan(th / 2), cx = (p[0] + q[0]) / 2 - dy / L * dd, cy = (p[1] + q[1]) / 2 + dx / L * dd, r = Math.hypot(p[0] - cx, p[1] - cy), a0 = Math.atan2(p[1] - cy, p[0] - cx), n = Math.max(4, Math.ceil(Math.abs(th) / 0.2)), o = []; for (let i = 1; i < n; i++) { const a = a0 + th * i / n; o.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); } o.push([q[0], q[1]]); return o; };
+  let pl = null;
+  for (const e of D.E) { const t = e.t; if (t === "VERTEX" && pl) { pl.v.push([gn(D, e, "10"), gn(D, e, "20"), gn(D, e, "42")]); continue; }
+    if (t === "SEQEND" && pl) { if (pl.v.length > 1) { const p = [pl.v[0].slice(0, 2)]; const vv = pl.cl ? [...pl.v, pl.v[0]] : pl.v; for (let i = 1; i < vv.length; i++) p.push(...bul(vv[i - 1], vv[i], vv[i - 1][2])); G.push({ k: "l", p, c: pl.c }); } pl = null; continue; }
+    if (t === "LINE") G.push({ k: "l", p: [[gn(D, e, "10"), gn(D, e, "20")], [gn(D, e, "11"), gn(D, e, "21")]], c: col(e) });
+    else if (t === "POLYLINE") pl = { v: [], cl: !!(gn(D, e, "70") & 1), c: col(e) };
+    else if (t === "LWPOLYLINE") { const v = []; let cur = null; for (const [c, k] of e.g) { if (c === "10") { cur = [+D.L[k], 0, 0]; v.push(cur); } else if (c === "20" && cur) cur[1] = +D.L[k]; else if (c === "42" && cur) cur[2] = +D.L[k]; } if (v.length > 1) { const cl = !!(gn(D, e, "70") & 1), vv = cl ? [...v, v[0]] : v, p = [v[0].slice(0, 2)]; for (let i = 1; i < vv.length; i++) p.push(...bul(vv[i - 1], vv[i], vv[i - 1][2])); G.push({ k: "l", p, c: col(e) }); } }
+    else if (t === "CIRCLE") G.push({ k: "l", p: arcP(gn(D, e, "10"), gn(D, e, "20"), gn(D, e, "40"), 0, 360), c: col(e) });
+    else if (t === "ARC") G.push({ k: "l", p: arcP(gn(D, e, "10"), gn(D, e, "20"), gn(D, e, "40"), gn(D, e, "50"), gn(D, e, "51")), c: col(e) });
+    else if (t === "TEXT" || t === "MTEXT") { const ha = gn(D, e, "72"), va = gn(D, e, "73"), ali = t === "TEXT" && (ha || va) && gv(D, e, "11") != null; let s = gv(D, e, "1") || ""; if (t === "MTEXT") for (const [c, k] of e.g) if (c === "3") s = D.L[k] + s;
+      G.push({ k: "x", x: gn(D, e, ali ? "11" : "10"), y: gn(D, e, ali ? "21" : "20"), h: gn(D, e, "40") || 0.25, s: metinTemiz(s), rot: gn(D, e, "50"), al: t === "MTEXT" ? ([0, "l", "c", "r"][(gn(D, e, "71") - 1) % 3 + 1] || "l") : ha === 1 || ha === 4 ? "c" : ha === 2 ? "r" : "l", va: t === "MTEXT" ? "t" : va === 2 || ha === 4 ? "m" : va === 3 ? "t" : "b", c: col(e) }); } }
+  return G; }
+function sablonSayfa(D) { const G = cizimTopla(D); let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; const ek = (x, y) => { if (Math.abs(x) < 1 && Math.abs(y) < 1) return; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); };
+  for (const g of G) if (g.k === "l") g.p.forEach(q => ek(q[0], q[1])); else ek(g.x, g.y);
+  const w = x1 - x0, h = y1 - y0, yat = w >= h, PW = yat ? 297 : 210, PH = yat ? 210 : 297, m = 6, s = Math.min((PW - 2 * m) / w, (PH - 2 * m) / h), ox = (PW - w * s) / 2, oy = (PH - h * s) / 2;
+  const M = (x, y) => [ox + (x - x0) * s, oy + (y - y0) * s], P = [];
+  for (const g of G) if (g.k === "l") P.push({ t: "l", p: g.p.map(q => M(q[0], q[1])), w: 0.13, color: g.c });
+  else { const q = M(g.x, g.y), hh = g.h * s; if (hh < 0.35) continue; const r = (g.rot || 0) * Math.PI / 180, dy = g.va === "m" ? 0 : g.va === "t" ? -hh / 2 : hh / 2; P.push({ t: "x", x: q[0] - Math.sin(r) * dy, y: q[1] + Math.cos(r) * dy, s: g.s, size: hh * 1.06, rot: g.rot || 0, al: g.al, color: g.c }); }
+  const PX = 200 / 25.4 * 1.6, c = document.createElement("canvas"); c.width = Math.round(PW * PX); c.height = Math.round(PH * PX); O.paint(c.getContext("2d"), P, PX, PW, PH); c.pw = PW / 25.4 * 72; c.ph = PH / 25.4 * 72; return c; }
+
+/* ---------- arayüz ---------- */
+async function sabListe(sec) { const el = $("tkSab"); if (!el) return; let ks = []; try { ks = await SDB.keys(); } catch (e) {} const cur = sec != null ? sec : el.value;
+  el.innerHTML = `<option value="">A-CAD çizimi (şablonsuz)</option>` + ks.sort().map(k => `<option value="${esc(k)}">${esc(k)}</option>`).join(""); el.value = ks.includes(cur) ? cur : ""; try { localStorage.setItem("acad-tk-sab", el.value); } catch (e) {} }
+if ($("tkSab")) { sabListe(localStorage.getItem("acad-tk-sab") || "");
+  $("tkSab").addEventListener("change", () => { try { localStorage.setItem("acad-tk-sab", $("tkSab").value); } catch (e) {} });
+  $("tkSabF").addEventListener("change", async ev => { const fs = [...ev.target.files]; ev.target.value = ""; const ok = [];
+    for (const f of fs) { try { const { t, enc } = dec(new Uint8Array(await f.arrayBuffer())); const D = dxParse(t), R = sabOku(D); const tip = R.ant.tip ? String(R.ant.tip.s).trim() : ""; let ad = (prompt(`"${f.name}" şablonunun adı (tip):`, tip || f.name.replace(/\.dxf$/i, "")) || "").trim(); if (!ad) continue;
+      await SDB.put(ad, { t, enc, dosya: f.name, tarih: Date.now() }); ok.push(`${esc(ad)} — ${R.tablo.a ? "kübaj tablosu bulundu" : "tablo yok (yeni tablo eklenecek)"}, ${R.ant.tarih ? "antet bulundu" : "antet bulunamadı"}`); $("tkTip").value || ($("tkTip").value = ad); await sabListe(ad); } catch (er) { msg(`${esc(f.name)}: ${esc(er.message)}`, true); } }
+    if (ok.length) msg("✓ Şablon kaydedildi (bu cihazda):<br>" + ok.join("<br>")); });
+  $("tkSabDel").addEventListener("click", async () => { const k = $("tkSab").value; if (!k || !confirm(`"${k}" şablonu silinsin mi?`)) return; await SDB.del(k); await sabListe(""); msg("Şablon silindi."); }); }
+const antetA = () => ({ tarih: ($("tkHT").value || "").trim(), no: ($("tkHN").value || "").trim(), par: ($("tkPar").value || "").trim() });
+async function sablonCikti(S) { const pf = paftala(S), out = [], yok = []; for (const p of pf) { const k = p.ana.sab || $("tkSab").value; const tpl = k ? await SDB.get(k) : null; if (!tpl) { yok.push(p); continue; } const r = sablonUygula(tpl, p, antetA()); out.push({ p, r, enc: tpl.enc, ad: `${p.ana.bina.replace(/\s+/g, "")}_TIP_KESIT${p.ana.tur === "kazi" ? "" : "_DOLGU"}` }); } return { out, yok }; }
+
+$("tkDxf").addEventListener("click", async () => { const S = secili(); if (!S.length) return msg("Önce hesap yap ya da listeye ekle.", true); const files = [], not = [];
+  try { const { out, yok } = await sablonCikti(S); for (const o of out) { files.push({ name: o.ad + ".dxf", data: encOut(o.r.text, o.enc) }); not.push(`${esc(o.ad)}: tablo ${o.r.bilgi.tablo ? "güncellendi" : "eklendi"}, ${o.r.bilgi.olc} ölçü yazısı${o.p.ek.length ? `, +${o.p.ek.length} dolgu tablosu` : ""}`); }
+    for (const p of yok) for (const e of [p.ana, ...p.ek]) { const X = O.dxf(); dxf(e, X); files.push({ name: `${e.bina.replace(/\s+/g, "")}_${e.tur === "kazi" ? "KAZI" : "DOLGU"}_TIP_KESIT.dxf`, data: X.build() }); } } catch (er) { console.error(er); return msg("Şablon işlenemedi: " + esc(er.message), true); }
+  await saveFile(files.length === 1 ? files[0].name.replace(/\.dxf$/, "_DXF.zip") : fad() + "_TIP_KESITLER.zip", O.zip(files), $("tkMsg")); if (not.length) msg("✓ " + not.join("<br>")); });
+$("tkPdf").addEventListener("click", async () => { const S = secili(); if (!S.length) return msg("Önce hesap yap ya da listeye ekle.", true); msg("PDF hazırlanıyor…");
+  try { const { out, yok } = await sablonCikti(S); const pages = out.map(o => sablonSayfa(o.r.D)); for (const p of yok) for (const e of [p.ana, ...p.ek]) pages.push(sayfa(e)); const b = await O.pdf(pages); await saveFile(fad() + "_TIP_KESIT.pdf", b, $("tkMsg")); } catch (er) { console.error(er); msg("PDF oluşturulamadı: " + esc(er.message), true); } });
+window.TKT = { hazirla, sablonUygula, sablonSayfa, dxParse, sabOku, paftala, SDB, get CUR() { return CUR; }, get LIST() { return LIST; }, excel, cizim };
 })();
 
 </script>
