@@ -464,7 +464,7 @@ body.wide:has(#kubSub:not([hidden])) #planBox{top:94px!important}
       </div>
       <div class="stat" id="sdTot"></div>
       <p class="note" id="sdNote" style="margin-top:8px"></p>
-      <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px"><button type="button" id="sdPdf">📄 PDF rapor (plan + hesap)</button><button type="button" id="sdXls">📊 Excel rapor</button></div><p class="msg" id="sdMsg"></p>
+      <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px"><button type="button" id="sdPdf">📄 PDF rapor (plan + hesap)</button><button type="button" id="sdDxf">📐 DXF (rapor + plan)</button><button type="button" id="sdXls">📊 Excel rapor</button></div><p class="msg" id="sdMsg"></p>
       <div class="row" style="margin-top:8px;gap:6px;flex-wrap:wrap;align-items:center"><div class="seg" role="group" hidden><button type="button" id="hV2" class="primary">2B harita</button><button type="button" id="hV3">3B görünüm</button></div>
 </div>
       <div id="h2Box" style="position:relative;margin-top:8px"><canvas id="hMap" width="1000" height="520" style="width:100%;height:auto;border:1px solid var(--line);border-radius:8px;background:#fff;touch-action:manipulation"></canvas></div>
@@ -482,7 +482,7 @@ body.wide:has(#kubSub:not([hidden])) #planBox{top:94px!important}
         <label>Sınır<select id="bzA"><option value="kub">Kübaj alanı (yoksa modelin tamamı)</option><option value="all">Modelin tamamı</option></select></label>
         <div class="row" style="align-items:flex-end;gap:6px"><button type="button" id="bzGo" class="primary">Hesapla</button><button type="button" id="bzSec" title="Kesit yöntemi için kırmızıyı bu sabit kot yapar">Kesitleri bu kotla hesapla</button></div></div>
       <div class="stat" id="bzRes" style="margin-top:8px"></div><p class="note" id="bzNote"></p>
-      <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px"><button type="button" id="bzPdf">📄 PDF rapor (plan + hesap)</button><button type="button" id="bzXls">📊 Excel rapor</button></div><p class="msg" id="bzMsg"></p>
+      <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px"><button type="button" id="bzPdf">📄 PDF rapor (plan + hesap)</button><button type="button" id="bzDxf">📐 DXF (rapor + plan)</button><button type="button" id="bzXls">📊 Excel rapor</button></div><p class="msg" id="bzMsg"></p>
     </details>
 
     <details class="card" id="kAyar"><summary><b>Kesit ayarları</b> <span class="note" id="kAyarOz"></span></summary>
@@ -4801,9 +4801,47 @@ function xlsx(C) { const X = O.xlsx(), th = { b: true, border: "thin", h: "cente
 async function xls(kind) { const el = kind === "baz" ? "bzMsg" : "sdMsg"; const C = ctx(kind); if (C.err) return say(el, C.err, true); say(el, "Excel hazırlanıyor…"); await new Promise(r => setTimeout(r, 30));
   try { await saveFile(fname2(kind, "xlsx"), xlsx(C), $(el)); } catch (e) { console.error(e); say(el, "Excel oluşturulamadı: " + e.message, true); } }
 
-$("bzPdf").addEventListener("click", () => pdf("baz")); $("bzXls").addEventListener("click", () => xls("baz"));
+
+/* ---------- DXF: plan gerçek koordinatta + rapor tablosu + kesit (ölçek 1/S için yazı boyları) ---------- */
+function dxfRapor(C) { const X = O.dxf(), M = C.mevcut, P = M.pts, T = M.tri;
+  const L = { sin: X.lay("KUBAJ_SINIRI", 6), ucg: X.lay("UCGEN", 8), nok: X.lay("KOT_NOKTA", 7), kot: X.lay("KOT_YAZI", 7), tab: X.lay("RAPOR", 7), kz: X.lay("RAPOR_KAZI", 1), dl: X.lay("RAPOR_DOLGU", 5), ks: X.lay("KESIT_HATTI", 30), kp: X.lay("KESIT_ZEMIN", 7), kh: X.lay("KESIT_BAZ", 1) };
+  /* plan: PDF'teki gibi alan + 10 m çevresine değen üçgenler tam */
+  const sd = (p, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy; let t = L2 ? ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L2 : 0; t = Math.max(0, Math.min(1, t)); return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy); };
+  const yakin = (x, y) => K.inPoly(C.poly, x, y) || C.poly.some((a, i) => sd([x, y], a, C.poly[(i + 1) % C.poly.length]) <= 10);
+  const ser = P.map(p => !!p && yakin(p.e, p.y)), gor = P.map(() => false), ed = new Set();
+  for (let t = 0; t + 2 < T.length; t += 3) { const ii = [T[t], T[t + 1], T[t + 2]], q = ii.map(i => P[i]); if (q.some(v => !v)) continue; if (!(C.ortakMod || ii.some(i => ser[i]) || yakin((q[0].e + q[1].e + q[2].e) / 3, (q[0].y + q[1].y + q[2].y) / 3))) continue;
+    ii.forEach(i => gor[i] = true); for (let k = 0; k < 3; k++) { const a = ii[k], b = ii[(k + 1) % 3], key = a < b ? a + "," + b : b + "," + a; if (ed.has(key)) continue; ed.add(key); X.line(L.ucg, [P[a].e, P[a].y, P[a].z], [P[b].e, P[b].y, P[b].z]); } }
+  const [x0, y0, x1, y1] = bbox([...C.poly, ...P.filter((p, i) => gor[i]).map(p => [p.e, p.y])]); const S = SCALES.find(s => (x1 - x0) * 1000 / s <= 250 && (y1 - y0) * 1000 / s <= 180) || 5000, h = 2 * S / 1000;
+  if (!C.ortakMod) X.poly(L.sin, C.poly, true);
+  P.forEach((p, i) => { if (!gor[i]) return; X.point(L.nok, p.e, p.y, p.z); X.text(L.kot, p.e + h * 0.3, p.y + h * 0.3, h * 0.8, tr(p.z, 2)); });
+  /* rapor tablosu: planın sağında */
+  const tx = x1 + 8 * h, cw = [22 * h, 18 * h, 16 * h], rh = 2.4 * h; let ty = y1; const W = cw[0] + cw[1] + cw[2];
+  const row = (cells, lay, big) => { const hh = big ? h * 1.2 : h; X.line(L.tab, [tx, ty], [tx + W, ty]); let x = tx; cells.forEach((v, i) => { if (v != null && v !== "") X.text(lay || L.tab, x + (i ? cw[i] - 0.6 * h : 0.6 * h), ty - rh / 2, hh, String(v), 0, i ? "r" : "l"); x += cw[i]; });
+    X.line(L.tab, [tx, ty], [tx, ty - rh]); X.line(L.tab, [tx + W, ty], [tx + W, ty - rh]); if (cells.length > 1) { X.line(L.tab, [tx + cw[0], ty], [tx + cw[0], ty - rh]); X.line(L.tab, [tx + cw[0] + cw[1], ty], [tx + cw[0] + cw[1], ty - rh]); } ty -= rh; X.line(L.tab, [tx, ty], [tx + W, ty]); };
+  X.text(L.tab, tx, ty + 2 * h, h * 1.8, "KÜBAJ RAPORU   " + today()); ty -= 0.5 * h;
+  krLoad(); for (const [l, v] of yerRows()) row([l, v, ""]);
+  row([C.baz != null ? "Baz kotu" : "Kübaj", C.baz != null ? tr(C.baz, 2) + " m" : (C.flat ? "sabit kot " + tr(+MR.flat, 2) + " m" : "siyah → kırmızı"), ""]); ty -= h;
+  const sev = C.sev, KT = C.kazi + (sev ? sev.kazi : 0), DT = C.dolgu + (sev ? sev.dolgu : 0), net = DT - KT;
+  row(["SONUÇ", "Hacim (m³)", "Alan (m²)"]);
+  if (sev) { row(["Kazı (platform)", tr(C.kazi), tr(C.kaziAlan)]); row(["Kazı şevi", tr(sev.kazi), tr(sev.kaziAlan)]); row(["Dolgu (platform)", tr(C.dolgu), tr(C.dolguAlan)]); row(["Dolgu şevi", tr(sev.dolgu), tr(sev.dolguAlan)]); }
+  row(["KAZI" + (sev ? " (toplam)" : ""), tr(KT), sev ? "" : tr(C.kaziAlan)], L.kz, true); row(["DOLGU" + (sev ? " (toplam)" : ""), tr(DT), sev ? "" : tr(C.dolguAlan)], L.dl, true);
+  if (C.siy > 0.005) row([C.tum ? `Sıyırma (${C.smod === "kazi" ? "kazıda" : "tamamında"}, ${tr(C.SY, 2)} m)` : `dolgu içindeki sıyırma (${tr(C.SY, 2)} m)`, tr(C.siy), C.tum ? tr(C.smod === "kazi" ? C.kaziAlan : C.alan) : ""]);
+  row([`Net (${net < 0 ? "malzeme artar" : net > 0 ? "malzeme gerekir" : "denk"})`, tr(net), tr(C.alan)]);
+  /* kesit: plan üzerinde hat, tablonun altında boy kesiti */
+  const KS = kesit(C); if (KS) { X.line(L.ks, KS.A, KS.B); X.text(L.ks, KS.A[0], KS.A[1] + h, h, "A"); X.text(L.ks, KS.B[0], KS.B[1] + h, h, "B");
+    const v = KS.s.filter(q => q.zh != null); let zmn = Infinity, zmx = -Infinity; for (const q of v) { zmn = Math.min(zmn, q.zm, q.zh); zmx = Math.max(zmx, q.zm, q.zh); }
+    const ex = Math.max(1, Math.min(10, Math.round(KS.len * 0.2 / Math.max(0.5, zmx - zmn)))), kx = W / KS.len, by = ty - 10 * h, zb = zmn - 0.5; const Q = q => [tx + (q.d - KS.d0) * kx, by - (zmx + 0.5 - zb) * ex * kx + (q.zm - zb) * ex * kx], Qh = q => [tx + (q.d - KS.d0) * kx, by - (zmx + 0.5 - zb) * ex * kx + (q.zh - zb) * ex * kx];
+    X.text(L.tab, tx, by + 2 * h, h * 1.2, `KESİT A-B (${tr(KS.len, 1)} m, düşey ×${ex}) · kesit alanı kazı ${tr(KS.ka)} m², dolgu ${tr(KS.da)} m²`);
+    const seg = (f, lay) => { let run = []; const flush = () => { if (run.length > 1) X.poly(lay, run, false); run = []; }; let last = null; for (const q of v) { if (last && q.d - last.d > KS.len / 100 + 1e-6) flush(); run.push(f(q)); last = q; } flush(); };
+    seg(Q, L.kp); seg(Qh, L.kh);
+    const yb = by - (zmx + 0.5 - zb) * ex * kx; X.line(L.tab, [tx, yb], [tx + W, yb]); const st = nice((zmx - zmn) / 4); for (let z = Math.ceil(zmn / st) * st; z <= zmx; z += st) { const yy = yb + (z - zb) * ex * kx; X.line(L.tab, [tx - h, yy], [tx, yy]); X.text(L.tab, tx - 1.3 * h, yy, h * 0.8, tr(z, st < 1 ? 2 : 1), 0, "r"); } }
+  
+  return X.build(); }
+async function dxf(kind) { const el = kind === "baz" ? "bzMsg" : "sdMsg"; const C = ctx(kind); if (C.err) return say(el, C.err, true); say(el, "DXF hazırlanıyor…"); await new Promise(r => setTimeout(r, 30));
+  try { await saveFile(fname2(kind, "dxf"), dxfRapor(C), $(el)); } catch (e) { console.error(e); say(el, "DXF oluşturulamadı: " + e.message, true); } }
+$("bzPdf").addEventListener("click", () => pdf("baz")); $("bzDxf") && $("bzDxf").addEventListener("click", () => dxf("baz")); $("sdDxf") && $("sdDxf").addEventListener("click", () => dxf("sd")); $("bzXls").addEventListener("click", () => xls("baz"));
 $("sdPdf").addEventListener("click", () => pdf("sd")); $("sdXls").addEventListener("click", () => xls("sd"));
-window.KUBRAP = { ctx, perTri, xlsx, pageOne, pageTwo, kesit, fullOf };
+window.KUBRAP = { ctx, dxfRapor, perTri, xlsx, pageOne, pageTwo, kesit, fullOf };
 })();
 
 </script>
@@ -5395,7 +5433,7 @@ function dxParse(text) { const nl = text.indexOf("\r\n") >= 0 ? "\r\n" : "\n", L
   if (s < 0) throw new Error("DXF'te ENTITIES bölümü yok");
   const E = []; let i = s; while (i < L.length - 1 && L[i + 1].trim() !== "ENDSEC") { let j = i + 2; while (j < L.length && L[j].trim() !== "0") j += 2; const g = []; for (let k = i + 2; k < j; k += 2) g.push([L[k].trim(), k + 1]); E.push({ t: L[i + 1].trim(), i, j, g }); i = j; }
   const hv = n => { const k = L.findIndex(x => x.trim() === n); return k >= 0 ? { k: k + 2, v: (L[k + 2] || "").trim() } : null; };
-  const lc = {}; { let inL = false, nm = null; const a = L.findIndex(x => x.trim() === "TABLES"); for (let k = a; k > 0 && k < s; k += 2) { const c = L[k].trim(), v = (L[k + 1] || "").trim(); if (c === "0") { inL = v === "LAYER"; nm = null; if (v === "ENDSEC") break; } else if (inL && c === "2") nm = v; else if (inL && c === "62" && nm) lc[nm] = +v; } }
+  const lc = {}; { let inL = false, nm = null; const a = L.findIndex(x => x.trim() === "TABLES") - 1; for (let k = a; k > 0 && k < s; k += 2) { const c = L[k].trim(), v = (L[k + 1] || "").trim(); if (c === "0") { inL = v === "LAYER"; nm = null; if (v === "ENDSEC") break; } else if (inL && c === "2") nm = v; else if (inL && c === "62" && nm) lc[nm] = +v; } }
   return { L, nl, E, end: i, ver: (hv("$ACADVER") || {}).v || "AC1009", seed: hv("$HANDSEED"), lc }; }
 const gk = (D, e, c) => { const x = e.g.find(q => q[0] === c); return x ? x[1] : -1; };
 const gv = (D, e, c) => { const k = gk(D, e, c); return k < 0 ? null : D.L[k]; };
@@ -5458,7 +5496,7 @@ function sablonUygula(tpl, pf, A) { const D = dxParse(tpl.t), R = sabOku(D), e =
 /* ---------- şablon çizimini PDF sayfasına (A4/A3, sığdır) ---------- */
 const ACI = c => { const b = { 1: "#e00000", 2: "#b09000", 3: "#00a000", 4: "#008b8b", 5: "#0000e0", 6: "#c000c0", 7: "#000000", 8: "#707070", 9: "#a0a0a0" }; if (b[c]) return b[c]; if (c >= 250) return ["#333", "#505050", "#696969", "#828282", "#bebebe", "#e0e0e0"][c - 250] || "#000";
   if (c >= 10 && c < 250) { const hue = Math.floor((c - 10) / 10) * 15, v = [1, 0.8, 0.6, 0.5, 0.3][Math.floor((c % 10) / 2)], sat = c % 2 ? 0.5 : 1; const f = n => { const k = (n + hue / 60) % 6; return v - v * sat * Math.max(0, Math.min(k, 4 - k, 1)); }; const h = x => Math.round(Math.min(1, x) * 200).toString(16).padStart(2, "0"); return "#" + h(f(5)) + h(f(3)) + h(f(1)); } return "#000"; };
-const metinTemiz = s => String(s).replace(/\^I/g, " ").replace(/%%[cC]/g, "Ø").replace(/%%[dD]/g, "°").replace(/%%[pP]/g, "±").replace(/%%[uUoO]/g, "").replace(/\\P/g, " ").replace(/\{\\[^;]*;|\}/g, "").replace(/\\[A-Za-z][^;]*;/g, "");
+const metinTemiz = s => String(s).replace(/\\U\+([0-9A-Fa-f]{4})/g, (m, h) => String.fromCharCode(parseInt(h, 16))).replace(/\^I/g, " ").replace(/%%[cC]/g, "Ø").replace(/%%[dD]/g, "°").replace(/%%[pP]/g, "±").replace(/%%[uUoO]/g, "").replace(/\\P/g, " ").replace(/\{\\[^;]*;|\}/g, "").replace(/\\[A-Za-z][^;]*;/g, "");
 function cizimTopla(D) { const G = [], col = e => { let c = +gv(D, e, "62"); if (!c || c === 256) c = Math.abs(D.lc[gv(D, e, "8")] || 7); return ACI(c); };
   const arcP = (cx, cy, r, a0, a1) => { while (a1 < a0) a1 += 360; const n = Math.max(6, Math.ceil((a1 - a0) / 10)), o = []; for (let i = 0; i <= n; i++) { const a = (a0 + (a1 - a0) * i / n) * Math.PI / 180; o.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); } return o; };
   const bul = (p, q, b) => { if (!b) return [q]; const th = 4 * Math.atan(b), dx = q[0] - p[0], dy = q[1] - p[1], L = Math.hypot(dx, dy); if (L < 1e-9) return [q]; const dd = L / 2 / Math.tan(th / 2), cx = (p[0] + q[0]) / 2 - dy / L * dd, cy = (p[1] + q[1]) / 2 + dx / L * dd, r = Math.hypot(p[0] - cx, p[1] - cy), a0 = Math.atan2(p[1] - cy, p[0] - cx), n = Math.max(4, Math.ceil(Math.abs(th) / 0.2)), o = []; for (let i = 1; i < n; i++) { const a = a0 + th * i / n; o.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); } o.push([q[0], q[1]]); return o; };
