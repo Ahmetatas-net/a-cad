@@ -5731,13 +5731,24 @@ window.LTX={LIB,has:n=>!!LIB[n],expand,cached,per,grup:GRUP,get u(){return LTS/1
     const E = ent(sec.ENTITIES[0] + 4, sec.ENTITIES[1], false);
     const B = sec.BLOCKS ? ent(sec.BLOCKS[0] + 4, sec.BLOCKS[1], true) : [];
     const blocks = {}; for (const e of B) { if (e.t === "BLOCK") blocks[e.nm] = { base: [e.x || 0, e.y || 0], E: [] }; else if (e.blk && blocks[e.blk]) blocks[e.blk].E.push(e); }
-    return { L, nl, sec, E, blocks };
+    const D = { L, nl, sec, E, blocks }; genislet(D); return D;
   }
+  /* kapsayıcı blokları patlat (ArchiCAD gibi programlar planları blok içine koyar): çocuklar sanal nesne olur */
+  function genislet(D) { const kb = {}; const cnt = nm => { if (kb[nm] != null) return kb[nm]; const b = D.blocks[nm]; if (!b || b.E.length < 40) return (kb[nm] = 0); let x0 = 1 / 0, y0 = 1 / 0, x1 = -1 / 0, y1 = -1 / 0; for (const c of b.E) { if (c.x == null) continue; x0 = Math.min(x0, c.x); x1 = Math.max(x1, c.x); y0 = Math.min(y0, c.y); y1 = Math.max(y1, c.y); } return (kb[nm] = Math.max(x1 - x0, y1 - y0) > 600 ? b.E.length : 0); }; const out = []; let n = 0;
+    const ac = (e, M, lay, derin, ust) => { const b = D.blocks[e.nm]; if (!b) return; const g = grp(D, e); const ins = insM(g, b.base); const MM = M ? (p => M(ins(p))) : ins; const sc = Math.abs(+(gv(g, "41") || 1)) * (ust || 1);
+      for (const c of b.E) { const ly = c.lay === "0" ? lay : c.lay;
+        if (c.t === "INSERT") { if (cnt(c.nm) >= 40 && derin < 5) { ac(c, MM, ly, derin + 1, sc); continue; } const cg = grp(D, c), cb = D.blocks[c.nm]; if (!cb) continue; const ci = insM(cg, cb.base), M2 = p => MM(ci(p)), p0 = MM([+gv(cg, "10") || 0, +gv(cg, "20") || 0]); out.push({ t: "INSERT", syn: 1, nm: c.nm, lay: ly, x: p0[0], y: p0[1], M: M2, sc }); n++; continue; }
+        if (c.t === "TEXT" || c.t === "MTEXT") { const y = yazi(D, c); if (!y.s) continue; const p0 = MM([y.x, y.y]); out.push({ t: c.t, syn: 1, lay: ly, x: p0[0], y: p0[1], Y: { s: y.s, x: p0[0], y: p0[1], h: (y.h || 0) * sc } }); n++; continue; }
+        if (!/^(LINE|LWPOLYLINE|POLYLINE|ARC|CIRCLE|ELLIPSE|SPLINE)$/.test(c.t)) continue; const G = geom(D, c, MM); if (!G.length) continue; out.push({ t: c.t, syn: 1, lay: ly, x: G[0][0][0], y: G[0][0][1], G }); n++; } };
+    const duv = D.E.filter(e => /^(LINE|LWPOLYLINE|POLYLINE)$/.test(e.t) && /DUVAR|WALL|STRUCTURAL|BEARING/i.test(e.lay)).length; if (duv > 300) return;
+    const kap = []; for (const e of D.E) if (e.t === "INSERT" && !e.syn && cnt(e.nm) >= 40) { kap.push(e); ac(e, null, e.lay, 0, 1); }
+    if (n) { D.kapsayici = kap; const k = new Set(kap); D.E = D.E.filter(e => !k.has(e)).concat(out); D.E.kap = kap; } }
   function hasAttr(L, i, j) { for (let k = i + 2; k < j; k += 2) if (L[k].trim() === "66" && L[k + 1].trim() === "1") return true; return false; }
   function grp(D, e) { const L = D.L, g = []; for (let k = e.a + 2; k < e.b; k += 2) { if (L[k].trim() === "0") break; g.push([L[k].trim(), L[k + 1]]); } return g; }
   const gv = (g, c) => { const x = g.find(q => q[0] === c); return x ? x[1] : null; };
   /* geometri (dünya koordinatında çoklu çizgiler) */
   function geom(D, e, M, derin) {
+    if (e.syn) { if (e.G) return M ? e.G.map(P => P.map(M)) : e.G; if (e.t === "INSERT") { const b = D.blocks[e.nm]; if (!b) return []; const MM = M ? (p => M(e.M(p))) : e.M, out = []; for (const c of b.E) { if (/^(TEXT|MTEXT|ATTDEF|ATTRIB|HATCH|DIMENSION|SOLID|POINT)$/.test(c.t)) continue; for (const P of geom(D, c, MM, (derin || 0) + 1)) out.push(P); } return out; } return []; }
     const g = grp(D, e), T = M || (p => p), out = [], t = e.t;
     if (t === "LINE") out.push([[+gv(g, "10"), +gv(g, "20")], [+gv(g, "11"), +gv(g, "21")]].map(T));
     else if (t === "LWPOLYLINE") { const P = []; for (const [c, v] of g) { if (c === "10") P.push([+v, 0]); else if (c === "20" && P.length) P[P.length - 1][1] = +v; } if ((+gv(g, "70") || 0) & 1 && P.length) P.push(P[0]); if (P.length > 1) out.push(P.map(T)); }
@@ -5750,11 +5761,11 @@ window.LTX={LIB,has:n=>!!LIB[n],expand,cached,per,grup:GRUP,get u(){return LTS/1
   }
   function insM(g, base) { const x = +gv(g, "10") || 0, y = +gv(g, "20") || 0, sx = +(gv(g, "41") || 1), sy = +(gv(g, "42") || gv(g, "41") || 1), r = (+gv(g, "50") || 0) * Math.PI / 180, c = Math.cos(r), s = Math.sin(r); return p => { const u = (p[0] - base[0]) * sx, v = (p[1] - base[1]) * sy; return [x + u * c - v * s, y + u * s + v * c]; }; }
   const bbox = Ps => { let a = 1 / 0, b = 1 / 0, c = -1 / 0, d = -1 / 0; for (const P of Ps) for (const p of P) { if (p[0] < a) a = p[0]; if (p[1] < b) b = p[1]; if (p[0] > c) c = p[0]; if (p[1] > d) d = p[1]; } return [a, b, c, d]; };
-  function yazi(D, e) { const g = grp(D, e); let s = ""; for (const [c, v] of g) if (c === "1" || c === "3") s += v; return { s: e.t === "MTEXT" ? mt(s) : mt(s.replace(/%%[uUoO]/g, "")), x: +gv(g, "10"), y: +gv(g, "20"), h: +gv(g, "40") || 0, x1: gv(g, "11") != null ? +gv(g, "11") : null, y1: gv(g, "21") != null ? +gv(g, "21") : null }; }
+  function yazi(D, e) { if (e.syn) return e.Y; const g = grp(D, e); let s = ""; for (const [c, v] of g) if (c === "1" || c === "3") s += v; return { s: e.t === "MTEXT" ? mt(s) : mt(s.replace(/%%[uUoO]/g, "")), x: +gv(g, "10"), y: +gv(g, "20"), h: +gv(g, "40") || 0, x1: gv(g, "11") != null ? +gv(g, "11") : null, y1: gv(g, "21") != null ? +gv(g, "21") : null }; }
 
   /* ---------- roller ---------- */
   const ROL = { tut: "Tut (duvar, kolon…)", kp: "Kapı / pencere → GML_KP", sil: "Sil" };
-  function tabakaRol(n) { const u = up(n); if (/^GML_/.test(u)) return "tut"; if (/ÇATI|CATI|ROOF|MAHYA/.test(u) && !/KES[İI]T|G[ÖO]R[ÜU]N/.test(u)) return "tut"; if (/KES[İI]T|G[ÖO]R[ÜU]N|VAZ[İI]YET|ANTET|PAFTA|ÇERÇEVE|CERCEVE|TEFR[İI]Ş|MOB[İI]L|ÖLÇ|OLC|DIM|TARAMA|HATCH|AKS|YAZI|TEXT/.test(u)) return "sil"; if (/KAPI|PENCERE|DOOR|WINDOW|DOGRAMA|DOĞRAMA/.test(u)) return "kp"; if (/DUVAR|WALL|KOLON|COLUMN|PERDE|KORKULUK|PARAPET|MERD[İI]VEN|STAIR|ASANS|BACA|ŞAFT|SAFT|KİRİŞ|KIRIS|BEAM/.test(u)) return /K[İI]R[İI]Ş|KIRIS|BEAM/.test(u) ? "sil" : "tut"; return "sil"; }
+  function tabakaRol(n) { const u = up(n); if (/^GML_/.test(u)) return "tut"; if (/ÇATI|CATI|ROOF|MAHYA/.test(u) && !/KES[İI]T|G[ÖO]R[ÜU]N/.test(u)) return "tut"; if (/KES[İI]T|G[ÖO]R[ÜU]N|VAZ[İI]YET|ANTET|PAFTA|ÇERÇEVE|CERCEVE|TEFR[İI]Ş|MOB[İI]L|ÖLÇ|OLC|DIM|TARAMA|HATCH|AKS|YAZI|TEXT/.test(u)) return "sil"; if (/MARKER|İŞARET|ISARET/.test(u)) return "sil"; if (/KAPI|PENCERE|DOOR|WINDOW|DOGRAMA|DOĞRAMA/.test(u)) return "kp"; if (/STRUCTURAL|BEARING|KDUVAR|^PANEL|PARTITION/.test(u)) return "tut"; if (/DUVAR|WALL|KOLON|COLUMN|PERDE|KORKULUK|PARAPET|MERD[İI]VEN|STAIR|ASANS|BACA|ŞAFT|SAFT|KİRİŞ|KIRIS|BEAM/.test(u)) return /K[İI]R[İI]Ş|KIRIS|BEAM/.test(u) ? "sil" : "tut"; return "sil"; }
   function blokRol(nm, lay) { const u = up(nm); if (/PENCERE|KAPI|DOOR|WINDOW|^\d{2,3}\s*[X×-]\s*\d{2,3}$|^P\d{2,3}$|ASANS[ÖO]R KAP/.test(u)) return "kp"; if (/KOLON|COLUMN/.test(u)) return "tut"; return tabakaRol(lay) === "kp" ? "kp" : "sil"; }
 
   /* ---------- çözümleme ---------- */
@@ -5765,15 +5776,15 @@ window.LTX={LIB,has:n=>!!LIB[n],expand,cached,per,grup:GRUP,get u(){return LTS/1
     /* yazılar */
     const Y = []; for (const e of E) if (e.t === "TEXT" || e.t === "MTEXT") { const y = yazi(D, e); if (y.s) { y.e = e; Y.push(y); } }
     /* plan başlıkları */
-    const TRE = /((?:-?\s*\d+\s*\.?\s*)?(?:BODRUM|ZEM[İI]N|NORMAL|\d+\s*\.?\s*KAT|ÇATI|CATI|ASMA|B[İI]RİNC[İI]|İK[İI]NC[İI])[^\n]*?PLANI)/i;
+    const TRE = /((?:-?\s*\d+\s*\.?\s*)?(?:BODRUM|ZEM[İI]N|NORMAL|\d+\s*\.?\s*KAT|ÇATI|CATI|ASMA|B[İI]RİNC[İI]|İK[İI]NC[İI])[^\n]*?PLANI(?![A-Za-zÇĞİÖŞÜçğıöşü]))/i;
     const bas = Y.filter(y => TRE.test(up(y.s)) && !/KES[İI]T|G[ÖO]R[ÜU]N[ÜU]Ş|VAZ[İI]YET|YERLEŞ[İI]M|KALIP|TEMEL|ALAN|EMSAL/.test(up(y.s))).map(y => ({ y, ad: up(y.s).replace(/\s*Ö\s*:.*$/, "").replace(/\s+/g, " ").trim() }));
     /* duvar kümeleri (tut rolündeki çizgiler) */
     const W = []; for (const e of E) { if (!/^(LINE|LWPOLYLINE|POLYLINE|ARC|CIRCLE)$/.test(e.t)) continue; if (lay[e.lay].rol !== "tut" || /^GML_/.test(up(e.lay))) continue; const G = geom(D, e); if (!G.length) continue; e.bb = bbox(G); if (Math.hypot(e.bb[2] - e.bb[0], e.bb[3] - e.bb[1]) > 8000) continue; W.push(e); }
     /* plan bölgeleri: başlıklar aynı sırada dizilir; her başlığın üstündeki/sağındaki sütunda duvar yoğunluğu */
-    const isDuv = e => /DUVAR|WALL|KOLON|COLUMN|PERDE/.test(up(e.lay)); const WD = W.filter(isDuv).length > 50 ? W.filter(isDuv) : W;
+    const isDuv = e => /DUVAR|WALL|KOLON|COLUMN|PERDE|STRUCTURAL|BEARING|PANEL/.test(up(e.lay)); const WD = W.filter(isDuv).length > 50 ? W.filter(isDuv) : W;
     const A_tum = Y.filter(y => /Ö\s*:\s*1\s*\/\s*\d+/.test(up(y.s)) || TRE.test(up(y.s))); const P = []; const bs = bas.slice().sort((a, b) => a.y.x - b.y.x);
     for (let i = 0; i < bs.length; i++) { const t = bs[i].y, h = t.h || 30; const sag = A_tum.filter(o => o !== t && Math.abs(o.y - t.y) < 10 * h && o.x > t.x + 20 * h).sort((a, b) => a.x - b.x).map(o => ({ y: o }))[0];
-      const x0 = t.x - 15 * h, x1 = sag ? sag.y.x - 15 * h : t.x + 400 * h; const y0 = t.y - 5 * h, y1 = t.y + 200 * h;
+      const x0 = t.x - 3 * h, x1 = sag ? sag.y.x - 3 * h : t.x + 400 * h; const y0 = t.y - 5 * h, y1 = t.y + 200 * h;
       const icr = WD.filter(e => { const cx = (e.bb[0] + e.bb[2]) / 2, cy = (e.bb[1] + e.bb[3]) / 2; return cx > x0 && cx < x1 && cy > y0 && cy < y1; });
       if (icr.length < 10) { const ic3 = W.filter(e => { const cx = (e.bb[0] + e.bb[2]) / 2, cy = (e.bb[1] + e.bb[3]) / 2; return cx > x0 && cx < x1 && cy > y0 && cy < y1; }); if (ic3.length >= 10) icr.splice(0, icr.length, ...ic3); }
       if (icr.length < 10) { /* başlık planın üstünde olabilir */ const ic2 = WD.filter(e => { const cx = (e.bb[0] + e.bb[2]) / 2, cy = (e.bb[1] + e.bb[3]) / 2; return cx > x0 && cx < x1 && cy < t.y + 5 * h && cy > t.y - 200 * h; }); if (ic2.length < 10) { P.push({ baslik: bs[i], b: [x0, y0, x1 - 30 * h, t.y + 120 * h], n: icr.length, bos: true }); continue; } icr.splice(0, icr.length, ...ic2); }
@@ -5825,7 +5836,7 @@ window.LTX={LIB,has:n=>!!LIB[n],expand,cached,per,grup:GRUP,get u(){return LTS/1
   /* duvar açıklıkları: karşılıklı duvar uçları (8–45 cm) arasında boşluk; dış cephedekiler pencere sayılır */
   function aciklik(D, A, opt, p, kpB) {
     const b = p.b, SEG = [];
-    for (const e of D.E) { if (e.x == null || e.x < b[0] || e.x > b[2] || e.y < b[1] || e.y > b[3]) continue; if (!/^(LINE|LWPOLYLINE|POLYLINE)$/.test(e.t)) continue; const r = (opt.lay[e.lay] || A.lay[e.lay] || {}).rol; if (r !== "tut" || !/DUVAR|WALL|KOLON|COLUMN|PERDE/.test(up(e.lay))) continue; for (const P of geom(D, e)) for (let i = 0; i + 1 < P.length; i++) SEG.push([P[i], P[i + 1]]); }
+    for (const e of D.E) { if (e.x == null || e.x < b[0] || e.x > b[2] || e.y < b[1] || e.y > b[3]) continue; if (!/^(LINE|LWPOLYLINE|POLYLINE)$/.test(e.t)) continue; const r = (opt.lay[e.lay] || A.lay[e.lay] || {}).rol; if (r !== "tut" || !/DUVAR|WALL|KOLON|COLUMN|PERDE|STRUCTURAL|BEARING|PANEL/.test(up(e.lay))) continue; for (const P of geom(D, e)) for (let i = 0; i + 1 < P.length; i++) SEG.push([P[i], P[i + 1]]); }
     const X = (a, b_, c, d) => { const o = (p_, q, r) => (q[0] - p_[0]) * (r[1] - p_[1]) - (q[1] - p_[1]) * (r[0] - p_[0]); return o(a, b_, c) * o(a, b_, d) < 0 && o(c, d, a) * o(c, d, b_) < 0; };
     const caps = SEG.map(sg => { const dx = sg[1][0] - sg[0][0], dy = sg[1][1] - sg[0][1], L = Math.hypot(dx, dy); return { sg, L, d: [dx / L, dy / L], m: [(sg[0][0] + sg[1][0]) / 2, (sg[0][1] + sg[1][1]) / 2] }; }).filter(c => c.L >= 8 && c.L <= 45);
     /* dış bölge: 10 cm ızgara, duvarlar 130 cm şişirilir, dışarıdan doldurulur */
@@ -5885,7 +5896,18 @@ window.LTX={LIB,has:n=>!!LIB[n],expand,cached,per,grup:GRUP,get u(){return LTS/1
     for (const [d, ti, vi] of ciftler) { if (kot[vi] != null || kulT.has(ti)) continue; kot[vi] = num(ad[ti].s); kulT.add(ti); }
     const ed50 = T.some(t => /^ED\s*-?50$/i.test(t.s.trim())); const sz = T.find(t => /S[ıiIİ]f[ıiIİ]r\s*Kot/i.test(t.s)); const sifir = sz ? num((sz.s.split(/[:=]/)[1] || "")) : null;
     return { P: best.P, alan: best.alan, lay: best.lay, kot, ed50, sifir: isFinite(sifir) ? sifir : null }; }
-  function planSeg(D, A, opt, p, tumu) { const b = p.b, SEG = []; for (const e of D.E) { if (e.x == null || e.x < b[0] || e.x > b[2] || e.y < b[1] || e.y > b[3]) continue; if (!/^(LINE|LWPOLYLINE|POLYLINE)$/.test(e.t)) continue; const r = (opt.lay[e.lay] || A.lay[e.lay] || {}).rol; if (r !== "tut" || (!tumu && !/DUVAR|WALL|KOLON|COLUMN|PERDE/.test(up(e.lay)))) continue; for (const P of geom(D, e)) for (let i = 0; i + 1 < P.length; i++) SEG.push([P[i], P[i + 1]]); } return SEG; }
+  function planSeg(D, A, opt, p, tumu) { const b = p.b, SEG = []; for (const e of D.E) { if (e.x == null || e.x < b[0] || e.x > b[2] || e.y < b[1] || e.y > b[3]) continue; if (!/^(LINE|LWPOLYLINE|POLYLINE)$/.test(e.t)) continue; const r = (opt.lay[e.lay] || A.lay[e.lay] || {}).rol; if (r !== "tut" || (!tumu && !/DUVAR|WALL|KOLON|COLUMN|PERDE|STRUCTURAL|BEARING|PANEL/.test(up(e.lay)))) continue; for (const P of geom(D, e)) for (let i = 0; i + 1 < P.length; i++) SEG.push([P[i], P[i + 1]]); } return SEG; }
+  /* belediye / proje bağımsız bölüm listesi: Excel (xlsx) ya da CSV; başlık satırından sütunlar bulunur */
+  async function listeOku(f) { const ad = f.name.toLowerCase(); let rows = [];
+    if (/\.xlsx$/.test(ad)) { const z = await K.unzip(new Uint8Array(await f.arrayBuffer())), td = new TextDecoder(), ss = []; if (z["xl/sharedStrings.xml"]) { const x = new DOMParser().parseFromString(td.decode(z["xl/sharedStrings.xml"]), "application/xml"); for (const si of x.getElementsByTagName("si")) ss.push([...si.getElementsByTagName("t")].map(t => t.textContent).join("")); }
+      const sh = Object.keys(z).filter(k => /^xl\/worksheets\/sheet\d+\.xml$/.test(k)).sort()[0]; const x = new DOMParser().parseFromString(td.decode(z[sh]), "application/xml"); const col = r => { let n = 0; for (const ch of (r.match(/^[A-Z]+/) || ["A"])[0]) n = n * 26 + ch.charCodeAt(0) - 64; return n - 1; };
+      for (const row of x.getElementsByTagName("row")) { const a = []; for (const c of row.getElementsByTagName("c")) { const t = c.getAttribute("t"), v = c.getElementsByTagName("v")[0]; const val = t === "s" ? ss[+(v && v.textContent)] : t === "inlineStr" ? [...c.getElementsByTagName("t")].map(q => q.textContent).join("") : v ? v.textContent : ""; a[col(c.getAttribute("r") || "A")] = String(val == null ? "" : val).trim(); } rows.push(Array.from(a, v => v || "")); } }
+    else { const t = new TextDecoder("utf-8").decode(new Uint8Array(await f.arrayBuffer())); const sep = (t.match(/;/g) || []).length > (t.match(/,/g) || []).length ? ";" : /\t/.test(t) ? "\t" : ","; rows = t.split(/\r?\n/).filter(l => l.trim()).map(l => l.split(sep).map(c => c.replace(/^"|"$/g, "").trim())); }
+    /* başlık */ const U = x => String(x).toLocaleUpperCase("tr"); let hi = -1, map = null;
+    for (let i = 0; i < Math.min(rows.length, 30) && hi < 0; i++) { const m = {}; rows[i].forEach((c, j) => { const u = U(c); if (/MAKS.*NUM/.test(u)) m.maksNumId = j; else if (/MAKS/.test(u) && m.maksId == null) m.maksId = j; else if (/ARSA|PAY/.test(u) && m.pay == null) m.pay = j; else if (/NET/.test(u) && m.net == null) m.net = j; else if (/BR[ÜU]T/.test(u) && m.brut == null) m.brut = j; else if (/N[İI]TEL|KULLANIM/.test(u) && m.nitelik == null) m.nitelik = j; else if (/G[İI]R[İI]Ş|BLOK/.test(u) && m.blok == null) m.blok = j; else if (/^KAT|BULUNDU/.test(u) && m.kat == null) m.kat = j; else if (/(B\.?B\.?|BA[ĞG]IMSIZ).*NO|^NO$|S[İI]RA/.test(u) && m.no == null) m.no = j; }); if (m.no != null && (m.net != null || m.pay != null || m.maksId != null)) { hi = i; map = m; } }
+    if (hi < 0) throw new Error("Başlık satırı bulunamadı (BB No, Net, Brüt, Arsa Payı, MAKS sütunları aranıyor)");
+    const out = []; for (const r of rows.slice(hi + 1)) { const g = k => map[k] != null ? r[map[k]] || "" : ""; const no = g("no").replace(/\D+$/, "").trim(); if (!/^\d+$/.test(no)) continue; out.push({ blok: U(g("blok")).replace(/\s*BLOK\s*/, "").replace(/\s*G[İI]R[İI]Ş[İI]?\s*/, "").trim(), no, kat: g("kat"), nitelik: g("nitelik"), net: num(g("net")), brut: num(g("brut")), pay: g("pay").replace(/\s/g, ""), maksNumId: g("maksNumId").replace(/\s/g, ""), maksId: g("maksId").replace(/\s/g, ""), alan: [] }); }
+    if (!out.length) throw new Error("Listede bağımsız bölüm satırı bulunamadı"); return out; }
   /* ---------- üretim ---------- */
   function uret(D, A, opt) {
     const L = D.L, nl = D.nl, sel = A.P.filter(p => p.sec); const pad = 60;
@@ -5905,7 +5927,7 @@ window.LTX={LIB,has:n=>!!LIB[n],expand,cached,per,grup:GRUP,get u(){return LTS/1
     for (const y of Y) { const m = odaRe.exec(y.s); if (m && !/B\.?B\.?\s*NO/i.test(m[1])) { const ad = m[1].replace(/\n/g, " ").trim(); const v = num(m[2]); const h = Math.max(8, y.h || 10); text("ODA_YAZI", y.x, y.y, h, ad); text("ODA_YAZI", y.x, y.y - h * 1.6, h, `alan : ${v.toFixed(2)} m²`); say.oda++; continue; }
       const s = y.s.replace(/[{}]/g, "").trim(); if (/^\d[.,]\d{2}$/.test(s) || /^\d[.,]\d{2}\s*\/\s*\d[.,]\d{2}$/.test(s) || /^\d{2,3}$/.test(s)) kpEt.push({ x: y.x, y: y.y, s }); }
     /* nesneler */
-    const kpMerk = [];
+    const kpMerk = [], kpLay = [];
     for (const e of D.E) {
       const x = e.x != null ? e.x : 0, y = e.y != null ? e.y : 0; const p = inP(x, y), U = up(e.lay);
       if (/^GML_/.test(U)) continue; /* hazır GML tabakalarına dokunma */
@@ -5917,9 +5939,12 @@ window.LTX={LIB,has:n=>!!LIB[n],expand,cached,per,grup:GRUP,get u(){return LTS/1
         for (const P of G) { if (P.length === 2) line(lay, P[0], P[1]); else pline(lay, P); }
         if (r === "kp") { const b = bbox(G); kpMerk.push({ b, x: (b[0] + b[2]) / 2, y: (b[1] + b[3]) / 2, nm: e.nm }); say.kp++; } else say.tut++; continue; }
       if (rol === "sil") { sil.add(e); continue; }
-      if (rol === "kp") { const G = geom(D, e); sil.add(e); for (const P of G) { if (P.length === 2) line("GML_KP", P[0], P[1]); else pline("GML_KP", P); } continue; }
+      if (rol === "kp") { const G = geom(D, e); sil.add(e); for (const P of G) { if (P.length === 2) line("GML_KP", P[0], P[1]); else pline("GML_KP", P); } if (G.length) kpLay.push({ b: bbox(G), pen: /WINDOW|PENCERE/i.test(e.lay) }); continue; }
+      if (e.syn && e.G) for (const P of e.G) { if (P.length === 2) line(e.lay, P[0], P[1]); else pline(e.lay, P); }
       say.tut++;
     }
+    /* tabaka olarak gelen kapı-pencere çizgilerini (patlatılmış bloklar) gruplara ayır */
+    if (kpLay.length) { const gr = kumele(kpLay.map(o => o.b), 3); for (const g of gr) { const w = Math.max(g.b[2] - g.b[0], g.b[3] - g.b[1]); if (w < 30 || w > 600) continue; const pen = kpLay.some(o => o.pen && o.b[0] >= g.b[0] - 1 && o.b[2] <= g.b[2] + 1 && o.b[1] >= g.b[1] - 1 && o.b[3] <= g.b[3] + 1); kpMerk.push({ b: g.b, x: (g.b[0] + g.b[2]) / 2, y: (g.b[1] + g.b[3]) / 2, nm: pen ? "PENCERE" : "KAPI" }); say.kp++; } }
     /* boş duvar açıklıkları: dış cephedekilere pencere kutusu */
     say.pen = 0; say.icAcik = 0; A.icAcik = [];
     if (opt.pencereKapat !== false) for (const p of sel) { for (const o of aciklik(D, A, opt, p, kpMerk.map(k => k.b))) { if (!o.dis) { say.icAcik++; A.icAcik.push(o); continue; } pline("GML_KP", o.P.concat([o.P[0]])); text("GML_KP", o.m[0], o.m[1], 8, `${opt.denizlik}/${opt.penH}`); say.pen++; } }
@@ -5951,7 +5976,8 @@ window.LTX={LIB,has:n=>!!LIB[n],expand,cached,per,grup:GRUP,get u(){return LTS/1
       text("GML_REF", x, yb, h, p.cati ? `CATI : ${f2(p.dos)} / ${f2(p.kot)}` : `${p.kat} : ${f2(p.dos)} / ${f2(p.kot)}`);
       /* B.B.NO yazıları */
       const gir = girisY.filter(y => y.x >= p.b[0] && y.x <= p.b[2] && y.y >= p.b[1] && y.y <= p.b[3]);
-      for (const y of A.Y) { if (!(y.x >= p.b[0] && y.x <= p.b[2] && y.y >= p.b[1] && y.y <= p.b[3])) continue; const m = /B\.?\s*B\.?\s*NO\s*:?\s*\n?\s*([\d\s-]+)/i.exec(y.s); if (!m) continue; const nos = m[1].replace(/\s/g, "").split("-").filter(Boolean);
+      for (const y of A.Y) { if (!(y.x >= p.b[0] && y.x <= p.b[2] && y.y >= p.b[1] && y.y <= p.b[3])) continue; const m = /B\.?\s*B\.?\s*NO\s*:?\s*\n?\s*([\d\s-]+)/i.exec(y.s); if (!m) continue; let nos = m[1].replace(/\s/g, "").split("-").filter(Boolean);
+        /* çok katlı planda tek numara yazılıysa üst katlardakini ekle: kat başına bölüm sayısı kadar artır */ const katSay = p.k0 != null && p.k1 != null ? p.k1 - p.k0 + 1 : 1; if (katSay > 1 && nos.length === 1) { const ayni = A.Y.filter(q => q.x >= p.b[0] && q.x <= p.b[2] && q.y >= p.b[1] && q.y <= p.b[3] && /B\.?\s*B\.?\s*NO/i.test(q.s)).length; const n0 = +nos[0]; nos = Array.from({ length: katSay }, (_, i) => String(n0 + i * ayni)); }
         /* giriş: plandaki en yakın giriş yazısı; yoksa listedeki tek blok */
         let g = ""; if (gir.length) { let bd = 1 / 0; for (const q of gir) { const d = Math.abs(q.x - y.x) + Math.abs(q.y - y.y) * 0.3; if (d < bd) { bd = d; g = (/([A-Z])\s*BLOK/.exec(up(q.s)) || /([A-Z])\s*G[İI]R[İI]Ş/.exec(up(q.s)) || [])[1] || ""; } } }
         else if (opt.girisKarsi) g = opt.girisKarsi(p, y);
@@ -5960,11 +5986,11 @@ window.LTX={LIB,has:n=>!!LIB[n],expand,cached,per,grup:GRUP,get u(){return LTS/1
         if (g && A.girisSay > 1) L_.push(`giris:${g}`);
         L_.push(`bbNo:${nos.join("-")}`);
         if (r.net != null) L_.push(`netAlan:${f2(r.net)}`); if (r.brut != null) L_.push(`brutAlan:${f2(r.brut)}`); if (r.pay) L_.push(`arsaPayi:${r.pay}`); if (r.nitelik) L_.push(`beyanNitelik:${r.nitelik}`);
-        L_.push(`maksNumid:${opt.maksBos ? "" : "?"}`, `maksid:${opt.maksBos ? "" : "?"}`);
+        const mk = (x) => rows.map(r_ => (r_ && r_[x]) || "?").join(" - "); L_.push(`maksNumid:${mk("maksNumId")}`, `maksid:${mk("maksId")}`);
         const th = 10; L_.forEach((s, i) => text("GML_REF", y.x, y.y - i * th * 1.5, th, s)); say.bb++; }
     }
     /* çıktı: ENTITIES içinden silinenleri at, ekleri sona koy; yeni tabakaları LAYER tablosuna ekle; HANDSEED güncelle */
-    const del = new Uint8Array(L.length); for (const e of sil) { for (let k = e.a; k < e.b; k++) del[k] = 1; say.sil++; }
+    const del = new Uint8Array(L.length); for (const e of sil) { if (e.syn) { say.sil++; continue; } for (let k = e.a; k < e.b; k++) del[k] = 1; say.sil++; } for (const e of (D.kapsayici || [])) for (let k = e.a; k < e.b; k++) del[k] = 1;
     /* blok tanımlarının içini boşalt (tanım kalır, dosya küçülür); model/kağıt alanı hariç */
     if (opt.blokBosalt !== false) for (const [nm, b] of Object.entries(D.blocks)) { if (/^\*(MODEL|PAPER)_SPACE/i.test(nm)) continue; for (const e of b.E) for (let k = e.a; k < e.b; k++) del[k] = 1; }
     const out = []; const [ea, eb] = D.sec.ENTITIES;
@@ -5984,7 +6010,7 @@ window.LTX={LIB,has:n=>!!LIB[n],expand,cached,per,grup:GRUP,get u(){return LTS/1
   function layerTabH(L, i) { for (let k = i - 1; k > 0; k--) if (L[k].trim() === "TABLE" && L[k - 1].trim() === "0") { for (let m = k + 1; m < k + 12; m += 2) if (L[m].trim() === "5") return L[m + 1].trim(); return null; } return null; }
   const f = v => (Math.round(v * 1e4) / 1e4).toString();
   const f2 = v => v == null || !isFinite(v) ? "0.00" : Number(v).toFixed(2);
-  window.K3S = { oku, analiz, uret, ROL, katTahmin, _geom: geom, _bbox: bbox, esle, yapOku };
+  window.K3S = { oku, analiz, uret, ROL, katTahmin, _geom: geom, _bbox: bbox, esle, yapOku, listeOku };
 })();
 
 /* ---------- arayüz: 3B Kadastro sekmesinde "Mimari projeyi sadeleştir" ---------- */
@@ -6019,9 +6045,13 @@ window.LTX={LIB,has:n=>!!LIB[n],expand,cached,per,grup:GRUP,get u(){return LTS/1
     b.innerHTML = `<h3 style="margin:6px 0">Kat planları</h3><div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr><th style="${td}"></th><th style="${td}">Başlık</th><th style="${td}">Kat adı</th><th style="${td}">Döşeme (m)</th><th style="${td}">Proje kotu (m)</th><th style="${td}">Duvar nesnesi</th></tr></thead><tbody>${P.map((p, i) => `<tr style="${p.bos ? "opacity:.5" : ""}"><td style="${td}"><input type="checkbox" data-pi="${i}" ${p.sec ? "checked" : ""}></td><td style="${td}">${esc(p.ad)}</td><td style="${td}"><input data-pk="${i}" value="${esc(p.kat)}" style="width:100px"></td><td style="${td}"><input data-pd="${i}" type="number" step="0.01" value="${p.dos}" style="width:70px"></td><td style="${td}"><input data-pt="${i}" type="number" step="0.01" value="${p.kot == null ? "" : p.kot}" placeholder="yaz" style="width:80px"></td><td style="${td}">${p.n}</td></tr>`).join("")}</tbody></table></div>
       <div class="note" style="margin:4px 0">Kat adı: KAT_-2, KAT_0, aynı planda çizilmiş katlar için KAT_0_2 (0, 1 ve 2. kat); çatı planı için CATI. Proje kotu = mimari proje döşeme üst kotu. Boş kalan kotu doldur.</div>
       <div class="row" style="gap:12px;flex-wrap:wrap;margin:8px 0"><label>Kapı yüksekliği (yazı yoksa) <input id="k3sKH" type="number" value="${OPT.kapiH}" style="width:60px"> cm</label><label>Pencere denizliği <input id="k3sPD" type="number" value="${OPT.denizlik}" style="width:60px"> cm</label><label>Pencere yüksekliği <input id="k3sPH" type="number" value="${OPT.penH}" style="width:60px"> cm</label><label><input id="k3sPK" type="checkbox" ${OPT.pencereKapat ? "checked" : ""}> Dış cephedeki boş açıklıkları pencere olarak kapat</label></div>
-      <details><summary style="cursor:pointer">Bağımsız bölüm listesi (${A.BL.length} satır, projeden okundu)</summary><div style="max-height:260px;overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><tr><th style="${td}">Blok</th><th style="${td}">No</th><th style="${td}">Kat</th><th style="${td}">Nitelik</th><th style="${td}">Net</th><th style="${td}">Brüt</th><th style="${td}">Arsa payı</th></tr>${A.BL.map(r => `<tr><td style="${td}">${esc(r.blok)}</td><td style="${td}">${esc(r.no)}</td><td style="${td}">${esc(r.kat)}</td><td style="${td}">${esc(r.nitelik)}</td><td style="${td}">${r.net ?? ""}</td><td style="${td}">${r.brut ?? ""}</td><td style="${td}">${esc(r.pay)}</td></tr>`).join("")}</table></div></details>
+      <details ${A.blKaynak ? "open" : ""}><summary style="cursor:pointer">Bağımsız bölüm listesi (${A.BL.length} satır, ${esc(A.blKaynak || "projeden okundu")}) — değerler düzenlenebilir</summary>
+        <div class="row" style="gap:8px;margin:6px 0;align-items:center;flex-wrap:wrap"><div class="filebtn"><span>📥 Belediye / onaylı liste (Excel ya da CSV)</span><input type="file" id="k3sBL" accept=".xlsx,.csv,.txt"></div><span class="note">Onaylı listedeki net/brüt alan, arsa payı ve MAKS numaraları projedekinin yerine geçer.</span></div>
+        <div style="max-height:320px;overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><tr>${["Blok/Giriş", "No", "Kat", "Nitelik", "Net", "Brüt", "Arsa payı", "MAKS numarataj", "MAKS kimlik"].map(h => `<th style="${td}">${h}</th>`).join("")}</tr>${A.BL.map((r, i) => `<tr>${["blok", "no", "kat", "nitelik", "net", "brut", "pay", "maksNumId", "maksId"].map(k => `<td style="${td}"><input data-bl="${i}" data-k="${k}" value="${esc(r[k] ?? "")}" style="width:${/maks/.test(k) ? 95 : /kat|nitelik/.test(k) ? 80 : 52}px;font-size:12px"></td>`).join("")}</tr>`).join("")}</table></div></details>
       <details style="margin-top:6px"><summary style="cursor:pointer">Tabakalar — ne olacağını seç (${Object.keys(A.lay).length})</summary><div style="max-height:300px;overflow:auto">${Object.entries(A.lay).sort((a, b) => b[1].n - a[1].n).map(([n, v]) => `<div class="row" style="gap:8px;padding:2px 0;align-items:center"><span style="flex:1;font-size:13px">${esc(n)} <span style="opacity:.6">(${v.n})</span></span>${sel("ly", n, (OPT.lay[n] || v).rol)}</div>`).join("")}</div></details>
       <details style="margin-top:6px"><summary style="cursor:pointer">Bloklar — kapı/pencere olanları seç (${Object.keys(A.blk).length})</summary><div style="max-height:300px;overflow:auto">${Object.entries(A.blk).sort((a, b) => b[1].n - a[1].n).map(([n, v]) => `<div class="row" style="gap:8px;padding:2px 0;align-items:center"><span style="flex:1;font-size:13px">${esc(n)} <span style="opacity:.6">(${v.n} · ${esc(v.lay)})</span></span>${sel("bk", n, (OPT.blk[n] || v).rol)}</div>`).join("")}</div></details>`;
+    b.querySelectorAll("[data-bl]").forEach(x => x.onchange = () => { const r = A.BL[+x.dataset.bl], k = x.dataset.k; r[k] = /^(net|brut)$/.test(k) ? parseFloat(String(x.value).replace(",", ".")) : x.value.trim(); });
+    const bf = $("k3sBL"); if (bf) bf.onchange = async e => { const f = e.target.files[0]; if (!f) return; const m = $("k3sMsg"); try { const L = await S.listeOku(f); A.BL = L; A.blKaynak = f.name; m.className = "msg"; m.textContent = `${f.name}: ${L.length} bağımsız bölüm satırı okundu${L.some(r => r.maksId) ? " (MAKS numaralarıyla)" : ""}`; ciz(); } catch (er) { m.className = "msg err"; m.textContent = "Liste okunamadı: " + er.message; } };
     b.querySelectorAll("[data-pi]").forEach(x => x.onchange = () => A.P[+x.dataset.pi].sec = x.checked);
     b.querySelectorAll("[data-pk]").forEach(x => x.onchange = () => { const p = A.P[+x.dataset.pk]; p.kat = x.value.trim().toUpperCase().replace("ÇATI", "CATI"); p.cati = p.kat === "CATI"; });
     b.querySelectorAll("[data-pd]").forEach(x => x.onchange = () => A.P[+x.dataset.pd].dos = parseFloat(x.value));
