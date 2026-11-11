@@ -5523,7 +5523,7 @@ window.LTX={LIB,has:n=>!!LIB[n],expand,cached,per,grup:GRUP,get u(){return LTS/1
     /* bağımsız bölümler */
     const go = /<gen:GenericCityObject gml:id="([^"]+)">\s*<gml:name>([^<]*)<\/gml:name>([\s\S]*?)<\/gen:GenericCityObject>/g; const bbId = new Map();
     while ((m = go.exec(t))) { const a = at(m[3]); if (!/BagimsizBolum/i.test((/<gen:class>([^<]*)/.exec(m[3]) || [])[1] || "") && a.independentSectionNumber == null) continue;
-      const o = { id: m[1], ad: m[2], giris: a.entrance, bbNo: a.independentSectionNumber, blok: a.blockName, netAlan: a.independentSectionPlanNetArea, brutAlan: a.independentSectionPlanGrossArea, arsaPayi: a.propertyLot, beyanNitelik: a.registeredQuality, maksId: a.maksIdentityNumber, maksNumId: a.maksNumaratajIdentityNumber, katTanim: a.registeredFloorDefinition, eklenti: a.registeredInstallation, kisimSay: +a.partCount || 0, net: num(a.independentSectionPlanNetArea), brut: num(a.independentSectionPlanGrossArea), hesNet: num(a.independentSectionCalculatedArea), yon: [].concat(a.independentSectionCardinalDirection || []) };
+      const o = { id: m[1], ad: m[2], giris: a.entrance, bbNo: a.independentSectionNumber, blok: a.blockName, netAlan: a.independentSectionPlanNetArea, brutAlan: a.independentSectionPlanGrossArea, arsaPayi: a.propertyLot, beyanNitelik: a.registeredQuality, maksId: a.maksIdentityNumber, maksNumId: a.maksNumaratajIdentityNumber, katTanim: a.registeredFloorDefinition, eklenti: a.registeredInstallation, kisimSay: +a.partCount || 0, net: num(a.independentSectionPlanNetArea), brut: num(a.independentSectionPlanGrossArea), hesNet: num(a.independentSectionCalculatedArea), hesTur: "brut", yon: [].concat(a.independentSectionCardinalDirection || []) };
       o.kat = katZ(zOf(m[3])); if (o.kat) o.kat.bb.push(o); R.bb.push(o); bbId.set(o.id, o); }
     R.bbAdet = R.bb.length;
     /* kısımlar (odalar) ve 3B yüzeyler */
@@ -5565,8 +5565,8 @@ window.LTX={LIB,has:n=>!!LIB[n],expand,cached,per,grup:GRUP,get u(){return LTS/1
     const root = $("k3Root"); if (!root || root.dataset.ok) return; root.dataset.ok = 1;
     root.innerHTML = `
     <div class="card" style="border-left:5px solid var(--accent)">
-      <h2>🏢 3B Sayısal Yapı Modeli — Ön Kontrol</h2>
-      <p class="note" style="margin:2px 0 8px">Doğrulama uygulamasına yüklemeden önce hazırladığın DXF'i burada aç. Katlar, bağımsız bölümler ve hacimler okunur; kapanmayan ya da kesişen sınırlar, eksik bağımsız bölüm yazıları, numara tekrarları, arsa payı toplamı, kat kotları, referans hattı ve beyan–hesap alan farkları kontrol edilir. Hatalı yerler DXF'e işaretlenip geri verilir.</p>
+      <h2 id="k3OnH">④ Ön kontrol — 3B Sayısal Yapı Modeli</h2>
+      <p class="note" style="margin:2px 0 8px">Sadeleştirilmiş DXF buraya kendiliğinden gelir; elle hazırladığın DXF'i ya da üretilen GML'i de açabilirsin. Katlar, bağımsız bölümler ve hacimler okunur; kapanmayan ya da kesişen sınırlar, eksik bağımsız bölüm yazıları, numara tekrarları, arsa payı toplamı, kat kotları, referans hattı ve beyan–hesap alan farkları kontrol edilir. Hatalı yerler DXF'e işaretlenip geri verilir.</p>
       <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">
         <div class="filebtn"><span>📂 3B yapı DXF'i ya da GML seç</span><input type="file" id="k3F" accept=".dxf,.DXF,.gml,.GML,.xml"></div>
         <button id="k3Dxf" type="button" disabled>⬇ Hata işaretli DXF</button>
@@ -5642,7 +5642,7 @@ window.LTX={LIB,has:n=>!!LIB[n],expand,cached,per,grup:GRUP,get u(){return LTS/1
   function bbTablo() {
     const rows = []; for (const k of R.kat) for (const o of k.bb) rows.push({ k, o });
     rows.sort((a, b) => (a.o.giris || "").localeCompare(b.o.giris || "") || parseInt(a.o.bbNo) - parseInt(b.o.bbNo));
-    $("k3BB").innerHTML = rows.length ? `<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr><th></th><th>Giriş</th><th>Kat</th><th>BB No</th><th>Nitelik</th><th>Net (beyan)</th><th>Net (hesap)</th><th>Fark</th><th>Brüt</th><th>Arsa payı</th><th>Hacimler</th></tr></thead><tbody>${rows.map(({ k, o }) => { const f = o.hesNet != null && isFinite(o.net) ? o.hesNet - o.net : NaN, kot = Math.abs(f) > Math.max(1, (o.net || 0) * 0.05); return `<tr><td><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:${bbRenk(o)}"></span></td><td>${esc(o.giris || "")}</td><td>${esc(k.ad.replace(/^KAT_/, ""))}</td><td>${esc(o.bbNo)}</td><td>${esc(o.beyanNitelik || "")}</td><td>${fmt(o.net)}</td><td>${o.hesNet != null ? fmt(o.hesNet) : "–"}</td><td style="color:${kot ? "#c62828;font-weight:600" : "inherit"}">${isFinite(f) ? (f > 0 ? "+" : "") + fmt(f) : "–"}</td><td>${fmt(o.brut)}</td><td>${esc(o.arsaPayi || "")}</td><td style="font-size:12px">${esc((o.odalar || []).map(s => s.ad).join(", "))}</td></tr>`; }).join("")}</tbody></table><div class="note" style="margin-top:4px">Net (hesap): bağımsız bölüm yazısının bulunduğu hacimden kapılarla ulaşılan hacimlerin çizilen alanları toplamı (ortak alanlara ve başka bölümlere geçilmez, kolon/şaft boşlukları düşülür). Doğrulama uygulamasının hesabı ile küçük farklar olabilir.</div>` : `<div class="note">Bağımsız bölüm yazısı (bbNo:, netAlan:, …) bulunamadı.</div>`;
+    $("k3BB").innerHTML = rows.length ? `<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr><th></th><th>Giriş</th><th>Kat</th><th>BB No</th><th>Nitelik</th><th>Net (beyan)</th><th>${rows.some(r_ => r_.o.hesTur === "brut") ? "Brüt (hesap)" : "Net (hesap)"}</th><th>Fark</th><th>Brüt</th><th>Arsa payı</th><th>Hacimler</th></tr></thead><tbody>${rows.map(({ k, o }) => { const taban = o.hesTur === "brut" ? o.brut : o.net; const f = o.hesNet != null && isFinite(taban) ? o.hesNet - taban : NaN, kot = Math.abs(f) > Math.max(1, (taban || 0) * 0.05); return `<tr><td><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:${bbRenk(o)}"></span></td><td>${esc(o.giris || "")}</td><td>${esc(k.ad.replace(/^KAT_/, ""))}</td><td>${esc(o.bbNo)}</td><td>${esc(o.beyanNitelik || "")}</td><td>${fmt(o.net)}</td><td>${o.hesNet != null ? fmt(o.hesNet) : "–"}</td><td style="color:${kot ? "#c62828;font-weight:600" : "inherit"}">${isFinite(f) ? (f > 0 ? "+" : "") + fmt(f) : "–"}</td><td>${fmt(o.brut)}</td><td>${esc(o.arsaPayi || "")}</td><td style="font-size:12px">${esc((o.odalar || []).map(s => s.ad).join(", "))}</td></tr>`; }).join("")}</tbody></table><div class="note" style="margin-top:4px">Net (hesap): bağımsız bölüm yazısının bulunduğu hacimden kapılarla ulaşılan hacimlerin çizilen alanları toplamı (ortak alanlara ve başka bölümlere geçilmez, kolon/şaft boşlukları düşülür). Doğrulama uygulamasının hesabı ile küçük farklar olabilir.</div>` : `<div class="note">Bağımsız bölüm yazısı (bbNo:, netAlan:, …) bulunamadı.</div>`;
     $("k3BB").querySelectorAll("th,td").forEach(c => c.style.cssText += ";border-bottom:1px solid #ddd;padding:4px 6px;text-align:left");
   }
   /* ---- 2B plan ---- */
@@ -5759,7 +5759,7 @@ window.LTX={LIB,has:n=>!!LIB[n],expand,cached,per,grup:GRUP,get u(){return LTS/1
     else if (t === "INSERT" && (derin || 0) < 4) { const b = D.blocks[e.nm]; if (b) { const ins = insM(g, b.base); const MM = T === M && M ? p => M(ins(p)) : ins; for (const c of b.E) { if (/^(TEXT|MTEXT|ATTDEF|ATTRIB|HATCH|DIMENSION|SOLID|POINT)$/.test(c.t)) continue; for (const P of geom(D, c, MM, (derin || 0) + 1)) out.push(P); } } }
     return out;
   }
-  function insM(g, base) { const x = +gv(g, "10") || 0, y = +gv(g, "20") || 0, sx = +(gv(g, "41") || 1), sy = +(gv(g, "42") || gv(g, "41") || 1), r = (+gv(g, "50") || 0) * Math.PI / 180, c = Math.cos(r), s = Math.sin(r); return p => { const u = (p[0] - base[0]) * sx, v = (p[1] - base[1]) * sy; return [x + u * c - v * s, y + u * s + v * c]; }; }
+  function insM(g, base) { const x = +gv(g, "10") || 0, y = +gv(g, "20") || 0, sx = +(gv(g, "41") || 1), sy = +(gv(g, "42") || 1), r = (+gv(g, "50") || 0) * Math.PI / 180, c = Math.cos(r), s = Math.sin(r); return p => { const u = (p[0] - base[0]) * sx, v = (p[1] - base[1]) * sy; return [x + u * c - v * s, y + u * s + v * c]; }; }
   const bbox = Ps => { let a = 1 / 0, b = 1 / 0, c = -1 / 0, d = -1 / 0; for (const P of Ps) for (const p of P) { if (p[0] < a) a = p[0]; if (p[1] < b) b = p[1]; if (p[0] > c) c = p[0]; if (p[1] > d) d = p[1]; } return [a, b, c, d]; };
   function yazi(D, e) { if (e.syn) return e.Y; const g = grp(D, e); let s = ""; for (const [c, v] of g) if (c === "1" || c === "3") s += v; return { s: e.t === "MTEXT" ? mt(s) : mt(s.replace(/%%[uUoO]/g, "")), x: +gv(g, "10"), y: +gv(g, "20"), h: +gv(g, "40") || 0, x1: gv(g, "11") != null ? +gv(g, "11") : null, y1: gv(g, "21") != null ? +gv(g, "21") : null }; }
 
@@ -5931,10 +5931,12 @@ window.LTX={LIB,has:n=>!!LIB[n],expand,cached,per,grup:GRUP,get u(){return LTS/1
     for (const e of D.E) {
       const x = e.x != null ? e.x : 0, y = e.y != null ? e.y : 0; const p = inP(x, y), U = up(e.lay);
       if (/^GML_/.test(U)) continue; /* hazır GML tabakalarına dokunma */
+      if (!p && e.t === "INSERT") { /* ekleme noktası plan dışında olan bloklar (ör. tüm kolonları tutan blok): parçaları planlara göre ayıkla */ const rol0 = (opt.lay[e.lay] || A.lay[e.lay] || {}).rol || "sil", br0 = (opt.blk[e.nm] || A.blk[e.nm] || {}).rol || "sil"; let r0 = rol0 === "sil" ? (br0 === "kp" ? "kp" : "sil") : br0 === "sil" ? (rol0 === "kp" ? "kp" : "sil") : br0; if (br0 === "tut" && /KOLON|COLUMN/.test(up(e.nm)) && !(opt.blk[e.nm])) r0 = "tut"; sil.add(e);
+        if (r0 === "tut") { const G = geom(D, e); let n0 = 0; for (const P of G) { if (!P.length || !inP(P[0][0], P[0][1])) continue; if (P.length === 2) line(e.lay, P[0], P[1]); else pline(e.lay, P); n0++; } if (n0) say.tut++; } continue; }
       if (!p) { sil.add(e); continue; }
       if (/^(TEXT|MTEXT|HATCH|DIMENSION|SOLID|POINT|ATTDEF|LEADER|MULTILEADER|MLEADER|IMAGE|WIPEOUT|OLE2FRAME|ACAD_TABLE|TOLERANCE|3DFACE|REGION|RAY|XLINE)$/.test(e.t)) { sil.add(e); continue; }
       const rol = (opt.lay[e.lay] || A.lay[e.lay] || {}).rol || "sil";
-      if (e.t === "INSERT") { const br = (opt.blk[e.nm] || A.blk[e.nm] || {}).rol || "sil"; const r = rol === "sil" ? (br === "kp" ? "kp" : "sil") : br === "sil" ? (rol === "kp" ? "kp" : "sil") : br;
+      if (e.t === "INSERT") { const br = (opt.blk[e.nm] || A.blk[e.nm] || {}).rol || "sil"; let r = rol === "sil" ? (br === "kp" ? "kp" : "sil") : br === "sil" ? (rol === "kp" ? "kp" : "sil") : br; if (br === "tut" && /KOLON|COLUMN/.test(up(e.nm)) && !(opt.blk[e.nm])) r = "tut";
         sil.add(e); if (r === "sil") continue; const G = geom(D, e); if (!G.length) continue; const lay = r === "kp" ? "GML_KP" : e.lay;
         for (const P of G) { if (P.length === 2) line(lay, P[0], P[1]); else pline(lay, P); }
         if (r === "kp") { const b = bbox(G); kpMerk.push({ b, x: (b[0] + b[2]) / 2, y: (b[1] + b[3]) / 2, nm: e.nm }); say.kp++; } else say.tut++; continue; }
@@ -6020,14 +6022,14 @@ window.LTX={LIB,has:n=>!!LIB[n],expand,cached,per,grup:GRUP,get u(){return LTS/1
   let D = null, A = null, AD = "", OPT = { lay: {}, blk: {}, denizlik: 90, penH: 150, kapiH: 210, pencereKapat: true };
   function kur() {
     const root = $("k3Root"); if (!root || $("k3sCard")) return; const c = document.createElement("div"); c.className = "card"; c.id = "k3sCard"; c.style.borderLeft = "5px solid #2e7d32";
-    c.innerHTML = `<h2>📐 Mimari projeyi sadeleştir</h2>
-      <p class="note" style="margin:2px 0 8px">Mimardan gelen ham DXF'i (2007 ve üstü) aç. Kat planları başlıklarından bulunur; kesit, görünüş, vaziyet, antet, tefriş, ölçü, tarama ve aks silinir. Kapı-pencere blokları patlatılıp yükseklik yazılarıyla <b>GML_KP</b>'ye alınır, dış cephedeki boş pencere açıklıkları kutu olarak kapatılır. Oda adı ve alanı yazıya çevrilir, kat yazıları ve bağımsız bölüm listesindeki bilgiler <b>GML_REF</b>'e yazılır. Çıktı kadastro3b.net'e yüklenecek DXF'tir.</p>
-      <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><div class="filebtn"><span>📂 Ham mimari DXF'i seç</span><input type="file" id="k3sF" accept=".dxf,.DXF"></div><button id="k3sGo" type="button" disabled style="background:#2e7d32;color:#fff;border-color:#2e7d32">⬇ Sadeleştirilmiş DXF üret</button></div>
-      <div id="k3sMsg" class="msg" style="margin-top:6px"></div><div id="k3sBody" style="display:none;margin-top:8px"></div>
-      <div id="k3sYap" style="display:none;margin-top:10px;border-top:1px solid #ddd;padding-top:8px"><h3 style="margin:4px 0">Yapı aplikasyon projesi (GML_BINA ve referans çizgileri)</h3>
-        <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><div class="filebtn"><span>📂 YAP DXF'i seç (isteğe bağlı)</span><input type="file" id="k3sYF" accept=".dxf,.DXF"></div><label>Sıfır kotu (ortometrik) <input id="k3sSZ" type="number" step="0.01" style="width:90px" placeholder="520,34"> m</label></div>
+    c.innerHTML = `<h2>📐 Mimari projeyi hazırla</h2>
+      <div id="k3sYap" style="margin:6px 0 10px;padding-bottom:8px;border-bottom:1px solid #ddd"><h3 style="margin:4px 0">① Yapı aplikasyon projesi (YAP) yükle</h3>
+        <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><div class="filebtn"><span>📂 YAP DXF'i seç</span><input type="file" id="k3sYF" accept=".dxf,.DXF"></div><label>Sıfır kotu (ortometrik) <input id="k3sSZ" type="number" step="0.01" style="width:90px" placeholder="520,34"> m</label></div>
         <div id="k3sYInfo" class="note" style="margin-top:6px">YAP verilirse bina sınırı GML_BINA'ya, köşe kotları GML_REF'e yazılır; bina üzerinde ve her kat planında aynı iki köşeden geçen referans çizgisi otomatik çizilir (plan, bina sınırına duvarlardan oturtulur).</div>
-        <div id="k3sED" style="display:none;margin-top:6px;padding:8px;border-radius:8px;background:#fff3cd;color:#5d4500">⚠ YAP <b>ED50</b> datumunda. kadastro3b ITRF (TUREF) ister. Bir ortak noktanın ITRF − ED50 farkını gir: <label>ΔY <input id="k3sDY" type="number" step="0.001" style="width:90px"></label> <label>ΔX <input id="k3sDX" type="number" step="0.001" style="width:90px"></label> m <span style="opacity:.8">(ör. aynı parsel köşesinin TKGM'deki ITRF koordinatı − YAP'taki ED50 koordinatı)</span></div></div>`;
+        <div id="k3sED" style="display:none;margin-top:6px;padding:8px;border-radius:8px;background:#fff3cd;color:#5d4500">⚠ YAP <b>ED50</b> datumunda. Kadastro sistemi ITRF (TUREF) ister. Bir ortak noktanın ITRF − ED50 farkını gir: <label>ΔY <input id="k3sDY" type="number" step="0.001" style="width:90px"></label> <label>ΔX <input id="k3sDX" type="number" step="0.001" style="width:90px"></label> m <span style="opacity:.8">(ör. aynı parsel köşesinin TKGM'deki ITRF koordinatı − YAP'taki ED50 koordinatı)</span></div></div>
+      <h3 style="margin:4px 0">② Mimari projeyi (ham DXF) yükle → ③ sadeleştir</h3><p class="note" style="margin:2px 0 8px">Mimardan gelen ham DXF'i (2007 ve üstü) aç. Kat planları başlıklarından bulunur; kesit, görünüş, vaziyet, antet, tefriş, ölçü, tarama ve aks silinir. Kapı-pencere blokları patlatılıp yükseklik yazılarıyla <b>GML_KP</b>'ye alınır, dış cephedeki boş pencere açıklıkları kutu olarak kapatılır. Oda adı ve alanı yazıya çevrilir, kat yazıları ve bağımsız bölüm listesindeki bilgiler <b>GML_REF</b>'e yazılır. Çıktı aşağıda ④ ön kontrole ve ⑤ GML üretimine kendiliğinden aktarılır.</p>
+      <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><div class="filebtn"><span>📂 Ham mimari DXF'i seç</span><input type="file" id="k3sF" accept=".dxf,.DXF"></div><button id="k3sGo" type="button" disabled style="background:#2e7d32;color:#fff;border-color:#2e7d32">③ Sadeleştir ve DXF'i indir</button></div>
+      <div id="k3sMsg" class="msg" style="margin-top:6px"></div><div id="k3sBody" style="display:none;margin-top:8px"></div>`;
     root.prepend(c);
     $("k3sF").addEventListener("change", async e => { const f = e.target.files[0]; if (!f) return; await ac(f); e.target.value = ""; });
     $("k3sGo").onclick = uret;
@@ -6066,7 +6068,7 @@ window.LTX={LIB,has:n=>!!LIB[n],expand,cached,per,grup:GRUP,get u(){return LTS/1
     let R; try { R = S.uret(D, A, OPT); } catch (e) { console.error(e); m.className = "msg err"; m.textContent = "Üretilemedi: " + e.message; return; }
     const nm = AD.replace(/\.dxf$/i, "") + "_3B.dxf", data = new Blob([R.dxf], { type: "application/octet-stream" });
     if (typeof saveFile === "function") await saveFile(nm, data, m); else { const a = document.createElement("a"); a.href = URL.createObjectURL(data); a.download = nm; a.click(); }
-    const s = R.say; const refY = s.ref && s.ref.length ? ` · referans çizgileri: ${s.ref.map(r => r.ad.replace(/ PLANI.*$/, "") + (r.iyi ? " ✓" : " ⚠ kontrol et")).join(", ")}` : ""; m.className = "msg"; m.textContent = `${nm}: ${s.sil} nesne silindi, ${s.tut} duvar/kolon nesnesi kaldı · ${s.kp} kapı-pencere bloğu GML_KP'ye alındı (${s.kpYazi} yükseklik yazısı) · ${s.pen} dış açıklık pencere olarak kapatıldı · ${s.oda} oda yazısı · ${s.bb} bağımsız bölüm bilgisi. ${refY}. Eksik kalan: maksNumid ve maksid değerleri (adres.nvi.gov.tr)${OPT.yap ? "" : ", GML_BINA (yapı aplikasyon projesi) ve GML_REF referans çizgileri"}, çatı mahya çizgileri (GML_MAHYA).`; }
+    try { window.dispatchEvent(new CustomEvent("k3s-cikti", { detail: { ad: nm, text: R.dxf } })); } catch (e) { } const s = R.say; const refY = s.ref && s.ref.length ? ` · referans çizgileri: ${s.ref.map(r => r.ad.replace(/ PLANI.*$/, "") + (r.iyi ? " ✓" : " ⚠ kontrol et")).join(", ")}` : ""; m.className = "msg"; m.textContent = `${nm}: ${s.sil} nesne silindi, ${s.tut} duvar/kolon nesnesi kaldı · ${s.kp} kapı-pencere bloğu GML_KP'ye alındı (${s.kpYazi} yükseklik yazısı) · ${s.pen} dış açıklık pencere olarak kapatıldı · ${s.oda} oda yazısı · ${s.bb} bağımsız bölüm bilgisi. ${refY}. Eksik kalan: maksNumid ve maksid değerleri (adres.nvi.gov.tr)${OPT.yap ? "" : ", GML_BINA (yapı aplikasyon projesi) ve GML_REF referans çizgileri"}, çatı mahya çizgileri (GML_MAHYA).`; }
   const go = () => kur(); if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", go); else setTimeout(go, 0);
 })();
 
@@ -6159,7 +6161,7 @@ window.LTX={LIB,has:n=>!!LIB[n],expand,cached,per,grup:GRUP,get u(){return LTS/1
   function acikliklar(W, KP, o) {
     o = o || {}; const mx = o.max || 300, mn = o.min || 3;
     const caps = W.map(sg => { const dx = sg[1][0] - sg[0][0], dy = sg[1][1] - sg[0][1], L = Math.hypot(dx, dy); return { sg, L, d: [dx / L, dy / L], m: [(sg[0][0] + sg[1][0]) / 2, (sg[0][1] + sg[1][1]) / 2] }; }).filter(c => c.L >= (o.capMin || 5) && c.L <= (o.capMax || 45));
-    const g = 100, G = new Map(); const ek = (k, v) => { if (!G.has(k)) G.set(k, []); G.get(k).push(v); };
+    const g = 100 * (o.u || 1), G = new Map(); const ek = (k, v) => { if (!G.has(k)) G.set(k, []); G.get(k).push(v); };
     W.forEach((sg, i) => { const i0 = Math.floor(Math.min(sg[0][0], sg[1][0]) / g), i1 = Math.floor(Math.max(sg[0][0], sg[1][0]) / g), j0 = Math.floor(Math.min(sg[0][1], sg[1][1]) / g), j1 = Math.floor(Math.max(sg[0][1], sg[1][1]) / g); for (let a = i0; a <= i1; a++) for (let b = j0; b <= j1; b++) ek(a + "," + b, i); });
     const KG = new Map(); KP.forEach(sg => { const m = [(sg[0][0] + sg[1][0]) / 2, (sg[0][1] + sg[1][1]) / 2]; const k = Math.floor(m[0] / g) + "," + Math.floor(m[1] / g); if (!KG.has(k)) KG.set(k, []); KG.get(k).push(sg); });
     const CG = new Map(); caps.forEach(c => { const k = Math.floor(c.m[0] / g) + "," + Math.floor(c.m[1] / g); if (!CG.has(k)) CG.set(k, []); CG.get(k).push(c); });
@@ -6169,7 +6171,7 @@ window.LTX={LIB,has:n=>!!LIB[n],expand,cached,per,grup:GRUP,get u(){return LTS/1
     // en kısa açıklıktan başla
     const C = [];
     for (const c of caps) { const w = [-c.d[1], c.d[0]];
-      for (const q of komsu(CG, c.m[0], c.m[1], mx)) { if (q === c) continue; if (Math.abs(c.d[0] * q.d[1] - c.d[1] * q.d[0]) > 0.05 || Math.abs(q.L - c.L) > 5) continue; const v = [q.m[0] - c.m[0], q.m[1] - c.m[1]], t = Math.abs(v[0] * w[0] + v[1] * w[1]), lat = v[0] * c.d[0] + v[1] * c.d[1]; if (Math.abs(lat) > 3 || t < mn || t > mx) continue; C.push([t, c, q]); } }
+      for (const q of komsu(CG, c.m[0], c.m[1], mx)) { if (q === c) continue; if (Math.abs(c.d[0] * q.d[1] - c.d[1] * q.d[0]) > 0.05 || Math.abs(q.L - c.L) > 5 * (o.u || 1)) continue; const v = [q.m[0] - c.m[0], q.m[1] - c.m[1]], t = Math.abs(v[0] * w[0] + v[1] * w[1]), lat = v[0] * c.d[0] + v[1] * c.d[1]; if (Math.abs(lat) > 3 * (o.u || 1) || t < mn || t > mx) continue; C.push([t, c, q]); } }
     C.sort((a, b) => a[0] - b[0]);
     for (const [t, c, q] of C) { if (used.has(c) || used.has(q)) continue;
       const mm = [(c.m[0] + q.m[0]) / 2, (c.m[1] + q.m[1]) / 2];
@@ -6186,7 +6188,7 @@ window.LTX={LIB,has:n=>!!LIB[n],expand,cached,per,grup:GRUP,get u(){return LTS/1
 
   // W: duvar segmentleri, KP: kapı/pencere çizgileri, T: [{s, x, y}] oda yazıları → her yazı için oda poligonu
   function odalar(W, KP, T, o) {
-    o = o || {}; W = W.concat(kapakla(W, o)); const A = acikliklar(W, KP, { hepsi: true, max: o.max || 300 }); let ac = A.map(() => true); let R, sonuc;
+    o = o || {}; if (o.uzat !== 0) W = uzat(W, o.uzat || 8); W = W.concat(kapakla(W, o)); const A = acikliklar(W, KP, { hepsi: true, max: o.max || 300 }); let ac = A.map(() => true); let R, sonuc;
     for (let it = 0; it < 4; it++) {
       const S = W.slice(); A.forEach((a, k) => { if (ac[k]) S.push([a.P[0], a.P[3]], [a.P[1], a.P[2]]); }); for (const sg of (o.ek || [])) S.push(sg);
       R = duzlem(S, o.tol || 0.5, o.kap == null ? 3 : o.kap, o.kap2 == null ? 50 : o.kap2);
@@ -6205,7 +6207,7 @@ window.LTX={LIB,has:n=>!!LIB[n],expand,cached,per,grup:GRUP,get u(){return LTS/1
 
   // kapaksız biten çift duvar çizgilerine uç kapağı ekle
   function kapakla(W, o) {
-    o = o || {}; const tol = o.tol || 0.5, mx = o.max || 45, g = 50; const G = new Map();
+    o = o || {}; const tol = o.tol || 0.5, mx = o.max || 45, g = Math.max(50, mx * 1.2); const G = new Map();
     const put = (k, v) => { if (!G.has(k)) G.set(k, []); G.get(k).push(v); };
     W.forEach((sg, i) => { const i0 = Math.floor(Math.min(sg[0][0], sg[1][0]) / g), i1 = Math.floor(Math.max(sg[0][0], sg[1][0]) / g), j0 = Math.floor(Math.min(sg[0][1], sg[1][1]) / g), j1 = Math.floor(Math.max(sg[0][1], sg[1][1]) / g); for (let a = i0; a <= i1; a++) for (let b = j0; b <= j1; b++) put(a + "," + b, i); });
     const yak = (p, r) => { const out = new Set(); const i0 = Math.floor((p[0] - r) / g), i1 = Math.floor((p[0] + r) / g), j0 = Math.floor((p[1] - r) / g), j1 = Math.floor((p[1] + r) / g); for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) for (const k of (G.get(i + "," + j) || [])) out.add(k); return out; };
@@ -6214,12 +6216,108 @@ window.LTX={LIB,has:n=>!!LIB[n],expand,cached,per,grup:GRUP,get u(){return LTS/1
     W.forEach((sg, i) => { for (const e of [0, 1]) { const p = sg[e], q = sg[1 - e]; let serbest = true; for (const k of yak(p, tol + 1)) { if (k === i) continue; if (sd(p, W[k][0], W[k][1]) <= tol) { serbest = false; break; } } if (serbest) { const L = Math.hypot(p[0] - q[0], p[1] - q[1]); if (L > 0) U.push({ p, d: [(p[0] - q[0]) / L, (p[1] - q[1]) / L], i }); } } });
     const UG = new Map(); U.forEach((u, k) => { const key = Math.floor(u.p[0] / g) + "," + Math.floor(u.p[1] / g); if (!UG.has(key)) UG.set(key, []); UG.get(key).push(k); });
     const es = k => { const u = U[k]; let b = -1, bd = mx; const i0 = Math.floor((u.p[0] - mx) / g), i1 = Math.floor((u.p[0] + mx) / g), j0 = Math.floor((u.p[1] - mx) / g), j1 = Math.floor((u.p[1] + mx) / g);
-      for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) for (const m of (UG.get(i + "," + j) || [])) { if (m === k) continue; const v = U[m]; if (v.d[0] * u.d[0] + v.d[1] * u.d[1] < 0.995) continue; const dx = v.p[0] - u.p[0], dy = v.p[1] - u.p[1], d = Math.hypot(dx, dy); if (d < 3 || d >= bd) continue; if (Math.abs(dx * u.d[0] + dy * u.d[1]) > Math.max(1, 0.08 * d)) continue; bd = d; b = m; } return b; };
+      for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) for (const m of (UG.get(i + "," + j) || [])) { if (m === k) continue; const v = U[m]; if (v.d[0] * u.d[0] + v.d[1] * u.d[1] < 0.995) continue; const dx = v.p[0] - u.p[0], dy = v.p[1] - u.p[1], d = Math.hypot(dx, dy); if (d < mx / 15 || d >= bd) continue; if (Math.abs(dx * u.d[0] + dy * u.d[1]) > Math.max(tol * 2, 0.08 * d)) continue; bd = d; b = m; } return b; };
     const C = [], done = new Set();
     U.forEach((u, k) => { if (done.has(k)) return; const m = es(k); if (m >= 0 && !done.has(m) && es(m) === k) { done.add(k); done.add(m); C.push([u.p, U[m].p]); } });
     return C;
   }
   window.K3G = Object.assign(window.K3G || {}, { kapakla });
+
+  // serbest uçları kendi doğrultusunda en çok d kadar uzat (T/köşe birleşimindeki küçük boşluklar)
+  function uzat(W, d, tol) {
+    tol = tol || 0.5; const g = Math.max(50, d * 6), G = new Map(); const put = (k, v) => { if (!G.has(k)) G.set(k, []); G.get(k).push(v); };
+    W = W.map(s => [s[0].slice(), s[1].slice()]);
+    W.forEach((sg, i) => { const i0 = Math.floor((Math.min(sg[0][0], sg[1][0]) - d) / g), i1 = Math.floor((Math.max(sg[0][0], sg[1][0]) + d) / g), j0 = Math.floor((Math.min(sg[0][1], sg[1][1]) - d) / g), j1 = Math.floor((Math.max(sg[0][1], sg[1][1]) + d) / g); for (let a = i0; a <= i1; a++) for (let b = j0; b <= j1; b++) put(a + "," + b, i); });
+    const sd = (p, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], LL = dx * dx + dy * dy; let t = LL ? ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / LL : 0; t = Math.max(0, Math.min(1, t)); return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy); };
+    const W0 = W.map(s => [s[0].slice(), s[1].slice()]); let n = 0;
+    W.forEach((sg, i) => { for (const e of [0, 1]) { const p = W0[i][e], q = W0[i][1 - e]; const C = G.get(Math.floor(p[0] / g) + "," + Math.floor(p[1] / g)) || [];
+        let serbest = true; for (const k of C) { if (k === i) continue; if (sd(p, W0[k][0], W0[k][1]) <= tol) { serbest = false; break; } } if (!serbest) continue;
+        const L = Math.hypot(p[0] - q[0], p[1] - q[1]); if (!L) continue; const dx = (p[0] - q[0]) / L, dy = (p[1] - q[1]) / L; let bs = d + 1e-9;
+        for (const k of C) { if (k === i) continue; const A_ = W0[k][0], B_ = W0[k][1]; const ex = B_[0] - A_[0], ey = B_[1] - A_[1], dd = dx * ey - dy * ex; if (Math.abs(dd) < 1e-9) continue; const s_ = ((A_[0] - p[0]) * ey - (A_[1] - p[1]) * ex) / dd, u = ((A_[0] - p[0]) * dy - (A_[1] - p[1]) * dx) / dd; const el = Math.hypot(ex, ey); if (s_ > 0 && s_ < bs && u >= -tol / el && u <= 1 + tol / el) bs = s_; }
+        if (bs <= d) { sg[e] = [p[0] + dx * bs, p[1] + dy * bs]; n++; } } });
+    W.uzatilan = n; return W;
+  }
+  window.K3G = Object.assign(window.K3G || {}, { uzat });
+
+  // ---- raster yöntemi: ham çizimler için (küçük boşlukları kapatma ile) ----
+  // W: duvar segmentleri, B: ek engel segmentleri (kapı kasası/eşik, pencere kutusu), T: [{x,y}], o: {hc, rc}
+  function odalarR(W, B, T, o) {
+    o = o || {}; if (o.kapanis === false || o._ic) return odalarR0(W, B, T, o);
+    const u = o.u || 1; const W2 = uzat(W, 8 * u, 0.5 * u); const A = acikliklar(W2.concat(kapakla(W2, { max: 45 * u, tol: 0.5 * u })), B, { hepsi: true, max: (o.max || 320) * u, min: 25 * u, capMin: 5 * u, capMax: 45 * u });
+    const kenar = a => [[a.P[0], a.P[3]], [a.P[1], a.P[2]]];
+    let ac = A.map(() => true);
+    for (let it = 0; it < 3; it++) { const ek = []; A.forEach((a, k) => { if (ac[k]) ek.push(...kenar(a)); });
+      const R = odalarR0(W, B.concat(ek), T, Object.assign({}, o, { _ic: true, bolge: true })); const G = R.bolge; if (!G) break;
+      const yaziL = new Set(R.odalar.map((r, i) => r && r.L).filter(Boolean)); let deg = false;
+      A.forEach((a, k) => { if (!ac[k] || a.kp) return; const c = [(a.P[0][0] + a.P[2][0]) / 2, (a.P[0][1] + a.P[2][1]) / 2]; const yan = kenar(a).map(([p, q]) => { const m = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2]; let nx = m[0] - c[0], ny = m[1] - c[1]; const l = Math.hypot(nx, ny) || 1; return G(m[0] + nx / l * (G.hc * 2.5 + 2), m[1] + ny / l * (G.hc * 2.5 + 2)); });
+        const t = yan.map(L => L > 0 && yaziL.has(L)), bos = yan.map(L => L > 0 && !yaziL.has(L)); if ((t[0] && bos[1]) || (t[1] && bos[0]) || (bos[0] && bos[1])) { ac[k] = false; deg = true; } });
+      if (!deg) break; }
+    const ek2 = []; A.forEach((a, k) => { if (ac[k]) ek2.push(...kenar(a)); }); const R2 = odalarR0(W, B.concat(ek2), T, Object.assign({}, o, { _ic: true })); R2.aciklik = A.filter((_, k) => ac[k]); return R2;
+  }
+  function odalarR0(W, B, T, o) {
+    o = o || {}; const u = o.u || 1; let hc = o.hc || 3 * u; const rc = o.rc != null ? o.rc : 12 * u;
+    let x0 = 1 / 0, y0 = 1 / 0, x1 = -1 / 0, y1 = -1 / 0; for (const t of T) { x0 = Math.min(x0, t.x); y0 = Math.min(y0, t.y); x1 = Math.max(x1, t.x); y1 = Math.max(y1, t.y); }
+    const pad = o.pad || 4000 * u; x0 -= pad; y0 -= pad; x1 += pad; y1 += pad;
+    const ALL = W.concat(B).filter(sg => { const ax = Math.min(sg[0][0], sg[1][0]), bx = Math.max(sg[0][0], sg[1][0]), ay = Math.min(sg[0][1], sg[1][1]), by = Math.max(sg[0][1], sg[1][1]); return bx >= x0 && ax <= x1 && by >= y0 && ay <= y1; });
+    { let a = 1 / 0, b = 1 / 0, c = -1 / 0, d = -1 / 0; for (const sg of ALL) for (const p of sg) { a = Math.min(a, p[0]); b = Math.min(b, p[1]); c = Math.max(c, p[0]); d = Math.max(d, p[1]); } const mg = (o.rDis === 0 ? 0 : (o.rDis || 150 * u) * 1.3) + 50 * u; x0 = Math.max(x0, a - mg); y0 = Math.max(y0, b - mg); x1 = Math.min(x1, c + mg); y1 = Math.min(y1, d + mg); }
+    while (((x1 - x0) / hc) * ((y1 - y0) / hc) > (o.maxHucre || 4e7)) hc *= 1.5;
+    const Wd = Math.ceil((x1 - x0) / hc) + 1, Hd = Math.ceil((y1 - y0) / hc) + 1, N = Wd * Hd; const g = new Uint8Array(N);
+    for (const sg of ALL) { const n = Math.ceil(Math.hypot(sg[1][0] - sg[0][0], sg[1][1] - sg[0][1]) / (hc * 0.5)) + 1; for (let k = 0; k <= n; k++) { const i = Math.floor((sg[0][0] + (sg[1][0] - sg[0][0]) * k / n - x0) / hc), j = Math.floor((sg[0][1] + (sg[1][1] - sg[0][1]) * k / n - y0) / hc); if (i >= 0 && j >= 0 && i < Wd && j < Hd) g[j * Wd + i] = 1; } }
+    const r = Math.round(rc / hc);
+    const dil = (src, R_) => { const t = new Uint8Array(N), out = new Uint8Array(N); for (let j = 0; j < Hd; j++) { const b = j * Wd; let last = -1e9; for (let i = 0; i < Wd; i++) { if (src[b + i]) last = i; if (i - last <= R_) t[b + i] = 1; } last = 1e9; for (let i = Wd - 1; i >= 0; i--) { if (src[b + i]) last = i; if (last - i <= R_) t[b + i] = 1; } } for (let i = 0; i < Wd; i++) { let last = -1e9; for (let j = 0; j < Hd; j++) { if (t[j * Wd + i]) last = j; if (j - last <= R_) out[j * Wd + i] = 1; } last = 1e9; for (let j = Hd - 1; j >= 0; j--) { if (t[j * Wd + i]) last = j; if (last - j <= R_) out[j * Wd + i] = 1; } } return out; };
+    let eng = g.slice(); if (r > 0) { const d = dil(g, r); const inv = new Uint8Array(N); for (let k = 0; k < N; k++) inv[k] = d[k] ? 0 : 1; const e2 = dil(inv, r); eng = new Uint8Array(N); for (let k = 0; k < N; k++) eng[k] = (e2[k] ? 0 : 1) | g[k]; }
+    if (o.rDis !== 0) { const R_ = Math.round((o.rDis || 150 * u) / hc); const d = dil(g, R_); const inv = new Uint8Array(N); for (let k = 0; k < N; k++) inv[k] = d[k] ? 0 : 1; const e2 = dil(inv, R_); /* kapanmış zarf: e2==0 */ const dis = new Uint8Array(N); const st = []; for (let i = 0; i < Wd; i++) { st.push(i, (Hd - 1) * Wd + i); } for (let j = 0; j < Hd; j++) st.push(j * Wd, j * Wd + Wd - 1);
+      while (st.length) { const q = st.pop(); if (dis[q] || !e2[q]) continue; dis[q] = 1; const qi = q % Wd; if (qi > 0) st.push(q - 1); if (qi < Wd - 1) st.push(q + 1); if (q >= Wd) st.push(q - Wd); if (q < N - Wd) st.push(q + Wd); }
+      for (let k = 0; k < N; k++) if (dis[k]) eng[k] = 1; }
+    if (o.ro !== 0) { const R_ = Math.round((o.ro || 15 * u) / hc); if (R_ > 0) { const er = dil(eng, R_); /* boşluğun aşınmışı: er==0 */ const kal = new Uint8Array(N); for (let k = 0; k < N; k++) kal[k] = er[k] ? 0 : 1; const ac = dil(kal, R_); for (let k = 0; k < N; k++) if (!eng[k] && !ac[k]) eng[k] = 1; } }
+    // etiketleme
+    const lab = new Int32Array(N); const res = [];
+    T.forEach((t, ti) => { const i = Math.floor((t.x - x0) / hc), j = Math.floor((t.y - y0) / hc); let k = j * Wd + i; if (i < 0 || j < 0 || i >= Wd || j >= Hd) { res.push(null); return; }
+      if (eng[k]) { let f = -1; for (let rr = 1; rr < 6 && f < 0; rr++) for (let v = -rr; v <= rr && f < 0; v++) for (let u = -rr; u <= rr; u++) { const ii = i + u, jj = j + v; if (ii >= 0 && jj >= 0 && ii < Wd && jj < Hd && !eng[jj * Wd + ii]) { f = jj * Wd + ii; break; } } if (f < 0) { res.push(null); return; } k = f; }
+      if (lab[k]) { res.push({ ayni: lab[k] - 1 }); return; }
+      const L = ti + 1; const st = [k]; lab[k] = L; let n = 0, kenar = false;
+      while (st.length) { const q = st.pop(); n++; const qi = q % Wd, qj = (q - qi) / Wd; if (qi === 0 || qj === 0 || qi === Wd - 1 || qj === Hd - 1) kenar = true;
+        if (qi > 0 && !eng[q - 1] && !lab[q - 1]) { lab[q - 1] = L; st.push(q - 1); } if (qi < Wd - 1 && !eng[q + 1] && !lab[q + 1]) { lab[q + 1] = L; st.push(q + 1); } if (qj > 0 && !eng[q - Wd] && !lab[q - Wd]) { lab[q - Wd] = L; st.push(q - Wd); } if (qj < Hd - 1 && !eng[q + Wd] && !lab[q + Wd]) { lab[q + Wd] = L; st.push(q + Wd); } }
+      res.push({ L, n, kenar }); });
+    let bolgeF = null; if (o.bolge) { let L2 = T.length + 1; for (let k = 0; k < N; k++) { if (eng[k] || lab[k]) continue; L2++; const st = [k]; lab[k] = L2; while (st.length) { const q = st.pop(); const qi = q % Wd; for (const nb of [qi > 0 ? q - 1 : -1, qi < Wd - 1 ? q + 1 : -1, q >= Wd ? q - Wd : -1, q < N - Wd ? q + Wd : -1]) { if (nb < 0 || eng[nb] || lab[nb]) continue; lab[nb] = L2; st.push(nb); } } }
+      bolgeF = (x, y) => { const i = Math.floor((x - x0) / hc), j = Math.floor((y - y0) / hc); if (i < 0 || j < 0 || i >= Wd || j >= Hd) return 0; return lab[j * Wd + i]; }; bolgeF.hc = hc;
+      return { odalar: res.map(r_ => r_ && r_.L ? { L: r_.L } : r_), bolge: bolgeF }; }
+    // kontur + duvara oturtma
+    const sd = (p, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], LL = dx * dx + dy * dy; const t = LL ? ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / LL : 0; return [Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy), t]; };
+    const GG = new Map(), gs = 100; W.concat(B).forEach((sg, i) => { const i0 = Math.floor(Math.min(sg[0][0], sg[1][0]) / gs), i1 = Math.floor(Math.max(sg[0][0], sg[1][0]) / gs), j0 = Math.floor(Math.min(sg[0][1], sg[1][1]) / gs), j1 = Math.floor(Math.max(sg[0][1], sg[1][1]) / gs); if ((i1 - i0 + 1) * (j1 - j0 + 1) > 400) return; for (let a = i0; a <= i1; a++) for (let b = j0; b <= j1; b++) { const kk = a + "," + b; if (!GG.has(kk)) GG.set(kk, []); GG.get(kk).push(sg); } });
+    const oturt = P => { const n = P.length; if (n < 3) return P; const lines = [];
+      for (let i = 0; i < n; i++) { const a = P[i], b = P[(i + 1) % n]; const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy); const m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; let best = null, bd = hc * 2.6;
+        if (L > hc * 2) { const C = GG.get(Math.floor(m[0] / gs) + "," + Math.floor(m[1] / gs)) || []; for (const sg of C) { const sx = sg[1][0] - sg[0][0], sy = sg[1][1] - sg[0][1], sl = Math.hypot(sx, sy); if (sl < 1e-9) continue; if (Math.abs(dx * sy - dy * sx) / (L * sl) > 0.03) continue; const [dd, t] = sd(m, sg[0], sg[1]); const ext = (L / 2) / sl; if (t < -ext || t > 1 + ext) continue; if (dd < bd) { bd = dd; best = sg; } } }
+        lines.push(best ? [best[0], best[1]] : [a, b]); }
+      const ks = (l1, l2) => { const [p, q] = l1, [r_, s_] = l2; const d = (q[0] - p[0]) * (s_[1] - r_[1]) - (q[1] - p[1]) * (s_[0] - r_[0]); if (Math.abs(d) < 1e-9 * Math.hypot(q[0] - p[0], q[1] - p[1]) * Math.hypot(s_[0] - r_[0], s_[1] - r_[1]) + 1e-12) return null; const t = ((r_[0] - p[0]) * (s_[1] - r_[1]) - (r_[1] - p[1]) * (s_[0] - r_[0])) / d; return [p[0] + t * (q[0] - p[0]), p[1] + t * (q[1] - p[1])]; };
+      const Q = []; for (let i = 0; i < n; i++) { const l0 = lines[(i - 1 + n) % n], l1 = lines[i]; const x = ks(l0, l1); if (x && Math.hypot(x[0] - P[i][0], x[1] - P[i][1]) < hc * 4) Q.push(x); else { const pr = (l, p) => { const [d, t] = sd(p, l[0], l[1]); return [l[0][0] + t * (l[1][0] - l[0][0]), l[0][1] + t * (l[1][1] - l[0][1])]; }; Q.push(pr(l0, P[i]), pr(l1, P[i])); } }
+      return sade(Q, 0.05); };
+    const dp = (P, e) => { if (P.length < 3) return P; const a = P[0], b = P[P.length - 1]; let m = -1, md = 0; const L = Math.hypot(b[0] - a[0], b[1] - a[1]); for (let i = 1; i < P.length - 1; i++) { const p = P[i]; const d = L ? Math.abs((b[0] - a[0]) * (a[1] - p[1]) - (a[0] - p[0]) * (b[1] - a[1])) / L : Math.hypot(p[0] - a[0], p[1] - a[1]); if (d > md) { md = d; m = i; } } if (md <= e) return [a, b]; return dp(P.slice(0, m + 1), e).slice(0, -1).concat(dp(P.slice(m), e)); };
+    const kontur = L => { // bölgenin tüm sınır halkaları
+      let i0 = Wd, i1 = 0, j0 = Hd, j1 = 0; for (let k = 0; k < N; k++) if (lab[k] === L) { const i = k % Wd, j = (k - i) / Wd; if (i < i0) i0 = i; if (i > i1) i1 = i; if (j < j0) j0 = j; if (j > j1) j1 = j; }
+      const on = (i, j) => i >= 0 && j >= 0 && i < Wd && j < Hd && lab[j * Wd + i] === L; const nx = new Map(); const key = (i, j) => i * 1000003 + j;
+      for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) { if (!on(i, j)) continue; if (!on(i, j - 1)) nx.set(key(i, j), [i + 1, j]); if (!on(i + 1, j)) nx.set(key(i + 1, j), [i + 1, j + 1]); if (!on(i, j + 1)) nx.set(key(i + 1, j + 1), [i, j + 1]); if (!on(i - 1, j)) nx.set(key(i, j + 1), [i, j]); }
+      const R = [], seen = new Set(); for (const [k0] of nx) { if (seen.has(k0)) continue; const C = []; let k = k0, ci = Math.floor(k0 / 1000003), cj = k0 - ci * 1000003, gd = 0; while (!seen.has(k) && gd++ < 4e6) { seen.add(k); C.push([x0 + ci * hc, y0 + cj * hc]); const q = nx.get(k); if (!q) break; ci = q[0]; cj = q[1]; k = key(ci, cj); } if (C.length > 3) R.push(C); }
+      return R; };
+    const out = T.map((t, ti) => { const r_ = res[ti]; if (!r_ || r_.ayni != null || r_.kenar) return r_ && r_.kenar ? { sizinti: true } : r_ && r_.ayni != null ? { ayni: r_.ayni } : null;
+      const R = kontur(r_.L).map(C => { const half = Math.floor(C.length / 2); const Q = dp(C.slice(0, half + 1), hc * 0.75).slice(0, -1).concat(dp(C.slice(half).concat([C[0]]), hc * 0.75).slice(0, -1)); return Q; }).filter(Q => Q.length >= 3).sort((a, b) => Math.abs(area(b)) - Math.abs(area(a)));
+      if (!R.length) return null; const dis = oturt(R[0]); const ic = R.slice(1).filter(h => Math.abs(area(h)) > hc * hc * 20).map(oturt);
+      return { dis, ic, L: r_.L, alan: Math.abs(area(dis)) - ic.reduce((s_, h) => s_ + Math.abs(area(h)), 0), raster: r_.n * hc * hc }; });
+    return { odalar: out, hc, dbg: o.dbg ? { eng, lab, Wd, Hd, x0, y0 } : null };
+  }
+  window.K3G = Object.assign(window.K3G || {}, { odalarR });
+
+  // karma: önce kapı sembolleri olmadan (kanat/yay oda alanını bölmesin), birleşen odalarda kapı çizgileriyle tekrar
+  function odalarH(W, KPtum, KRkut, T, o) {
+    o = o || {}; const sc2 = o.sc2 || 1e-4;
+    const R1 = odalarR(W, KRkut, T, o); const bir = new Set(); R1.odalar.forEach((r, i) => { if (r && r.ayni != null) { bir.add(i); bir.add(r.ayni); } });
+    if (!bir.size) return R1;
+    const R2 = odalarR(W, KPtum.concat(KRkut), T, o); const bir2 = new Set(); R2.odalar.forEach((r, i) => { if (r && r.ayni != null) { bir2.add(i); bir2.add(r.ayni); } });
+    const out = R1.odalar.map((r, i) => { const r2 = R2.odalar[i]; const iyi = x => x && x.dis; if (bir.has(i)) return !bir2.has(i) && iyi(r2) ? Object.assign({}, r2, { kapili: true }) : r; if (!iyi(r) && iyi(r2) && !bir2.has(i)) return r2;
+      if (iyi(r) && iyi(r2) && !bir2.has(i) && T[i].alan != null) { const d1 = Math.abs(r.alan * sc2 - T[i].alan), d2 = Math.abs(r2.alan * sc2 - T[i].alan); if (d2 < d1 * 0.5) return r2; } return r; });
+    return { odalar: out, hc: R1.hc, aciklik: R1.aciklik };
+  }
+  window.K3G = Object.assign(window.K3G || {}, { odalarH });
   window.K3G = Object.assign(window.K3G || {}, { duzlem, yuzBul, delikler, sade, area, pip });
 })();
 // ---------- Hazırlık DXF → model → TKGM CityGML ----------
@@ -6303,10 +6401,21 @@ window.LTX={LIB,has:n=>!!LIB[n],expand,cached,per,grup:GRUP,get u(){return LTS/1
       m = /^(.+?):\s*([\d.,]+)\s*m²/.exec(e.s); if (m && /^GML_(KISIM|BALKON_DIS|ORTAKALAN_IC)$/.test(e.lay)) { odaY.push({ s: m[1].trim(), alan: num(m[2]), x: e.x, y: e.y }); return; } if (e.lay === "GML_ORTAKALAN_IC" && !/:/.test(e.s) && !/^[iİI]c\s*yap[iı]$/i.test(e.s.trim()) && e.s.length < 40) odaY.push({ s: e.s.trim(), alan: null, x: e.x, y: e.y }); });
     const odaT = odaY.filter(o => !ATLA.test(up(o.s)));
     const R = K.odalar(W.filter(s => planda(s[0])), KPS.filter(s => planda(s[0])), odaT, { ek: KR_.filter(P => planda(P[0])).flatMap(P => segs({ P, kapali: true })) });
+    // ham çizimlerde vektör yöntemi kapanmayan odaları kaçırır: gerekirse raster yöntemiyle tamamla
+    { const sc0 = donus(katE[0].ref).s, sc2 = sc0 * sc0; const say = new Map(); R.odalar.forEach(r => { if (r) say.set(r.f, (say.get(r.f) || 0) + 1); });
+      const iyiV = R.odalar.map((r, i) => r && say.get(r.f) === 1 && (odaT[i].alan == null || Math.abs(r.alan * sc2 - odaT[i].alan) <= Math.max(0.3, odaT[i].alan * 0.06)));
+      const oran = iyiV.filter(Boolean).length / Math.max(1, odaT.length); meta._vektorOran = oran;
+      if (oran < 0.97 && meta.raster !== false) { const KRs = KR_.filter(P => planda(P[0])).flatMap(P => P.map((p, i) => [p, P[(i + 1) % P.length]]));
+        const RH = K.odalarH(W.filter(sg => planda(sg[0])), KPS.filter(sg => planda(sg[0])), KRs, odaT, { u: 0.01 / sc0, sc2 }); let n = 0;
+        R.odalar = R.odalar.map((r, i) => { if (iyiV[i]) return r; const h = RH.odalar[i]; if (h && h.dis) { n++; return { dis: h.dis, ic: h.ic || [], alan: h.alan, f: { A: Math.abs(K.area(h.dis)), P: h.dis, R: [], raster: true } }; } return r; });
+        uyari.unshift(`Ham çizim: ${odaT.length} odanın ${Math.round(oran * odaT.length)}'i çizgilerden doğrudan kapandı, ${n} oda boşluk kapatma (raster) yöntemiyle bulundu — bunları gözle kontrol et`);
+        const ek_ = (RH.aciklik || []).map(a => ({ P: a.P, m: [(a.P[0][0] + a.P[2][0]) / 2, (a.P[0][1] + a.P[2][1]) / 2], kp: a.kp, dis: a.dis })); R.aciklik = R.aciklik.concat(ek_); } }
     // açıklıklar: dikdörtgenler + kapı eşleşmeleri
     const kpT = T.filter(e => (e.lay === "GML_KP" || e.lay === "GML_KPENCERE") && planda([e.x, e.y]));
-    const acik = []; const ekle = (P, kaynak) => { const c = [(P[0][0] + P[1][0] + P[2][0] + P[3][0]) / 4, (P[0][1] + P[1][1] + P[2][1] + P[3][1]) / 4]; if (acik.some(a => Math.hypot(a.c[0] - c[0], a.c[1] - c[1]) < 10)) return; acik.push({ P: P.slice(0, 4), c, kaynak }); };
-    for (const P of KR_) if (planda(P[0])) ekle(P, "kp"); for (const a of R.aciklik) if (a.kp || a.dis) ekle(a.P, "es");
+    const scA = donus(katE[0].ref).s; const acik = []; const ekle = (P, kaynak) => { const Ls = [Math.hypot(P[1][0] - P[0][0], P[1][1] - P[0][1]), Math.hypot(P[2][0] - P[1][0], P[2][1] - P[1][1])]; const en_ = Math.max(...Ls) * scA, kal_ = Math.min(...Ls) * scA; if (en_ < 0.45 || en_ > 4.5 || kal_ > 0.8 || kal_ < 0.02) return; const c = [(P[0][0] + P[1][0] + P[2][0] + P[3][0]) / 4, (P[0][1] + P[1][1] + P[2][1] + P[3][1]) / 4]; if (acik.some(a => Math.hypot(a.c[0] - c[0], a.c[1] - c[1]) * scA < 0.3)) return; acik.push({ P: P.slice(0, 4), c, kaynak }); };
+    const Wp = W.filter(sg => planda(sg[0])); const sdW = (p) => { let b_ = 1 / 0; for (const sg of Wp) { const e_ = 0.05 / scA; if (p[0] < Math.min(sg[0][0], sg[1][0]) - e_ || p[0] > Math.max(sg[0][0], sg[1][0]) + e_ || p[1] < Math.min(sg[0][1], sg[1][1]) - e_ || p[1] > Math.max(sg[0][1], sg[1][1]) + e_) continue; const dx = sg[1][0] - sg[0][0], dy = sg[1][1] - sg[0][1], LL = dx * dx + dy * dy; let t = LL ? ((p[0] - sg[0][0]) * dx + (p[1] - sg[0][1]) * dy) / LL : 0; t = Math.max(0, Math.min(1, t)); const d = Math.hypot(p[0] - sg[0][0] - t * dx, p[1] - sg[0][1] - t * dy); if (d < b_) b_ = d; } return b_; };
+    const pervaz = P => { if (P.length !== 4) return false; const L0 = Math.hypot(P[1][0] - P[0][0], P[1][1] - P[0][1]), L1 = Math.hypot(P[2][0] - P[1][0], P[2][1] - P[1][1]); const kisa = L0 < L1 ? [[P[0], P[1]], [P[2], P[3]]] : [[P[1], P[2]], [P[3], P[0]]]; const tol_ = 0.04 / scA; const uzun = L0 < L1 ? [[P[1], P[2]], [P[3], P[0]]] : [[P[0], P[1]], [P[2], P[3]]]; const dg = ([a_, b_]) => sdW([(a_[0] + b_[0]) / 2, (a_[1] + b_[1]) / 2]) < tol_; return kisa.every(dg) || uzun.every(dg); };
+    let nPer = 0; for (const P of KR_) if (planda(P[0]) && (meta._vektorOran >= 0.97 || pervaz(P))) { nPer++; ekle(P, "kp"); } meta._pervaz = nPer; for (const a of R.aciklik) if (a.kp || a.dis) ekle(a.P, "es");
     for (const a of acik) { let b = null, d = 1 / 0; for (const t of kpT) { const dd = Math.hypot(t.x - a.c[0], t.y - a.c[1]); if (dd < d) { d = dd; b = t; } } const L = [Math.hypot(a.P[1][0] - a.P[0][0], a.P[1][1] - a.P[0][1]), Math.hypot(a.P[2][0] - a.P[1][0], a.P[2][1] - a.P[1][1])]; const en = Math.max(...L);
       const s = b && d < Math.max(en * 1.5, 150) ? b.s.replace(/^\s*(dis|kisim|bb)\s*:\s*/i, "") : ""; const m2 = /^\s*(\d+(?:[.,]\d+)?)\s*\/\s*(\d+(?:[.,]\d+)?)/.exec(s), m1 = /^\s*(\d+(?:[.,]\d+)?)\s*$/.exec(s);
       if (m2) { a.alt = num(m2[1]) / 100; a.ust = num(m2[2]) / 100; a.tip = a.alt < 0.05 ? "kapi" : "pencere"; } else if (m1) { a.alt = 0; a.ust = num(m1[1]) / 100; a.tip = "kapi"; } else { a.alt = a.kaynak === "es" && a.dis ? 0.9 : 0; a.ust = a.tip === "pencere" ? 2.4 : 2.1; a.tip = "kapi"; uyari.push("Yüksekliği yazılmamış açıklık (" + a.c.map(v => v.toFixed(0)).join(", ") + ")"); }
@@ -6332,7 +6441,7 @@ window.LTX={LIB,has:n=>!!LIB[n],expand,cached,per,grup:GRUP,get u(){return LTS/1
     for (let h = 0; h < Q.length; h++) { const o = Q[h], x = sahip.get(o); for (const q of (komsu.get(o) || [])) { if (sahip.has(q) || q.ortak || q.kat !== o.kat) continue; sahip.set(q, x); Q.push(q); } }
     for (const [o, x] of sahip) x.odalar.push(o);
     for (const x of BBl) { const net = num(x.netAlan); if (isFinite(net) && net > 0) { const top = x.odalar.filter(o => !o.cls).reduce((t, o) => t + (o.alan || 0), 0); if (Math.abs(top - net) > Math.max(1, net * 0.03)) uyari.push(`bbNo:${x.bbNo}: kısımların yazılı alan toplamı ${top.toFixed(2)} m², beyan net ${net} m²`); } }
-    return { E, bina, sifir, kos, bref, katlar, katE, cati, odalar, acik, BB: BBl, donus, meta, uyari, R };
+    return { E, bina, sifir, kos, bref, katlar, katE, cati, odalar, acik, BB: BBl, donus, meta, uyari, R, W, KPS, KR: KR_ };
   }
   window.K3G = Object.assign(window.K3G || {}, { dxfOku, model, kisimTip });
 })();
@@ -6348,7 +6457,7 @@ window.LTX={LIB,has:n=>!!LIB[n],expand,cached,per,grup:GRUP,get u(){return LTS/1
   const poly = (id, R, H) => `<gml:Polygon gml:id="${id}"><gml:exterior>${ring(R)}</gml:exterior>${(H || []).map(h => `<gml:interior>${ring(h)}</gml:interior>`).join("")}</gml:Polygon>`;
   const ms = (inner) => `<gml:MultiSurface><gml:surfaceMember>${inner}</gml:surfaceMember></gml:MultiSurface>`;
   const at = (t, n, v) => `<gen:${t}Attribute name="${n}"><gen:value>${esc(v)}</gen:value></gen:${t}Attribute>`;
-  const S = (n, v) => at("string", n, v), I = (n, v) => at("int", n, v), D = (n, v) => at("double", n, v);
+  const S = (n, v) => at("string", n, v), I = (n, v) => at("int", n, /^-?\d+$/.test(String(v == null ? "" : v).trim()) ? String(v).trim() : -1), D = (n, v) => at("double", n, isFinite(parseFloat(String(v).replace(",", "."))) ? String(parseFloat(String(v).replace(",", "."))) : 0);
   const z = (P, zz) => P.map(p => [p[0], p[1], zz]);
   const cw = P => K.area(P) > 0 ? P.slice().reverse() : P.slice(); const ccw = P => K.area(P) < 0 ? P.slice().reverse() : P.slice();
   const katTanim = n => n < 0 ? `${-n}.Bodrum Kat` : n === 0 ? "Zemin Kat" : `${n}.Normal Kat`;
@@ -6470,13 +6579,31 @@ window.LTX={LIB,has:n=>!!LIB[n],expand,cached,per,grup:GRUP,get u(){return LTS/1
   const AL = [["ada", "Ada"], ["parsel", "Parsel"], ["takbis", "TAKBİS taşınmaz no"], ["mahalle", "TAKBİS mahalle ref. no"], ["binaMaks", "Bina MAKS kimlik no"], ["blok", "Bina/blok adı", "A"], ["onay", "Proje onay tarihi", "", "date"], ["asansor", "Asansör sayısı (boş: otomatik)"]];
   function kur() {
     const root = $("k3Root"); if (!root || $("k3gCard")) return; const c = document.createElement("div"); c.className = "card"; c.id = "k3gCard"; c.style.borderLeft = "5px solid #6a1b9a";
-    c.innerHTML = `<h3 style="margin:0 0 6px">🧊 Kadastro GML'i üret <span style="font-size:11px;font-weight:normal;color:#6a1b9a">deneme</span></h3>
-      <div class="hint" style="margin-bottom:6px">Yüklemeye hazır DXF'ten (GML_BINA + SıfırKotu, GML_REF çizgileri ve KAT etiketleri, BB blokları, oda yazıları, GML_KP) TKGM'nin istediği CityGML dosyasını burada üretir. Odalar duvar çizgilerinden kapalı alan olarak bulunur.</div>
-      <div class="filebtn"><span>📂 Hazırlık DXF'ini seç</span><input type="file" id="k3gF" accept=".dxf,.DXF"></div>
+    c.innerHTML = `<h3 style="margin:0 0 6px">⑤ Kadastro GML'i üret <span style="font-size:11px;font-weight:normal;color:#6a1b9a">deneme</span></h3>
+      <div class="hint" style="margin-bottom:6px">③'teki sadeleştirilmiş DXF buraya kendiliğinden gelir (ya da elle hazırladığın DXF'i seç). Odalar duvar çizgilerinden kapalı alan olarak bulunur; kapanmayan çizimlerde küçük boşluklar otomatik kapatılır. Bilgileri girip TKGM'nin istediği CityGML dosyasını üret.</div>
+      <div class="filebtn"><span>📂 Başka bir hazırlık DXF'i seç</span><input type="file" id="k3gF" accept=".dxf,.DXF"></div>
       <div id="k3gMeta" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:6px;margin:8px 0">${AL.map(([k, t, v, ty]) => `<label style="font-size:12px">${t}<input data-gm="${k}" type="${ty || "text"}" value="${v || ""}" style="width:100%"></label>`).join("")}</div>
       <div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn" id="k3gGo" disabled>🧊 GML üret ve indir</button></div>
       <div id="k3gMsg" class="msg" style="margin-top:6px"></div><div id="k3gOz" style="max-height:320px;overflow:auto;font-size:12px"></div>`;
-    const s = $("k3sCard"); if (s && s.parentNode === root) s.after(c); else root.prepend(c);
+    root.appendChild(c);
+    // ⑥ kadastro sistemine yükleme kartı
+    const y = document.createElement("div"); y.className = "card"; y.id = "k3yCard"; y.style.borderLeft = "5px solid #1565c0";
+    y.innerHTML = `<h3 style="margin:0 0 6px">⑥ Kadastro sistemine yükle</h3><ol style="margin:4px 0 6px 18px;padding:0;font-size:13px;line-height:1.6"><li>⑤'te inen GML dosyasını <b>3B Bina Doğrulama</b> sayfasına yükle.</li><li>Doğrulama hata verirse hata metnini buraya (Claude'a) yaz ya da ekran görüntüsünü gönder; DXF'te düzeltip GML'i yeniden üret.</li><li>Geçerse verilen doğrulama kodunu ve PDF'i sakla.</li></ol>
+      <div class="row" style="gap:8px;flex-wrap:wrap"><a class="btn" id="k3yGit" href="https://3dbinadogrula.tkgm.gov.tr" target="_blank" rel="noopener" style="text-decoration:none">🌐 3dbinadogrula.tkgm.gov.tr'yi aç</a></div>`;
+    root.appendChild(y);
+    // adım çubuğu
+    const a = document.createElement("div"); a.className = "card"; a.id = "k3Adim"; a.style.cssText = "position:sticky;top:0;z-index:5;padding:8px 10px";
+    const AD_ = [["yap", "① YAP", "k3sYap"], ["mim", "② Mimari proje", "k3sF"], ["sad", "③ Sadeleştir", "k3sGo"], ["kon", "④ Ön kontrol + liste", "k3OnH"], ["gml", "⑤ GML üret", "k3gCard"], ["yuk", "⑥ Kadastroya yükle", "k3yCard"]];
+    a.innerHTML = `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><b style="font-size:13px;margin-right:4px">3B kadastro adımları:</b>${AD_.map(([k, t]) => `<button type="button" data-adim="${k}" style="padding:4px 10px;border-radius:14px;font-size:12px">${t}</button>`).join("")}</div>`;
+    root.prepend(a);
+    a.querySelectorAll("[data-adim]").forEach(bt => bt.onclick = () => { const h = AD_.find(q => q[0] === bt.dataset.adim); const el = h && document.getElementById(h[2]); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); });
+    const tamam = k => { const bt = a.querySelector(`[data-adim="${k}"]`); if (bt && !/✓/.test(bt.textContent)) { bt.textContent += " ✓"; bt.style.background = "#e8f5e9"; bt.style.borderColor = "#2e7d32"; bt.style.color = "#1b5e20"; } };
+    window.K3G.adimTamam = tamam;
+    const on = (id, ev, k) => { const el = document.getElementById(id); if (el) el.addEventListener(ev, () => tamam(k)); };
+    on("k3sYF", "change", "yap"); on("k3sF", "change", "mim"); on("k3F", "change", "kon"); on("k3yGit", "click", "yuk");
+    window.addEventListener("k3s-cikti", ev => { tamam("sad"); const d = ev.detail || {}; if (!d.text) return; TXT = d.text; AD = d.ad || "sadelestirilmis.dxf";
+      try { const f = new File([d.text], AD, { type: "application/dxf" }); const inp = $("k3F"); if (inp && window.DataTransfer) { const dt = new DataTransfer(); dt.items.add(f); inp.files = dt.files; inp.dispatchEvent(new Event("change")); } } catch (e) { }
+      mesaj("Sadeleştirilmiş DXF alındı, odalar aranıyor…"); setTimeout(() => { try { M = K.model(TXT); $("k3gGo").disabled = false; ozet(); } catch (e) { M = null; mesaj("Okunamadı: " + e.message, true); } }, 60); });
     $("k3gF").addEventListener("change", async e => { const f = e.target.files[0]; if (!f) return; e.target.value = ""; await ac(f); });
     $("k3gGo").onclick = uret;
     try { const kay = JSON.parse(localStorage.getItem("k3gMeta") || "{}"); c.querySelectorAll("[data-gm]").forEach(i => { if (kay[i.dataset.gm] != null && i.dataset.gm !== "asansor") i.value = kay[i.dataset.gm]; }); } catch (e) { }
@@ -6503,7 +6630,7 @@ window.LTX={LIB,has:n=>!!LIB[n],expand,cached,per,grup:GRUP,get u(){return LTS/1
     let G; try { M = K.model(TXT); G = K.gml(M, meta); } catch (e) { mesaj("GML üretilemedi: " + e.message, true); return; }
     const ad = `${meta.ada}_${meta.parsel}_${meta.blok || "A"}_A-CAD.gml`; const blob = new Blob([G.xml], { type: "application/gml+xml" });
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = ad; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
-    mesaj(`${ad} indirildi: ${G.istat.kat} kat, ${G.istat.bb} bağımsız bölüm, ${G.istat.oda} kısım, ${G.istat.ortak} ortak alan · aşağıdaki kontrol ve 3B görünüm bu dosyadan`);
+    if (K.adimTamam) K.adimTamam("gml"); mesaj(`${ad} indirildi: ${G.istat.kat} kat, ${G.istat.bb} bağımsız bölüm, ${G.istat.oda} kısım, ${G.istat.ortak} ortak alan · aşağıdaki kontrol ve 3B görünüm bu dosyadan`);
     try { const f = new File([blob], ad, { type: "application/gml+xml" }); const inp = $("k3F"); if (inp && window.DataTransfer) { const dt = new DataTransfer(); dt.items.add(f); inp.files = dt.files; inp.dispatchEvent(new Event("change")); } } catch (e) { }
   }
   const go = () => setTimeout(kur, 50); if (typeof document === "undefined") return; if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", go); else go();
