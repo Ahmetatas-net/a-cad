@@ -5845,6 +5845,47 @@ window.LTX={LIB,has:n=>!!LIB[n],expand,cached,per,grup:GRUP,get u(){return LTS/1
       out.push({ P, m: mm, en: bt, dis: disYakin(mm[0], mm[1]) }); }
     return out;
   }
+  /* bina sınırını (m) plan duvarlarına (çizim birimi) oturt: benzerlik dönüşümü, ölçek sabit (k) */
+  function esle(B, SEG, k) {
+    const n = B.length, L = SEG.map(s => ({ s, L: Math.hypot(s[1][0] - s[0][0], s[1][1] - s[0][1]) })).filter(o => o.L > 50);
+    /* hızlı mesafe: ızgara */
+    const cs = 50, G = new Map(); const key = (x, y) => Math.floor(x / cs) + "," + Math.floor(y / cs);
+    for (const o of L) { const s = o.s, m = Math.ceil(o.L / cs) + 1; for (let i = 0; i <= m; i++) { const x = s[0][0] + (s[1][0] - s[0][0]) * i / m, y = s[0][1] + (s[1][1] - s[0][1]) * i / m; const kk = key(x, y); if (!G.has(kk)) G.set(kk, []); const a = G.get(kk); if (a[a.length - 1] !== o) a.push(o); } }
+    const sd = (p, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], LL = dx * dx + dy * dy; let t = LL ? ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / LL : 0; t = Math.max(0, Math.min(1, t)); return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy); };
+    const dist = p => { const gx = Math.floor(p[0] / cs), gy = Math.floor(p[1] / cs); let d = 1e9; for (let u = -1; u <= 1; u++) for (let v = -1; v <= 1; v++) { const a = G.get((gx + u) + "," + (gy + v)); if (a) for (const o of a) d = Math.min(d, sd(p, o.s[0], o.s[1])); } return d; };
+    /* aday dönüklükler: plan duvar doğrultuları (uzunluk ağırlıklı) − bina kenar doğrultuları */
+    const hist = new Map(); for (const o of L) { const t = Math.round(((Math.atan2(o.s[1][1] - o.s[0][1], o.s[1][0] - o.s[0][0]) * 180 / Math.PI) % 180 + 180) % 180 * 2) / 2; hist.set(t, (hist.get(t) || 0) + o.L); }
+    const yon = [...hist.entries()].sort((x, y) => y[1] - x[1]).slice(0, 3).map(x => x[0]);
+    let bl = 0, bt = 0; for (let i = 0; i < n; i++) { const a = B[i], c = B[(i + 1) % n], l = Math.hypot(c[0] - a[0], c[1] - a[1]); if (l > bl) { bl = l; bt = Math.atan2(c[1] - a[1], c[0] - a[0]) * 180 / Math.PI; } }
+    const rots = []; for (const t of yon) for (const add of [0, 90, 180, 270]) rots.push((t + add - bt) * Math.PI / 180);
+    const uc = []; for (const o of L) uc.push(o.s[0], o.s[1]);
+    let best = null; const n0 = B.reduce((a, p) => [a[0] + p[0] / n, a[1] + p[1] / n], [0, 0]);
+    for (const r of rots) { const c = Math.cos(r) * k, sn = Math.sin(r) * k; const R0 = p => [c * (p[0] - n0[0]) - sn * (p[1] - n0[1]), sn * (p[0] - n0[0]) + c * (p[1] - n0[1])]; const BR = B.map(R0);
+      for (let vi = 0; vi < Math.min(n, 4); vi++) for (const q of uc) { const dx = q[0] - BR[vi][0], dy = q[1] - BR[vi][1];
+        let top = 0, uyan = 0, kes = false; for (let i = 0; i < n; i++) { const d = Math.min(dist([BR[i][0] + dx, BR[i][1] + dy]), 200); top += d; if (d < 3) uyan++; if (top > (best ? best.skor * n : 1e9)) { kes = true; break; } }
+        if (kes) continue; const skor = top / n; if (!best || skor < best.skor) best = { skor, uyan, rot: r, T: p => { const w = R0(p); return [w[0] + dx, w[1] + dy]; } }; } }
+    if (!best) return null;
+    /* ince ayar: en yakın duvar noktalarına katı (dönme+öteleme) en küçük kareler, birkaç tur */
+    const enYakin = p => { const gx = Math.floor(p[0] / cs), gy = Math.floor(p[1] / cs); let d = 1e9, q = null; for (let u = -1; u <= 1; u++) for (let v = -1; v <= 1; v++) { const a = G.get((gx + u) + "," + (gy + v)); if (a) for (const o of a) { const s0 = o.s[0], s1 = o.s[1], dx = s1[0] - s0[0], dy = s1[1] - s0[1], LL = dx * dx + dy * dy; let t = LL ? ((p[0] - s0[0]) * dx + (p[1] - s0[1]) * dy) / LL : 0; t = Math.max(0, Math.min(1, t)); const x = s0[0] + t * dx, y = s0[1] + t * dy, dd = Math.hypot(p[0] - x, p[1] - y); if (dd < d) { d = dd; q = [x, y]; } } } return { d, q }; };
+    let T = best.T; for (let it = 0; it < 12; it++) { const P = [], Q = []; for (const v of B) { const p = T(v), r = enYakin(p); if (r.q && r.d < 40) { P.push(p); Q.push(r.q); } } if (P.length < 3) break;
+      const pc = P.reduce((a, p) => [a[0] + p[0] / P.length, a[1] + p[1] / P.length], [0, 0]), qc = Q.reduce((a, p) => [a[0] + p[0] / Q.length, a[1] + p[1] / Q.length], [0, 0]); let sxx = 0, sxy = 0; P.forEach((p, i) => { const ax = p[0] - pc[0], ay = p[1] - pc[1], bx = Q[i][0] - qc[0], by = Q[i][1] - qc[1]; sxx += ax * bx + ay * by; sxy += ax * by - ay * bx; }); const th = Math.atan2(sxy, sxx), c = Math.cos(th), sn = Math.sin(th); const T0 = T; T = p => { const w = T0(p); return [qc[0] + c * (w[0] - pc[0]) - sn * (w[1] - pc[1]), qc[1] + sn * (w[0] - pc[0]) + c * (w[1] - pc[1])]; }; }
+    let top = 0, uyan = 0; for (const v of B) { const d = Math.min(enYakin(T(v)).d, 200); top += d; if (d < 3) uyan++; } best.T = T; best.skor = top / n; best.uyan = uyan;
+    return best;
+  }
+
+  /* yapı aplikasyon projesi: bina sınırı, köşe kotları, datum */
+  function yapOku(text) { const Y = oku(text); let best = null;
+    for (const e of Y.E) { if (!/^(LWPOLYLINE|POLYLINE)$/.test(e.t)) continue; const u = up(e.lay); const pr = /^GML_BINA$/.test(u) ? 4 : /BINA_ALN/.test(u) ? 3 : /KAD_BINA|YAPI|BINA/.test(u) ? 2 : 0; if (!pr) continue; let P = geom(Y, e)[0]; if (!P || P.length < 4) continue; P = P.filter((q, i) => !i || Math.hypot(q[0] - P[i - 1][0], q[1] - P[i - 1][1]) >= 0.001); while (P.length > 3 && Math.hypot(P[0][0] - P[P.length - 1][0], P[0][1] - P[P.length - 1][1]) < 0.001) P = P.slice(0, -1); const a = Math.abs(P.reduce((s_, p, i) => { const q = P[(i + 1) % P.length]; return s_ + p[0] * q[1] - q[0] * p[1]; }, 0) / 2); if (!best || pr > best.pr || (pr === best.pr && a > best.alan)) best = { P, pr, alan: a, lay: e.lay }; }
+    if (!best) throw new Error("Yapı aplikasyon projesinde bina sınırı (BINA_ALN / KAD_BINA / GML_BINA) bulunamadı");
+    const T = []; for (const e of Y.E) if (e.t === "TEXT" || e.t === "MTEXT") { const y = yazi(Y, e); if (y.s) { y.lay = e.lay; T.push(y); } }
+    const sayi = T.filter(t => /^-?\d{1,4}[.,]\d{1,3}$/.test(t.s.trim())); let ad = sayi.filter(t => /KOT.*BINA|BINA.*KOT/.test(up(t.lay))); if (!ad.length) ad = sayi.filter(t => /KOT/.test(up(t.lay)) && best.P.some(v => Math.hypot(t.x - v[0], t.y - v[1]) < 4));
+    /* yazılar köşeye göre sabit bir kaymayla konmuşsa (ör. +1,5 m) önce ortanca kaymayı bul */
+    const ilk = ad.map(t => { let bv = null, bd = 1e9; for (const v of best.P) { const d = Math.hypot(t.x - v[0], t.y - v[1]); if (d < bd) { bd = d; bv = v; } } return bv ? [t.x - bv[0], t.y - bv[1]] : [0, 0]; }); const med = a_ => { const s_ = a_.slice().sort((x, y) => x - y); return s_.length ? s_[s_.length >> 1] : 0; }; const ox = med(ilk.map(q => q[0])), oy = med(ilk.map(q => q[1]));
+    const ciftler = []; ad.forEach((t, ti) => best.P.forEach((v, vi) => { const d = Math.hypot(t.x - ox - v[0], t.y - oy - v[1]); if (d < 6) ciftler.push([d, ti, vi]); })); ciftler.sort((a, b) => a[0] - b[0]); const kot = best.P.map(() => null), kulT = new Set();
+    for (const [d, ti, vi] of ciftler) { if (kot[vi] != null || kulT.has(ti)) continue; kot[vi] = num(ad[ti].s); kulT.add(ti); }
+    const ed50 = T.some(t => /^ED\s*-?50$/i.test(t.s.trim())); const sz = T.find(t => /S[ıiIİ]f[ıiIİ]r\s*Kot/i.test(t.s)); const sifir = sz ? num((sz.s.split(/[:=]/)[1] || "")) : null;
+    return { P: best.P, alan: best.alan, lay: best.lay, kot, ed50, sifir: isFinite(sifir) ? sifir : null }; }
+  function planSeg(D, A, opt, p, tumu) { const b = p.b, SEG = []; for (const e of D.E) { if (e.x == null || e.x < b[0] || e.x > b[2] || e.y < b[1] || e.y > b[3]) continue; if (!/^(LINE|LWPOLYLINE|POLYLINE)$/.test(e.t)) continue; const r = (opt.lay[e.lay] || A.lay[e.lay] || {}).rol; if (r !== "tut" || (!tumu && !/DUVAR|WALL|KOLON|COLUMN|PERDE/.test(up(e.lay)))) continue; for (const P of geom(D, e)) for (let i = 0; i + 1 < P.length; i++) SEG.push([P[i], P[i + 1]]); } return SEG; }
   /* ---------- üretim ---------- */
   function uret(D, A, opt) {
     const L = D.L, nl = D.nl, sel = A.P.filter(p => p.sec); const pad = 60;
@@ -5889,6 +5930,17 @@ window.LTX={LIB,has:n=>!!LIB[n],expand,cached,per,grup:GRUP,get u(){return LTS/1
       else if (best && /^\d[.,]\d{2}$/.test(best.s)) { const h = Math.round(num(best.s) * 100); s = pen ? `${opt.denizlik}/${h}` : String(h); }
       if (!s) s = pen ? `${opt.denizlik}/${opt.penH}` : String(opt.kapiH);
       text("GML_KP", k.x, k.y, 8, s); say.kpYazi++; }
+    /* yapı aplikasyon projesinden GML_BINA, sıfır kotu, köşe kotları ve referans çizgileri */
+    say.ref = []; if (opt.yap) { const Yp = opt.yap, dE = +opt.dY || 0, dN = +opt.dX || 0, BI = Yp.P.map(p => [p[0] + dE, p[1] + dN]);
+      pline("GML_BINA", BI.concat([BI[0]])); const c = BI.reduce((a, p) => [a[0] + p[0] / BI.length, a[1] + p[1] / BI.length], [0, 0]);
+      if (opt.sifir != null && isFinite(opt.sifir)) text("GML_BINA", c[0], c[1], 0.5, `SıfırKotu: ${String(Number(opt.sifir).toFixed(2)).replace(".", ",")}`);
+      Yp.kot.forEach((z, i) => { if (z != null) text("GML_REF", BI[i][0], BI[i][1], 0.3, String(z.toFixed(2)).replace(".", ",")); });
+      let ii = 0, jj = 1, dm = 0; for (let i = 0; i < BI.length; i++) for (let j = i + 1; j < BI.length; j++) { const d = Math.hypot(BI[i][0] - BI[j][0], BI[i][1] - BI[j][1]); if (d > dm) { dm = d; ii = i; jj = j; } }
+      line("GML_REF", BI[ii], BI[jj]);
+      for (const p of sel) { const pw = Math.max(p.b[2] - p.b[0], p.b[3] - p.b[1]), bw = Math.max(...Yp.P.map(q => q[0])) - Math.min(...Yp.P.map(q => q[0])) + Math.max(...Yp.P.map(q => q[1])) - Math.min(...Yp.P.map(q => q[1])), oran = pw / (bw || 1), k = oran > 30 ? 100 : oran > 0.3 ? 1 : 1000;
+        let M = esle(Yp.P, planSeg(D, A, opt, p, false), k); if (!M || M.skor > 40 * k / 100) { const M2 = esle(Yp.P, planSeg(D, A, opt, p, true), k); if (M2 && (!M || M2.skor < M.skor)) M = M2; }
+        const iyi = M && M.skor < 40 * k / 100; say.ref.push({ ad: p.ad, iyi, skor: M ? M.skor / k * 100 : null });
+        if (M) { line("GML_REF", M.T(Yp.P[ii]), M.T(Yp.P[jj])); if (!iyi) text("GML_REF", M.T(Yp.P[ii])[0], M.T(Yp.P[ii])[1], 20, "REF KONTROL ET"); } } }
     /* kat yazıları ve bağımsız bölüm bilgileri */
     const girisY = A.Y.filter(y => /G[İI]R[İI]Ş/i.test(y.s) && !/\n/.test(y.s) && /\b([A-Z])\s*BLOK|([A-Z])\s*G[İI]R[İI]Ş/i.test(up(y.s)));
     const girPlan = sel.map(p => ({ p, g: girisY.filter(y => y.x >= p.b[0] && y.x <= p.b[2] && y.y >= p.b[1] && y.y <= p.b[3]) })).find(o => o.g.length);
@@ -5932,7 +5984,7 @@ window.LTX={LIB,has:n=>!!LIB[n],expand,cached,per,grup:GRUP,get u(){return LTS/1
   function layerTabH(L, i) { for (let k = i - 1; k > 0; k--) if (L[k].trim() === "TABLE" && L[k - 1].trim() === "0") { for (let m = k + 1; m < k + 12; m += 2) if (L[m].trim() === "5") return L[m + 1].trim(); return null; } return null; }
   const f = v => (Math.round(v * 1e4) / 1e4).toString();
   const f2 = v => v == null || !isFinite(v) ? "0.00" : Number(v).toFixed(2);
-  window.K3S = { oku, analiz, uret, ROL, katTahmin, _geom: geom, _bbox: bbox };
+  window.K3S = { oku, analiz, uret, ROL, katTahmin, _geom: geom, _bbox: bbox, esle, yapOku };
 })();
 
 /* ---------- arayüz: 3B Kadastro sekmesinde "Mimari projeyi sadeleştir" ---------- */
@@ -5945,16 +5997,21 @@ window.LTX={LIB,has:n=>!!LIB[n],expand,cached,per,grup:GRUP,get u(){return LTS/1
     c.innerHTML = `<h2>📐 Mimari projeyi sadeleştir</h2>
       <p class="note" style="margin:2px 0 8px">Mimardan gelen ham DXF'i (2007 ve üstü) aç. Kat planları başlıklarından bulunur; kesit, görünüş, vaziyet, antet, tefriş, ölçü, tarama ve aks silinir. Kapı-pencere blokları patlatılıp yükseklik yazılarıyla <b>GML_KP</b>'ye alınır, dış cephedeki boş pencere açıklıkları kutu olarak kapatılır. Oda adı ve alanı yazıya çevrilir, kat yazıları ve bağımsız bölüm listesindeki bilgiler <b>GML_REF</b>'e yazılır. Çıktı kadastro3b.net'e yüklenecek DXF'tir.</p>
       <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><div class="filebtn"><span>📂 Ham mimari DXF'i seç</span><input type="file" id="k3sF" accept=".dxf,.DXF"></div><button id="k3sGo" type="button" disabled style="background:#2e7d32;color:#fff;border-color:#2e7d32">⬇ Sadeleştirilmiş DXF üret</button></div>
-      <div id="k3sMsg" class="msg" style="margin-top:6px"></div><div id="k3sBody" style="display:none;margin-top:8px"></div>`;
+      <div id="k3sMsg" class="msg" style="margin-top:6px"></div><div id="k3sBody" style="display:none;margin-top:8px"></div>
+      <div id="k3sYap" style="display:none;margin-top:10px;border-top:1px solid #ddd;padding-top:8px"><h3 style="margin:4px 0">Yapı aplikasyon projesi (GML_BINA ve referans çizgileri)</h3>
+        <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><div class="filebtn"><span>📂 YAP DXF'i seç (isteğe bağlı)</span><input type="file" id="k3sYF" accept=".dxf,.DXF"></div><label>Sıfır kotu (ortometrik) <input id="k3sSZ" type="number" step="0.01" style="width:90px" placeholder="520,34"> m</label></div>
+        <div id="k3sYInfo" class="note" style="margin-top:6px">YAP verilirse bina sınırı GML_BINA'ya, köşe kotları GML_REF'e yazılır; bina üzerinde ve her kat planında aynı iki köşeden geçen referans çizgisi otomatik çizilir (plan, bina sınırına duvarlardan oturtulur).</div>
+        <div id="k3sED" style="display:none;margin-top:6px;padding:8px;border-radius:8px;background:#fff3cd;color:#5d4500">⚠ YAP <b>ED50</b> datumunda. kadastro3b ITRF (TUREF) ister. Bir ortak noktanın ITRF − ED50 farkını gir: <label>ΔY <input id="k3sDY" type="number" step="0.001" style="width:90px"></label> <label>ΔX <input id="k3sDX" type="number" step="0.001" style="width:90px"></label> m <span style="opacity:.8">(ör. aynı parsel köşesinin TKGM'deki ITRF koordinatı − YAP'taki ED50 koordinatı)</span></div></div>`;
     root.prepend(c);
     $("k3sF").addEventListener("change", async e => { const f = e.target.files[0]; if (!f) return; await ac(f); e.target.value = ""; });
     $("k3sGo").onclick = uret;
+    $("k3sYF").addEventListener("change", async e => { const f = e.target.files[0]; if (!f) return; const i = $("k3sYInfo"); try { OPT.yap = S.yapOku(new TextDecoder("utf-8").decode(new Uint8Array(await f.arrayBuffer()))); const Y = OPT.yap; i.textContent = `${f.name}: bina sınırı ${Y.lay} tabakasında, ${Y.P.length} köşe, ${Y.alan.toFixed(2).replace(".", ",")} m² · ${Y.kot.filter(z => z != null).length} köşe kotu okundu${Y.ed50 ? " · datum ED50" : ""}`; $("k3sED").style.display = Y.ed50 ? "block" : "none"; if (Y.sifir != null) $("k3sSZ").value = Y.sifir; } catch (er) { OPT.yap = null; i.textContent = "Okunamadı: " + er.message; } e.target.value = ""; });
   }
   async function ac(f) { const m = $("k3sMsg"); m.className = "msg"; m.textContent = `Okunuyor… (${(f.size / 1e6).toFixed(1)} MB)`; await new Promise(r => setTimeout(r, 30));
     try { const t = new TextDecoder("utf-8").decode(new Uint8Array(await f.arrayBuffer())); const v = (/\$ACADVER\s*\r?\n\s*1\s*\r?\n\s*(AC\d+)/.exec(t.slice(0, 5000)) || [])[1] || ""; D = S.oku(t); A = S.analiz(D); AD = f.name; OPT.lay = {}; OPT.blk = {};
       const eski = v && +v.slice(2) < 1021; m.className = "msg" + (eski ? " err" : ""); m.textContent = `${f.name}: ${D.E.length} nesne · ${A.P.filter(p => !p.bos).length} kat planı bulundu · bağımsız bölüm listesinde ${A.BL.length} satır${eski ? " · ⚠ DXF sürümü " + v + ": kadastro3b en az 2007 DXF ister, AutoCAD'de 2007 ya da üstü olarak kaydet" : ""}`; }
     catch (e) { console.error(e); m.className = "msg err"; m.textContent = "Okunamadı: " + e.message; return; }
-    $("k3sGo").disabled = false; ciz(); }
+    $("k3sGo").disabled = false; $("k3sYap").style.display = "block"; ciz(); }
   function ciz() {
     const b = $("k3sBody"); b.style.display = "block"; const P = A.P;
     const sel = (k, v, o) => `<select data-${k}="${esc(v)}">${Object.entries(S.ROL).map(([a, t]) => `<option value="${a}"${o === a ? " selected" : ""}>${t}</option>`).join("")}</select>`;
@@ -5972,14 +6029,14 @@ window.LTX={LIB,has:n=>!!LIB[n],expand,cached,per,grup:GRUP,get u(){return LTS/1
     b.querySelectorAll("[data-ly]").forEach(x => x.onchange = () => OPT.lay[x.dataset.ly] = { rol: x.value });
     b.querySelectorAll("[data-bk]").forEach(x => x.onchange = () => OPT.blk[x.dataset.bk] = { rol: x.value });
   }
-  async function uret() { if (!D) return; const m = $("k3sMsg"); OPT.kapiH = +$("k3sKH").value || 210; OPT.denizlik = +$("k3sPD").value || 0; OPT.penH = +$("k3sPH").value || 150; OPT.pencereKapat = $("k3sPK").checked;
+  async function uret() { if (!D) return; const m = $("k3sMsg"); OPT.kapiH = +$("k3sKH").value || 210; OPT.denizlik = +$("k3sPD").value || 0; OPT.penH = +$("k3sPH").value || 150; OPT.pencereKapat = $("k3sPK").checked; OPT.sifir = $("k3sSZ").value === "" ? null : parseFloat($("k3sSZ").value); OPT.dY = parseFloat($("k3sDY").value) || 0; OPT.dX = parseFloat($("k3sDX").value) || 0; if (OPT.yap && OPT.yap.ed50 && !OPT.dY && !OPT.dX && !confirm("YAP ED50 datumunda ve ITRF farkı girilmedi. GML_BINA ED50 koordinatıyla yazılsın mı?")) return; if (OPT.yap && OPT.sifir == null) { m.className = "msg err"; m.textContent = "Sıfır kotunu yaz (proje ±0,00'ın ortometrik kotu)"; return; }
     const sel = A.P.filter(p => p.sec); if (!sel.length) { m.className = "msg err"; m.textContent = "En az bir kat planı seç"; return; }
     const eks = sel.filter(p => p.kot == null || !isFinite(p.kot)); if (eks.length) { m.className = "msg err"; m.textContent = "Proje kotu boş: " + eks.map(p => p.ad).join(", "); return; }
     m.className = "msg"; m.textContent = "Üretiliyor…"; await new Promise(r => setTimeout(r, 30));
     let R; try { R = S.uret(D, A, OPT); } catch (e) { console.error(e); m.className = "msg err"; m.textContent = "Üretilemedi: " + e.message; return; }
     const nm = AD.replace(/\.dxf$/i, "") + "_3B.dxf", data = new Blob([R.dxf], { type: "application/octet-stream" });
     if (typeof saveFile === "function") await saveFile(nm, data, m); else { const a = document.createElement("a"); a.href = URL.createObjectURL(data); a.download = nm; a.click(); }
-    const s = R.say; m.className = "msg"; m.textContent = `${nm}: ${s.sil} nesne silindi, ${s.tut} duvar/kolon nesnesi kaldı · ${s.kp} kapı-pencere bloğu GML_KP'ye alındı (${s.kpYazi} yükseklik yazısı) · ${s.pen} dış açıklık pencere olarak kapatıldı · ${s.oda} oda yazısı · ${s.bb} bağımsız bölüm bilgisi. Eksik kalan: maksNumid ve maksid değerleri (adres.nvi.gov.tr), GML_BINA (yapı aplikasyon projesindeki bina sınırı + SıfırKotu) ve GML_REF referans çizgileri, çatı mahya çizgileri (GML_MAHYA).`; }
+    const s = R.say; const refY = s.ref && s.ref.length ? ` · referans çizgileri: ${s.ref.map(r => r.ad.replace(/ PLANI.*$/, "") + (r.iyi ? " ✓" : " ⚠ kontrol et")).join(", ")}` : ""; m.className = "msg"; m.textContent = `${nm}: ${s.sil} nesne silindi, ${s.tut} duvar/kolon nesnesi kaldı · ${s.kp} kapı-pencere bloğu GML_KP'ye alındı (${s.kpYazi} yükseklik yazısı) · ${s.pen} dış açıklık pencere olarak kapatıldı · ${s.oda} oda yazısı · ${s.bb} bağımsız bölüm bilgisi. ${refY}. Eksik kalan: maksNumid ve maksid değerleri (adres.nvi.gov.tr)${OPT.yap ? "" : ", GML_BINA (yapı aplikasyon projesi) ve GML_REF referans çizgileri"}, çatı mahya çizgileri (GML_MAHYA).`; }
   const go = () => kur(); if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", go); else setTimeout(go, 0);
 })();
 
