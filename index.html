@@ -2040,6 +2040,7 @@ O.sheetNeed = (sec, set) => { const pts = sec.full.flat(); if (!pts.length) retu
 O.IMG = {};
 O.kase = (G, cx, cy, w) => { const im = O.IMG.kase; if (!im || O.kaseKapali) return; const h = w * im.height / im.width; G.push({ t: "i", k: "kase", x: cx - w / 2, y: cy - h / 2, w, h }); };
 O.paint = (ctx, G, pxmm, W = 297, H = 210) => {
+  if (G && G.coz !== false && !G.__coz && window.APLGEO && APLGEO.cakisma) { try { APLGEO.cakisma(G); } catch (e) { console.error(e); } }
   ctx.save(); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W * pxmm, H * pxmm); ctx.lineCap = "butt"; ctx.lineJoin = "round";
   const X = x => x * pxmm, Y = y => (H - y) * pxmm;
   for (const g of G) if (g.t === "f") { ctx.fillStyle = g.color; ctx.beginPath(); g.p.forEach(([x, y], i) => i ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y))); ctx.closePath(); ctx.fill(); }
@@ -2836,11 +2837,49 @@ A.splitPoly = (poly, line) => { const hits = []; let s0 = 0;
 
 /* ---------- ifraz evrakı (TKGM formlarına benzer düzen) ---------- */
 A.trn = (v, d = 2) => isFinite(v) ? v.toFixed(d) : "";
-A.pg = (W, H) => { const G = []; G.W = W; G.H = H; const api = {
+A.pg = (W, H) => { const G = []; G.W = W; G.H = H; G.coz = true; const api = {
   G, L: (p, w = 0.25, color = "#000") => G.push({ t: "l", p, w, color }),
   T: (x, y, s, size = 2.2, o = {}) => G.push(Object.assign({ t: "x", x, y, s: String(s ?? ""), size, color: "#000" }, o)),
   R: (x0, y0, x1, y1, w = 0.3) => G.push({ t: "l", p: [[x0, y0], [x1, y0], [x1, y1], [x0, y1], [x0, y0]], w, color: "#000" }),
   S: (x0, y, x1, s, size, o = {}) => { G.push(Object.assign({ t: "x", x: (x0 + x1) / 2, y, s, size, al: "c", color: "#000" }, o)); } }; return api; };
+/* ===== çıktı yazılarında çakışma çözücü: nokta adı, kenar uzunluğu, kot yazısı birbirinin ve kalın çizgilerin üstüne binmesin =====
+   sabit: başlık/etiket yazıları ve öncü çizgili kotlar; taşınabilir: nokta adları, kenar uzunlukları, öncüsüz kotlar */
+A.cakisma = (G) => { if (!G || G.__coz) return G; G.__coz = 1; const t0 = (typeof performance !== "undefined" ? performance.now() : 0);
+  let mc = null; try { mc = document.createElement("canvas").getContext("2d"); } catch (e) {}
+  const genis = g => { if (mc) { mc.font = `${g.bold ? "700 " : ""}${g.size * 1.32}px Arial`; return mc.measureText(g.s).width; } return g.size * 1.32 * 0.56 * String(g.s).length; };
+  const kutu = (g, x, y) => { const w = genis(g), h = g.size * 1.0, x0 = g.al === "c" ? -w / 2 : g.al === "r" ? -w : 0, a = (g.rot || 0) * Math.PI / 180, ca = Math.cos(a), sa = Math.sin(a);
+    return [[x0, -h / 2], [x0 + w, -h / 2], [x0 + w, h / 2], [x0, h / 2]].map(([u, v]) => [x + u * ca - v * sa, y + u * sa + v * ca]); };
+  const kucult = (P, k) => { const cx = (P[0][0] + P[2][0]) / 2, cy = (P[0][1] + P[2][1]) / 2; return P.map(p => [cx + (p[0] - cx) * k, cy + (p[1] - cy) * k]); };
+  const bb = P => [Math.min(P[0][0], P[1][0], P[2][0], P[3][0]), Math.min(P[0][1], P[1][1], P[2][1], P[3][1]), Math.max(P[0][0], P[1][0], P[2][0], P[3][0]), Math.max(P[0][1], P[1][1], P[2][1], P[3][1])];
+  const eks = P => [0, 1].map(i => { const d = [P[i + 1][0] - P[i][0], P[i + 1][1] - P[i][1]], L = Math.hypot(d[0], d[1]) || 1; return [-d[1] / L, d[0] / L]; });
+  const kes = (A_, B_) => { for (const n of [...eks(A_), ...eks(B_)]) { let a0 = Infinity, a1 = -Infinity, b0 = Infinity, b1 = -Infinity; for (const p of A_) { const v = p[0] * n[0] + p[1] * n[1]; if (v < a0) a0 = v; if (v > a1) a1 = v; } for (const p of B_) { const v = p[0] * n[0] + p[1] * n[1]; if (v < b0) b0 = v; if (v > b1) b1 = v; } if (a1 < b0 || b1 < a0) return false; } return true; };
+  const icinde = (P, x, y) => { let c = false; for (let i = 0, j = 3; i < 4; j = i++) { const a = P[i], b = P[j]; if ((a[1] > y) !== (b[1] > y) && x < (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]) + a[0]) c = !c; } return c; };
+  const sx = (p, q, r, t) => { const d = (q[0] - p[0]) * (t[1] - r[1]) - (q[1] - p[1]) * (t[0] - r[0]); if (Math.abs(d) < 1e-12) return false; const u = ((r[0] - p[0]) * (t[1] - r[1]) - (r[1] - p[1]) * (t[0] - r[0])) / d, v = ((r[0] - p[0]) * (q[1] - p[1]) - (r[1] - p[1]) * (q[0] - p[0])) / d; return u > 0 && u < 1 && v > 0 && v < 1; };
+  /* kalın çizgi parçaları (sınırlar) + tüm ince çizgi uçları (öncü tespiti) — ızgara */
+  const CS = 8, gk = (i, j) => i * 100003 + j, SG = new Map(), INCE = [];
+  for (const g of G) { if (g.t !== "l" || !g.p || g.p.length < 2) continue; const kal = true; const ince = (g.w || 0) < 0.3; for (let k = 0; k + 1 < g.p.length; k++) { const p = g.p[k], q = g.p[k + 1]; if (ince) INCE.push(p, q); if (kal) { const i0 = Math.floor(Math.min(p[0], q[0]) / CS), i1 = Math.floor(Math.max(p[0], q[0]) / CS), j0 = Math.floor(Math.min(p[1], q[1]) / CS), j1 = Math.floor(Math.max(p[1], q[1]) / CS); if ((i1 - i0 + 1) * (j1 - j0 + 1) > 400) continue; for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) { const kk = gk(i, j); let a = SG.get(kk); if (!a) SG.set(kk, a = []); a.push([p, q, ince]); } } } }
+  const sd = (p, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], l = dx * dx + dy * dy; let t = l ? ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / l : 0; t = Math.max(0, Math.min(1, t)); return Math.hypot(a[0] + t * dx - p[0], a[1] + t * dy - p[1]); };
+  const cizgiyeBiner = (P, haric) => { const b = bb(P); const seen = new Set(); for (let i = Math.floor(b[0] / CS); i <= Math.floor(b[2] / CS); i++) for (let j = Math.floor(b[1] / CS); j <= Math.floor(b[3] / CS); j++) { const a = SG.get(gk(i, j)); if (!a) continue; for (const s of a) { if (seen.has(s)) continue; seen.add(s); const [p, q, inc] = s; if (haric && (inc ? !haric.ince : false)) continue; if (haric && sd(haric.o, p, q) < haric.r) continue; if (icinde(P, p[0], p[1]) || icinde(P, q[0], q[1])) return true; for (let e = 0; e < 4; e++) if (sx(p, q, P[e], P[(e + 1) % 4])) return true; } } return false; };
+  const sinif = g => { const t = String(g.s).trim(); if (!t || g.sabit) return 0; if (/^\d{1,5}[.,]\d{2}$/.test(t) && (g.size || 0) <= 3) return 1; /* kenar ölçüsü */ if (/^[A-ZÇĞİÖŞÜ]{0,3}\d{1,7}[A-Z]?$/.test(t) && t.length <= 9 && (g.size || 0) <= 3.2) return 3; /* nokta adı */ if (/^-?\d{1,5}[.,]\d{3}$/.test(t) && (g.size || 0) <= 3) return 2; /* kot */ return 0; };
+  const T = G.filter(g => g.t === "x" && String(g.s).trim()).map(g => { const P = kutu(g, g.x, g.y); return { g, P, k: sinif(g), b: bb(P) }; });
+  /* öncülü kot: ince bir çizginin ucu yazının hemen yanındaysa sabit say */
+  for (const t of T) if (t.k === 2) { const h = t.g.size; for (let i = 0; i < INCE.length; i++) { const p = INCE[i]; if (p[0] > t.b[0] - h && p[0] < t.b[2] + h && p[1] > t.b[1] - h && p[1] < t.b[3] + h) { t.k = 0; break; } } }
+  const yer = []; const YG = new Map(); const ekle = t => { yer.push(t); const b = t.b; for (let i = Math.floor(b[0] / CS); i <= Math.floor(b[2] / CS); i++) for (let j = Math.floor(b[1] / CS); j <= Math.floor(b[3] / CS); j++) { const kk = gk(i, j); let a = YG.get(kk); if (!a) YG.set(kk, a = []); a.push(t); } };
+  const yaziyaBiner = (P, ben) => { const b = bb(P); const seen = new Set(); for (let i = Math.floor(b[0] / CS); i <= Math.floor(b[2] / CS); i++) for (let j = Math.floor(b[1] / CS); j <= Math.floor(b[3] / CS); j++) { const a = YG.get(gk(i, j)); if (!a) continue; for (const o of a) { if (o === ben || seen.has(o)) continue; seen.add(o); if (kes(P, kucult(o.P, 0.94))) return true; } } return false; };
+  for (const t of T) if (!t.k) ekle(t);
+  let tas = 0, kal = 0; const sira = T.filter(t => t.k).sort((a, b) => b.k - a.k);
+  for (const t of sira) { const g = t.g, h = g.size, a = (g.rot || 0) * Math.PI / 180, u = [Math.cos(a), Math.sin(a)], n = [-u[1], u[0]]; const w = genis(g);
+    const ha = { o: [g.x, g.y], r: h * 0.9, ince: true }; const ok = (x, y) => { const P = kucult(kutu(g, x, y), 0.95); return !yaziyaBiner(P, t) && !cizgiyeBiner(kucult(P, 1.02), t.k === 3 ? { o: [g.x, g.y], r: h * 2.2, ince: true } : ha); };
+    const ilk = (x, y) => { const P = kucult(kutu(g, x, y), 0.92); return !yaziyaBiner(P, t) && !cizgiyeBiner(kucult(P, 0.9), { o: [g.x, g.y], r: h * 0.9, ince: false }); };
+    if (ok(g.x, g.y)) { ekle(t); continue; }
+    const C = []; const R = t.k === 3 ? [0.7, 1.1, 1.6, 2.2, 3] : t.k === 2 ? [0.6, 1, 1.5] : [0.8, 1.3, 1.9, 2.6, 3.4, 4.4];
+    for (const d of R) { const dd = d * h; C.push([n[0] * dd, n[1] * dd], [-n[0] * dd, -n[1] * dd]); const ua = Math.min(dd, w * 0.6); C.push([u[0] * ua, u[1] * ua], [-u[0] * ua, -u[1] * ua]); if (t.k === 3) { const q = dd * 0.75; C.push([(u[0] + n[0]) * q, (u[1] + n[1]) * q], [(u[0] - n[0]) * q, (u[1] - n[1]) * q], [(-u[0] + n[0]) * q, (-u[1] + n[1]) * q], [(-u[0] - n[0]) * q, (-u[1] - n[1]) * q]); } }
+    if (Array.isArray(g.cand)) C.unshift(...g.cand.filter(c => Array.isArray(c)).map(c => [c[0] - g.x, c[1] - g.y])); /* çizimin kendi önerdiği yerler önce */
+    let bul = null; for (const [dx, dy] of C) if (ok(g.x + dx, g.y + dy)) { bul = [dx, dy]; break; }
+    if (!bul) { /* daha uzağa öncü çizgiyle taşı: yazılar asla üst üste kalmasın */ const ox = g.x, oy = g.y; for (const d of [5, 6.5, 8, 10]) { const dd = d * h; for (const k of [0, 1, 2, 3, 4, 5, 6, 7]) { const an = k * Math.PI / 4, dx = Math.cos(an) * dd, dy = Math.sin(an) * dd; const P = kucult(kutu(g, ox + dx, oy + dy), 0.95); if (!yaziyaBiner(P, t) && !cizgiyeBiner(kucult(P, 1.02), null)) { bul = [dx, dy]; break; } } if (bul) break; }
+      if (bul) G.push({ t: "l", p: [[ox, oy], [ox + bul[0] * 0.82, oy + bul[1] * 0.82]], w: 0.1, color: g.color || "#000" }); }
+    if (bul) { g.x += bul[0]; g.y += bul[1]; t.P = kutu(g, g.x, g.y); t.b = bb(t.P); tas++; } else kal++; ekle(t); }
+  G.cozRapor = { tasindi: tas, cozulemedi: kal, ms: Math.round((typeof performance !== "undefined" ? performance.now() : 0) - t0) }; return G; };
 A.fitPlan = (pts, box, list) => { const [x0, y0, x1, y1] = A.bbox(pts); const [bx0, by0, bx1, by1] = box; let olc = null;
   if (list) { for (const o of list) if ((x1 - x0) * 1000 / o <= bx1 - bx0 && (y1 - y0) * 1000 / o <= by1 - by0) { olc = o; break; } if (!olc) olc = list[list.length - 1]; }
   const s = olc ? 1000 / olc : Math.min((bx1 - bx0) / ((x1 - x0) || 1), (by1 - by0) / ((y1 - y0) || 1)); const ox = (bx0 + bx1) / 2 - (x0 + x1) / 2 * s, oy = (by0 + by1) / 2 - (y0 + y1) / 2 * s;
@@ -8204,7 +8243,7 @@ $("iOn").addEventListener("change", () => { readIfz(); const f = S().ifz; f.yeni
 
 /* ---------- plan (kendi tuvali) ---------- */
 const cv = $("aCv"), cx = cv.getContext("2d"); const V = { cx: 0, cy: 0, s: 0 }; let dpr = 1, LBL = true, MODEA = null, DR = [];
-function rs() { dpr = window.devicePixelRatio || 1; const r = cv.getBoundingClientRect(); cv.width = Math.max(10, r.width * dpr); cv.height = Math.max(10, r.height * dpr); }
+function rs() { dpr = Math.min(2, window.devicePixelRatio || 1); const r = cv.getBoundingClientRect(); cv.width = Math.max(10, r.width * dpr); cv.height = Math.max(10, r.height * dpr); }
 const X = e => (e - V.cx) * V.s * dpr + cv.width / 2, Y = n => (V.cy - n) * V.s * dpr + cv.height / 2, WX = x => (x * dpr - cv.width / 2) / (V.s * dpr) + V.cx, WY = y => V.cy - (y * dpr - cv.height / 2) / (V.s * dpr);
 function fitA() { rs(); const a = S(); let pts = a.parsel ? a.parsel.pts : []; if (!pts.length && FD) pts = [...FD.polys.flatMap(p => p.pts), ...FD.lines.flatMap(l => l.pts), ...FD.points.map(p => [p.e, p.y])].filter(p => isFinite(p[0]) && isFinite(p[1])); if (!pts.length) { V.s = 1; drawA(); return; }
   const [x0, y0, x1, y1] = A.bbox(pts); V.cx = (x0 + x1) / 2; V.cy = (y0 + y1) / 2; V.s = Math.min(cv.width / dpr / ((x1 - x0) || 1), cv.height / dpr / ((y1 - y0) || 1)) * 0.85; drawA(); }
@@ -8507,7 +8546,7 @@ function pagesGen() { const a = S(), P = P0(); if (!a.parsel) return [];
 /* ---------- pafta üzerinde elle düzenleme: sayfa CAD çizimde açılır (mm), değişiklikler önizlemeye ve PDF'e yansır ---------- */
 const SHEo = () => { const a = S(); if (!a.she || typeof a.she !== "object") a.she = {}; return a.she; }; // kalıcı (proje ile saklanır). anahtar: modül|sayfa adı → { st: üretilen sayfanın parmak izi, G: düzenlenmiş sayfa }
 const hashG = G => { const t = JSON.stringify(G.filter(g => g.t !== "i")); let h = 5381; for (let i = 0; i < t.length; i += 7) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return h + ":" + t.length; };
-function pagesNow() { return pagesGen().map(p => { const k = MOD + "|" + p.ad, e = SHEo()[k]; p.key = k; p.st = hashG(p.G); const q = e && e.st === p.st ? Object.assign({}, p, { G: e.G.filter(g => g.t !== "i").concat(p.G.filter(g => g.t === "i")), edited: true }) : p; return txoApply(q); }); }
+function pagesNow() { return pagesGen().map(p => { if (p.G && p.G.coz !== false) { try { A.cakisma(p.G); } catch (e) { console.error(e); } } const k = MOD + "|" + p.ad, e = SHEo()[k]; p.key = k; p.st = hashG(p.G); const q = e && e.st === p.st ? Object.assign({}, p, { G: e.G.filter(g => g.t !== "i").concat(p.G.filter(g => g.t === "i")), edited: true }) : p; return txoApply(q); }); }
 /* yazıya dokununca içeriğini değiştir: değişiklik, sayfa yeniden üretilse de aynı yerdeki aynı yazıya uygulanır */
 const txoKey = (p, g) => `${MOD}|${p.ad}|${g.s}@${(+g.x).toFixed(1)},${(+g.y).toFixed(1)}`;
 function txoApply(p) { const T = S().txo; if (!T || !Object.keys(T).length) return p; let ch = false; const G = []; for (const g of p.G) { if (g.t === "x") { const k = txoKey(p, g); if (k in T) { ch = true; if (T[k] !== "") G.push(Object.assign({}, g, { s: T[k], _k: k })); continue; } } G.push(g); } return ch ? Object.assign({}, p, { G, txo: true }) : p; }
@@ -9134,7 +9173,7 @@ function near(p, r) { const I = idx(); if (Math.abs(I.s - V.s) / V.s > 0.6) { ID
   for (let gx = Math.floor((p[0] - r) / I.cell); gx <= Math.floor((p[0] + r) / I.cell); gx++) for (let gy = Math.floor((p[1] - r) / I.cell); gy <= Math.floor((p[1] + r) / I.cell); gy++) for (const i of I.g.get(gx + "," + gy) || []) out.add(i); return [...out].map(i => ents[i]); }
 
 /* ---------- görünüm ---------- */
-function rs() { dpr = window.devicePixelRatio || 1; const r = cv.getBoundingClientRect(); cv.width = Math.max(10, r.width * dpr); cv.height = Math.max(10, r.height * dpr); }
+function rs() { dpr = Math.min(2, window.devicePixelRatio || 1); const r = cv.getBoundingClientRect(); cv.width = Math.max(10, r.width * dpr); cv.height = Math.max(10, r.height * dpr); }
 const X = x => (x - V.cx) * V.s * dpr + cv.width / 2, Y = y => (V.cy - y) * V.s * dpr + cv.height / 2, WX = x => (x * dpr - cv.width / 2) / (V.s * dpr) + V.cx, WY = y => V.cy - (y * dpr - cv.height / 2) / (V.s * dpr);
 function extents(list) { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const e of list) for (const p of (e.t === "circle" ? [[e.c[0] - e.r, e.c[1] - e.r], [e.c[0] + e.r, e.c[1] + e.r]] : e.pts)) { if (!isFinite(p[0])) continue; x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); } return isFinite(x0) ? [x0, y0, x1, y1] : null; }
 function faceBox() { let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity; for (const f of FACES) { const L = lays[f.lay]; if (!L || !L.on) continue; for (const q of f.p) { if (q[0] < a) a = q[0]; if (q[0] > c) c = q[0]; if (q[1] < b) b = q[1]; if (q[1] > d) d = q[1]; } } return isFinite(a) ? [a, b, c, d] : null; }
@@ -9225,7 +9264,7 @@ function ebb(e) { let b = BBK.m.get(e); if (b !== undefined) return b; b = null;
   else if (e.t === "text") { const h = e.h || 1, w = h * 0.9 * String(e.s || "").length + h, p = e.pts[0]; b = [p[0] - w, p[1] - w, p[0] + w, p[1] + w]; }
   else if (e.pts && e.pts.length) { let x0 = 1 / 0, y0 = 1 / 0, x1 = -1 / 0, y1 = -1 / 0; for (const p of e.pts) { if (p[0] < x0) x0 = p[0]; if (p[0] > x1) x1 = p[0]; if (p[1] < y0) y0 = p[1]; if (p[1] > y1) y1 = p[1]; } const m = (window.LTX && e.lt) ? 5 : 0; b = [x0 - m, y0 - m, x1 + m, y1 + m]; }
   BBK.m.set(e, b); return b; }
-function draw() { liveTick(); { const r = cv.getBoundingClientRect(); if (r.width && (Math.abs(r.width * (window.devicePixelRatio || 1) - cv.width) > 2 || Math.abs(r.height * (window.devicePixelRatio || 1) - cv.height) > 2)) rs(); } if (!cv.width) return; const D = dpr, W = cv.width, H = cv.height; cx.fillStyle = BGC; cx.fillRect(0, 0, W, H); cx.lineJoin = "round"; cx.lineCap = "round"; izgara(D, W, H); try { window.BGI && BGI.draw(cx, X, Y); } catch (e) {} bgPlan(D); try { if (window.ARZ && CARZ.tin) ARZ.tin(cx, X, Y, W, H, V.s * D, D); if (window.ARZ && CARZ.egri) ARZ.egri(cx, X, Y, W, H, D); } catch (e) {} if (FACES.length) drawFaces(W, H, D);
+function draw() { liveTick(); { const r = cv.getBoundingClientRect(); if (r.width && (Math.abs(r.width * Math.min(2, window.devicePixelRatio || 1) - cv.width) > 2 || Math.abs(r.height * Math.min(2, window.devicePixelRatio || 1) - cv.height) > 2)) rs(); } if (!cv.width) return; const D = dpr, W = cv.width, H = cv.height; cx.fillStyle = BGC; cx.fillRect(0, 0, W, H); cx.lineJoin = "round"; cx.lineCap = "round"; izgara(D, W, H); try { window.BGI && BGI.draw(cx, X, Y); } catch (e) {} bgPlan(D); try { if (window.ARZ && CARZ.tin) ARZ.tin(cx, X, Y, W, H, V.s * D, D); if (window.ARZ && CARZ.egri) ARZ.egri(cx, X, Y, W, H, D); } catch (e) {} if (FACES.length) drawFaces(W, H, D);
   // ızgara çizgisi yerine eksen işareti
   const vis = (x, y) => x > -50 && y > -50 && x < W + 50 && y < H + 50; let nv = 0; for (const e of ents) if (e.t === "point" && vis(X(e.pts[0][0]), Y(e.pts[0][1]))) nv++; const lbl = nv < 600; const occ = new Set(); if (IDX === null || BBK.a !== ents || BBK.n !== ents.length || !BBK.TS) { BBK.m = new Map(); BBK.a = ents; BBK.n = ents.length; BBK.TS = new Set(); for (const e of ents) if (e.t === "text") BBK.TS.add(String(e.s).trim()); } const TS = BBK.TS; const rawZ = TS.size < 10;
   const vx0 = WX(-60), vx1 = WX(W / D + 60), vy1 = WY(-60), vy0 = WY(H / D + 60); const BPATH = new Map();
@@ -9768,7 +9807,7 @@ function pdfPage(o, px) { const pap = o.pap.split("x").map(Number), W = pap[0], 
   for (const fc of FF) { const c = col(lays[fc.lay].c); for (let i = 0; i < 3; i++) Ln(M(fc.p[i]), M(fc.p[(i + 1) % 3]), 0.08, c); }
   if (ap.length) ARZX.toG(ap, M, s, fr, G, o.bw);
   if (o.frame) G.push({ t: "x", x: m + 3, y: m + tb / 2, s: title || "A-CAD çizimi", size: 3, bold: true, color: "#000" }, { t: "x", x: W - m - 3, y: m + tb / 2, s: `Ölçek 1/${olcY}   ·   ${new Date().toLocaleDateString("tr-TR")}`, size: 2.6, al: "r", color: "#000" });
-  const c = document.createElement("canvas"); c.width = Math.round(W * px); c.height = Math.round(H * px); O.paint(c.getContext("2d"), G, px, W, H); c.pw = W / 25.4 * 72; c.ph = H / 25.4 * 72; return { c, olcY, W, H }; }
+  const c = document.createElement("canvas"); c.width = Math.round(W * px); c.height = Math.round(H * px); O.paint(c.getContext("2d"), Object.assign(G, { coz: false }), px, W, H); c.pw = W / 25.4 * 72; c.ph = H / 25.4 * 72; return { c, olcY, W, H }; }
 const PVO = { pap: "420x297", olc: "0", alan: "tum", title: "", frame: true, bw: false }; try { Object.assign(PVO, JSON.parse(localStorage.getItem("acad-pdf") || "{}")); } catch (e) {}
 function pvOpts() { return { ...PVO }; }
 let PVZ_ = false;
@@ -9820,7 +9859,7 @@ function editEnter(ad) { if (PLAN) editExit(); PLAN = { ad, stash: JSON.stringif
   ad.load(add, layer); cur = Object.keys(lays).find(l => l !== "0") || "0"; IDX = null; $("cadPlanT").textContent = ad.title; $("cadPlan").hidden = false; $("cadPlanPv").hidden = $("cadPlanPdf").hidden = !ad.live; LIVEK = U.length + ":" + RD.length + ":" + nid + ":" + ents.length; renderLays(); zoomAll(); say(ad.hint || "Düzenle, bitince ✓ Uygula."); }
 /* anlık pafta: düzenlerken her değişiklik paftaya (önizleme ve PDF) hemen uygulanır */
 var LIVEK = "", LIVET = null; function liveTick() { if (!PLAN || !PLAN.ad.live) return; const k = U.length + ":" + RD.length + ":" + nid + ":" + ents.length; if (k === LIVEK) return; LIVEK = k; clearTimeout(LIVET); LIVET = setTimeout(() => { if (!PLAN) return; try { PLAN.ad.live(ents, lays); livePaint(); } catch (e) { console.error(e); } }, 250); }
-function livePaint() { const box = $("cadLivePv"); if (!PLAN || !PLAN.ad.page || box.hidden) return; const p = PLAN.ad.page(); if (!p || !window.O) return; const c = $("cadLivePvC"), r = c.getBoundingClientRect(), D = window.devicePixelRatio || 1, px = Math.max(1, (r.width || 400) * D / p.W); c.width = Math.round(p.W * px); c.height = Math.round(p.H * px); O.paint(c.getContext("2d"), p.G, px, p.W, p.H); $("cadLivePvT").textContent = p.edited ? "düzenleme uygulandı" : ""; }
+function livePaint() { const box = $("cadLivePv"); if (!PLAN || !PLAN.ad.page || box.hidden) return; const p = PLAN.ad.page(); if (!p || !window.O) return; const c = $("cadLivePvC"), r = c.getBoundingClientRect(), D = window.devicePixelRatio || 1, px = Math.max(1, (r.width || 400) * D / p.W); c.width = Math.round(p.W * px); c.height = Math.round(p.H * px); O.paint(c.getContext("2d"), Object.assign(p.G, { coz: false }), px, p.W, p.H); $("cadLivePvT").textContent = p.edited ? "düzenleme uygulandı" : ""; }
 $("cadPlanPv").addEventListener("click", () => { const b = $("cadLivePv"); b.hidden = !b.hidden; if (!b.hidden) { if (PLAN) { try { PLAN.ad.live(ents, lays); } catch (e) {} } livePaint(); } }); $("cadLivePvX").addEventListener("click", () => { $("cadLivePv").hidden = true; });
 $("cadPlanPdf").addEventListener("click", () => { if (!PLAN || !PLAN.ad.pdf) return; try { PLAN.ad.live(ents, lays); } catch (e) {} PLAN.ad.pdf(); say("PDF hazırlanıyor: düzenlenmiş hâliyle iner."); });
 function editApply() { if (!PLAN) return; const ad = PLAN.ad; let err = null; try { err = ad.apply(ents, lays); } catch (e) { err = e.message; } if (err) return say(err, true); editExit(); ad.back && ad.back(); }
