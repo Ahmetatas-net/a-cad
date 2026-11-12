@@ -2044,8 +2044,9 @@ O.paint = (ctx, G, pxmm, W = 297, H = 210) => {
   ctx.save(); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W * pxmm, H * pxmm); ctx.lineCap = "butt"; ctx.lineJoin = "round";
   const X = x => x * pxmm, Y = y => (H - y) * pxmm;
   for (const g of G) if (g.t === "f") { ctx.fillStyle = g.color; ctx.beginPath(); g.p.forEach(([x, y], i) => i ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y))); ctx.closePath(); ctx.fill(); }
-  for (const g of G) if (g.t === "l") { ctx.strokeStyle = g.color; ctx.lineWidth = Math.max(0.6, g.w * pxmm); ctx.setLineDash(g.dash ? g.dash.map(v => v * pxmm) : []); ctx.beginPath(); g.p.forEach(([x, y], i) => i ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y))); ctx.stroke(); }
+  for (const g of G) if (g.t === "l" && !g.ust) { ctx.strokeStyle = g.color; ctx.lineWidth = Math.max(0.6, g.w * pxmm); ctx.setLineDash(g.dash ? g.dash.map(v => v * pxmm) : []); ctx.beginPath(); g.p.forEach(([x, y], i) => i ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y))); ctx.stroke(); }
   ctx.setLineDash([]);
+  for (const g of G) if (g.t === "l" && g.ust) { ctx.beginPath(); g.p.forEach(([x, y], i) => i ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y))); ctx.closePath(); ctx.fillStyle = "#fff"; ctx.fill(); ctx.strokeStyle = g.color; ctx.lineWidth = Math.max(0.6, g.w * pxmm); ctx.stroke(); } /* balastro */
   for (const g of G) if (g.t === "x") { ctx.save(); ctx.translate(X(g.x), Y(g.y)); if (g.rot) ctx.rotate(-g.rot * Math.PI / 180);
     ctx.fillStyle = g.color; ctx.font = `${g.it ? "italic " : ""}${g.bold ? "700 " : ""}${g.size * 1.32 * pxmm}px Arial, "Liberation Sans", Arimo, "Helvetica Neue", sans-serif`;
     ctx.textAlign = g.al === "c" ? "center" : g.al === "r" ? "right" : "left"; ctx.textBaseline = "middle"; ctx.fillText(g.s, 0, 0); ctx.restore(); }
@@ -2723,7 +2724,7 @@ A.sheet = (D, P) => {
       const { L_, rot, kk: k } = pick, ar = rot * Math.PI / 180, ru = [Math.cos(ar), Math.sin(ar)], rv = [-ru[1], ru[0]]; const htot = L_.reduce((t, l) => t + l[1] * 1.45, 0);
       let off = htot * k / 2 - L_[0][1] * k * 0.72; BID++; for (const [t_, sz] of L_) { T(c[0] + rv[0] * off, c[1] + rv[1] * off, t_, sz * k, { al: "c", color: "#000", rot: rot || undefined, pr: 5, grp: "b" + BID, anc: c, inP: q }); off -= sz * k * 1.45; } } } // kat adedi ve cinsi binanın içinde
   // parsel sınırı ve cepheleri
-  if (par.length) { L([...par, par[0]].map(M), 0.8, "#000"); par.forEach(q => { const m = M(q); L(A.circ(m[0], m[1], 0.35), 0.12, "#000"); }); } // Netcad örneği: parsel siyah kalın, köşede küçük daire
+  if (par.length) { L([...par, par[0]].map(M), 0.8, "#000"); par.forEach(q => { const m = M(q); A.balastro(G, m[0], m[1], 0.45, 0.15); }); } // Netcad örneği: parsel siyah kalın, köşede küçük daire
   // köşe adları ve kotlar
   const corner = (p, cen, name, kot, kind, poly, idx) => { let d = [p[0] - cen[0], p[1] - cen[1]];
     if (poly && poly.length > 2) { const a = poly[(idx + poly.length - 1) % poly.length], b = poly[(idx + 1) % poly.length]; const e1 = [p[0] - a[0], p[1] - a[1]], e2 = [b[0] - p[0], b[1] - p[1]], l1 = Math.hypot(...e1) || 1, l2 = Math.hypot(...e2) || 1; const bis = [e1[0] / l1 - e2[0] / l2, e1[1] / l1 - e2[1] / l2]; // köşenin dış açıortayı
@@ -2809,8 +2810,11 @@ A.sheet = (D, P) => {
 A.sym = (G, k, x, y, r = 1) => { if (k === "pk" || k === "bk") { const col = k === "pk" ? "#e00000" : "#1e8cff", R_ = 0.95 * r; const q = (a0) => { const p = [[x, y]]; for (let i = 0; i <= 6; i++) { const a = a0 + i / 6 * Math.PI / 2; p.push([x + R_ * Math.cos(a), y + R_ * Math.sin(a)]); } return p; };
     G.push({ t: "f", p: A.circ(x, y, R_), color: "#ffffff" }, { t: "f", p: q(Math.PI / 2), color: col }, { t: "f", p: q(Math.PI * 1.5), color: col }, { t: "l", p: A.circ(x, y, R_), w: 0.18, color: col }); return; }
   G.push({ t: "f", p: A.circ(x, y, 0.7 * r), color: "#1f5fbf" }); };
+/* kroki üstünde kısa nokta adı: ada ile başlayan uzun sayısal numaralarda son 3 hane (21000069 → 069); çizelgede tam ad kalır */
+A.kisaAd = (n, ada) => { const s = String(n == null ? "" : n).trim(), a = String(ada || "").trim(); if (/^\d{7,}$/.test(s) && a && s.startsWith(a)) return s.slice(-3); return s; };
+A.balastro = (G, x, y, r = 0.6, w = 0.2, color = "#000") => G.push({ t: "l", p: A.circ(x, y, r), w, color, ust: true }); /* parsel noktası işareti: içi beyaz küçük daire, çizgilerin üstünde */
 A.circ = (x, y, r) => { const p = []; for (let i = 0; i <= 16; i++) p.push([x + r * Math.cos(i / 8 * Math.PI), y + r * Math.sin(i / 8 * Math.PI)]); return p; };
-A.north = (G, x, y) => { G.push({ t: "f", p: [[x, y + 8], [x + 2.6, y - 3], [x, y - 1.2]], color: "#000" }, { t: "l", p: [[x, y + 8], [x - 2.6, y - 3], [x, y - 1.2]], w: 0.25, color: "#000" }, { t: "x", x, y: y + 11, s: "K", size: 3, al: "c", color: "#000", bold: true }); };
+A.north = (G, x, y, harf = "K") => { G.push({ t: "f", p: [[x, y + 8], [x + 2.6, y - 3], [x, y - 1.2]], color: "#000" }, { t: "l", p: [[x, y + 8], [x - 2.6, y - 3], [x, y - 1.2]], w: 0.25, color: "#000" }, { t: "x", x, y: y + 11, s: harf, size: 3, al: "c", color: "#000", bold: true }); };
 A.dash = (G, a, b, color, wd = 0.35) => { const d = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.max(1, Math.floor(d / 3)); for (let i = 0; i < n; i += 1) { const t0 = i / n, t1 = Math.min(1, (i + 0.6) / n); G.push({ t: "l", p: [[a[0] + (b[0] - a[0]) * t0, a[1] + (b[1] - a[1]) * t0], [a[0] + (b[0] - a[0]) * t1, a[1] + (b[1] - a[1]) * t1]], w: wd, color }); } };
 /* koordinat çizelgesi sayfaları (A3 yatay) */
 A.tables = (title, head, rows, P, widths) => { const pages = []; const W = 420, H = 297, rh = 4.4, top = 270, bot = 14; const per = Math.floor((top - bot) / rh) - 1; const tw = widths.reduce((a, b) => a + b, 0);
@@ -2847,7 +2851,7 @@ A.pg = (W, H) => { const G = []; G.W = W; G.H = H; G.coz = true; const api = {
 A.cakisma = (G) => { if (!G || G.__coz) return G; G.__coz = 1; const t0 = (typeof performance !== "undefined" ? performance.now() : 0);
   let mc = null; try { mc = document.createElement("canvas").getContext("2d"); } catch (e) {}
   const genis = g => { if (mc) { mc.font = `${g.bold ? "700 " : ""}${g.size * 1.32}px Arial`; return mc.measureText(g.s).width; } return g.size * 1.32 * 0.56 * String(g.s).length; };
-  const kutu = (g, x, y) => { const w = genis(g), h = g.size * 1.0, x0 = g.al === "c" ? -w / 2 : g.al === "r" ? -w : 0, a = (g.rot || 0) * Math.PI / 180, ca = Math.cos(a), sa = Math.sin(a);
+  const kutu = (g, x, y, pd = 0) => { const w = genis(g) + 2 * pd, h = g.size * 1.0 + 2 * pd, x0 = (g.al === "c" ? -w / 2 : g.al === "r" ? -w : 0) - (g.al === "c" ? 0 : g.al === "r" ? -pd : pd), a = (g.rot || 0) * Math.PI / 180, ca = Math.cos(a), sa = Math.sin(a);
     return [[x0, -h / 2], [x0 + w, -h / 2], [x0 + w, h / 2], [x0, h / 2]].map(([u, v]) => [x + u * ca - v * sa, y + u * sa + v * ca]); };
   const kucult = (P, k) => { const cx = (P[0][0] + P[2][0]) / 2, cy = (P[0][1] + P[2][1]) / 2; return P.map(p => [cx + (p[0] - cx) * k, cy + (p[1] - cy) * k]); };
   const bb = P => [Math.min(P[0][0], P[1][0], P[2][0], P[3][0]), Math.min(P[0][1], P[1][1], P[2][1], P[3][1]), Math.max(P[0][0], P[1][0], P[2][0], P[3][0]), Math.max(P[0][1], P[1][1], P[2][1], P[3][1])];
@@ -2865,17 +2869,17 @@ A.cakisma = (G) => { if (!G || G.__coz) return G; G.__coz = 1; const t0 = (typeo
   /* öncülü kot: ince bir çizginin ucu yazının hemen yanındaysa sabit say */
   for (const t of T) if (t.k === 2) { const h = t.g.size; for (let i = 0; i < INCE.length; i++) { const p = INCE[i]; if (p[0] > t.b[0] - h && p[0] < t.b[2] + h && p[1] > t.b[1] - h && p[1] < t.b[3] + h) { t.k = 0; break; } } }
   const yer = []; const YG = new Map(); const ekle = t => { yer.push(t); const b = t.b; for (let i = Math.floor(b[0] / CS); i <= Math.floor(b[2] / CS); i++) for (let j = Math.floor(b[1] / CS); j <= Math.floor(b[3] / CS); j++) { const kk = gk(i, j); let a = YG.get(kk); if (!a) YG.set(kk, a = []); a.push(t); } };
-  const yaziyaBiner = (P, ben) => { const b = bb(P); const seen = new Set(); for (let i = Math.floor(b[0] / CS); i <= Math.floor(b[2] / CS); i++) for (let j = Math.floor(b[1] / CS); j <= Math.floor(b[3] / CS); j++) { const a = YG.get(gk(i, j)); if (!a) continue; for (const o of a) { if (o === ben || seen.has(o)) continue; seen.add(o); if (kes(P, kucult(o.P, 0.94))) return true; } } return false; };
+  const yaziyaBiner = (P, ben) => { const b = bb(P); const seen = new Set(); for (let i = Math.floor(b[0] / CS); i <= Math.floor(b[2] / CS); i++) for (let j = Math.floor(b[1] / CS); j <= Math.floor(b[3] / CS); j++) { const a = YG.get(gk(i, j)); if (!a) continue; for (const o of a) { if (o === ben || seen.has(o)) continue; seen.add(o); if (kes(P, kucult(o.P, 1.04))) return true; } } return false; };
   for (const t of T) if (!t.k) ekle(t);
   let tas = 0, kal = 0; const sira = T.filter(t => t.k).sort((a, b) => b.k - a.k);
   for (const t of sira) { const g = t.g, h = g.size, a = (g.rot || 0) * Math.PI / 180, u = [Math.cos(a), Math.sin(a)], n = [-u[1], u[0]]; const w = genis(g);
-    const ha = { o: [g.x, g.y], r: h * 0.9, ince: true }; const ok = (x, y) => { const P = kucult(kutu(g, x, y), 0.95); return !yaziyaBiner(P, t) && !cizgiyeBiner(kucult(P, 1.02), t.k === 3 ? { o: [g.x, g.y], r: h * 2.2, ince: true } : ha); };
+    const ha = { o: [g.x, g.y], r: h * 0.9, ince: true }; const ok = (x, y) => { const P = kutu(g, x, y, 0.6); return !yaziyaBiner(P, t) && !cizgiyeBiner(kucult(kutu(g, x, y), 1.02), t.k === 3 ? { o: [g.x, g.y], r: h * 2.2, ince: true } : ha); };
     const ilk = (x, y) => { const P = kucult(kutu(g, x, y), 0.92); return !yaziyaBiner(P, t) && !cizgiyeBiner(kucult(P, 0.9), { o: [g.x, g.y], r: h * 0.9, ince: false }); };
-    if (ok(g.x, g.y)) { ekle(t); continue; }
+    if (ok(g.x, g.y)) { ekle(t); continue; } const ok2 = (x, y) => { const P = kutu(g, x, y, 0.6); return !yaziyaBiner(P, t) && !cizgiyeBiner(kucult(kutu(g, x, y), 1.02), t.k === 3 ? { o: [g.x, g.y], r: h * 2.2, ince: true } : null); };
     const C = []; const R = t.k === 3 ? [0.7, 1.1, 1.6, 2.2, 3] : t.k === 2 ? [0.6, 1, 1.5] : [0.8, 1.3, 1.9, 2.6, 3.4, 4.4];
     for (const d of R) { const dd = d * h; C.push([n[0] * dd, n[1] * dd], [-n[0] * dd, -n[1] * dd]); const ua = Math.min(dd, w * 0.6); C.push([u[0] * ua, u[1] * ua], [-u[0] * ua, -u[1] * ua]); if (t.k === 3) { const q = dd * 0.75; C.push([(u[0] + n[0]) * q, (u[1] + n[1]) * q], [(u[0] - n[0]) * q, (u[1] - n[1]) * q], [(-u[0] + n[0]) * q, (-u[1] + n[1]) * q], [(-u[0] - n[0]) * q, (-u[1] - n[1]) * q]); } }
     if (Array.isArray(g.cand)) C.unshift(...g.cand.filter(c => Array.isArray(c)).map(c => [c[0] - g.x, c[1] - g.y])); /* çizimin kendi önerdiği yerler önce */
-    let bul = null; for (const [dx, dy] of C) if (ok(g.x + dx, g.y + dy)) { bul = [dx, dy]; break; }
+    let bul = null; for (const [dx, dy] of C) if (ok2(g.x + dx, g.y + dy)) { bul = [dx, dy]; break; }
     if (!bul) { /* daha uzağa öncü çizgiyle taşı: yazılar asla üst üste kalmasın */ const ox = g.x, oy = g.y; for (const d of [5, 6.5, 8, 10]) { const dd = d * h; for (const k of [0, 1, 2, 3, 4, 5, 6, 7]) { const an = k * Math.PI / 4, dx = Math.cos(an) * dd, dy = Math.sin(an) * dd; const P = kucult(kutu(g, ox + dx, oy + dy), 0.95); if (!yaziyaBiner(P, t) && !cizgiyeBiner(kucult(P, 1.02), null)) { bul = [dx, dy]; break; } } if (bul) break; }
       if (bul) G.push({ t: "l", p: [[ox, oy], [ox + bul[0] * 0.82, oy + bul[1] * 0.82]], w: 0.1, color: g.color || "#000" }); }
     if (bul) { g.x += bul[0]; g.y += bul[1]; t.P = kutu(g, g.x, g.y); t.b = bb(t.P); tas++; } else kal++; ekle(t); }
@@ -2892,10 +2896,11 @@ A.imzaTablo = (g, x0, y0, x1, y1, cols, P) => { // cols: başlık satırları di
     if (c.ad) g.S(a, y0 + rh * 2.5, a + cw, c.ad, 1.6); if (c.tarih) g.S(a, y0 + rh * 1.5, a + cw, c.tarih, 1.6); if (i === 0 && g.G && window.O) window.O.kase(g.G, a + cw / 2, y0 + rh * 1.6, Math.min(cw - 2, 40)); }); };
 /* EK-18 ölçü krokisi (A4 yatay) */
 A.kroki = (D, P) => { const g = A.pg(297, 210); const { L, T, R } = g; R(10, 12, 287, 200, 0.45);
-  T(148, 204, P.baslik || (P.kgm ? "ÖLÇÜ KROKİSİ" : `${P.ada || ""} ADA ÖLÇÜ KROKİSİ`), 3.2, { al: "c" }); T(287, 204, P.kgm ? "EK-18" : "Ek-18", 2.6, { al: "r" }); if (P.formKod || P.kgm) T(10, 8, P.formKod || "32381507 FR. 521 Rev.No/Tarihi:01/06.06.2024", 1.6);
+  T(148, 204, P.baslik || (P.kgm ? "ÖLÇÜ KROKİSİ" : `${P.ada || ""} ADA ÖLÇÜ KROKİSİ`), 3.2, { al: "c" }); T(287, 204, P.kgm ? "EK-18" : "Ek-18", 2.6, { al: "r" }); if (String(P.formKod || "").trim() !== "-") T(10, 8, String(P.formKod || "").trim() || "32381507 FR. 521 Rev.No/ Tarihi:01/06.06.2024", 1.6); /* TKGM form seri kodu (örnek Ek-18 sol alt) */
   if (P.sira) { R(204, 182, 218, 196, 0.3); T(211, 187.5, String(P.sira), 3.2, { al: "c" }); }
   const cx = 222; L([[cx, 12], [cx, 200]], 0.35); // sağ sütun: kuzey, datum, koordinat çizelgesi
-  T(226, 182, `Datum : ${P.datum || "ITRF96"}`, 2.2); T(226, 177.5, `Projeksiyon : ${P.projK || "UTM 3°"}`, 2.2); A.north(g.G, 270, 186);
+  /* örnek Ek-18 düzeni: üstte N oku + KROKİ, altında Datum / Projeksiyon */ { const nx = 254.5; T(nx, 197.6, "N", 2.2, { al: "c", bold: true }); g.G.push({ t: "f", p: [[nx, 196.2], [nx + 1.3, 190.4], [nx, 191.3]], color: "#000" }, { t: "l", p: [[nx, 196.2], [nx - 1.3, 190.4], [nx, 191.3], [nx, 196.2]], w: 0.2, color: "#000" }); L([[nx, 191.3], [nx, 188.6]], 0.25); T(nx, 186.6, "KROKİ", 2, { al: "c", bold: true }); L([[cx, 184.4], [287, 184.4]], 0.3); }
+  T(225, 180.4, `Datum : ${String(P.datum || "ITRF96").replace(/^ITRF-96$/i, "ITRF96")}`, 2.2); T(225, 175.6, `Projeksiyon : ${String(P.projK || "TM 3°").replace(/^UTM 3°$/i, "TM 3°")}`, 2.2);
   L([[cx, 172], [287, 172]], 0.3); L([[cx, 165], [287, 165]], 0.3); const cc = [cx, 238, 260, 280, 287]; ["Nokta No", "Y", "X", "MK"].forEach((s, i) => T((cc[i] + cc[i + 1]) / 2, 168.5, s, 1.8, { al: "c" }));
   cc.slice(1, -1).forEach(c => L([[c, 12], [c, 172]], 0.2));
   const rows = D.koord || [], rh = 3.2, nfit = Math.floor((165 - 13) / rh);
@@ -2920,18 +2925,21 @@ A.krokiPlan = (g, D, box, list) => { const i0 = g.G.length; const all = [...D.pa
   /* birleştirmede kalkan eski sınırlar: çizgi + çarpı işaretleri; eski parsel numaraları üstü çizili */ for (const [a0, b0] of D.iptal || []) { const ma = M(a0), mb = M(b0); g.G.push({ t: "l", p: [ma, mb], w: 0.3, color: "#b000b0" }); for (const t of [0.3, 0.7]) { const c = [ma[0] + (mb[0] - ma[0]) * t, ma[1] + (mb[1] - ma[1]) * t]; L([[c[0] - 1, c[1] - 1], [c[0] + 1, c[1] + 1]], 0.2); L([[c[0] - 1, c[1] + 1], [c[0] + 1, c[1] - 1]], 0.2); } }
   for (const e of D.eskiNo || []) { const q = M(e.p); if (!inB(q)) continue; T(q[0], q[1], e.s, 2.6, { al: "c" }); L([[q[0] - 2, q[1] - 0.6], [q[0] + 2, q[1] + 1.6]], 0.2); }
   { const P = D.parent.pts; L([...P, P[0]].map(M), 0.8); } /* ana parsel kalın */
-  for (const pr of polys) { const P = pr.pts; L([...P, P[0]].map(M), 0.6); if (!D.noLen) for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length], k = ek(a, b); if (seen.has(k)) continue; seen.add(k);
+  for (const pr of polys) { const P = pr.pts; L([...P, P[0]].map(M), D.parts.length ? 0.3 : 0.6); if (!D.noLen) for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length], k = ek(a, b); if (seen.has(k)) continue; seen.add(k);
       const d = Math.hypot(b[0] - a[0], b[1] - a[1]); if (d * F.s < 4) continue; const ma = M(a), mb = M(b); let ang = Math.atan2(mb[1] - ma[1], mb[0] - ma[0]) * 180 / Math.PI; if (ang > 90) ang -= 180; if (ang < -90) ang += 180;
-      const c = A.centroid(P), mid = [(ma[0] + mb[0]) / 2, (ma[1] + mb[1]) / 2], mc = M(c), nx = -(mb[1] - ma[1]), ny = mb[0] - ma[0], nl = Math.hypot(nx, ny) || 1, sg = (mc[0] - mid[0]) * nx + (mc[1] - mid[1]) * ny > 0 ? 1 : -1;
-      T(mid[0] + nx / nl * 1.4 * sg, mid[1] + ny / nl * 1.4 * sg, d.toFixed(2), 1.45, { al: "c", rot: ang }); } }
+      const c = A.centroid(P), mid = [(ma[0] + mb[0]) / 2, (ma[1] + mb[1]) / 2], mc = M(c), nx = -(mb[1] - ma[1]), ny = mb[0] - ma[0], nl = Math.hypot(nx, ny) || 1; let sg = (mc[0] - mid[0]) * nx + (mc[1] - mid[1]) * ny > 0 ? 1 : -1;
+      /* örnek Ek-18 düzeni: ana parsel sınırındaki ölçü dışarıda, bölme hattındaki ölçü parçanın içinde; eğik, küçük */ const mw = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], PP = D.parent.pts; if (PP.some((u, k) => A.segDist(mw, u, PP[(k + 1) % PP.length]) < 1e-3)) sg = -sg;
+      T(mid[0] + nx / nl * 1.5 * sg, mid[1] + ny / nl * 1.5 * sg, d.toFixed(2), 1.8, { al: "c", rot: ang, it: true }); } }
   // nokta numaraları
-  const pc = A.centroid(D.parent.pts), boxes = []; let hid = 0; for (const q of D.points) { const m = M(q.p); g.G.push({ t: "l", p: A.circ(m[0], m[1], 0.55), w: 0.15, color: "#000" });
-    const dx = q.p[0] - pc[0], dy = q.p[1] - pc[1], l = Math.hypot(dx, dy) || 1, x = m[0] + dx / l * 1.4, y = m[1] + dy / l * 1.4, w = String(q.n).length * 1.75 * 0.62, al = dx >= 0 ? "l" : "r";
-    const bx = [al === "l" ? x : x - w, y - 1.0, al === "l" ? x + w : x, y + 1.0]; if (boxes.some(b => b[0] < bx[2] && bx[0] < b[2] && b[1] < bx[3] && bx[1] < b[3])) { hid++; continue; } boxes.push(bx); T(x, y, q.n, 1.75, { al }); }
+  const pc = A.centroid(D.parent.pts), boxes = []; let hid = 0; for (const q of D.points) { const m = M(q.p); A.balastro(g.G, m[0], m[1], 0.6, 0.2);
+    const nn = A.kisaAd(q.n, D.ada); const dx = q.p[0] - pc[0], dy = q.p[1] - pc[1], l = Math.hypot(dx, dy) || 1, x = m[0] + dx / l * 1.6, y = m[1] + dy / l * 1.6, w = String(nn).length * 1.9 * 0.62, al = dx >= 0 ? "l" : "r";
+    const bx = [al === "l" ? x : x - w, y - 1.0, al === "l" ? x + w : x, y + 1.0]; if (boxes.some(b => b[0] < bx[2] && bx[0] < b[2] && b[1] < bx[3] && bx[1] < b[3])) { hid++; continue; } boxes.push(bx); T(x, y, nn, 1.9, { al }); }
   if (hid && !D.noHidNote) T(box[0] + 1, box[1] + 1, `Sık noktalardan ${hid} tanesinin numarası koordinat özetinde.`, 1.5);
-  for (const pr of polys) { const c = M(A.label(pr.pts)); if (D.parts.length) T(c[0], c[1], pr.ad, 3.4, { al: "c" }); }
-  if (D.ada) { const c = M(A.label(D.parent.pts)); T(c[0] - 6, c[1] + 6, D.ada, 3.2, { al: "c" }); if (!D.parts.length) T(c[0] - 6, c[1] + 2, D.parselNo || "", 2.4, { al: "c" }); }
-  for (const ln of D.cuts || []) if (ln.length === 2) A.dash(g.G, M(ln[0]), M(ln[1]), "#000");
+  for (const pr of polys) { const c = M(A.label(pr.pts)); if (D.parts.length) { T(c[0], c[1] + 1.2, pr.ad, 3.4, { al: "c", bold: true }); T(c[0], c[1] - 2.4, `${A.area(pr.pts).toFixed(2)} m²`, 1.7, { al: "c" }); } }
+  if (D.ada) { const c = M(A.label(D.parent.pts)); let q = [c[0], c[1]]; if (D.parts.length) { /* ada numarası: bölme hatlarından, parça yazılarından ve sınırdan en uzak boş yer */ const PM = D.parent.pts.map(M), cs = polys.map(pr => M(A.label(pr.pts))), cuts = (D.cuts || []).map(l => l.map(M)); const bb_ = A.bbox(PM); let best = null, bs = -1;
+      const sd_ = (p, a, b) => A.segDist(p, a, b); for (let i = 1; i < 18; i++) for (let j = 1; j < 18; j++) { const p = [bb_[0] + (bb_[2] - bb_[0]) * i / 18, bb_[1] + (bb_[3] - bb_[1]) * j / 18]; if (!A.inPoly(PM, p[0], p[1])) continue;
+        let d = Infinity; for (const l of cuts) for (let k = 0; k + 1 < l.length; k++) d = Math.min(d, sd_(p, l[k], l[k + 1]) / 6); for (const z of cs) d = Math.min(d, Math.hypot(p[0] - z[0], p[1] - z[1]) / 8); for (let k = 0; k < PM.length; k++) d = Math.min(d, sd_(p, PM[k], PM[(k + 1) % PM.length]) / 7); if (d > bs) { bs = d; best = p; } } if (best) q = best; }
+    T(q[0], q[1] + 1.6, D.ada, 4.4, { al: "c", bold: true }); const pn = String(D.parselNo || ""); if (pn) { T(q[0], q[1] - 2.6, pn, 2.6, { al: "c", color: D.parts.length ? "#c00000" : "#000" }); if (D.parts.length) { const w = Math.max(1.6, pn.length * 1.6); g.G.push({ t: "l", p: [[q[0] - w / 2 - 0.4, q[1] - 2.6], [q[0] + w / 2 + 0.4, q[1] - 2.6]], w: 0.2, color: "#c00000" }); } /* ifrazda eski parsel no üstü çizili */ } }
   try { A.declutter(g.G, i0, g.G.length, box, { pad: 0.2 }); } catch (e) { console.error(e); }
   return F; };
 A.label = P => { const c = A.centroid(P); if (A.inPoly(P, c[0], c[1])) return c; // içerideki en geniş yatay kesitin ortası
@@ -3241,7 +3249,7 @@ A.kamPlan = (D, P) => { const SR = D.sinir.rings || [D.sinir.pts]; const all = [
   for (const t of D.komsuNo || []) { const q = M(t.p); if (inB(q)) T(q[0], q[1], t.s, 2.4, { al: "c" }); }
   const adaYaz = new Set(); for (const r of D.parseller) { const big = r.parts.slice().sort((x, y) => A.area(y.pts) - A.area(x.pts))[0]; const c = M(A.label(big.pts)); if (r.ada && !adaYaz.has(r.ada)) { adaYaz.add(r.ada); T(c[0], c[1] + 3.2, r.ada, 4.2, { al: "c" }); } T(c[0], c[1] - (adaYaz.has(r.ada) ? 1.2 : 0), r.no || "", 2.6, { al: "c" });
     for (const pr of r.parts) { if (r.parts.length < 2) continue; const lc = M(A.label(pr.pts)); const sz = Math.min(2.8, Math.sqrt(A.area(pr.pts)) * k * 0.35); if (sz < 1) continue; const dup = pr === big; T(lc[0] + (dup ? 4 : 0), lc[1] + (dup ? 4 : 0), pr.ad, Math.max(1.6, sz), { al: "c" }); } }
-  for (const q of D.noktalar || []) { const m = M(q.p); if (!inB(m)) continue; L(A.circ ? A.circ(m[0], m[1], 0.35) : [[m[0] - 0.3, m[1]], [m[0] + 0.3, m[1]]], 0.12); T(m[0] + 0.8, m[1] + 0.6, q.n, 1.6); }
+  for (const q of D.noktalar || []) { const m = M(q.p); if (!inB(m)) continue; A.balastro(G, m[0], m[1], 0.45, 0.15); T(m[0] + 0.8, m[1] + 0.6, q.n, 1.6); }
   /* sağ sütun: cetvel */
   const tx0 = mx1 + 2, tx1 = W - kenar; let y = H - kenar - 4; T((tx0 + tx1) / 2, y, "KAMULAŞTIRMA CETVELİ", 3, { al: "c", bold: true }); y -= 3;
   const cols = [[D.kgm ? "SIRA" : "NU", 5], ["ADA", 7], ["PARSEL", 8], ["ALAN", 14], ["CİNSİ", 14], ["GİREN", 15], ["GİRMEYEN", 15]]; const sw = cols.reduce((t, c) => t + c[1], 0), sc = (tx1 - tx0) / sw; const xs = [tx0]; cols.forEach(c => xs.push(xs[xs.length - 1] + c[1] * sc));
@@ -3281,7 +3289,7 @@ A.apkKroki = (D) => { const W = 210, H = 297, s = Math.min((W - 10) / 226.9, (H 
   const OL = [250, 500, 1000, 2000, 2500, 5000, 10000, 25000]; const fit = o => wx * 1000 / o <= (box[2] - box[0]) * 0.72 && wy * 1000 / o <= (box[3] - box[1]) * 0.72; const olc = +D.olcek || OL.find(fit) || 25000; const k = 1000 / olc;
   const cx = (box[0] + box[2]) / 2, cy = (box[1] + box[3]) / 2, mx = (bb[0] + bb[2]) / 2, my = (bb[1] + bb[3]) / 2; const M = p => [cx + (p[0] - mx) * k, cy + (p[1] - my) * k]; const clip = (a, b) => A.clipSeg(M(a), M(b), box);
   for (const [a, b] of D.komsu || []) { const c = clip(a, b); if (c) L(c, 0.18, "#e00000"); }
-  L([...P, P[0]].map(M), 0.55, "#5a0010");
+  L([...P, P[0]].map(M), 0.55, "#5a0010"); P.forEach(p => { const m = M(p); A.balastro(G, m[0], m[1], 0.6, 0.2); });
   /* kenar uzunlukları: kenara paralel, dışta */ const ccw = A.sArea(P) > 0; P.forEach((p, i) => { const q = P[(i + 1) % P.length], Lq = Math.hypot(q[0] - p[0], q[1] - p[1]); if (Lq < 0.01) return; const a = M(p), b = M(q); let ang = Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI; if (ang > 90) ang -= 180; if (ang < -90) ang += 180; const nl = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, ex = (b[0] - a[0]) / nl, ey = (b[1] - a[1]) / nl; let o = [ey, -ex]; { const mp = [(p[0] + q[0]) / 2 + o[0] * 0.5 / k, (p[1] + q[1]) / 2 + o[1] * 0.5 / k]; if (A.inPoly(P, mp[0], mp[1])) o = [-ey, ex]; }
     G.push({ raw: 1, t: "x", x: (a[0] + b[0]) / 2 + o[0] * 1.6, y: (a[1] + b[1]) / 2 + o[1] * 1.6, s: Lq.toFixed(2), size: 2.2 * 0.76, color: "#b05a00", al: "c", rot: ang }); });
   /* köşe adları: dışarı doğru */ const c0 = A.centroid(P); P.forEach((p, i) => { const m = M(p), d = [p[0] - c0[0], p[1] - c0[1]], l = Math.hypot(...d) || 1; G.push({ raw: 1, t: "x", x: m[0] + d[0] / l * 2.2, y: m[1] + d[1] / l * 2.2, s: D.parsel.names[i] || "", size: 2.4 * 0.76, color: "#1f3fbf", al: d[0] >= 0 ? "l" : "r" }); });
@@ -8262,7 +8270,7 @@ function drawA() { if (!cv.width || !V.s) return; const D = dpr; cx.clearRect(0,
   if (MOD === "ifz" && ADAV && ADAV.parts) { cx.setLineDash([6 * D, 4 * D]); ADAV.parts.forEach((P, i) => { path(P, true); cx.fillStyle = ["rgba(31,95,191,.10)", "rgba(46,122,73,.12)", "rgba(208,122,16,.12)", "rgba(150,60,170,.10)"][i % 4]; cx.fill(); cx.strokeStyle = "#1f5fbf"; cx.lineWidth = 1.6 * D; cx.stroke(); const c = A.label(P); cx.fillStyle = "#1f3f8f"; cx.font = `700 ${11 * D}px Arial`; cx.textAlign = "center"; cx.fillText(`${i + 1}: ${tr2(A.area(P))} m²`, X(c[0]), Y(c[1])); }); cx.setLineDash([]); }
   if (f.parts && f.parts.length) f.parts.forEach((p, i) => { path(p.pts, true); cx.fillStyle = ["rgba(31,95,191,.12)", "rgba(46,122,73,.14)", "rgba(208,122,16,.14)", "rgba(150,60,170,.12)"][i % 4]; cx.fill(); cx.strokeStyle = "#1f5fbf"; cx.lineWidth = (i === f.part ? 3 : 1.6) * D; cx.stroke();
     const c = A.label(p.pts); cx.fillStyle = "#1f5fbf"; cx.font = `700 ${14 * D}px Arial`; cx.textAlign = "center"; cx.fillText(`${p.ad}  ${tr2(A.area(p.pts))} m²`, X(c[0]), Y(c[1])); });
-  if (a.parsel) { path(a.parsel.pts, true); cx.strokeStyle = "#d00000"; cx.lineWidth = 2.6 * D; cx.stroke();
+  if (a.parsel) { path(a.parsel.pts, true); cx.strokeStyle = "#d00000"; cx.lineWidth = 2.6 * D; cx.stroke(); /* balastro: parsel köşelerinde küçük daire */ cx.fillStyle = "#fff"; cx.lineWidth = 1.4 * D; for (const p of a.parsel.pts) { cx.beginPath(); cx.arc(X(p[0]), Y(p[1]), 3.2 * D, 0, 7); cx.fill(); cx.stroke(); }
     if (!(f.parts && f.parts.length) && !(MOD === "ifz" && ADAV)) { const c = A.label(a.parsel.pts); cx.fillStyle = "#d00000"; cx.font = `700 ${13 * D}px Arial`; cx.textAlign = "center"; cx.fillText(`${tr2(A.area(a.parsel.pts))} m²`, X(c[0]), Y(c[1])); }
     if (MOD === "ifz") { cx.strokeStyle = "rgba(230,120,0,.85)"; cx.lineWidth = 6 * D; cx.lineCap = "round"; for (const i of a.ifz.yol || []) { const p = a.parsel.pts[i], q = a.parsel.pts[(i + 1) % a.parsel.pts.length]; if (!p || !q) continue; cx.beginPath(); cx.moveTo(X(p[0]), Y(p[1])); cx.lineTo(X(q[0]), Y(q[1])); cx.stroke(); } cx.lineCap = "butt"; }
     // kenar numaraları
@@ -8613,7 +8621,7 @@ function ifzDataFor(par, f, ant) { const parts_ = (f.parts || []).map(p => ({ ad
   { /* YOL yazısı en çok 2 yerde (aynı türden yazılar birbirinden uzak), parsele en yakın olanlar; DERE/KANAL ayrıca en çok 1 */ const pc = A.label(par.pts), sz = Math.max(bb[2] - bb[0], bb[3] - bb[1]); const dP = t => { let m = Infinity; for (let i = 0; i < par.pts.length; i++) m = Math.min(m, A.segDist(t.p, par.pts[i], par.pts[(i + 1) % par.pts.length])); return m; };
     const pick = (L, n) => { const out = []; for (const t of L.slice().sort((x, y) => (x.a ? -1 : 0) - (y.a ? -1 : 0) || dP(x) - dP(y))) { if (out.length >= n) break; if (out.some(o => Math.hypot(o.p[0] - t.p[0], o.p[1] - t.p[1]) < sz * 0.6)) continue; out.push(t); } return out; };
     const Y_ = yolYazi.filter(t => /YOL|CADDE|SOKAK/.test(t.s)), O_ = yolYazi.filter(t => !/YOL|CADDE|SOKAK/.test(t.s)); yolYazi.length = 0; yolYazi.push(...pick(Y_, 2), ...pick(O_, 1)); }
-  return { komsu, komsuAd, komsuP, yolYazi, yol: f.yol || [], ada: ant.ada, parselNo: ant.parselNo, parent: { pts: par.pts, names: par.names }, parts: parts_, cuts: f.cuts, points: [...pts.values()], koord: [...pts.values()].map(q => [q.n, q.p[0].toFixed(2), q.p[1].toFixed(2), ""]) }; }
+  return { komsu, komsuAd, komsuP, yolYazi, yol: f.yol || [], ada: ant.ada, parselNo: ant.parselNo, parent: { pts: par.pts, names: par.names }, parts: parts_, cuts: f.cuts, points: [...pts.values()], koord: [...pts.values()].map(q => [q.n, q.p[0].toFixed(2), q.p[1].toFixed(2), par.names.includes(q.n) ? "" : String(f.mk ?? "0.09")]) }; } /* MK: yeni (ifrazla oluşan) noktaların konum doğruluğu, örnek Ek-18 gibi */
 $("aoI").addEventListener("click", async () => { const a = S(); if (!a.parsel) return msg("aoMsg", "Önce parseli seç.", true); if (!a.ifz.parts || !a.ifz.parts.length) { if ($("iAl").value.trim() || $("iY").value === "esit") $("iGo").click(); }
   if (!a.ifz.parts || !a.ifz.parts.length) { msg("aoMsg", "Parsel henüz bölünmedi. Yukarıdaki İfraz bölümünde istenen alanı yazıp \"Böl (ifraz et)\" düğmesine bas.", true); $("iAl").scrollIntoView({ block: "center" }); return; } msg("aoMsg", "İfraz evrakı hazırlanıyor…"); await new Promise(r => setTimeout(r, 0));
   try { const D = ifzData(), P = P0(); const cs = pagesNow().map(p => paint(p.G, p.W, p.H)); // elle düzenlenmiş sayfalar dahil
