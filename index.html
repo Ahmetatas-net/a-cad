@@ -8973,7 +8973,7 @@ const nkArt = v => { const m = /^(.*?)(\d+)$/.exec(String(v)); return m ? m[1] +
 function nkBak() { const names = new Set(ents.filter(e => e.t === "point").map(e => String(e.n))); if (!NKNO) { let n = 1; while (names.has("P" + n)) n++; return "P" + n; } let v = NKNO, g = 0; while (names.has(v) && g++ < 100000) v = nkArt(v); return v; }
 function nkBakFrom(v) { const names = new Set(ents.filter(e => e.t === "point").map(e => String(e.n))); let g = 0; while (names.has(v) && g++ < 100000) v = nkArt(v); return v; }
 /* yakalanan noktanın kotu: kotlu nokta, çizgi köşesi ya da kotlu çizginin üstü (kenar boyunca enterpole) */
-function yakZ(p) { const t = 1e-4; for (const e of ents) { if (lays[e.lay] && lays[e.lay].on === false) continue; if (e.t === "point") { const q = e.pts[0]; if (Math.abs(q[0] - p[0]) < t && Math.abs(q[1] - p[1]) < t && Math.abs(q[2] || 0) > 1e-6) return +q[2]; } }
+function yakZ(p) { if (!snapMk) return null; const t = 1e-4; for (const e of ents) { if (lays[e.lay] && lays[e.lay].on === false) continue; if (e.t === "point") { const q = e.pts[0]; if (Math.abs(q[0] - p[0]) < t && Math.abs(q[1] - p[1]) < t && Math.abs(q[2] || 0) > 1e-6) return +q[2]; } }
   for (const e of ents) { if ((e.t !== "line" && e.t !== "pline") || !e.pts || (lays[e.lay] && lays[e.lay].on === false)) continue; const P = e.pts, m = e.closed ? P.length : P.length - 1;
     for (let i = 0; i < m; i++) { const a = P[i], b = P[(i + 1) % P.length], za = +a[2] || 0, zb = +b[2] || 0; if (Math.abs(za) < 1e-6 && Math.abs(zb) < 1e-6) continue; const dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy; let u = L2 ? ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L2 : 0; if (u < -1e-9 || u > 1 + 1e-9) continue; u = Math.max(0, Math.min(1, u)); if (Math.hypot(p[0] - a[0] - u * dx, p[1] - a[1] - u * dy) > t) continue; if (Math.abs(za) < 1e-6 || Math.abs(zb) < 1e-6) { if (u < 1e-6 && Math.abs(za) > 1e-6) return za; if (u > 1 - 1e-6 && Math.abs(zb) > 1e-6) return zb; continue; } return za + (zb - za) * u; } }
   return null; }
@@ -9845,11 +9845,14 @@ Object.assign(ALIAS, { ON: "OTONOKTA", OTO: "OTONOKTA", TS: "TOPLUSORGU", TOPLU:
 const KZL = /^KAZI_(TABAN|SEV_UST|SEV_ALT|SIFIR|TARAMA|YAZI|YUZEY)$/; const PRJ = /KAZI|PROJE|TASARIM|KIRMIZI/i;
 /* arazi modeli: çizimdeki üçgenler (3 köşeli kotlu kapalı çizgiler) ya da kotlu noktalardan; nokta, çizim değişince yenilenir */
 let KMOD = { a: null, n: -1, M: null };
-function kotModel() { if (KMOD.a === ents && KMOD.n === ents.length && KMOD.v === UVER && KMOD.f === FACES.length) return KMOD.M; let M = null;
-  try { const F0 = FACES.filter(f => !PRJ.test(f.lay) && lays[f.lay] && lays[f.lay].on !== false); const F = F0.length >= 3 ? F0.map(f => ({ p: f.p })) : ents.filter(e => e.t === "pline" && e.closed && e.pts.length === 3 && !PRJ.test(e.lay) && e.pts.every(q => Math.abs(q[2] || 0) > 1e-6)).map(e => ({ p: e.pts.map(q => [q[0], q[1], +q[2]]) })); if (F.length >= 3) M = K.facesToModel(F);
+function kotModel() { const vis = Object.keys(lays).filter(l => lays[l].on !== false).join(","); if (KMOD.a === ents && KMOD.n === ents.length && KMOD.v === UVER && KMOD.f === FACES.length && KMOD.vis === vis) return KMOD.M;
+  /* yüzey üçgenlerden geliyorsa çizimdeki başka değişiklikler (nokta atma vb.) modeli yeniden kurdurmasın: yalnız üçgenler ya da görünürlük değişince */
+  let fs = null; if (FACES.length) { let c = 0; for (let i = 0; i < FACES.length; i++) { const q = FACES[i].p; c += (+q[0][2] || 0) * ((i % 7) + 1) + q[1][0] * 1e-7 + (+q[2][2] || 0) * 0.31; } fs = FACES.length + "|" + c + "|" + vis; if (KMOD.fs === fs && KMOD.src === "F") { KMOD.a = ents; KMOD.n = ents.length; KMOD.v = UVER; KMOD.vis = vis; return KMOD.M; } }
+  let M = null, src = "";
+  try { const F0 = FACES.filter(f => !PRJ.test(f.lay) && lays[f.lay] && lays[f.lay].on !== false); if (F0.length >= 3) src = "F"; const F = F0.length >= 3 ? F0.map(f => ({ p: f.p })) : ents.filter(e => e.t === "pline" && e.closed && e.pts.length === 3 && !PRJ.test(e.lay) && e.pts.every(q => Math.abs(q[2] || 0) > 1e-6)).map(e => ({ p: e.pts.map(q => [q[0], q[1], +q[2]]) })); if (F.length >= 3) M = K.facesToModel(F);
     else { const P = [], g = new Set(); for (const e of ents) if (e.t === "point" && Math.abs(e.pts[0][2] || 0) > 1e-6 && !KOTHARIC.has(e.id)) { const k = Math.round(e.pts[0][0] * 100) + "," + Math.round(e.pts[0][1] * 100); if (g.has(k)) continue; g.add(k); P.push({ n: e.n, e: e.pts[0][0], y: e.pts[0][1], z: +e.pts[0][2] }); } if (P.length >= 3) M = { pts: P, tri: K.tinIyi(P, 0) }; }
     if (M && M.tri && M.tri.length) K.index(M); else M = null; } catch (er) { M = null; }
-  KMOD = { a: ents, n: ents.length, v: UVER, f: FACES.length, M }; return M; }
+  KMOD = { a: ents, n: ents.length, v: UVER, f: FACES.length, M, fs, src, vis }; return M; }
 let UVER = 0, KOTHARIC = new Set();
 /* proje (kırmızı) yüzeyi: KAZI / PROJE / TASARIM adlı tabakalardaki üçgenler (kazı planı yüzeyi ya da kazı çizgilerinden üretilen üçgenler) */
 let PMOD = { k: "", M: null };
@@ -9857,11 +9860,11 @@ function projeModel() { let n = 0, sg = 0; for (const f of FACES) if (PRJ.test(f
 /* kotlu çizgiler (DXF/DWG/NCZ'den gelen 3B çizgi, kazı planı çizgileri): en yakın noktadaki kot, çizgi boyunca enterpole */
 let KCZ = { v: -1, a: null, n: 0, S: null };
 const KCZX = /E[GĞ]R[İI]|E[ŞS]Y[ÜU]K|KONT[UÜ]R|CONTOUR|ISOHYP|TES[İI]YE/i;
-function kotluSeg() { if (KCZ.v === UVER && KCZ.a === ents && KCZ.n === ents.length) return KCZ.S; const S = [];
+function kotluSeg() { const vis = Object.keys(lays).filter(l => lays[l].on !== false).join(","); if (KCZ.v === UVER && KCZ.a === ents && KCZ.n === ents.length && KCZ.vis === vis) return KCZ.S; const S = [];
   for (const e of ents) { if ((e.t !== "line" && e.t !== "pline") || !e.pts || e.pts.length < 2) continue; const L = lays[e.lay]; if (L && L.on === false) continue; if (KCZX.test(e.lay || "")) continue;
     if (!e.pts.some(q => Math.abs(q[2] || 0) > 1e-6)) continue; const P = e.pts, n = P.length, m = e.closed ? n : n - 1;
     for (let i = 0; i < m; i++) { const a = P[i], b = P[(i + 1) % n]; S.push([a[0], a[1], a[2] || 0, b[0], b[1], b[2] || 0, e.lay || "0"]); } }
-  KCZ = { v: UVER, a: ents, n: ents.length, S }; return S; }
+  KCZ = { v: UVER, a: ents, n: ents.length, S, vis }; return S; }
 function cizgiKot(x, y, R) { const S = kotluSeg(); if (!S.length) return null; let bd = R || 50, bk = null, bl = "";
   for (const s of S) { if (Math.min(s[0], s[3]) > x + bd || Math.max(s[0], s[3]) < x - bd || Math.min(s[1], s[4]) > y + bd || Math.max(s[1], s[4]) < y - bd) continue;
     const dx = s[3] - s[0], dy = s[4] - s[1], L2 = dx * dx + dy * dy; let t = L2 ? ((x - s[0]) * dx + (y - s[1]) * dy) / L2 : 0; t = t < 0 ? 0 : t > 1 ? 1 : t;
