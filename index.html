@@ -9844,7 +9844,7 @@ const ucgKot = e => e.t === "point" ? Math.abs(e.pts[0][2] || 0) > 1e-6 : (e.pts
 function ucgKume() { const tum = sel.size ? selEnts() : ents.filter(e => lays[e.lay] && lays[e.lay].on); const F = sel.size ? [] : FACES.filter(f => lays[f.lay] && lays[f.lay].on !== false); return { tum, F }; }
 CMDS.UCGENLE = (mod) => { const { tum, F } = ucgKume(); const N = { nk: 0, dg: 0, cd: 0, al: 0, ug: F.length }, NK = { nk: 0 };
   for (const e of tum) { const t = ucgTur(e); if (!t) continue; if (t === "nk") { N.nk++; if (ucgKot(e)) NK.nk++; } else if (ucgKot(e)) N[t]++; }
-  let TY = null; try { TY = JSON.parse(localStorage.getItem("acad_ucgty") || "null"); } catch (e) {} if (!TY) TY = { nk: 1, dg: 1, cd: 1, al: 1, ug: 0 }; if (mod === "cz") TY = { nk: 0, dg: 1, cd: 1, al: 1, ug: 0 };
+  let TY = null; try { TY = JSON.parse(localStorage.getItem("acad_ucgty") || "null"); } catch (e) {} if (!TY) TY = NK.nk >= 3 ? { nk: 1, dg: 0, cd: 0, al: 0, ug: 0 } : { nk: 1, dg: 1, cd: 1, al: 1, ug: 0 }; /* varsayılan: kotlu nokta varsa yalnız noktalar (proje çizgileri araziyi bozmasın) */ if (mod === "cz") TY = { nk: 0, dg: 1, cd: 1, al: 1, ug: 0 };
   if (!UTY.some(([k]) => N[k])) return say(sel.size ? "Seçimde kotlu nokta, çizgi, alan ya da üçgen yok" : "Açık tabakalarda kotlu nokta, çizgi, alan ya da üçgen yok", true);
   const box = $("cadOut"); let d = $("ucgBox"); if (!d) { d = document.createElement("div"); d.id = "ucgBox"; d.className = "card"; box.parentNode.insertBefore(d, box); }
   const ky = sel.size ? `seçili ${sel.size} nesne` : "açık tabakalardaki tüm nesneler";
@@ -9955,7 +9955,8 @@ function tinBilgi(lay) { const F = FACES.filter(f => f.lay === lay); let a2 = 0,
   const S = tinSinir(lay); outShow(`◬ Yüzey bilgisi: ${lay}`, ["Bilgi", "Değer"], [["Üçgen sayısı", fmtN_(F.length)], ["Yatay (2B) alan", fmt(a2) + " m²"], ["Eğik (3B) yüzey alanı", fmt(a3) + " m²"], ["En düşük kot", zn.toFixed(3)], ["En yüksek kot", zx.toFixed(3)], ["Kot farkı", (zx - zn).toFixed(3) + " m"], ["Ortalama eğim", (a2 ? eg / a2 : 0).toFixed(1) + " %"], ["En dik üçgen", ex.toFixed(1) + " %"], ["En uzun kenar", fmt(ek) + " m"], ["Sınır", `${S.length} kapalı çizgi (${S.length > 1 ? "1 dış sınır + " + (S.length - 1) + " delik/ada" : "tek parça"}) · çevre ${fmt(S.length ? S[0].reduce((s, q, i) => s + Math.hypot(q[0] - S[0][(i + 1) % S[0].length][0], q[1] - S[0][(i + 1) % S[0].length][1]), 0) : 0)} m`]]); }
 const tLayAt = p => { const i = faceAt(p[0], p[1]); return i < 0 ? null : FACES[i].lay; };
 const tTekLay = (p, ad) => { const l = tLayAt(p) || (tLays().length === 1 ? tLays()[0] : null); if (!l) say(`${ad}: bir üçgen yüzeyin içine dokun`, true); return l; };
-const tKapali = e => e && ((e.t === "pline" && e.closed && e.pts.length >= 3) || e.t === "circle") ? (e.t === "circle" ? Array.from({ length: 72 }, (_, i) => [e.pts[0][0] + e.r * Math.cos(i * Math.PI / 36), e.pts[0][1] + e.r * Math.sin(i * Math.PI / 36), 0]) : e.pts) : null;
+const tKapali = e => { if (!e || !((e.t === "pline" && e.closed && e.pts.length >= 3) || e.t === "circle")) return null; let P = e.t === "circle" ? Array.from({ length: 144 }, (_, i) => [e.pts[0][0] + e.r * Math.cos(i * Math.PI / 72), e.pts[0][1] + e.r * Math.sin(i * Math.PI / 72), 0]) : e.pts.filter((q, i, A) => Math.hypot(q[0] - A[(i + 1) % A.length][0], q[1] - A[(i + 1) % A.length][1]) > 1e-6);
+  /* aynı doğrudaki ara köşeleri at (kulak kesme bunlarda takılabilir) */ P = P.filter((q, i, A) => { const a_ = A[(i - 1 + A.length) % A.length], b_ = A[(i + 1) % A.length]; return Math.abs(tCr(a_, q, b_)) > 1e-9 * Math.max(1, Math.hypot(b_[0] - a_[0], b_[1] - a_[1])); }); return P.length >= 3 ? P : null; };
 Object.assign(CMDS, {
   UCSINIR: () => { cmd = { name: "Üçgen sınırı", rcExit: true, pt(p) { const l = tTekLay(p, "Sınır"); if (!l) return; const S = tinSinir(l); if (!S.length) return say("Sınır bulunamadı", true); snap0(); const L = layer("UCGEN_SINIR", "#ff00ff") || "UCGEN_SINIR"; for (const P of S) add({ t: "pline", closed: true, pts: P, lay: "UCGEN_SINIR" }); persist(); renderLays(); draw();
       say(`"${l}" sınırı: ${S.length} kotlu kapalı çizgi (${S.length > 1 ? "dış sınır + " + (S.length - 1) + " delik/ada" : "dış sınır"}), dış alan ${fmt(Math.abs(pAr(S[0])))} m² → "UCGEN_SINIR" · Geri al: U`); } }; prompt_("Üçgen sınırı: yüzeyin içine dokun"); },
@@ -9982,21 +9983,24 @@ Object.assign(CMDS, {
 Object.assign(ALIAS, { USIN: "UCSINIR", UKES: "UCKES", UBIR: "UCBIRLES", UTEM: "UCTEMIZ", UBIL: "UCBILGI", UOT: "UCOTELE" });
 /* üçgen doldur: açık yüzeylerin arasındaki boşluğu sınır köşelerinden üçgenle; var olan üçgenlerle çakışan ve (2+ yüzeyde) iki yüzeyi bağlamayan üçgenler atılır */
 function tinDoldur(maxK) { const L = tLays(); if (!L.length) return say("Açık tabakalarda üçgen yüzey yok", true); const O = fOrg();
-  const P = [], src = [], seg = []; const key = q => Math.round(q[0] * 1e4) + "," + Math.round(q[1] * 1e4), seen = new Map();
-  L.forEach((l, li) => { for (const S of tinSinir(l)) { const ids = S.map(q => { const k = key(q); let i = seen.get(k); if (i == null) { i = P.length; seen.set(k, i); P.push({ n: "", e: q[0] - O[0], y: q[1] - O[1], z: +q[2] || 0 }); src.push(new Set()); } src[i].add(li); return i; }); for (let i = 0; i < ids.length; i++) seg.push([ids[i], ids[(i + 1) % ids.length]]); } });
+  const P = [], src = []; const key = q => Math.round(q[0] * 1e4) + "," + Math.round(q[1] * 1e4), seen = new Map();
+  L.forEach((l, li) => { for (const S of tinSinir(l)) for (const q of S) { const k = key(q); let i = seen.get(k); if (i == null) { i = P.length; seen.set(k, i); P.push({ n: "", e: q[0] - O[0], y: q[1] - O[1], z: +q[2] || 0 }); src.push(0); } src[i] |= 1 << Math.min(li, 30); } });
   if (P.length < 3) return say("Doldurulacak sınır bulunamadı", true);
-  const FL = FACES.filter(fVis).map(f => { const t = tLoc(f, O); return { t, bb: tBB(t) }; }); let cs = 0; for (const f of FL.slice(0, 300)) cs += f.bb[2] - f.bb[0] + f.bb[3] - f.bb[1]; cs = Math.max(1, cs / Math.min(300, FL.length)); const G = tGrid(FL, cs);
-  const SG = seg.map(([a, b]) => ({ a, b, bb: tBB([[P[a].e, P[a].y], [P[b].e, P[b].y]]) })); const GS = tGrid(SG, cs * 2);
-  const icte = (x, y) => { for (const i of G.near([x, y, x, y])) { const [a, b, c] = FL[i].t; if (tCr(a, b, [x, y]) > 1e-9 && tCr(b, c, [x, y]) > 1e-9 && tCr(c, a, [x, y]) > 1e-9) return true; } return false; };
-  const kes = (p, q, ia, ib) => { const B = tBB([p, q]); for (const i of GS.near(B)) { const s = SG[i]; if (s.a === ia || s.a === ib || s.b === ia || s.b === ib) continue; const r = [P[s.a].e, P[s.a].y], t = [P[s.b].e, P[s.b].y]; const d1 = tCr(p, q, r), d2 = tCr(p, q, t), d3 = tCr(r, t, p), d4 = tCr(r, t, q); if (((d1 > 1e-9 && d2 < -1e-9) || (d1 < -1e-9 && d2 > 1e-9)) && ((d3 > 1e-9 && d4 < -1e-9) || (d3 < -1e-9 && d4 > 1e-9))) return true; } return false; };
-  const T = K.tinIyi(P, maxK || 0); const out = yeniLay("UCGEN_DOLGU"), R = [];
-  for (let i = 0; i + 2 < T.length; i += 3) { const ix = [T[i], T[i + 1], T[i + 2]], V = ix.map(k => [P[k].e, P[k].y]);
-    if (L.length > 1) { const u = new Set(); for (const k of ix) for (const s of src[k]) u.add(s); if (u.size < 2 && ix.every(k => src[k].size === 1)) continue; }
-    const c = [(V[0][0] + V[1][0] + V[2][0]) / 3, (V[0][1] + V[1][1] + V[2][1]) / 3]; if (icte(c[0], c[1])) continue; let bad = false;
-    for (let e = 0; e < 3 && !bad; e++) { const a = V[e], b = V[(e + 1) % 3]; if (icte((a[0] + b[0]) / 2, (a[1] + b[1]) / 2) || kes(a, b, ix[e], ix[(e + 1) % 3])) bad = true; } if (bad) continue;
-    R.push({ lay: out, p: ix.map(k => [P[k].e + O[0], P[k].y + O[1], P[k].z]) }); }
-  if (!R.length) return say("Boşlukta üçgen oluşmadı" + (maxK ? ": kenar sınırını büyüt" : ""), true);
-  snap0(); layer(out, "#ff9df0"); for (const f of R) FACES.push(f); tinYen(`${R.length} dolgu üçgeni → "${out}" (${L.length} yüzeyin arasındaki boşluk${maxK ? `, en uzun kenar ${maxK} m` : ""}) · tek yüzey için: ⧉ Birleştir · Geri al: U`); }
+  const FL = FACES.filter(fVis).map(f => { const t = tLoc(f, O); return { t, bb: tBB(t), li: L.indexOf(f.lay) }; }); let cs = 0; for (const f of FL.slice(0, 300)) cs += f.bb[2] - f.bb[0] + f.bb[3] - f.bb[1]; cs = Math.max(1, cs / Math.min(300, FL.length)); const G = tGrid(FL, cs);
+  const pz = (c, q) => { const [a, b, d] = c.t, s_ = tCr(a, b, d); if (Math.abs(s_) < 1e-12) return null; const l1 = tCr(b, d, q) / s_, l2 = tCr(d, a, q) / s_, l3 = 1 - l1 - l2; if (l1 < -1e-6 || l2 < -1e-6 || l3 < -1e-6) return null; return l1 * a[2] + l2 * b[2] + l3 * d[2]; };
+  /* boşluk = sınır köşelerinin üçgen ağı − var olan yüzeyler (tam kırpma: delik ya da çakışma kalmaz); kırpılan yeni köşelerin kotu komşu yüzeyden */
+  const T = K.tinIyi(P, maxK || 0), RT = [];
+  for (let i = 0; i + 2 < T.length; i += 3) { const t = pCcw([T[i], T[i + 1], T[i + 2]].map(k => [P[k].e, P[k].y, P[k].z, 0, src[k]])); if (Math.abs(pAr(t)) < 1e-6) continue; const b = tBB(t); let pcs = [t];
+    for (const ci of G.near(b)) { const c = FL[ci]; if (!bbK(b, c.bb)) continue; const nP = []; for (const p of pcs) { if (!cvxVe(p, c.t)) { nP.push(p); continue; } for (const d of cvxEksi(p, c.t)) nP.push(d); } pcs = nP; if (!pcs.length) break; }
+    for (const p of pcs) for (const tr of fanT(p)) { const q3 = tr.map(q => { const o = [q[0], q[1], q[2], q[4] || 0]; if (q[3]) { for (const ci of G.near(tBB([q]))) { const z = pz(FL[ci], q); if (z != null) { o[2] = z; o[3] |= 1 << Math.min(FL[ci].li, 30); break; } } } return o; }); if (Math.abs(tCr(q3[0], q3[1], q3[2])) > 2e-4) RT.push(q3); } }
+  /* birden çok yüzey açıksa yalnız en az iki yüzeye değen parçalar (yüzeylerin arası) kalır; tek yüzeyde delik ve girintiler dolar */
+  let keep = RT; if (L.length > 1 && RT.length) { const ek = new Map(), k2 = q => Math.round(q[0] * 1e3) + "," + Math.round(q[1] * 1e3), par = RT.map((_, i) => i), bul = i => { while (par[i] !== i) i = par[i] = par[par[i]]; return i; };
+    RT.forEach((t, i) => { for (let e = 0; e < 3; e++) { const a = k2(t[e]), b = k2(t[(e + 1) % 3]), k = a < b ? a + "|" + b : b + "|" + a; const j = ek.get(k); if (j == null) ek.set(k, i); else par[bul(j)] = bul(i); } });
+    const m = new Map(); RT.forEach((t, i) => { const r = bul(i); m.set(r, (m.get(r) || 0) | t[0][3] | t[1][3] | t[2][3]); }); const pc = v => { let n = 0; while (v) { n += v & 1; v >>>= 1; } return n; };
+    keep = RT.filter((t, i) => pc(m.get(bul(i))) >= 2); }
+  if (!keep.length) return say("Boşlukta üçgen oluşmadı" + (maxK ? ": kenar sınırını büyüt" : ""), true);
+  const out = yeniLay("UCGEN_DOLGU"); const R = tConform(keep.map(t => tGlb(t, O, out)));
+  snap0(); layer(out, "#ff9df0"); for (const f of R) FACES.push(f); tinYen(`${R.length} dolgu üçgeni → "${out}" (${L.length > 1 ? L.length + " yüzeyin arasındaki boşluk" : "yüzeydeki delik ve girintiler"}${maxK ? `, en uzun kenar ${maxK} m` : ""}) · tek yüzey için: ⧉ Birleştir · Geri al: U`); }
 CMDS.UCDOLDUR = () => { if (!FACES.some(fVis)) return say("Açık tabakalarda üçgen yüzey yok", true); cmd = { name: "Üçgen doldur", ask: { ph: "en uzun kenar m", num: true, w: 110, chips: ["sınırsız", 10, 20, 50] }, val(t) { const v = /sın/i.test(t) || t === "" ? 0 : +String(t).replace(",", "."); if (!(v >= 0)) return false; tinDoldur(v); idle(); return true; } };
   prompt_(`Üçgen doldur: açık ${tLays().length} yüzeyin arasındaki boşluk doldurulacak — en uzun kenarı seç (dolmasını istemediğin yüzeyleri kapat)`); };
 Object.assign(ALIAS, { UDOL: "UCDOLDUR" });
@@ -10544,7 +10548,8 @@ window.CADX && (CADX._kapali = () => ents.filter(e => e.t === "pline" && e.close
 window.CADX && (CADX._dun = (x, y) => { const r = cv.getBoundingClientRect(); return [WX(x - r.left), WY(y - r.top), cv.width, dpr]; });
 try { let roT = 0; new ResizeObserver(() => { clearTimeout(roT); roT = setTimeout(() => draw(), 30); }).observe(cv); } catch (e) { }
 window.CADX && (CADX._dbg = (x, y) => ents.filter(e => e.t === "pline" && e.closed).map(e => [e.lay, e.pts.length, KZL.test(e.lay), !!(lays[e.lay] && lays[e.lay].on), inPolyC(e.pts, x, y)]));
-window.CADX && (CADX._kd = (x, y) => ({ z: kotAt(x, y), p: projeKot(x, y) }), CADX._gps = gpsCb);
+window.CADX && (CADX._ucg = { tKapali, tinBirles, alanKes, alanDisSil, tinSinir, tinDoldur, tConform, faces: () => FACES, setFaces: F => { FACES = F; FC = null; }, lays: () => lays,
+  stat(l) { const F = FACES.filter(f => f.lay === l); let a = 0; for (const f of F) a += Math.abs(tCr(f.p[0], f.p[1], f.p[2])) / 2; const S = tinSinir(l); const ar = S.map(P => pAr(P)); const out = Math.abs(ar[0] || 0); const net = S.reduce((s, P) => s + Math.abs(pAr(P)), 0) - 2 * S.slice(1).reduce((s, P) => s + Math.abs(pAr(P)), 0); return { n: F.length, a, loops: S.length, sinirNet: net }; } }), window.CADX && (CADX._kd = (x, y) => ({ z: kotAt(x, y), p: projeKot(x, y) }), CADX._gps = gpsCb);
 window.CADX && (CADX._gor = (re, on) => { for (const k in lays) if (re.test(k)) lays[k].on = on; FC = null; renderLays(); zoomAll(ents.filter(e => /^KAZI_/.test(e.lay))); draw(); });
 })();
 
