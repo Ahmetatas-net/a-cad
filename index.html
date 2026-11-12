@@ -9832,19 +9832,39 @@ CMDS.KARELAJ = () => { const b = extents(ents.filter(e => lays[e.lay] && lays[e.
   persist(); renderLays(); draw(); say(`${n} karelaj kesişimi çizildi (${a} m)`); };
 Object.assign(ALIAS, { XYZ: "XYZYAZ", UY: "UZUNYAZ", AY: "ALANYAZ", DIM: "OLCULENDIR", DAL: "OLCULENDIR", KAR: "KARELAJ", GRID: "KARELAJ" });
 /* ---------- Üçgenle: çizimdeki kotlu noktalardan üçgen ağ (kotsuz noktalar — Z boş ya da 0 — hesaba katılmaz) ---------- */
-CMDS.UCGENLE = (mod) => { const czm = mod === "cz"; const tum = (sel.size ? selEnts() : ents.filter(e => lays[e.lay] && lays[e.lay].on)); const kz = e => (e.t === "line" || e.t === "pline") && e.pts.length >= 2 && e.pts.every(q => Math.abs(q[2] || 0) > 1e-6);
-  const src = czm && !sel.size ? [] : tum.filter(e => e.t === "point"); const cz = sel.size || czm || !src.length ? tum.filter(kz) : [];
-  if (!src.length && !cz.length) return say(sel.size ? "Seçimde nokta ya da kotlu çizgi yok" : czm ? "Açık tabakalarda kotlu çizgi yok (çizgi, çoklu doğru ya da alanın tüm köşeleri kotlu olmalı)" : "Çizimde kotlu nokta ya da kotlu çizgi yok", true);
-  const P = src.map(e => ({ n: e.n || "", e: e.pts[0][0], y: e.pts[0][1], z: e.pts[0][2] }));
+/* üçgenlemeye girecek nesne türleri: nokta, doğru, çoklu doğru (açık), alan (kapalı), üçgen (3 köşeli kapalı çizgi ve mevcut üçgen yüzeyler) */
+const UTY = [["nk", "Nokta"], ["dg", "Doğru"], ["cd", "Çoklu doğru"], ["al", "Alan"], ["ug", "Üçgen"]];
+const ucgTur = e => e.t === "point" ? "nk" : e.t === "line" ? "dg" : e.t === "pline" ? (e.closed ? (e.pts.length === 3 ? "ug" : "al") : (e.pts.length === 2 ? "dg" : "cd")) : null;
+const ucgKot = e => e.t === "point" ? Math.abs(e.pts[0][2] || 0) > 1e-6 : (e.pts.length >= 2 && e.pts.every(q => Math.abs(q[2] || 0) > 1e-6));
+function ucgKume() { const tum = sel.size ? selEnts() : ents.filter(e => lays[e.lay] && lays[e.lay].on); const F = sel.size ? [] : FACES.filter(f => lays[f.lay] && lays[f.lay].on !== false); return { tum, F }; }
+CMDS.UCGENLE = (mod) => { const { tum, F } = ucgKume(); const N = { nk: 0, dg: 0, cd: 0, al: 0, ug: F.length }, NK = { nk: 0 };
+  for (const e of tum) { const t = ucgTur(e); if (!t) continue; if (t === "nk") { N.nk++; if (ucgKot(e)) NK.nk++; } else if (ucgKot(e)) N[t]++; }
+  let TY = null; try { TY = JSON.parse(localStorage.getItem("acad_ucgty") || "null"); } catch (e) {} if (!TY) TY = { nk: 1, dg: 1, cd: 1, al: 1, ug: 0 }; if (mod === "cz") TY = { nk: 0, dg: 1, cd: 1, al: 1, ug: 0 };
+  if (!UTY.some(([k]) => N[k])) return say(sel.size ? "Seçimde kotlu nokta, çizgi, alan ya da üçgen yok" : "Açık tabakalarda kotlu nokta, çizgi, alan ya da üçgen yok", true);
+  const box = $("cadOut"); let d = $("ucgBox"); if (!d) { d = document.createElement("div"); d.id = "ucgBox"; d.className = "card"; box.parentNode.insertBefore(d, box); }
+  const ky = sel.size ? `seçili ${sel.size} nesne` : "açık tabakalardaki tüm nesneler";
+  d.hidden = false; d.innerHTML = `<b>◬ Üçgenle</b> <small style="opacity:.75">(${ky})</small><div style="margin:6px 0;display:flex;flex-wrap:wrap;gap:6px 14px">${UTY.map(([k, a]) => `<label style="white-space:nowrap${N[k] ? "" : ";opacity:.45"}"><input type="checkbox" data-ut="${k}"${TY[k] && N[k] ? " checked" : ""}${N[k] ? "" : " disabled"}> ${a} <small>(${k === "nk" ? `${NK.nk} kotlu${N.nk - NK.nk ? ", " + (N.nk - NK.nk) + " kotsuz" : ""}` : N[k]})</small></label>`).join("")}</div>
+    <div class="row" style="gap:6px;align-items:center">En uzun kenar <select id="ucgV" style="width:auto;padding:4px"><option value="0">sınırsız</option><option>20</option><option>50</option><option>100</option><option>200</option></select><button type="button" class="primary" id="ucgGo">Üçgenle</button><button type="button" id="ucgX">Kapat</button></div>
+    <small style="opacity:.75">Yalnız işaretli türlerin kotu kullanılır. Çizgi, çoklu doğru ve alanın tüm köşeleri kotlu olmalı; kenar boyunca ~2 m'de bir ara nokta alınır (kırılma hattı gibi). Seçim yaparsan yalnız seçtiklerin girer.</small>`;
+  try { const v0 = localStorage.getItem("acad_ucgv"); if (v0 != null) $("ucgV").value = v0; } catch (e) {}
+  $("ucgX").onclick = () => { d.hidden = true; idle(); };
+  $("ucgGo").onclick = () => { const T2 = {}; d.querySelectorAll("[data-ut]").forEach(c => T2[c.dataset.ut] = c.checked ? 1 : 0); if (!UTY.some(([k]) => T2[k])) return say("En az bir tür işaretle", true); const v = $("ucgV").value;
+    try { if (mod !== "cz") localStorage.setItem("acad_ucgty", JSON.stringify(T2)); localStorage.setItem("acad_ucgv", v); } catch (e) {} d.hidden = true; ucgYap(T2, v === "0" ? "sınırsız" : v); };
+  prompt_("Üçgenle: kullanılacak türleri işaretle → Üçgenle"); };
+function ucgYap(TY, v0) { const { tum, F } = ucgKume();
+  const src = TY.nk ? tum.filter(e => e.t === "point") : []; const cz = tum.filter(e => e.t !== "point" && TY[ucgTur(e)] && ucgKot(e));
+  const FP = [], FL = []; if (TY.ug) for (const f of F) { if (!FL.includes(f.lay)) FL.push(f.lay); for (const q of f.p) FP.push({ n: "", e: q[0], y: q[1], z: q[2] }); }
+  if (!src.length && !cz.length && !FP.length) return say("İşaretli türlerde kotlu nesne yok", true);
+  
+const P = src.map(e => ({ n: e.n || "", e: e.pts[0][0], y: e.pts[0][1], z: e.pts[0][2] })); for (const q of FP) P.push(q);
   /* kotlu çizgi, alan, çoklu doğru: köşeleri ve kenar boyunca ~2 m'de bir ara noktalar (kırılma hattı gibi davranır) */ let nCz = 0; for (const e of cz) { const Q = e.closed && e.t === "pline" ? e.pts.concat([e.pts[0]]) : e.pts; for (let i = 0; i + 1 < Q.length; i++) { const a = Q[i], b = Q[i + 1], Lg = dist(a, b), k = Math.max(1, Math.ceil(Lg / 2)); for (let j = 0; j < k; j++) { const t = j / k; P.push({ n: "", e: a[0] + (b[0] - a[0]) * t, y: a[1] + (b[1] - a[1]) * t, z: +a[2] + (b[2] - a[2]) * t }); } } if (!e.closed) { const z_ = Q[Q.length - 1]; P.push({ n: "", e: z_[0], y: z_[1], z: +z_[2] }); } nCz++; }
-  const d = K.dedupe(P); say(nCz ? `${src.length} nokta + ${nCz} kotlu çizgi (köşe ve ~2 m ara noktalarıyla) üçgenlenecek` : `${src.length} nokta üçgenlenecek · kotlu çizgileri (kazı şev çizgileri, kotlu alan, çoklu doğru) katmak için önce pencereyle seç`);
+  const d = K.dedupe(P); 
   if (d.pts.length < 3) return say(`Üçgenlemek için en az 3 kotlu nokta gerekir (kotlu ${d.pts.length}, kotsuz ${d.kotsuz.length})`, true);
-  cmd = { name: "Üçgenle", ask: { ph: "en uzun kenar m", num: true, w: 110, chips: ["sınırsız", 20, 50, 100] },
-    val(t) { const v = /sın/i.test(t) || t === "" ? 0 : +String(t).replace(",", "."); if (!(v >= 0)) return; const T = K.tinIyi(d.pts, v); if (!T.length) { say("Üçgen oluşmadı: kenar sınırını büyüt", true); return true; }
-      snap0(); const lay = "UCGEN_" + ((src[0] || cz[0]).lay || "0"); layer(lay); FACES = FACES.filter(f => f.lay !== lay); for (let i = 0; i + 2 < T.length; i += 3) { const a = d.pts[T[i]], b = d.pts[T[i + 1]], c = d.pts[T[i + 2]]; FACES.push({ lay, p: [[a.e, a.y, a.z], [b.e, b.y, b.z], [c.e, c.y, c.z]] }); }
+  const run = (t) => { const v = /sın/i.test(t) || t === "" ? 0 : +String(t).replace(",", "."); if (!(v >= 0)) return; const T = K.tinIyi(d.pts, v); if (!T.length) { say("Üçgen oluşmadı: kenar sınırını büyüt", true); return true; }
+      snap0(); const lay = "UCGEN_" + String((src[0] || cz[0] || { lay: FL[0] || "YUZEY" }).lay || "0").replace(/^(UCGEN_)+/, ""); layer(lay); FACES = FACES.filter(f => f.lay !== lay); for (let i = 0; i + 2 < T.length; i += 3) { const a = d.pts[T[i]], b = d.pts[T[i + 1]], c = d.pts[T[i + 2]]; FACES.push({ lay, p: [[a.e, a.y, a.z], [b.e, b.y, b.z], [c.e, c.y, c.z]] }); }
       FC = null; IDX = null; persist(); let kubW = null; try { if (window.kubCadAl && typeof window.kubCadBagli === "function" && window.kubCadBagli().includes(lay)) { kubW = window.kubCadAl(lay, d.pts, T, { src: projName() }); KUBSIG.set(lay, kubSig(lay)); } } catch (e) { console.error(e); } const ks = d.kotsuz; ANN = ks.map(e => ({ t: "pt", p: [e.e, e.y], col: "#ff5a5a" }));
-      const eg = genEgri(0, true) || {}; const oz = kubW && window.kubOzet ? window.kubOzet() : ""; say(`${oz ? oz + " · " : ""}${kubW ? `Kübaj ${kubW === "S" ? "siyah (ilk hâl)" : "kırmızı (son hâl)"} yüzeyi bu üçgenler oldu — Plan ve hesap güncel · ` : ""}${fmtN_(T.length / 3)} üçgen · ${eg.n || 0} eğri (${eg.used || "-"} aralık; değiştirmek için 〰 Eğri) · ${fmtN_(d.pts.length)} kotlu nokta kullanıldı${ks.length ? ` · ${ks.length} kotsuz nokta dışarıda (kırmızı halka): ${ks.slice(0, 6).map(e => e.n || "adsız").join(", ")}${ks.length > 6 ? "…" : ""}` : ""}${d.dup ? ` · ${d.dup} tekrar nokta atlandı` : ""}${v ? ` · kenar sınırı ${v} m` : ""} → "${lay}" tabakası; ③ Kübaj ile siyah/kırmızı yapabilirsin`); idle(); draw(); return true; } };
-  prompt_(`Üçgenle: ${d.pts.length} kotlu nokta${d.kotsuz.length ? `, ${d.kotsuz.length} kotsuz nokta dışarıda kalacak` : ""} — en uzun kenarı seç (sınır dışa taşan uzun üçgenleri keser)`); };
+      const eg = genEgri(0, true) || {}; const oz = kubW && window.kubOzet ? window.kubOzet() : ""; say(`${oz ? oz + " · " : ""}${kubW ? `Kübaj ${kubW === "S" ? "siyah (ilk hâl)" : "kırmızı (son hâl)"} yüzeyi bu üçgenler oldu — Plan ve hesap güncel · ` : ""}${fmtN_(T.length / 3)} üçgen · ${eg.n || 0} eğri (${eg.used || "-"} aralık; değiştirmek için 〰 Eğri) · ${fmtN_(d.pts.length)} kotlu nokta kullanıldı${ks.length ? ` · ${ks.length} kotsuz nokta dışarıda (kırmızı halka): ${ks.slice(0, 6).map(e => e.n || "adsız").join(", ")}${ks.length > 6 ? "…" : ""}` : ""}${d.dup ? ` · ${d.dup} tekrar nokta atlandı` : ""}${v ? ` · kenar sınırı ${v} m` : ""} → "${lay}" tabakası; ③ Kübaj ile siyah/kırmızı yapabilirsin`); idle(); draw(); return true; };
+  run(v0); }
 const fmtN_ = n => n.toLocaleString("tr-TR"); Object.assign(ALIAS, { UC: "UCGENLE", TIN: "UCGENLE", UCGEN: "UCGENLE" });
 /* ======== Yüzeyler: çizimdeki üçgen ağlar (FACES) + Arazi/Kübaj siyah/kırmızı ======== */
 const SFC = new Map();
