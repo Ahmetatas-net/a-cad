@@ -2390,7 +2390,7 @@ A.plankote = (D, P) => { const W = 297, H = 420, G = []; const L = (p, w = 0.25,
   /* ölçek yazılmaz; çizim alanının sağ üst köşesinde kuzey oku */
   { const nx = 272, ny = 352, hh = 12, ww = 4.2; G.push({ t: "f", p: [[nx, ny + hh / 2], [nx - ww / 2, ny - hh / 2], [nx, ny - hh / 2 + 3]], color: "#000", lay: "KUZEY" }); L([[nx, ny + hh / 2], [nx + ww / 2, ny - hh / 2], [nx, ny - hh / 2 + 3], [nx - ww / 2, ny - hh / 2], [nx, ny + hh / 2]], 0.3); T(nx, ny + hh / 2 + 3, "K", 4, { al: "c", bold: true, lay: "KUZEY" }); }
   for (const l of D.komsu || []) for (let i = 0; i + 1 < l.length; i++) { const q = A.clipSeg(M(l[i]), M(l[i + 1]), fr); if (q) { if (l.dash) G.push({ t: "l", p: q, w: 0.15, color: "#555", dash: l.dash }); else L(q, 0.15, "#555"); } }
-  if (par) L([...par, par[0]].map(M), 0.45, "#000");
+  if (par) { L([...par, par[0]].map(M), 0.45, "#000"); par.forEach(q => { const m = M(q); A.balastro(G, m[0], m[1], 0.45, 0.15); }); }
   for (const b of D.binalar || []) L([...b, b[0]].map(M), 0.3, "#0030c0");
   // kotlar: artı işareti + kot (3 hane), çakışmayan
   /* dolu alanlar: 5 mm'lik ızgarada tutulur (binlerce yazıda da hızlı) */
@@ -2925,13 +2925,14 @@ A.krokiPlan = (g, D, box, list) => { const i0 = g.G.length; const all = [...D.pa
   /* birleştirmede kalkan eski sınırlar: çizgi + çarpı işaretleri; eski parsel numaraları üstü çizili */ for (const [a0, b0] of D.iptal || []) { const ma = M(a0), mb = M(b0); g.G.push({ t: "l", p: [ma, mb], w: 0.3, color: "#b000b0" }); for (const t of [0.3, 0.7]) { const c = [ma[0] + (mb[0] - ma[0]) * t, ma[1] + (mb[1] - ma[1]) * t]; L([[c[0] - 1, c[1] - 1], [c[0] + 1, c[1] + 1]], 0.2); L([[c[0] - 1, c[1] + 1], [c[0] + 1, c[1] - 1]], 0.2); } }
   for (const e of D.eskiNo || []) { const q = M(e.p); if (!inB(q)) continue; T(q[0], q[1], e.s, 2.6, { al: "c" }); L([[q[0] - 2, q[1] - 0.6], [q[0] + 2, q[1] + 1.6]], 0.2); }
   { const P = D.parent.pts; L([...P, P[0]].map(M), 0.8); } /* ana parsel kalın */
+  { /* balastro: ana parselin ve parçaların bütün köşelerinde */ const bs = new Set(); for (const P of [D.parent.pts, ...polys.map(pr => pr.pts)]) for (const p of P) { const k = p[0].toFixed(3) + "," + p[1].toFixed(3); if (bs.has(k)) continue; bs.add(k); const m = M(p); if (inB(m)) A.balastro(g.G, m[0], m[1], D.points && D.points.length ? 0.6 : 0.45, 0.2); } }
   for (const pr of polys) { const P = pr.pts; L([...P, P[0]].map(M), D.parts.length ? 0.3 : 0.6); if (!D.noLen) for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length], k = ek(a, b); if (seen.has(k)) continue; seen.add(k);
       const d = Math.hypot(b[0] - a[0], b[1] - a[1]); if (d * F.s < 4) continue; const ma = M(a), mb = M(b); let ang = Math.atan2(mb[1] - ma[1], mb[0] - ma[0]) * 180 / Math.PI; if (ang > 90) ang -= 180; if (ang < -90) ang += 180;
       const c = A.centroid(P), mid = [(ma[0] + mb[0]) / 2, (ma[1] + mb[1]) / 2], mc = M(c), nx = -(mb[1] - ma[1]), ny = mb[0] - ma[0], nl = Math.hypot(nx, ny) || 1; let sg = (mc[0] - mid[0]) * nx + (mc[1] - mid[1]) * ny > 0 ? 1 : -1;
       /* örnek Ek-18 düzeni: ana parsel sınırındaki ölçü dışarıda, bölme hattındaki ölçü parçanın içinde; eğik, küçük */ const mw = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], PP = D.parent.pts; if (PP.some((u, k) => A.segDist(mw, u, PP[(k + 1) % PP.length]) < 1e-3)) sg = -sg;
       T(mid[0] + nx / nl * 1.5 * sg, mid[1] + ny / nl * 1.5 * sg, d.toFixed(2), 1.8, { al: "c", rot: ang, it: true }); } }
   // nokta numaraları
-  const pc = A.centroid(D.parent.pts), boxes = []; let hid = 0; for (const q of D.points) { const m = M(q.p); A.balastro(g.G, m[0], m[1], 0.6, 0.2);
+  const pc = A.centroid(D.parent.pts), boxes = []; let hid = 0; for (const q of D.points) { const m = M(q.p); if (!D.parent.pts.concat(...polys.map(pr => pr.pts)).some(p => Math.hypot(p[0] - q.p[0], p[1] - q.p[1]) < 1e-3)) A.balastro(g.G, m[0], m[1], 0.6, 0.2);
     const nn = A.kisaAd(q.n, D.ada); const dx = q.p[0] - pc[0], dy = q.p[1] - pc[1], l = Math.hypot(dx, dy) || 1, x = m[0] + dx / l * 1.6, y = m[1] + dy / l * 1.6, w = String(nn).length * 1.9 * 0.62, al = dx >= 0 ? "l" : "r";
     const bx = [al === "l" ? x : x - w, y - 1.0, al === "l" ? x + w : x, y + 1.0]; if (boxes.some(b => b[0] < bx[2] && bx[0] < b[2] && b[1] < bx[3] && bx[1] < b[3])) { hid++; continue; } boxes.push(bx); T(x, y, nn, 1.9, { al }); }
   if (hid && !D.noHidNote) T(box[0] + 1, box[1] + 1, `Sık noktalardan ${hid} tanesinin numarası koordinat özetinde.`, 1.5);
@@ -3243,6 +3244,7 @@ A.kamPlan = (D, P) => { const SR = D.sinir.rings || [D.sinir.pts]; const all = [
   if (D.harici > 0.01) for (const h of D.hariciP || []) F(h.map(M), "#1a73e8"); /* önce tescil harici (delikli olabilir), üstüne parçalar */
   for (const r of D.parseller) for (const pr of r.parts) { const q = pr.pts.map(M); F(q, pr.in ? "#ffff33" : "#f08080"); }
   for (const r of D.parseller) { for (const pr of r.parts) L([...pr.pts, pr.pts[0]].map(M), 0.35, "#707070"); L([...r.pts, r.pts[0]].map(M), 0.45, "#606060"); }
+  { const bs = new Set(); for (const r of D.parseller) for (const P of [r.pts, ...r.parts.map(pr => pr.pts)]) for (const p of P) { const k = p[0].toFixed(3) + "," + p[1].toFixed(3); if (bs.has(k)) continue; bs.add(k); const m = M(p); A.balastro(G, m[0], m[1], 0.4, 0.15); } } /* balastro */
   for (const sr of SR) L([...sr, sr[0]].map(M), 0.7, "#000");
   /* yazılar: parça adı, parsel numarası, ada numarası */
   for (const t of D.yazilar || []) { const q = M(t.p); if (inB(q)) T(q[0], q[1], t.s, 2.4, { al: "c", color: "#1f3fbf" }); }
