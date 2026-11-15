@@ -14738,7 +14738,7 @@ function acadReportPlacement(source,lines,kind,box){
  const _ar=(()=>{try{return window.ACAD_AREA_EDIT.area(source.pts)}catch(x){return 100}})(),_h=Math.max(.25,Math.min(2.0,Math.sqrt(_ar)/22)),_row=_h*1.65,_w=Math.min(125,Math.max(12,...clean.map(t=>t.length*.63*_h))+1.4*_h),_H=_row*clean.length+.6*_h;
  let _bekle=null;
  cmd={name:'Raporu Çizime Yapıştır',raw:true,rcExit:false,
- prev(g,X_,Y_,D){const q=_bekle||hover;if(!q)return;g.save();g.strokeStyle=_bekle?'#0b7a3b':'#4aa3e6';g.lineWidth=2*D;g.setLineDash([6*D,4*D]);g.strokeRect(X_(q[0]),Y_(q[1]+_h*.3),X_(q[0]+_w)-X_(q[0]),Y_(q[1]-_H)-Y_(q[1]+_h*.3));g.setLineDash([]);g.fillStyle=_bekle?'#0b7a3b':'#4aa3e6';g.font=`700 ${12*D}px Arial`;g.fillText(_bekle?'✓ Buraya yapıştırmak için kutunun içine dokun':(kind==='ALAN_CIKTISI'?'Alan çıktısı':'Koordinat özeti'),X_(q[0]),Y_(q[1]+_h*.3)-5*D);g.restore();},
+ prev(g,X_,Y_,D){const q=_bekle||hover;if(!q)return;g.save();g.strokeStyle=_bekle?'#0b7a3b':'#4aa3e6';g.lineWidth=2*D;g.setLineDash([6*D,4*D]);g.strokeRect(X_(q[0]),Y_(q[1]+_h*.3),X_(q[0]+_w)-X_(q[0]),Y_(q[1]-_H)-Y_(q[1]+_h*.3));g.setLineDash([]);g.fillStyle=_bekle?'#0b7a3b':'#4aa3e6';g.font=`700 ${12*D}px Arial`;g.fillText(_bekle?'✓ Buraya yapıştırmak için kutunun içine dokun':(kind==='ALAN_CIKTISI'?'Alan çıktısı':'Alan çıktısı + koordinat özeti'),X_(q[0]),Y_(q[1]+_h*.3)-5*D);g.restore();},
  pt(p){ if(_coarse()){ const ic=_bekle&&p[0]>=_bekle[0]-_h&&p[0]<=_bekle[0]+_w+_h&&p[1]<=_bekle[1]+_h&&p[1]>=_bekle[1]-_H-_h; if(!ic){_bekle=[p[0],p[1]];prompt_('Kutu gösterildi: yapıştırmak için kutunun içine dokun, yerini değiştirmek için başka yere dokun');draw();return;} p=_bekle; } return this._pt(p); },
  _pt(p){
    if(ents.find(e=>e.id===source.id)!==source||JSON.stringify(source.pts)!==prior)
@@ -14762,13 +14762,14 @@ function acadReportPlacement(source,lines,kind,box){
    const edge=[[a,b+h*.3],[a+wide,b+h*.3],[a+wide,b-height],[a,b-height]];
    for(let i=0;i<edge.length;i++)add({...base,t:'line',lay,pts:[[...edge[i],0],[...edge[(i+1)%4],0]]});
    add({...base,t:'line',lay,pts:[[a,b-row-.05*h,0],[a+wide,b-row-.05*h,0]]});
+   if(kind==='KOORDINAT_OZETI'){const k=clean.findIndex((t,i)=>i>0&&t==='KOORDİNAT ÖZETİ');if(k>0)add({...base,t:'line',lay,pts:[[a,b-k*row+.15*h,0],[a+wide,b-k*row+.15*h,0]]});}
    IDX=null;persist();sel.clear();acadSelectReport(group);
    // Delete no source geometry; only finish the temporary placement command.
    cmd=null;rub=null;last=null;RUNKEY=null;markTools();draw();
    acadReportActionPanel(group,kind,clean.length);
    return group;
  }};
- prompt_((kind==='ALAN_CIKTISI'?'Alan çıktısı':'Koordinat özeti')+' için çizimde yerleştirme noktasına dokun');
+ prompt_((kind==='ALAN_CIKTISI'?'Alan çıktısı':'Alan çıktısı + koordinat özeti')+' için çizimde yerleştirme noktasına dokun');
  say('Çizimde raporun sol üst köşesini göster. Daha sonra Taşı veya Ölçekle komutuyla düzenle.');draw();
 }
 function acadReportActionPanel(group,kind,count){
@@ -14808,8 +14809,8 @@ function acadAreaQueryShow(e,p){
   <div style="max-height:30dvh;overflow:auto"><table class="tbl" style="width:100%"><thead><tr><th>No</th><th>Y</th><th>X</th><th>Z</th></tr></thead><tbody data-kotlar="${esc_(String(e.id))}">${table}</tbody></table>${P.length>200?'<small>İlk 200 köşe gösteriliyor; tamamı Excel dosyasında.</small>':''}</div></details>
   <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
     <button type="button" id="acadAreaXlsx" class="primary">⬇ Excel'e Aktar</button>
-    <button type="button" id="acadAreaPaste">▤ Alan Çıktısını Ekrana Yapıştır</button>
-    <button type="button" id="acadCoordPaste">▦ Koordinat Özetini Ekrana Yapıştır</button>
+    <button type="button" id="acadAreaPaste">▤ Alan Çıktısı (tek başına) Yapıştır</button>
+    <button type="button" id="acadCoordPaste">▦ Alan Çıktısı + Koordinat Özeti Yapıştır</button>
     <button type="button" id="acadAreaClose">Kapat</button>
   </div>`);
  const box=$('arzBox');
@@ -14836,8 +14837,8 @@ function acadAreaQueryShow(e,p){
    acadReportPlacement(e,lines,'ALAN_CIKTISI',box);
  };
  box.querySelector('#acadCoordPaste').onclick=()=>{
-   const rows=[`KOORDİNAT ÖZETİ · ${name}`,`Köşe    Y                X                Z`];
-   const take=Math.min(P.length,200);
+   const rows=[`ALAN ÇIKTISI · ${name}`,`Alan: ${acadAlanSay(ar,4)} m²  ·  Çevre: ${acadAlanSay(pr,3)} m  ·  Köşe: ${P.length}`,`Tabaka: ${e.lay||'—'} · Durum: ${quality}`,`KOORDİNAT ÖZETİ`,`Köşe    Y                X                Z`];
+   const take=Math.min(P.length,195);
    for(let i=0;i<take;i++){
      const q=P[i],f=n=>Number(n).toFixed(3);
      rows.push(`${String(i+1).padStart(3,'0')}   ${f(q.y)}   ${f(q.x)}   ${q.z===null?'—':f(q.z)}`);
@@ -17502,7 +17503,7 @@ window.cadShow = () => { docInfo(); if (GPSS.on) { $("cadGps").classList.add("on
 window.addEventListener("resize", () => { if (!$("v-cad").hidden) { rs(); draw(); } });
 try { arzSave(); } catch (e) {}
 window.CADT = { closedOn: re => ents.filter(e => e.t === "pline" && e.closed && e.pts.length >= 3 && re.test(e.lay)).map(e => e.pts.map(p => [p[0], p[1]])), get ents() { return ents; }, run, enter: t => { $("cadIn").value = t; enter(); }, sel, zoomAll, scr: p => [X(p[0]) / dpr, Y(p[1]) / dpr] };
-window.CADT.__ = { xy: (x, y) => [X(x) / dpr, Y(y) / dpr], zoom: () => zoomAll(), tdraw: () => { const t = performance.now(); draw(); return performance.now() - t; }, V, get lays() { return lays; }, get ents() { return ents; }, get faces() { return FACES; }, snap0: () => snap0(), persist: () => persist(), add: e => { const r = add(e); IDX = null; return r; } }; /* test erişimi */
+window.CADT.__ = { xy: (x, y) => [X(x) / dpr, Y(y) / dpr], zoom: l => zoomAll(l), tdraw: () => { const t = performance.now(); draw(); return performance.now() - t; }, V, get lays() { return lays; }, get ents() { return ents; }, get faces() { return FACES; }, snap0: () => snap0(), persist: () => persist(), add: e => { const r = add(e); IDX = null; return r; } }; /* test erişimi */
 try { if (window.BGI) BGI.onChange(draw); } catch (e) {}
 
 /* ======== HALİHAZIR SAYISALLAŞTIRMA (Netcad benzeri): bina, yol, şev, sınır, hidro, ENH, semboller ========
