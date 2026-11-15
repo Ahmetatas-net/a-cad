@@ -478,7 +478,7 @@ body.cadmasa.cadkoyu #arzBox button:not(.primary){background:#3b4149!important;c
       <div id="pKub" hidden style="position:absolute;left:8px;bottom:38px;z-index:5;background:rgba(255,255,255,.93);border:1px solid #ccc;border-radius:8px;padding:5px 9px;font:600 13px Arial;line-height:1.35;pointer-events:none;box-shadow:0 1px 4px rgba(0,0,0,.15)"></div>
       <div class="tool">
         <button id="tEdit" type="button" class="primary">✏️ Düzenle (taşı, döndür, kes…)</button>
-        <label class="filebtn mini" style="margin:0"><span>📂 Dosya aç</span><input type="file" id="tOpen" multiple accept=".dxf,.DXF,.ncz,.NCZ,.ncn,.NCN,.txt,.csv,.xls,.xlsx,.XLS,.XLSX,.geojson,.json,.kml,.kmz"></label>
+        <label class="filebtn mini" style="margin:0"><span>📂 Dosya aç</span><input type="file" id="tOpen" multiple accept=".dxf,.DXF,.ncz,.NCZ,.ncn,.NCN,.cks,.CKS,.txt,.csv,.xls,.xlsx,.XLS,.XLSX,.geojson,.json,.kml,.kmz"></label>
         <button id="tFit" type="button">Tümünü göster</button>
         <button id="tAlan" type="button">Alan çevir</button>
         <button id="tEksen" type="button">Eksen çiz</button>
@@ -766,7 +766,7 @@ body.cadmasa.cadkoyu #arzBox button:not(.primary){background:#3b4149!important;c
     <div class="card" data-g="dos">
       <h2>Dosya</h2>
       <div class="grid">
-        <div class="full"><div class="filebtn"><span>Dosya aç (DXF, NCZ, NCN, XLSX, XLS, TKGM GeoJSON / KML)</span><input type="file" id="cadF" accept=".dxf,.DXF,.ncz,.NCZ,.ncn,.NCN,.txt,.csv,.xlsx,.xls,.XLS,.XLSX,.geojson,.json,.kml,.kmz,.xml,.XML,.pdf"></div></div>
+        <div class="full"><div class="filebtn"><span>Dosya aç (DXF, NCZ, NCN, XLSX, XLS, TKGM GeoJSON / KML)</span><input type="file" id="cadF" accept=".dxf,.DXF,.ncz,.NCZ,.ncn,.NCN,.cks,.CKS,.txt,.csv,.xlsx,.xls,.XLS,.XLSX,.geojson,.json,.kml,.kmz,.xml,.XML,.pdf"></div></div>
         <label style="flex-direction:row;align-items:center;gap:6px;color:var(--ink)"><input type="checkbox" id="cadApp"> Mevcut çizime ekle</label>
         <label>Yazı yüksekliği (m)<input id="cadTh" value="1" inputmode="decimal"></label>
       </div>
@@ -2932,7 +2932,7 @@ window.__roadQualityCheck=(all=false)=&gt;{const pick=all?projects:[projects[act
         <div class="full"><div class="filebtn"><span>Siyah kot — ilk hâl üçgen model (NCZ, DXF, NCN, XLSX)</span><input type="file" id="bkMS" accept=".ncz,.NCZ,.dxf,.DXF,.ncn,.NCN,.txt,.csv,.xlsx,.xls"></div><div class="note" id="bkMSi"></div></div>
         <div class="full"><div class="filebtn"><span>Kırmızı kot — son hâl üçgen model (NCZ, DXF, NCN, XLSX)</span><input type="file" id="bkMR" accept=".ncz,.NCZ,.dxf,.DXF,.ncn,.NCN,.txt,.csv,.xlsx,.xls"></div><div class="note" id="bkMRi"></div></div>
         <label>Son hâl yerine sabit kot (temel alt)<input id="bkMRk" inputmode="decimal" placeholder="örn. 914.75"></label>
-        <div class="full"><div class="filebtn"><span>Kübaj sınırı (DXF, NCZ, NCN, TKGM GeoJSON / KML)</span><input type="file" id="bkSB" accept=".dxf,.DXF,.ncz,.NCZ,.ncn,.NCN,.txt,.csv,.xlsx,.xls,.geojson,.json,.kml,.kmz"></div><div class="note" id="bkSBi"></div></div>
+        <div class="full"><div class="filebtn"><span>Kübaj sınırı (DXF, NCZ, NCN, TKGM GeoJSON / KML)</span><input type="file" id="bkSB" accept=".dxf,.DXF,.ncz,.NCZ,.ncn,.NCN,.cks,.CKS,.txt,.csv,.xlsx,.xls,.geojson,.json,.kml,.kmz"></div><div class="note" id="bkSBi"></div></div>
         <label class="full">Sınır<select id="bkSBs"></select></label>
       </div>
       <div class="row" style="margin-top:8px"><button type="button" id="bkMGo" class="primary">Hesapla</button><button type="button" id="bkM3">3B göster</button><span class="msg" id="bkMMsg"></span></div>
@@ -2945,7 +2945,7 @@ window.__roadQualityCheck=(all=false)=&gt;{const pick=all?projects:[projects[act
       <h2>Toplu: sayısal veriden bina bina</h2>
       <p class="note" style="margin-bottom:8px">Bina oturumunun içinde arazi (siyah) ile temel alt kotu (mavi) arasındaki hacim. Arazi, ölçü noktalarından kurulan üçgen modelden alınır; yoksa bina içindeki siyah kot yazısı kullanılır. Su basman kotu (kırmızı) çizelgede gösterilir.</p>
       <div class="grid">
-        <div class="full"><div class="filebtn"><span>Sayısal veri seç (DXF, NCZ, NCN, XLS, XLSX)</span><input type="file" id="bkF" accept=".dxf,.DXF,.ncz,.NCZ,.ncn,.NCN,.txt,.csv,.xls,.XLS,.xlsx,.XLSX"></div></div>
+        <div class="full"><div class="filebtn"><span>Sayısal veri seç (DXF, NCZ, NCN, XLS, XLSX)</span><input type="file" id="bkF" accept=".dxf,.DXF,.ncz,.NCZ,.ncn,.NCN,.cks,.CKS,.txt,.csv,.xls,.XLS,.xlsx,.XLSX"></div></div>
         <div class="full note" id="bkInfo">Henüz dosya yok.</div>
         <label class="full">Bina dış hatları<select id="bkOut"></select></label>
         <label class="full">Arazi (ilk hâl) kotu<select id="bkAraz"></select></label>
@@ -10267,7 +10267,22 @@ async function readAny(file, opt) { let buf = await readBuf(file); const nm = fi
   if (/\.pdf$/i.test(nm) || toText(buf.subarray(0, 5)) === "%PDF-") { const t = await K.pdfText(buf); return { lines: [], polys: [], points: [], texts: t.split(/\n/).map(s => ({ lay: "PDF", s: A.cleanText(s), e: 0, y: 0 })), pdf: true }; }
   if (/\.xlsx?$/i.test(nm) || (buf[0] === 0x50 && buf[1] === 0x4b) || (buf[0] === 0xD0 && buf[1] === 0xCF)) { const sh = /\.xls$/i.test(nm) || buf[0] === 0xD0 ? K.xlsText(buf) : await K.xlsxText(buf); const t = sh.map(x => [x, K.parsePoints(x).pts.length]).sort((a, b) => b[1] - a[1])[0]?.[0] || ""; return ptsOnly(t); }
   if (/\.dxf$/i.test(nm) || /^\s*0\s*\r?\n\s*SECTION/.test(toText(buf.subarray(0, 300)))) return A.parseCAD(buf, opt); const text = toText(buf);
+  if (/\.cks$/i.test(nm) || (/[\u00b3\u2502]/.test(text.slice(0, 4000)) && /Nokta\s*No/i.test(text.slice(0, 4000)))) { const D = fromCKS(text); if (D.points.length) return D; }
   return ptsOnly(text); }
+/* Netcad CKS (alan hesabı / koordinat özeti metin raporu): noktalar + parseller + alan kontrolü */
+function fromCKS(text) { const SEP = /[\u00b3\u2502|]/, num = s => { const v = +String(s).trim().replace(",", "."); return Number.isFinite(v) ? v : null; };
+  const pts = new Map(), points = [], polys = [], texts = [], rapor = []; let tablo = null, cur = null; const kapat = () => { if (cur && cur.ad && cur.liste.length >= 3) tablo.push(cur); cur = null; };
+  for (const raw of text.split(/\r?\n/)) { const ln = raw.replace(/\s+$/, ""); if (!SEP.test(ln)) { if (/[\u00c0\u2514]/.test(ln)) kapat(); continue; } const c = ln.split(SEP).slice(1, -1).map(x => x.trim());
+    if (c.some(x => /Ada\/Parsel/i.test(x))) { tablo = []; cur = null; continue; } if (c.some(x => /^Nokta\s*No$/i.test(x))) { tablo = null; continue; }
+    if (tablo) { const [ad, lst, hes] = c; if (/^(TOPLAM|Tapu Alan|HESAPLANAN|FARK|TECV)/i.test(ad || "") || /TOPLAM/i.test(lst || "")) { kapat(); continue; }
+      if (ad) { kapat(); cur = { ad, liste: [], hesap: num(hes) }; } if (cur && lst) cur.liste.push(...lst.split(",").map(x => x.trim()).filter(Boolean)); continue; }
+    for (let i = 0; i + 2 < c.length; i += 3) { const n = c[i], y = num(c[i + 1]), x = num(c[i + 2]); if (!n || y == null || x == null || Math.abs(y) < 1000 || Math.abs(x) < 1000) continue; if (!pts.has(n)) { pts.set(n, [y, x]); points.push({ lay: "CKS_NOKTA", n, e: y, y: x, z: 0 }); } } }
+  kapat(); for (const t of tablo || []) { const P = t.liste.map(n => pts.get(n)); if (P.some(q => !q)) { rapor.push(`${t.ad}: ${t.liste.filter(n => !pts.has(n)).join(",")} noktası koordinat listesinde yok`); continue; }
+    const ar = Math.abs(A.area(P)), c = A.label ? A.label(P) : A.centroid(P), fark = t.hesap != null ? ar - t.hesap : null; polys.push({ lay: "CKS_PARSEL", pts: P.map(q => [q[0], q[1], 0]), closed: true, ad: t.ad });
+    texts.push({ lay: "CKS_PARSEL_AD", s: t.ad, e: c[0], y: c[1] + 1.2, h: 1.6 }, { lay: "CKS_PARSEL_AD", s: `${ar.toFixed(2)} m²`, e: c[0], y: c[1] - 1.2, h: 1.1 });
+    const cev = P.reduce((u, q, i) => u + Math.hypot(P[(i + 1) % P.length][0] - q[0], P[(i + 1) % P.length][1] - q[1]), 0), tol = Math.max(0.01, 0.005 * cev); /* raporda koordinatlar cm'ye yuvarlı: alan bu kadar oynayabilir */
+    if (fark != null && Math.abs(fark) > tol) { rapor.push(`${t.ad}: koordinattan ${ar.toFixed(2)} m², raporda ${t.hesap.toFixed(2)} m² (fark ${fark.toFixed(2)}, cm yuvarlama sınırı ±${tol.toFixed(2)})`); texts.push({ lay: "CKS_KONTROL", s: `⚠ ${t.ad} alan farkı ${fark.toFixed(2)} m²`, e: c[0], y: c[1] - 3.2, h: 1.1 }); } }
+  return { lines: [], polys, points, texts, cksRapor: rapor, cksParsel: (tablo || []).length }; }
 const ptsOnly = t => ({ lines: [], polys: [], texts: [], points: K.parsePoints(t).pts.map(p => ({ lay: "NOKTA", n: p.n, e: p.e, y: p.y, z: p.z, ...(p.kod ? { kod: p.kod } : {}) })) });
 const named = () => [...(FD ? FD.points : []), ...(MD && !MD.pdf ? MD.points : []), ...(ST.S.pts || []).map(p => ({ n: p.n, e: p.e, y: p.y, z: p.z }))].filter(p => p.n);
 function nameOf(p, tol = 0.03) { let best = null, bd = tol; for (const q of named()) { const d = Math.hypot(q.e - p[0], q.y - p[1]); if (d < bd) { bd = d; best = q.n; } } return best; }
@@ -14079,6 +14094,7 @@ function alanKotPanel(e, yeni=false){
     if(!next.length)return;
     base=src.map(p=>p.slice());preview=next;
     btn.disabled=changed===0;
+    try{const tb=document.querySelector(`#arzBox tbody[data-kotlar="${CSS.escape(String(e.id))}"]`);if(tb)[...tb.rows].forEach((r,i)=>{if(!next[i])return;const o=src[i][2],o3=Number.isFinite(o)?o.toFixed(3):'—',n3=next[i][2].toFixed(3),d=Number.isFinite(o)?next[i][2]-o:null;r.cells[3].innerHTML=o3===n3?n3:`<span style="opacity:.6;text-decoration:line-through">${o3}</span> → <b style="color:#0b7a3b">${n3}</b>${d!=null?` <small>(${d>=0?'+':''}${d.toFixed(3)})</small>`:''}`;});}catch(x){}
     out.textContent=`Önizleme: ${next.length} köşe · ${changed} kot değişikliği · Yeni kot aralığı ${zmin.toFixed(3)} – ${zmax.toFixed(3)} m. Alan ${tr2_(window.ACAD_ROAD_AREA.area(src))} m², Y/X değişmeyecek.${changed?' Uygula veya vazgeç.':' Değişiklik yok.'}`;
   };
   btn.onclick=()=>{
@@ -14088,6 +14104,7 @@ function alanKotPanel(e, yeni=false){
     snap0();live.pts=preview.map(p=>p.slice());IDX=null;persist();draw();
     const count=preview.length;preview=null;base=null;btn.disabled=true;
     out.textContent=`✓ ${count} köşenin kotları güncellendi. Alan ve Y/X korundu. Geri al: U`;
+    try{const tb=document.querySelector(`#arzBox tbody[data-kotlar="${CSS.escape(String(e.id))}"]`);if(tb)[...tb.rows].forEach((r,i)=>{const z=live.pts[i]&&live.pts[i][2];if(Number.isFinite(z))r.cells[3].innerHTML=`<b style="color:#0b7a3b">${z.toFixed(3)}</b> ✓`;});}catch(x){}
     say(`${count} alan köşesi kotu değiştirildi · Alan: ${tr2_(a1)} m² · Geri al: U`);
   };
   change();
@@ -14709,6 +14726,7 @@ function acadReportAnchor(group){
  const maxX=Math.max(...L.map(e=>e.pts[0][1]));
  return[minY,maxX];
 }
+const _coarse=()=>{try{return matchMedia('(pointer:coarse)').matches}catch(x){return false}};
 function acadReportPlacement(source,lines,kind,box){
  if(!source||!Array.isArray(lines)||lines.length<2||!['ALAN_CIKTISI','KOORDINAT_OZETI'].includes(kind))
   return say('Rapor kaynağı/geometrisi geçersiz.',true);
@@ -14716,7 +14734,13 @@ function acadReportPlacement(source,lines,kind,box){
  if(clean.length>204)throw Error('Koordinat özeti azami 200 satırda gösterilir; tamamı Excel ile alınır.');
  const prior=JSON.stringify(source.pts);
  box.hidden=true;sel.clear();
- cmd={name:'Raporu Çizime Yapıştır',raw:true,rcExit:false,pt(p){
+ /* önizleme: raporun kaplayacağı kutu imleçle gezer; dokunmatikte ilk dokunuş kutuyu gösterir, kutunun içine ikinci dokunuş yapıştırır */
+ const _ar=(()=>{try{return window.ACAD_AREA_EDIT.area(source.pts)}catch(x){return 100}})(),_h=Math.max(.25,Math.min(2.0,Math.sqrt(_ar)/22)),_row=_h*1.65,_w=Math.min(125,Math.max(12,...clean.map(t=>t.length*.63*_h))+1.4*_h),_H=_row*clean.length+.6*_h;
+ let _bekle=null;
+ cmd={name:'Raporu Çizime Yapıştır',raw:true,rcExit:false,
+ prev(g,X_,Y_,D){const q=_bekle||hover;if(!q)return;g.save();g.strokeStyle=_bekle?'#0b7a3b':'#4aa3e6';g.lineWidth=2*D;g.setLineDash([6*D,4*D]);g.strokeRect(X_(q[0]),Y_(q[1]+_h*.3),X_(q[0]+_w)-X_(q[0]),Y_(q[1]-_H)-Y_(q[1]+_h*.3));g.setLineDash([]);g.fillStyle=_bekle?'#0b7a3b':'#4aa3e6';g.font=`700 ${12*D}px Arial`;g.fillText(_bekle?'✓ Buraya yapıştırmak için kutunun içine dokun':(kind==='ALAN_CIKTISI'?'Alan çıktısı':'Koordinat özeti'),X_(q[0]),Y_(q[1]+_h*.3)-5*D);g.restore();},
+ pt(p){ if(_coarse()){ const ic=_bekle&&p[0]>=_bekle[0]-_h&&p[0]<=_bekle[0]+_w+_h&&p[1]<=_bekle[1]+_h&&p[1]>=_bekle[1]-_H-_h; if(!ic){_bekle=[p[0],p[1]];prompt_('Kutu gösterildi: yapıştırmak için kutunun içine dokun, yerini değiştirmek için başka yere dokun');draw();return;} p=_bekle; } return this._pt(p); },
+ _pt(p){
    if(ents.find(e=>e.id===source.id)!==source||JSON.stringify(source.pts)!==prior)
      return say('Alan değişmiş; rapor yapıştırılmadı. Tekrar sorgula.',true);
    if(!Array.isArray(p)||p.length<2||!Number.isFinite(p[0])||!Number.isFinite(p[1]))
@@ -14775,13 +14799,13 @@ function acadAreaQueryShow(e,p){
  const layer=esc_(e.lay||'—'),safeName=esc_(name);
  arzBox(`<b>▱ Alan Sorgula</b><p class="note">${safeName} · ${layer}</p>
   <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;font-variant-numeric:tabular-nums">
-   <div><b>${acadAlanSay(ar,4)} m²</b><div>Alan</div></div>
-   <div><b>${acadAlanSay(pr,3)} m</b><div>Çevre</div></div>
-   <div><b>${P.length}</b><div>Köşe</div></div>
-   <div><b>${review?'Yaklaşık':'Kontrollü'}</b><div>Durum</div></div>
+   <div><b style="font-size:16px;color:inherit">${acadAlanSay(ar,4)} m²</b><div>Alan</div></div>
+   <div><b style="font-size:16px;color:inherit">${acadAlanSay(pr,3)} m</b><div>Çevre</div></div>
+   <div><b style="font-size:16px;color:inherit">${P.length}</b><div>Köşe</div></div>
+   <div><b style="font-size:16px;color:inherit">${review?'Yaklaşık':'Kontrollü'}</b><div>Durum</div></div>
   </div><p class="note" style="color:${review?'#a64c09':'inherit'}">${quality}</p>
-  <details><summary>Y / X / Z koordinatları (${P.length} köşe)</summary>
-  <div style="max-height:30dvh;overflow:auto"><table class="tbl" style="width:100%"><thead><tr><th>No</th><th>Y</th><th>X</th><th>Z</th></tr></thead><tbody>${table}</tbody></table>${P.length>200?'<small>İlk 200 köşe gösteriliyor; tamamı Excel dosyasında.</small>':''}</div></details>
+  <details open><summary>Y / X / Z koordinatları (${P.length} köşe)</summary>
+  <div style="max-height:30dvh;overflow:auto"><table class="tbl" style="width:100%"><thead><tr><th>No</th><th>Y</th><th>X</th><th>Z</th></tr></thead><tbody data-kotlar="${esc_(String(e.id))}">${table}</tbody></table>${P.length>200?'<small>İlk 200 köşe gösteriliyor; tamamı Excel dosyasında.</small>':''}</div></details>
   <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
     <button type="button" id="acadAreaXlsx" class="primary">⬇ Excel'e Aktar</button>
     <button type="button" id="acadAreaPaste">▤ Alan Çıktısını Ekrana Yapıştır</button>
@@ -14789,6 +14813,7 @@ function acadAreaQueryShow(e,p){
     <button type="button" id="acadAreaClose">Kapat</button>
   </div>`);
  const box=$('arzBox');
+ box.style.pointerEvents='none'; clearTimeout(box._pe); box._pe=setTimeout(()=>{box.style.pointerEvents='';},450); /* alanı seçen dokunuş, açılan paneldeki 'yapıştır' düğmesine düşmesin */
  box.querySelector('#acadAreaClose').onclick=()=>box.hidden=true;
  box.querySelector('#acadAreaXlsx').onclick=()=>{
    try{
@@ -15690,7 +15715,7 @@ async function loadFile(f, append) { say("Okunuyor…"); try { if (/\.dwg$/i.tes
     if (!append && CDOC.fmt === 'ncz') CDOC.nczLoadedVersion = FVER;
     docInfo();
     if (CDOC.nczUnmodeledRecords) say('NCZ kaynak koruması: ' + nczSafetySummary() + ' Asıl dosya korunuyor; değişiklik sonrası NCZ kaydı yalnız geometri kopyası olarak yapılabilir.', true);
-    say(`${f.name}: ${n} nesne${nf ? ` + ${nf} üçgen (A-CAD geometri katmanına aktarıldı)` : ""} ${append ? (KAY ? `eklendi — koordinatları mevcut çizimden farklı olduğu için sağına konuldu (kaydırma ΔY ${KAY[0].toFixed(2)}, ΔX ${KAY[1].toFixed(2)}; gerçek yerine taşımak için TAŞI)` : "eklendi (kendi koordinatında, mevcut çizimin üstüne)") : "yüklendi"} (${Object.keys(lays).length} tabaka${off.length ? `; dosyada kapalı ${off.length} tabaka kapalı açıldı: ${off.join(", ")} — Tabakalar'dan açabilirsin` : ""})${zeroRemoved||zeroFaces ? ` | (0,0) çalışma çiziminden temizlendi: ${zeroRemoved} nesne, ${zeroFaces} üçgen; kaydedilen proje bu hâli içerir.` : ""}${FARK ? "\n" + FARK : ""}${CDOC.nczUnmodeledRecords ? " | DİKKAT: "+nczSafetySummary()+" Kaynak dosya ayrıca korunmalı." : ""}`); } catch (er) { say(`${f.name} okunamadı: ${er.message}`, true); } }
+    say(`${f.name}: ${n} nesne${nf ? ` + ${nf} üçgen (A-CAD geometri katmanına aktarıldı)` : ""} ${append ? (KAY ? `eklendi — koordinatları mevcut çizimden farklı olduğu için sağına konuldu (kaydırma ΔY ${KAY[0].toFixed(2)}, ΔX ${KAY[1].toFixed(2)}; gerçek yerine taşımak için TAŞI)` : "eklendi (kendi koordinatında, mevcut çizimin üstüne)") : "yüklendi"} (${Object.keys(lays).length} tabaka${off.length ? `; dosyada kapalı ${off.length} tabaka kapalı açıldı: ${off.join(", ")} — Tabakalar'dan açabilirsin` : ""})${zeroRemoved||zeroFaces ? ` | (0,0) çalışma çiziminden temizlendi: ${zeroRemoved} nesne, ${zeroFaces} üçgen; kaydedilen proje bu hâli içerir.` : ""}${FARK ? "\n" + FARK : ""}${CDOC.nczUnmodeledRecords ? " | DİKKAT: "+nczSafetySummary()+" Kaynak dosya ayrıca korunmalı." : ""}${D.cksParsel != null ? ` | CKS: ${D.points.length} nokta, ${D.polys.length}/${D.cksParsel} parsel çizildi${D.cksRapor && D.cksRapor.length ? " · ⚠ " + D.cksRapor.join(" · ") : " · parsel alanları rapordaki hesap alanıyla uyumlu (cm yuvarlama sınırı içinde)"}` : ""}`); } catch (er) { say(`${f.name} okunamadı: ${er.message}`, true); } }
 $("cadF").addEventListener("change", e => { const f = e.target.files[0]; if (f) loadFile(f, $("cadApp").checked); e.target.value = ""; });
 $("cadNew").addEventListener("click", e => { if (!e.target.dataset.arm) { e.target.dataset.arm = 1; e.target.textContent = "Emin misin? Çizim silinir"; setTimeout(() => { delete e.target.dataset.arm; e.target.textContent = "Yeni çizim"; }, 4000); return; } delete e.target.dataset.arm; e.target.textContent = "Yeni çizim"; snap0(); ents = []; lays = { "0": { c: "#ffffff", on: true } }; cur = "0"; sel.clear(); IDX = null; FACES = []; CDOC = { name: "", fmt: "" }; DIRTY = false; docInfo(); renderLays(); zoomAll(); persist(); });
 $("cadFromApl").addEventListener("click", () => { const A_ = window.APLT && window.APLT.S(); if (!A_ || !A_.parsel) return say("Yapı aplikasyonu / ifraz sekmesinde parsel yok", true); snap0(); const RL = ["PARSEL", "PARSEL_NOKTA", "BINA", "BINA_KOSE", "IFRAZ", "IFRAZ_NOKTA", "IFRAZ_AD"]; ents = ents.filter(e => !RL.includes(e.lay)); sel.clear();
