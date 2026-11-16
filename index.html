@@ -5800,9 +5800,11 @@ A.faces = (segs0, tol = 0.005, maxSeg = 60000) => {
   // kesişen parçaları kesişim noktasında böl (ızgara ile)
   { const b = A.bbox(segs.flat()), cs = Math.max(1, Math.max(b[2] - b[0], b[3] - b[1]) / 300), SG = new Map();
     segs.forEach((sg, i) => { const [p, q] = sg; for (let gx = Math.floor(Math.min(p[0], q[0]) / cs); gx <= Math.floor(Math.max(p[0], q[0]) / cs); gx++) for (let gy = Math.floor(Math.min(p[1], q[1]) / cs); gy <= Math.floor(Math.max(p[1], q[1]) / cs); gy++) { const k = gx + "," + gy; if (!SG.has(k)) SG.set(k, []); SG.get(k).push(i); } });
-    const cut = segs.map(() => []); const seen = new Set();
-    for (const list of SG.values()) for (let x = 0; x < list.length; x++) for (let y = x + 1; y < list.length; y++) { const i = list[x], j = list[y], kk = i < j ? i + "|" + j : j + "|" + i; if (seen.has(kk)) continue; seen.add(kk);
-      const h = A.segInt(segs[i][0], segs[i][1], segs[j][0], segs[j][1]); if (!h) continue; const P = [h[0], h[1]]; if (h[2] > 1e-9 && h[2] < 1 - 1e-9) cut[i].push([h[2], P]); if (h[3] > 1e-9 && h[3] < 1 - 1e-9) cut[j].push([h[3], P]); }
+    const cut = segs.map(() => []); let is_ = 0;
+    /* çift tekrarını önlemek için büyük küme yerine: çift yalnız iki parçanın ortak hücrelerinden en küçüğünde denenir (bellek sınırı aşılmaz) */
+    const c0 = segs.map(([p, q]) => [Math.floor(Math.min(p[0], q[0]) / cs), Math.floor(Math.min(p[1], q[1]) / cs)]);
+    for (const [kc, list] of SG) { const [gx_, gy_] = kc.split(",").map(Number); for (let x = 0; x < list.length; x++) for (let y = x + 1; y < list.length; y++) { const i = list[x], j = list[y]; if (Math.max(c0[i][0], c0[j][0]) !== gx_ || Math.max(c0[i][1], c0[j][1]) !== gy_) continue; if (++is_ > 4e7) return [];
+      const h = A.segInt(segs[i][0], segs[i][1], segs[j][0], segs[j][1]); if (!h) continue; const P = [h[0], h[1]]; if (h[2] > 1e-9 && h[2] < 1 - 1e-9) cut[i].push([h[2], P]); if (h[3] > 1e-9 && h[3] < 1 - 1e-9) cut[j].push([h[3], P]); } }
     const ns = []; segs.forEach((sg, i) => { if (!cut[i].length) { ns.push(sg); return; } const c = cut[i].sort((u, v) => u[0] - v[0]); let prev = sg[0]; for (const [, P] of c) { ns.push([prev, P]); prev = P; } ns.push([prev, sg[1]]); });
     segs.length = 0; segs.push(...ns); }
   segs.forEach(s => { nid(s[0]); nid(s[1]); }); const N = [...node.values()].map(n => n.p);
@@ -11012,7 +11014,12 @@ $("aM").addEventListener("change", async e => { const f = e.target.files[0]; if 
 // plankote/parsel + mimari hazırsa yapı aplikasyonu kendiliğinden hesaplanır ve pafta gösterilir
 function autoAPL() { const a = S(); if (MOD !== "apl" || !a.parsel || !MD || MD.pdf) return; setTimeout(() => { const r0 = a.res; try { place(); } catch (e) { msg("aMsg", "Yerleştirilemedi: " + e.message, true); return; } if (S().res && S().res !== r0) showPafta(); }, 50); }
 let BCC = null; // bina adayları önbelleği (büyük mimari dosyalarda döngü arama pahalı)
-function binaCands() { const a = S(), par = a.parsel ? a.parsel.pts : null; const key = [par ? par.length + ":" + par[0].join(",") : "-", (ST.S.pts || []).length]; if (BCC && BCC.MD === MD && BCC.FD === FD && BCC.k === key.join("|")) return BCC.out; const out = binaCands0(a, par); BCC = { MD, FD, k: key.join("|"), out }; return out; }
+function binaCands() { const a = S(), par = a.parsel ? a.parsel.pts : null; const key = [par ? par.length + ":" + par[0].join(",") : "-", (ST.S.pts || []).length]; if (BCC && BCC.MD === MD && BCC.FD === FD && BCC.k === key.join("|")) return BCC.out; const out = binaCands0(a, par).map((c, i) => [c, i]).sort((x, y) => binaPuan(y[0]) - binaPuan(x[0]) || x[1] - y[1]).map(x => x[0]); BCC = { MD, FD, k: key.join("|"), out }; return out; }
+/* bina dış hattı adaylarının sırası: taban/oturum ve bina tabakaları önde; mobilya, kapı-pencere, ölçü, yazı, merdiven gibi iç çizimler sonda (yanlış "bina" seçilmesin) */
+function binaPuan(c) { if (c.auto) return 100; const l = String(c.v || "").replace(/^[A-Z]+:/, "").replace(/^MIM_KOORDINATLI:/, "").toLocaleUpperCase("tr-TR"); let p = 0;
+  if (/TABAN|OTURUM|D[İI]Ş\s*_?HAT|DIS_?HAT|BLOK|KONTUR|SINIR/.test(l)) p += 6; if (/B[İI]NA|YAPI|BUILDING|WALL|DUVAR/.test(l)) p += 3; if (/^TK_|^KAD_|KADASTRO|MEVCUT|ESK[İI]/.test(l)) p -= 2;
+  if (/MOB[İI]LYA|FURN|INTERIOR|TEFR[İI]Ş|KAPI|PENCERE|DOOR|WINDOW|MERD[İI]VEN|STAIR|[ÖO]L[ÇC][ÜU]|DIM|YAZI|TEXT|HATCH|TARAMA|ZONE|ANNOT|ARMAT|SIHH|VAV|E[ŞS]YA|KOLON|COLUMN|ÇATI|CATI|ROOF|MAHYA|PEYZAJ|A[ĞG]A[ÇC]|BAH[ÇC]E|OTOPARK|ARA[ÇC]|CAR/.test(l)) p -= 8;
+  if (c.src === "F" && /^F:/.test(c.v) && !/MIM_/.test(c.v)) p += 1; return p; }
 function binaCands0(a, par) { const out = [];
   const add = (src, D, nm) => { if (!D) return; const by = {}; D.polys.forEach(p => { if (!p.closed || p.pts.length < 3) return; (by[p.lay] = by[p.lay] || []).push(p); });
     for (const [l, ps] of Object.entries(by)) { let use = ps.map(p => A.clean(p.pts.map(v => [v[0], v[1]]))).filter(q => q.length >= 3);
@@ -14343,7 +14350,7 @@ function draw() { liveTick(); { const r = cv.getBoundingClientRect(); if (r.widt
 function ustler(D, W, H) {
   // lastik çizgi
   if (rub && last && hover) { cx.strokeStyle = "#ffd800"; cx.lineWidth = 1 * D; cx.setLineDash([4 * D, 4 * D]); cx.beginPath(); cx.moveTo(X(last[0]), Y(last[1])); cx.lineTo(X(hover[0]), Y(hover[1])); cx.stroke(); cx.setLineDash([]); }
-  drawAnn(D); try { araCiz(D); } catch (e) {} if (cmd && cmd.prev) cmd.prev(cx, X, Y, D); if (cmd && cmd.live && hover) cmd.live(cx, X, Y, D);
+  drawAnn(D); try { araCiz(D); } catch (e) {} try { if (MIM_ADAY) MIM_ADAY.forEach((c, i) => { const P = c.o.c.e.pts; cx.save(); cx.strokeStyle = '#ff9a3c'; cx.lineWidth = 3 * D; cx.setLineDash([10 * D, 6 * D]); cx.beginPath(); P.forEach((q, k) => k ? cx.lineTo(X(q[0]), Y(q[1])) : cx.moveTo(X(q[0]), Y(q[1]))); cx.closePath(); cx.fillStyle = 'rgba(255,154,60,.14)'; cx.fill(); cx.stroke(); cx.setLineDash([]); const x = X((c.bb[0] + c.bb[2]) / 2), y = Y((c.bb[1] + c.bb[3]) / 2); cx.fillStyle = '#ff9a3c'; cx.beginPath(); cx.arc(x, y, 16 * D, 0, 7); cx.fill(); cx.fillStyle = '#000'; cx.font = `bold ${16 * D}px Arial`; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText(String(i + 1), x, y); cx.restore(); }); } catch (e) {} if (cmd && cmd.prev) cmd.prev(cx, X, Y, D); if (cmd && cmd.live && hover) cmd.live(cx, X, Y, D);
   if (winBox) { const [a, b] = winBox; cx.strokeStyle = b[0] >= a[0] ? "#36c3ff" : "#40e040"; cx.fillStyle = b[0] >= a[0] ? "rgba(54,195,255,.12)" : "rgba(64,224,64,.12)"; cx.lineWidth = 1 * D; if (b[0] < a[0]) cx.setLineDash([5 * D, 4 * D]); cx.fillRect(a[0] * D, a[1] * D, (b[0] - a[0]) * D, (b[1] - a[1]) * D); cx.strokeRect(a[0] * D, a[1] * D, (b[0] - a[0]) * D, (b[1] - a[1]) * D); cx.setLineDash([]); }
   try { if (window.BGI && BGI.drawVec) BGI.drawVec(cx, X, Y, D); } catch (e) {}
   drawGps(D);
@@ -16280,8 +16287,8 @@ const up = e => { const was = ptr.has(e.pointerId); ptr.delete(e.pointerId); if 
   if (mv) { IDX = null; persist(); return; } const sx = e.offsetX, sy = e.offsetY;
   if (grip) { const p = pickPt(sx, sy); snap0(); const g = grip; grip = null; if (g.e.t === "circle") g.e.c = p; else g.e.pts[g.i] = [p[0], p[1], g.e.pts[g.i][2] || 0]; IDX = null; persist(); say("Köşe taşındı"); idle(); return; }
   if (window.BGI && BGI.reg) { const odd = BGI.reg.step % 2 === 1; const p = odd ? pickPt(sx, sy) : [WX(sx), WY(sy)]; BGI.tap([p[0], p[1]]); draw(); return; }
-  if (cmd && cmd.ent && !cmd.e) { const en = pickEnt(sx, sy); if (en) { cmd.ent(en, [WX(sx), WY(sy)]); if(!/^(Sorgula|Noktayı sorgula)$/.test(cmd.name))draw(); return; } if (!cmd.pt) return; }
-  if (cmd && cmd.pt) { const p = cmd.raw ? [WX(sx),WY(sy)] : pickPt(sx, sy); cmd.pt(p); if(!/^(Sorgula|Noktayı sorgula)$/.test(cmd.name)) { draw(); setTimeout(() => { snapMk = null; draw(); }, 700); } return; }
+  if (cmd && cmd.ent && !cmd.e) { const en = pickEnt(sx, sy); if (en) { cmd.ent(en, [WX(sx), WY(sy)]); if(!(cmd && /^(Sorgula|Noktayı sorgula)$/.test(cmd.name)))draw(); /* komut ent() içinde bitmiş olabilir (cmd=null) */ return; } if (!cmd.pt) return; }
+  if (cmd && cmd.pt) { const p = cmd.raw ? [WX(sx),WY(sy)] : pickPt(sx, sy); cmd.pt(p); if(!(cmd && /^(Sorgula|Noktayı sorgula)$/.test(cmd.name))) { draw(); setTimeout(() => { snapMk = null; draw(); }, 700); } return; }
   // seçim: tutamaç mı?
   if (sel.size) { for (const en of ents) if (sel.has(en.id)) { const V_ = vertsOf(en); for (let i = 0; i < V_.length; i++) if (Math.hypot(X(V_[i][0]) / dpr - sx, Y(V_[i][1]) / dpr - sy) < 10) { grip = { e: en, i }; last = V_[i]; rub = true; prompt_("Tutamaç: köşenin yeni yerini göster (Esc iptal)"); draw(); return; } } }
   { const t = Date.now(); if (window.__dtC && t - __dtC.t < 380 && Math.hypot(sx - __dtC.q[0], sy - __dtC.q[1]) < 30) { window.__dtC = null; if (window.__dtC0) { sel.clear(); window.__dtC0.forEach(i => sel.add(i)); } zoomAll(); say("Tüm çizim ortalandı (çift dokunuş)"); idle(); return; } window.__dtC = { t, q: [sx, sy] }; window.__dtC0 = new Set(sel); }
@@ -16459,7 +16466,7 @@ function landXmlOku(tx) { const doc = new DOMParser().parseFromString(tx, "appli
     if (pts.length >= 2) { const c = Math.hypot(pts[0][0] - pts[pts.length - 1][0], pts[0][1] - pts[pts.length - 1][1]) < 1e-4 && pts.length > 3; D.polys.push({ pts: c ? pts.slice(0, -1) : pts, closed: c, lay }); } }
   for (const c of by(doc, "CgPoint")) { const q = nez(c.textContent); if (q) D.points.push({ n: c.getAttribute("name") || "", e: q[0], y: q[1], z: q[2], lay: c.getAttribute("code") || "LANDXML_NOKTA" }); }
   if (!D.faces.length && !D.polys.length && !D.points.length) throw new Error("LandXML'de yüzey, çizgi ya da nokta bulunamadı"); return D; }
-async function loadFile(f, append) { say("Okunuyor…"); ARA_HL = null; ARA_SON = []; try { const ab = $("araBox"); if (ab && !append) { ab.hidden = true; } } catch (e) {} try { if (/\.dwg$/i.test(f.name)) throw new Error("DWG ikili dosyası bu çevrimdışı HTML sürümünde yerel olarak çözülemez. CAD → Dosya → Özgün CAD dosyası ekle ile kaynağı kayıpsız projeye saklayabilir veya ODA File Converter/AutoCAD/Netcad üzerinden DXF olarak dışarı aktarıp düzenleyebilirsin. DWG dosyan ve mevcut çizimin değiştirilmedi."); if (/\.pdf$/i.test(f.name)) throw new Error("PDF'ten çizim geri okunamaz: PDF'te koordinat değil kâğıt ölçüsü vardır, okunan değer doğru olmaz. Aynı çizimin DXF, NCZ ya da NCN'sini aç"); const D = /\.xml$/i.test(f.name) ? landXmlOku(await f.text()) : await window.APLT.readAny(f); if (D.pdf) throw new Error("PDF çizim olarak açılamaz");
+async function loadFile(f, append, opt) { say("Okunuyor…"); ARA_HL = null; ARA_SON = []; try { const ab = $("araBox"); if (ab && !append) { ab.hidden = true; } } catch (e) {} try { if (/\.dwg$/i.test(f.name)) throw new Error("DWG ikili dosyası bu çevrimdışı HTML sürümünde yerel olarak çözülemez. CAD → Dosya → Özgün CAD dosyası ekle ile kaynağı kayıpsız projeye saklayabilir veya ODA File Converter/AutoCAD/Netcad üzerinden DXF olarak dışarı aktarıp düzenleyebilirsin. DWG dosyan ve mevcut çizimin değiştirilmedi."); if (/\.pdf$/i.test(f.name)) throw new Error("PDF'ten çizim geri okunamaz: PDF'te koordinat değil kâğıt ölçüsü vardır, okunan değer doğru olmaz. Aynı çizimin DXF, NCZ ya da NCN'sini aç"); const D = /\.xml$/i.test(f.name) ? landXmlOku(await f.text()) : await window.APLT.readAny(f); if (D.pdf) throw new Error("PDF çizim olarak açılamaz");
     if(/\.ncz$/i.test(f.name) && !D.nczDiagnostics?.recordChainFound)
       throw new Error('NCZ nesne kayıt zinciri doğrulanamadı; mevcut CAD korunuyor. Kaynak NCZ dosyasını Netcad ile kontrol et.');
     let KAY = null;
@@ -16469,7 +16476,7 @@ async function loadFile(f, append) { say("Okunuyor…"); ARA_HL = null; ARA_SON 
       const ax = [Infinity, Infinity, -Infinity, -Infinity]; for (const e of ents) for (const p of e.pts) { ax[0] = Math.min(ax[0], p[0]); ax[1] = Math.min(ax[1], p[1]); ax[2] = Math.max(ax[2], p[0]); ax[3] = Math.max(ax[3], p[1]); }
       if (isFinite(bx[0]) && isFinite(ax[0])) { const boy = Math.max(ax[2] - ax[0], ax[3] - ax[1], bx[2] - bx[0], bx[3] - bx[1], 50), ara = Math.max(0, bx[0] - ax[2], ax[0] - bx[2], bx[1] - ax[3], ax[1] - bx[3]);
         const yerel = (Math.abs(ax[0]) > 100000) !== (Math.abs(bx[0]) > 100000) || (Math.abs(ax[1]) > 1000000) !== (Math.abs(bx[1]) > 1000000);
-        if ((yerel || ara > Math.max(2000, 20 * boy)) && confirm("DİKKAT: Eklenen çizimin koordinatları mevcut projeden çok uzakta veya farklı sistemde.\\n\\nTAMAM: Görsel karşılaştırma için çizimi taşı (gerçek koordinatlar değişir).\\nİPTAL: Orijinal koordinatları koru (önerilen).")) { const dx = ax[2] + Math.max(10, (ax[2] - ax[0]) * 0.15) - bx[0], dy = ax[1] - bx[1]; KAY = [dx, dy]; const m = p => { p[0] += dx; p[1] += dy; };
+        if ((yerel || ara > Math.max(2000, 20 * boy)) && ((opt && opt.mimari) || confirm("DİKKAT: Eklenen çizimin koordinatları mevcut projeden çok uzakta veya farklı sistemde.\\n\\nTAMAM: Görsel karşılaştırma için çizimi taşı (gerçek koordinatlar değişir).\\nİPTAL: Orijinal koordinatları koru (önerilen)."))) { /* mimari proje koordinatsızdır: sormadan projenin yanına konur, oturtma şekilden yapılır */ const dx = ax[2] + Math.max(10, (ax[2] - ax[0]) * 0.15) - bx[0], dy = ax[1] - bx[1]; KAY = [dx, dy]; const m = p => { p[0] += dx; p[1] += dy; };
           D.lines.forEach(l => l.pts.forEach(m)); D.polys.forEach(l => l.pts.forEach(m)); (D.circles || []).forEach(l => l.pts.forEach(m)); D.points.forEach(p => { p.e += dx; p.y += dy; }); D.texts.forEach(t => { if (t.e) { t.e += dx; t.y += dy; } }); } } } if (!append) { snap0(); ents = []; lays = { "0": { c: "#ffffff", on: true } }; sel.clear(); }
     if (!append) FACES = [];
     /* V7097: Gerçek NCZ projelerindeki boş tabakalar da proje yapısının parçasıdır. */
@@ -17030,7 +17037,7 @@ CMDS.TOPLUSORGU = () => { const yaz = () => { const L = ents.filter(e => sel.has
 /* ===== Mimari projeyi parsele oturt · 2 noktadan dönüşüm · dik çiz · dik döndür ===== */
 const benz = (k, th, tx, ty) => { const c = Math.cos(th) * k, s_ = Math.sin(th) * k; const f = p => [p[0] * c - p[1] * s_ + tx, p[0] * s_ + p[1] * c + ty]; f.k = k; f.rot = th; return f; };
 const entBB = L => { let x0 = 1 / 0, y0 = 1 / 0, x1 = -1 / 0, y1 = -1 / 0; for (const e of L) { const P = e.t === "circle" ? [e.c] : e.pts || []; for (const q of P) { if (q[0] < x0) x0 = q[0]; if (q[0] > x1) x1 = q[0]; if (q[1] < y0) y0 = q[1]; if (q[1] > y1) y1 = q[1]; } } return [x0, y0, x1, y1]; };
-let MIMSON = null; /* son eklenen mimari projenin nesne kimlikleri */
+let MIMSON = null, MIM_ADAY = null; /* son eklenen mimari projenin nesne kimlikleri */
 let MIMQA = null; /* başarılı son oturtmanın denetlenebilir bilgisi; bağımsız saha onayı yerine geçmez */
 const MIM_ETIKET = 'MIM_KOORDINATLI:';
 const MIM_ETIKET_DIS = 'MIM_KOORDINATSIZ:';
@@ -17059,8 +17066,23 @@ function mimRaporGoster() {
 }
 CMDS.MIMARIRAPOR = mimRaporGoster;
 
+/* Mimari vaziyette parsel çoğu zaman patlatılmış ÇİZGİLER (LINE / açık çoklu çizgi) olarak gelir: aynı tabakadaki
+   parçalar uçlarından birleştirilip kapalı yüzler (en küçük çevrimler) çıkarılır; bunlar yalnız ADAY olarak kullanılır,
+   çizime eklenmez. Uç birleştirme toleransı çizim boyutunun 1/100000'i (cm çizimde ~mm). */
+function mimYuzler(yeni) { const out = [], grup = new Map();
+  for (const e of yeni) { if (e.t === "line" || (e.t === "pline" && !e.closed && e.pts && e.pts.length >= 2)) { const P = e.pts; for (let i = 0; i + 1 < P.length; i++) { const k = e.lay || "0"; (grup.get(k) || grup.set(k, []).get(k)).push([P[i], P[i + 1]]); } } }
+  for (const [lay, S] of grup) { if (S.length < 3 || S.length > 6000) continue; let x0 = 1 / 0, y0 = 1 / 0, x1 = -1 / 0, y1 = -1 / 0; for (const [a, b] of S) for (const q of [a, b]) { if (q[0] < x0) x0 = q[0]; if (q[0] > x1) x1 = q[0]; if (q[1] < y0) y0 = q[1]; if (q[1] > y1) y1 = q[1]; }
+    const tol = Math.max(1e-6, Math.max(x1 - x0, y1 - y0) * 1e-5), N = [], H = new Map(), nid_ = q => { const k = Math.round(q[0] / tol) + "," + Math.round(q[1] / tol); for (const dx of [-1, 0, 1]) for (const dy of [-1, 0, 1]) { const kk = (Math.round(q[0] / tol) + dx) + "," + (Math.round(q[1] / tol) + dy); if (H.has(kk)) return H.get(kk); } H.set(k, N.length); N.push([q[0], q[1]]); return N.length - 1; };
+    const adj = new Map(), ek = new Set(); for (const [a, b] of S) { const i = nid_(a), j = nid_(b); if (i === j) continue; const k = i < j ? i + "|" + j : j + "|" + i; if (ek.has(k)) continue; ek.add(k); (adj.get(i) || adj.set(i, []).get(i)).push(j); (adj.get(j) || adj.set(j, []).get(j)).push(i); }
+    for (const [i, L] of adj) L.sort((u, v) => Math.atan2(N[u][1] - N[i][1], N[u][0] - N[i][0]) - Math.atan2(N[v][1] - N[i][1], N[v][0] - N[i][0]));
+    const gez = new Set(); let say_ = 0;
+    for (const [i0, L0] of adj) for (const j0 of L0) { if (gez.has(i0 + ">" + j0)) continue; const cyc = []; let i = i0, j = j0, ok = false;
+      for (let g = 0; g < 400; g++) { gez.add(i + ">" + j); cyc.push(N[i]); const L = adj.get(j); if (!L || L.length < 2) break; const ix = L.indexOf(i); const k = L[(ix - 1 + L.length) % L.length]; i = j; j = k; if (i === i0 && j === j0) { ok = true; break; } }
+      if (!ok || cyc.length < 3) continue; let ar = 0; for (let q = 0; q < cyc.length; q++) { const a = cyc[q], b = cyc[(q + 1) % cyc.length]; ar += a[0] * b[1] - b[0] * a[1]; } if (ar <= 0) continue; /* dış yüz atılır */
+      out.push({ t: "pline", closed: true, pts: cyc, lay, _yuz: true }); if (++say_ > 400) break; } }
+  return out; }
 function mimOturt(yeni, parsel, sessiz) { const baslangicMs = performance.now(); const G = window.APLGEO; if (!G || !G.fitPoly) return say("Oturtma modülü yüklenemedi", true); const P = parsel.pts.map(q => [q[0], q[1]]), aP = Math.abs(areaOf(parsel.pts)), nP = G.corners(P, 0.0005).length; const sek = Q => { const a = Math.abs(areaOf(Q)); let c = 0; for (let i = 0; i < Q.length; i++) c += dist(Q[i], Q[(i + 1) % Q.length]); return c * c / a; }; const sP = sek(parsel.pts);
-  const adaylar = yeni.filter(e => e.t === "pline" && e.pts.length >= 3 && (e.closed || dist(e.pts[0], e.pts[e.pts.length - 1]) < 1e-6 * (1 + Math.abs(e.pts[0][0])))).map(e => ({ e, a: Math.abs(areaOf(e.pts)) })).filter(c => c.a > 0 && Math.abs(sek(c.e.pts) / sP - 1) < 0.22).sort((x, y) => Math.abs(sek(x.e.pts) / sP - 1) - Math.abs(sek(y.e.pts) / sP - 1)).slice(0, 72);
+  const adaylar = yeni.filter(e => e.t === "pline" && e.pts.length >= 3 && (e.closed || dist(e.pts[0], e.pts[e.pts.length - 1]) < 1e-6 * (1 + Math.abs(e.pts[0][0])))).concat(mimYuzler(yeni)).map(e => ({ e, a: Math.abs(areaOf(e.pts)) })).filter(c => c.a > 0 && Math.abs(sek(c.e.pts) / sP - 1) < 0.22).sort((x, y) => Math.abs(sek(x.e.pts) / sP - 1) - Math.abs(sek(y.e.pts) / sP - 1)).slice(0, 72);
   const esik = Math.max(0.5, Math.sqrt(aP) * 0.03), TR = t => String(t || "").toLocaleUpperCase("tr-TR"); const basl = yeni.filter(e => e.t === "text" && /PLAN|VAZ[İI]YET|YERLEŞ|YERLES/.test(TR(e.s))); const yakin = (e, re) => { const b = entBB([e]), cx_ = (b[0] + b[2]) / 2, cy_ = (b[1] + b[3]) / 2, sz = Math.max(b[2] - b[0], b[3] - b[1]); let en = null; for (const t of basl) { if (re && !re.test(TR(t.s))) continue; const d = Math.hypot(t.pts[0][0] - cx_, t.pts[0][1] - cy_) / sz; if (d < 3 && (!en || d < en[0])) en = [d, t]; } return en; };
   let best = null, bestV = null, bestY = null, guvenliAdaySayisi = 0, guvenliUyumlular = []; for (const c of adaylar) { let T = null; try { T = G.fitPoly(c.e.pts.map(q => [q[0], q[1]]), P); } catch (er) { } if (!T || !isFinite(T.rms) || !isFinite(T.max)) continue; if (T.max <= 0.020 + 1e-9) { guvenliAdaySayisi++; guvenliUyumlular.push({c, T}); } const nC = G.corners(c.e.pts.map(q => [q[0], q[1]]), 0.0005).length; const skor = T.rms / Math.sqrt(aP) + Math.abs(nC - nP) * 0.002; const o = { T, c, skor }; if (!best || skor < best.skor) best = o; if (T.rms <= esik) { const v = yakin(c.e, /VAZ[İI]YET/), y = v ? null : yakin(c.e, /YERLEŞ|YERLES/); if (v) { o.vz = v; if (!bestV || v[0] < bestV.vz[0] - 0.05 || (Math.abs(v[0] - bestV.vz[0]) <= 0.05 && skor < bestV.skor)) bestV = o; } else if (y) { o.vz = y; if (!bestY || y[0] < bestY.vz[0] - 0.05 || (Math.abs(y[0] - bestY.vz[0]) <= 0.05 && skor < bestY.skor)) bestY = o; } } }
   /* standart: şekle uyanlar içinde "VAZİYET PLANI" başlıklı çizim koordinatlandırılır */ const vazVar = !!(bestV || bestY); if (bestV) best = bestV; else if (bestY) best = bestY; if (best) { const b_ = best.vz || yakin(best.c.e, null); best.baslik = b_ ? String(b_[1].s).replace(/^(?:\\?[A-Za-z]{1,2}[\d.]*;)+/, "").trim() : ""; }
@@ -17077,15 +17099,32 @@ function mimOturt(yeni, parsel, sessiz) { const baslangicMs = performance.now();
   }));
   const guvenliMi = !!(best && best.T.max <= 0.020 + 1e-9 && !best.T.m && !belirsizBaslikli && (vazVar || guvenliAdaySayisi <= 1));
   if (sessiz === 1) return guvenliMi ? best.skor : null;
+  /* Aynı başlıklı birden çok vaziyet (ör. iki paftada kopya ya da revizyon): tahmin edilmez, KULLANICI seçer */
+  if (!guvenliMi && belirsizBaslikli && !sessiz) { const C_ = guvenliUyumlular.filter(o => { if (o.T.m) return false; const y0 = yakin(o.c.e, null); return !!(y0 && baslikSinifi.test(String(y0[1].s).toLocaleUpperCase('tr-TR'))); }).map(o => ({ o, bb: entBB([o.c.e]), vz: yakin(o.c.e, null) })); /* yalnız en yakın başlığı VAZİYET olanlar */
+    const tek = []; for (const c of C_) if (!tek.some(d => Math.abs(d.bb[0] - c.bb[0]) < 1e-6 && Math.abs(d.bb[1] - c.bb[1]) < 1e-6)) tek.push(c);
+    if (tek.length >= 2) { MIM_ADAY = tek; let x0 = 1 / 0, y0 = 1 / 0, x1 = -1 / 0, y1 = -1 / 0; for (const c of tek) { x0 = Math.min(x0, c.bb[0]); y0 = Math.min(y0, c.bb[1]); x1 = Math.max(x1, c.bb[2]); y1 = Math.max(y1, c.bb[3]); }
+      const W_ = cv.clientWidth || 800, H_ = cv.clientHeight || 600; V.s = Math.min(W_ * 0.7 / Math.max(1e-9, x1 - x0), H_ * 0.62 / Math.max(1e-9, y1 - y0)); V.cx = (x0 + x1) / 2; V.cy = (y0 + y1) / 2 - (H_ * 0.06) / V.s;
+      cmd = { name: "Vaziyet seç", rcExit: true, pt(p) { const c = MIM_ADAY && MIM_ADAY.find(c => p[0] >= c.bb[0] && p[0] <= c.bb[2] && p[1] >= c.bb[1] && p[1] <= c.bb[3]); if (!c) return say("Numaralı vaziyet çerçevelerinden birinin içine dokun", true);
+          MIM_ADAY = null; const b = { T: c.o.T, c: c.o.c, vz: c.vz, skor: 0 }; b.baslik = String(c.vz[1].s).replace(/^(?:\\?[A-Za-z]{1,2}[\d.]*;)+/, "").trim(); cmd = null; const ok_ = mimYerlesimUygula(yeni, parsel, b, true, { startMs: performance.now(), secim: true }); if (ok_ === true) MIMSON = null; const m_ = $("cadMsg").textContent, er_ = $("cadMsg").classList.contains("err"); idle(); say(m_, er_); },
+        done() { MIM_ADAY = null; idle(); say("Vaziyet seçilmedi; hiçbir çizim değiştirilmedi.", true); } };
+      draw(); prompt_(`${tek.length} adet "${String(tek[0].vz[1].s).slice(0, 40)}" bulundu (parsele hepsi uyuyor). Kullanılacak vaziyetin içine dokun · Esc: vazgeç`); say(`Aynı başlıklı ${tek.length} vaziyet var; hangisinin güncel olduğunu sen seç. Seçmeden hiçbir şey taşınmaz.`); return null; } }
   if (!guvenliMi) { sel.clear(); yeni.forEach(e => sel.add(e.id)); draw(); say(`${!best ? "Vaziyette parselin şekline uyan kapalı çizgi bulunamadı." : best.T.m ? 'Otomatik yerleştirme aynalı dönüşüm gerektiriyor; güvenlik için reddedildi.' : belirsizBaslikli ? 'Aynı nitelikte birden fazla vaziyet başlığı ve parsel çizimi bulundu; otomatik seçim güvenilir değil.' : (!vazVar && guvenliAdaySayisi > 1) ? `Birden çok parsel adayı aynı doğrulukta eşleşiyor (${guvenliAdaySayisi} aday); vaziyet güvenle ayrılamadı.` : `OTOMATİK OTURTMA DURDURULDU: en büyük parsel köşe uyum hatası ${(best.T.max * 100).toFixed(2)} cm, izin verilen 2.00 cm.`} Hiçbir çizim değiştirilmedi. ${best && best.T.m ? "Mimari çizimi AYNA ile düzeltip sonra M2N ile kontrol et." : "Mimari: 2 referans + 3. kontrol (M2N) ile tekrar dene."}`, true); return false; }
   return mimYerlesimUygula(yeni, parsel, best, vazVar, { startMs: baslangicMs }); }
 
 function mimYerlesimUygula(yeni, parsel, best, vazVar, opt = {}) {
   const G = window.APLGEO; const T = best.T, fT = p => G.apply(T, p); fT.k = T.k; fT.rot = T.th; const cb = entBB([best.c.e]), gw = Math.max((cb[2] - cb[0]) * 0.32, 0.8 * (opt.baseLen || 0)), gh = Math.max((cb[3] - cb[1]) * 0.32, 0.8 * (opt.baseLen || 0)), R = [cb[0] - gw, cb[1] - gh, cb[2] + gw, cb[3] + gh];
+  /* Pafta hücre çerçevesi: vaziyetin çevresindeki uzun yatay/düşey çerçeve çizgileri bölgeyi sınırlar; yan paftadaki kat planı/kesit karışmaz */
+  { const cxm = (cb[0] + cb[2]) / 2, cym = (cb[1] + cb[3]) / 2, uz = Math.max(cb[2] - cb[0], cb[3] - cb[1]) * 0.9;
+    for (const e of yeni) { if (!(e.t === 'line' || e.t === 'pline') || !e.pts || e.pts.length < 2 || e === best.c.e) continue; const P_ = e.t === 'pline' && e.closed ? [...e.pts, e.pts[0]] : e.pts;
+      for (let i = 0; i + 1 < P_.length; i++) { const a = P_[i], b = P_[i + 1], dx = Math.abs(b[0] - a[0]), dy = Math.abs(b[1] - a[1]), L = Math.hypot(dx, dy); if (L < Math.min(uz, Math.min(cb[2] - cb[0], cb[3] - cb[1]))) continue;
+        /* çerçeve çizgisi: parselin o yöndeki tüm genişliğini/yüksekliğini kaplar */
+        if (dx < L * 0.005) { const x = (a[0] + b[0]) / 2; if (Math.min(a[1], b[1]) <= cb[1] && Math.max(a[1], b[1]) >= cb[3]) { if (x >= cb[2] && x < R[2]) R[2] = x; else if (x <= cb[0] && x > R[0]) R[0] = x; } }
+        else if (dy < L * 0.005) { const y = (a[1] + b[1]) / 2; if (Math.min(a[0], b[0]) <= cb[0] && Math.max(a[0], b[0]) >= cb[2]) { if (y >= cb[3] && y < R[3]) R[3] = y; else if (y <= cb[1] && y > R[1]) R[1] = y; } } } } }
   const vz = [], diger = []; for (const e of yeni) { const b = entBB([e]); const mx = (b[0] + b[2]) / 2, my = (b[1] + b[3]) / 2; ((best.vz && best.vz[1] === e) || (mx >= R[0] && mx <= R[2] && my >= R[1] && my <= R[3] && (b[2] - b[0]) < (R[2] - R[0]) * 1.2) ? vz : diger).push(e); }
   const yanBaslik = yeni.some(e => e.t === 'text' && /(?:^|\s)(?:[1-9]\.?\s*KAT|KES[İI]T|G[ÖO]R[ÜU]N[ÜU][ŞS]|CEPHE|ÇATI|CATI)\b/i.test(String(e.s || '')));
   /* Ayrı kat/kesit/görünüş başlığının koordinatlı gruba sızması kullanıcıyı yanlış koordinat okumaya sürükler. */
-  const yabanciBaslik = vz.find(e => e.t === 'text' && /(?:^|\b)(?:BODRUM|ZEM[İI]N|G[İI]R[İI][ŞS]|[1-9]\s*\.?\s*KAT|KES[İI]T|G[ÖO]R[ÜU]N[ÜU][ŞS]|CEPHE|ÇATI|CATI)\b/i.test(String(e.s || '')) && !/VAZ[İI]YET|YERLE[ŞS][İI]M/i.test(String(e.s || '')));
+  const baslikMi = t => { const s_ = String(t || '').replace(/^(?:\\?[A-Za-z]{1,2}[\d.,-]*;)+/, '').trim(); if (!s_ || s_.length > 70) return false; const U_ = s_.toLocaleUpperCase('tr-TR'); /* pafta başlığı: büyük harf ya da ölçek içerir; "dış cephe boyası" gibi not yazısı başlık değildir */ if (U_ !== s_ && !/Ö\s*:|1\s*\/\s*\d/.test(s_)) return false; return /(?:PLANI|KES[İI]T[İI]?|G[ÖO]R[ÜU]N[ÜU][ŞS][ÜU]?)(?:\s|$|\b)/i.test(U_) && /BODRUM|ZEM[İI]N|G[İI]R[İI][ŞS]|KAT|KES[İI]T|G[ÖO]R[ÜU]N|ÇATI|CATI|TERAS|ASMA/i.test(U_) && !/VAZ[İI]YET|YERLE[ŞS][İI]M/i.test(U_); };
+  const yabanciBaslik = vz.find(e => e.t === 'text' && baslikMi(e.s));
   if (yabanciBaslik) {
     say('GÜVENLİK: Vaziyet bölgesine diğer kat/kesit başlığı (' + String(yabanciBaslik.s).slice(0, 75) + ') karışmış. Koordinatlandırma yapılmadı; pafta sınırlarını ayır.', true); return false;
   }
@@ -17198,8 +17237,8 @@ CMDS.MIMARI2N = () => {
   prompt_('1. mimari KAYNAK noktasını seç (nokta yakalama açık)');
 };
 Object.assign(ALIAS, { M2N: 'MIMARI2N', MIM2N: 'MIMARI2N' });
-CMDS.MIMARIEKLE = () => { const pars0 = selEnts().find(e => e.t === "pline" && e.closed && e.pts.length >= 3) || null; const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".dxf,.DXF,.ncz,.NCZ"; inp.onchange = async () => { const f = inp.files[0]; if (!f) return; const once = new Set(ents.map(e => e.id)); const V0 = { cx: V.cx, cy: V.cy, s: V.s }; await loadFile(f, true); const yeni = ents.filter(e => !once.has(e.id)); if (!yeni.length) return say("Dosyadan nesne gelmedi", true); MIMSON = new Set(yeni.map(e => e.id));
-    const bitir = pr => { cmd = null; const ok_ = mimOturt(yeni, pr); if (ok_ === true) MIMSON = null; const m_ = $("cadMsg").textContent, er_ = $("cadMsg").classList.contains("err"); idle(); say(m_, er_); };
+CMDS.MIMARIEKLE = () => { const pars0 = selEnts().find(e => e.t === "pline" && e.closed && e.pts.length >= 3) || null; const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".dxf,.DXF,.ncz,.NCZ"; inp.onchange = async () => { const f = inp.files[0]; if (!f) return; const once = new Set(ents.map(e => e.id)); const V0 = { cx: V.cx, cy: V.cy, s: V.s }; await loadFile(f, true, { mimari: true }); const yeni = ents.filter(e => !once.has(e.id)); if (!yeni.length) return say("Dosyadan nesne gelmedi", true); MIMSON = new Set(yeni.map(e => e.id));
+    const bitir = pr => { cmd = null; const ok_ = mimOturt(yeni, pr); if (cmd && cmd.name === "Vaziyet seç") return; /* kullanıcı vaziyet seçecek */ if (ok_ === true) MIMSON = null; const m_ = $("cadMsg").textContent, er_ = $("cadMsg").classList.contains("err"); idle(); say(m_, er_); };
     if (pars0) return bitir(pars0); V.cx = V0.cx; V.cy = V0.cy; V.s = V0.s; draw();
     cmd = { name: "Mimari oturt", ent(e, p) { this.pt(p, e); }, pt(p, e0) { const C = ents.filter(e => once.has(e.id) && e.t === "pline" && e.closed && e.pts.length >= 3 && lays[e.lay] && lays[e.lay].on && (e === e0 || inPolyC(e.pts, p[0], p[1]))).sort((a, b) => Math.abs(areaOf(a.pts)) - Math.abs(areaOf(b.pts))).slice(0, 8); if (!C.length) return say("Parselin içine ya da çizgisine dokun", true);
         say("Vaziyet aranıyor…"); let en = null; for (const c of C) { const sk = mimOturt(yeni, c, 1); if (sk != null && (!en || sk < en[1])) en = [c, sk]; } bitir(en ? en[0] : (e0 && e0.t === "pline" && e0.closed ? e0 : C[C.length - 1])); } };
@@ -18185,7 +18224,7 @@ function bgPlan(D) { if (!PLAN || PLAN.ad !== PLAN_AD) return; const W = cv.widt
   try { tin(typeof MS !== "undefined" ? MS : null, "rgba(200,210,220,.22)"); tin(typeof MR !== "undefined" ? MR : null, "rgba(255,90,90,.35)"); if (typeof SECS !== "undefined" && SECS.length) { cx.strokeStyle = "rgba(255,216,0,.5)"; cx.lineWidth = 1 * D; cx.beginPath(); SECS.forEach(sc => sc.line.forEach(([a, b]) => { cx.moveTo(X(a[0]), Y(a[1])); cx.lineTo(X(b[0]), Y(b[1])); })); cx.stroke(); } } catch (e) {} }
 /* ---------- kademeli iş akışı: çizim → ① ifraz → ② yapı apl → ③ kübaj ---------- */
 $("cadF2").addEventListener("change", async e => { const f = e.target.files[0]; e.target.value = ""; if (!f) return; if (PLAN) editExit(); snap0(); $("cadKub").hidden = true; propClose(); await loadFile(f, false); try { window.APLT.fromCad(toFD(ents), f.name.replace(/\.[^.]+$/, ""), null, null); } catch (er) {} });
-const toFD = L => { const d = { lines: [], polys: [], points: [], texts: [], circles: [] };
+const toFD = L => { L = L.filter(e => !(typeof e.lay === 'string' && e.lay.startsWith('MIM_KOORDINATSIZ:'))); /* koordinatsız mimari paftaları (projenin yanına dizilmiş) koordinatlı modüllere gönderilmez */ const d = { lines: [], polys: [], points: [], texts: [], circles: [] };
   L.forEach(e => { if (!lays[e.lay] || lays[e.lay].on === false) return; const q = e.pts;
     if (e.t === "line") d.lines.push({ lay: e.lay, pts: q.map(p => [p[0], p[1], p[2] || 0]) });
     else if (e.t === "pline") d.polys.push({ lay: e.lay, closed: !!e.closed, pts: q.map(p => [p[0], p[1], p[2] || 0]) });
@@ -18205,13 +18244,20 @@ function flowTo(m) { if (!ents.length) return say("Önce 📂 Dosya aç ile bir 
   const a = window.APLT.S(); if (m === "apl" && a.ifz && a.ifz.parts && a.ifz.parts.length && !flowTo.arm) { flowTo.arm = 1; setTimeout(() => flowTo.arm = 0, 5000); return say("İfraz sekmesindeki bölme sonucu, yeni parsel aktarılınca silinir. Çıktılarını aldıysan ya da ⬅ Sonucu çizime al ile çizime eklediysen ② Yapı APL'ye tekrar bas.", true); } flowTo.arm = 0;
   // V7.0.34: Yapı Aplikasyonu aktarımında doğrulanmamış nokta adı kullanma.
   // İfraz ve parselsiz çizim aktarımının eski davranışı korunur.
+  /* Parsel köşelerinden ardışık tekrar eden ve kapanış noktası temizlenir (sıfır uzunluklu kenar aktarımı durdurmasın) */
+  if (P && P.length > 3) { const Q = []; for (const q of P) if (!Q.length || Math.hypot(q[0] - Q[Q.length - 1][0], q[1] - Q[Q.length - 1][1]) > 1e-4) Q.push(q); while (Q.length > 3 && Math.hypot(Q[0][0] - Q[Q.length - 1][0], Q[0][1] - Q[Q.length - 1][1]) <= 1e-4) Q.pop(); P = Q; }
   var strictYapi=(m==="apl"&&!!P), verifiedYapi=null;
   if(strictYapi){
     if(!window.ACAD_CAD_AUDIT)return say("Nokta kimliği denetimi yüklenmedi; Yapı Aplikasyonu aktarımı durduruldu.",true);
-    var yAudit=window.ACAD_CAD_AUDIT(P,ents,0.002);
-    if(yAudit.errors.length)return say("Yapı Aplikasyonu aktarımı durduruldu: "+yAudit.errors.slice(0,3).join(" | "),true);
+    /* mimari projeden gelen noktalar (MIM_ tabakaları) mimarın etiketleridir, ölçü noktası değil: nokta kimliği denetimine girmez */
+    var yAudit=window.ACAD_CAD_AUDIT(P,ents.filter(function(e){return !(typeof e.lay==='string'&&/^MIM_/.test(e.lay));}),0.002);
+    /* Yalnız nokta adı çakışması varsa durdurmak yerine sor: çakışan köşeler numarasız (otomatik adla) aktarılır, yanlış ad asla kullanılmaz */
+    var adCak=yAudit.errors.filter(function(x){return /^Parsel köşesindeki nokta adı çizimde farklı koordinatta da var: /.test(x);}), digerHata=yAudit.errors.filter(function(x){return adCak.indexOf(x)<0;});
+    if(digerHata.length)return say("Yapı Aplikasyonu aktarımı durduruldu: "+digerHata.slice(0,3).join(" | "),true);
+    var cakAd=new Set(adCak.map(function(x){return x.replace(/^.*: /,"");}));
+    if(cakAd.size&&!confirm("Nokta adı çakışması: "+[...cakAd].slice(0,8).join(", ")+(cakAd.size>8?"…":"")+" adı aynı tabakada farklı koordinatlarda da var.\n\nTAMAM: Bu köşeler numarasız aktarılsın (Yapı Aplikasyonu otomatik ad verir, koordinatlar değişmez).\nİPTAL: Aktarma; önce çizimdeki çift numarayı düzelt."))return say("Aktarım iptal edildi: çizimdeki çift nokta numaralarını düzelt ("+[...cakAd].slice(0,5).join(", ")+").",true);
     verifiedYapi=P.map(function(){return "";});
-    yAudit.matched.forEach(function(hit){verifiedYapi[hit.corner-1]=hit.name;});
+    yAudit.matched.forEach(function(hit){if(!cakAd.has(hit.name))verifiedYapi[hit.corner-1]=hit.name;});
     if(yAudit.warnings.length&&!confirm("Yapı Aplikasyonu aktarım uyarıları:\\n"+yAudit.warnings.join("\\n")+"\\n\\nKoordinatları değiştirmeden aktarılsın mı?"))return;
   }
   window.APLT.fromCad(toFD(ents), projName(), P, noOf(P), strictYapi, verifiedYapi); if (typeof showTab === "function") showTab(m); setTimeout(() => window.APLT.fitA(), 60);
@@ -19273,7 +19319,7 @@ try { window.IFC = IFC; } catch (e) {}
   // Nokta kimlikleri sadece açıkça adlandırılmış CAD POINT varlıklarından alınır.
   function cadTransferAudit(poly, entities, tolerance){
     var tol=Number.isFinite(tolerance)&&tolerance>0?tolerance:0.002;
-    var errors=[], warnings=[], ids=new Map(), grid=new Map(), matched=[], unnamed=[], conflict=new Set();
+    var errors=[], warnings=[], ids=new Map(), grid=new Map(), matched=[], unnamed=[], conflict=new Set(), layerDup=new Set();
     var key=function(x,y){return Math.floor(x/tol)+','+Math.floor(y/tol);};
     var norm=function(s){return String(s==null?'':s).trim();};
     for(var i=0;i<entities.length;i++){
@@ -19283,9 +19329,10 @@ try { window.IFC = IFC; } catch (e) {}
       if(!name)continue;
       var prior=ids.get(name);
       if(prior){
-        if(Math.hypot(prior[0]-p[0],prior[1]-p[1])>=tol)conflict.add(name);
+        /* Aynı ad farklı koordinatta: aynı tabakada ise kimlik çakışmasıdır; farklı tabakalarda (ör. parsel noktası 1 ile plankote noktası 1) ayrı numaralandırmadır, yalnız uyarı */
+        if(Math.hypot(prior[0]-p[0],prior[1]-p[1])>=tol){ if(prior[2]===e.lay)conflict.add(name); else layerDup.add(name+' ('+prior[2]+' / '+e.lay+')'); }
         else warnings.push('Aynı numaralı CAD noktası tekrar ediyor: '+name);
-      }else ids.set(name,[p[0],p[1]]);
+      }else ids.set(name,[p[0],p[1],e.lay]);
       var k=key(p[0],p[1]);if(!grid.has(k))grid.set(k,[]);grid.get(k).push({name:name,p:p});
     }
     for(var i=0;i<poly.length;i++){
@@ -19321,6 +19368,7 @@ try { window.IFC = IFC; } catch (e) {}
     if(conflict.size){var used=new Set(matched.map(function(m){return m.name;})),bad=[...conflict].filter(function(n){return used.has(n);}),other=conflict.size-bad.length;
       bad.forEach(function(n){errors.push('Parsel köşesindeki nokta adı çizimde farklı koordinatta da var: '+n);});
       if(other)warnings.push(other+' nokta adı çizimde farklı koordinatlarda tekrar ediyor (parsel köşesi değil).');}
+    if(layerDup.size)warnings.push('Aynı nokta adı farklı tabakalarda farklı yerde kullanılmış (ayrı numaralandırma; parsel köşesinde koordinatı çakışan nokta esas alındı): '+[...layerDup].slice(0,6).join(', ')+(layerDup.size>6?'…':''));
     if(unnamed.length)warnings.push(unnamed.length+' köşenin gerçek CAD nokta numarası yok: '+unnamed.slice(0,15).join(', ')+(unnamed.length>15?'…':''));
     return {errors:[...new Set(errors)],warnings:[...new Set(warnings)],matched:matched,unnamed:unnamed,pointCount:ids.size,cornerCount:poly.length,perimeter:perimeter,bounds:Number.isFinite(minX)?{minX:minX,maxX:maxX,minY:minY,maxY:maxY}:null};
   }
