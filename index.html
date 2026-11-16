@@ -15196,7 +15196,7 @@ function areaEditorOpen(initial=null,preferredAction='vertex',quickDraw=false){
 // toplam geometrileri resmi parsel alanıymış gibi birleştirmez.
 CMDS.ALANDENET=()=>{
   const E=window.ACAD_AREA_AUDIT;if(!E)return say('Alan veri denetimi yüklenmedi.',true);
-  let R;try{R=E.audit(ents,{source:CDOC?.name||'CAD çizimi',unmodeledRecords:CDOC?.nczUnmodeledRecords||0,
+  let R;const gizliN=ents.filter(e=>lays[e.lay]?.on===false).length;try{R=E.audit(ents.filter(e=>lays[e.lay]?.on!==false),{source:CDOC?.name||'CAD çizimi',unmodeledRecords:CDOC?.nczUnmodeledRecords||0,
     unmodeledKinds:CDOC?.nczUnmodeledKinds||{}});}catch(er){return say('Alan veri denetimi çalışmadı: '+er.message,true);}
   window.ACAD_LAST_AREA_AUDIT=R;
   const s=v=>Number(v||0).toLocaleString('tr-TR',{maximumFractionDigits:3});
@@ -15224,7 +15224,7 @@ CMDS.ALANDENET=()=>{
     document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
     say('Alan veri denetim raporu indirildi; kaynak koordinatları değiştirilmedi.');
   };
-  say(`Alan denetimi: ${R.boundaryCandidates} sınır adayı; ${R.exactDuplicateCount} tekrar; ${R.invalidCoordinateCount} hatalı XY.`);
+  say(`Alan denetimi: ${R.boundaryCandidates} sınır adayı; ${R.exactDuplicateCount} tekrar; ${R.invalidCoordinateCount} hatalı XY.${gizliN?` Kapalı tabakalardaki ${gizliN} nesne denetime alınmadı.`:''}`);
 };
 ALIAS.AVD='ALANDENET';
 CMDS.ALANDUZELT=()=>areaEditorOpen(sel.size===1?selEnts()[0]:null);
