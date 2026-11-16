@@ -3083,6 +3083,73 @@ window.__DY=window.__DY||function(n){var v=Math.round(n*100)/100;return &#x27;1D
 })();
 
 &lt;/script&gt;
+&lt;script data-ek=&quot;yol_konum.js&quot;&gt;
+/* A-CAD Yol · YOL PLANI konum desteği: arazide gezerken telefonun konumu planda gösterilir; en yakın yol ekseninin
+   KM&#x27;si, eksenden sağ/sol uzaklık ve GPS doğruluğu canlı yazılır. Konum, A-CAD&#x27;in ortak GPS servisinden (GPSS) gelir ve
+   programın dilim orta meridyeni (DOM) ayarıyla proje koordinatına (TM) çevrilir. Tasarım (yeni yol) varsa onun KM&#x27;si de verilir. */
+(function(){
+  var P=window.parent&amp;&amp;window.parent!==window?window.parent:window,G=P.GPSS;
+  if(typeof toScreen!==&#x27;function&#x27;||typeof nearestPrecise!==&#x27;function&#x27;||typeof draw!==&#x27;function&#x27;)return;
+  var h2=[].slice.call(document.querySelectorAll(&#x27;h2&#x27;)).find(function(h){return /Gerçek koordinatlı yol planı/.test(h.textContent);});
+  if(h2)h2.textContent=&#x27;YOL PLANI&#x27;;
+  var zIn=document.getElementById(&#x27;zoomIn&#x27;);if(!zIn)return;
+  var css=document.createElement(&#x27;style&#x27;);
+  css.textContent=&#x27;#ykGpsBtn.on{background:#2f6fd6!important;border-color:#7fb0ff!important;color:#fff!important}&#x27;
+   +&#x27;#ykGpsBox{position:absolute;left:10px;bottom:10px;z-index:5;max-width:min(330px,calc(100% - 20px));background:rgba(23,28,35,.92);border:1px solid #7fb0ff;border-radius:12px;padding:8px 11px;color:#e6eaef;font:13px Arial,system-ui;box-shadow:0 8px 24px rgba(0,0,0,.35);pointer-events:none}&#x27;
+   +&#x27;#ykGpsBox b.km{display:block;font-size:22px;color:#fff;letter-spacing:.3px}#ykGpsBox .w{color:#e09a50}#ykGpsBox small{color:#9aa5b3}&#x27;;
+  document.head.appendChild(css);
+  var btn=document.createElement(&#x27;button&#x27;);btn.className=&#x27;btn&#x27;;btn.id=&#x27;ykGpsBtn&#x27;;btn.type=&#x27;button&#x27;;btn.textContent=&#x27;📍 Konumum&#x27;;btn.title=&#x27;Arazide konumunu planda göster; KM ve eksen uzaklığını canlı gör&#x27;;
+  var row=zIn.parentNode;var fs=document.getElementById(&#x27;mapFullscreen&#x27;);(fs?fs:row.lastChild).after(btn);
+  var box=document.createElement(&#x27;div&#x27;);box.id=&#x27;ykGpsBox&#x27;;box.hidden=true;var cvb=document.getElementById(&#x27;map&#x27;).parentNode;cvb.style.position=cvb.style.position||&#x27;relative&#x27;;cvb.appendChild(box);
+  var fx=null,on=false,follow=true,trail=[];
+  var f2=function(v,n){return Number.isFinite(v)?v.toLocaleString(&#x27;tr-TR&#x27;,{minimumFractionDigits:n,maximumFractionDigits:n}):&#x27;—&#x27;;};
+  function km(s){return typeof kmLabel===&#x27;function&#x27;?kmLabel(s):s.toFixed(2);}
+  function designNear(w){try{var o=typeof dpState!==&#x27;undefined&#x27;&amp;&amp;dpState.result,dense=o&amp;&amp;o.path&amp;&amp;o.path.dense;if(!dense||dense.length&lt;2)return null;var best=null,bd=Infinity;
+      for(var i=0;i&lt;dense.length-1;i++){var a=dense[i],b=dense[i+1],dx=b.x-a.x,dy=b.y-a.y,l2=dx*dx+dy*dy;if(l2&lt;1e-8)continue;var t=Math.max(0,Math.min(1,((w[0]-a.x)*dx+(w[1]-a.y)*dy)/l2)),x=a.x+dx*t,y=a.y+dy*t,d=Math.hypot(w[0]-x,w[1]-y);
+        if(d&lt;bd){bd=d;best={s:a.s+(b.s-a.s)*t,off:((w[0]-x)*(-dy)+(w[1]-y)*dx)/Math.sqrt(l2),distance:d};}}return best;}catch(e){return null;}}
+  function info(){
+    if(!fx){box.innerHTML=&#x27;&lt;small&gt;Konum bekleniyor… Açık alanda birkaç saniye bekle.&lt;/small&gt;&#x27;;return;}
+    var w=[fx.e,fx.n],p=projects[activeProject],nr=null;try{nr=nearestPrecise(p,w);}catch(e){}
+    var dn=designNear(w),acc=Number.isFinite(fx.acc)?&#x27;±&#x27;+f2(fx.acc,0)+&#x27; m&#x27;:&#x27;&#x27;;
+    /* kaynak yolda eksi ofset sol, artı sağ; tasarımda artı sol (paveLeft) */
+    var side=function(o,tas){var sol=tas?o&gt;0:o&lt;0;return Math.abs(o)&lt;0.05?&#x27;Eksen üzerinde&#x27;:&#x27;Eksenden &#x27;+f2(Math.abs(o),2)+&#x27; m &#x27;+(sol?&#x27;solda&#x27;:&#x27;sağda&#x27;);};
+    var h=&#x27;&#x27;;
+    if(nr&amp;&amp;nr.distance&lt;=60){h+=&#x27;&lt;small&gt;&#x27;+(p.id||&#x27;Yol&#x27;)+&#x27; · en yakın kesit noktası&lt;/small&gt;&lt;b class=&quot;km&quot;&gt;KM &#x27;+km(nr.s)+&#x27;&lt;/b&gt;&#x27;+side(nr.x,false)+&#x27; · GPS &#x27;+acc;}
+    else if(nr){var d=nr.distance;h+=&#x27;&lt;small&gt;&#x27;+(p.id||&#x27;Yol&#x27;)+&#x27; · en yakın KM&lt;/small&gt;&lt;b class=&quot;km&quot;&gt;KM &#x27;+km(nr.s)+&#x27;&lt;/b&gt;&lt;span class=&quot;w&quot;&gt;Yoldan &#x27;+(d&gt;1000?f2(d/1000,2)+&#x27; km&#x27;:f2(d,0)+&#x27; m&#x27;)+&#x27; uzaktasın&lt;/span&gt; · GPS &#x27;+acc;
+      if(d&gt;5000)h+=&#x27;&lt;br&gt;&lt;small class=&quot;w&quot;&gt;Çok uzak: proje koordinat sistemi / dilim orta meridyeni (DOM &#x27;+((P.ST&amp;&amp;P.ST.set&amp;&amp;P.ST.set.cm)||33)+&#x27;) ayarını kontrol et.&lt;/small&gt;&#x27;;}
+    if(dn&amp;&amp;dn.distance&lt;=200)h+=&#x27;&lt;br&gt;&lt;small&gt;Yeni yol: KM &#x27;+km(dn.s)+&#x27; · &#x27;+side(dn.off,true).toLocaleLowerCase(&#x27;tr&#x27;)+&#x27;&lt;/small&gt;&#x27;;
+    h+=&#x27;&lt;br&gt;&lt;small&gt;Y &#x27;+f2(fx.e,3)+&#x27; · X &#x27;+f2(fx.n,3)+(Number.isFinite(fx.alt)?&#x27; · GPS yüksekliği &#x27;+f2(fx.alt,1)+&#x27; m (kot değildir)&#x27;:&#x27;&#x27;)+&#x27;&lt;/small&gt;&#x27;;
+    box.innerHTML=h;
+  }
+  function overlay(){
+    if(!on||!fx)return;try{
+      var s=toScreen([fx.e,fx.n]),r=Number.isFinite(fx.acc)?fx.acc*view.scale:0,g=ctx;g.save();
+      if(trail.length&gt;1){g.strokeStyle=&#x27;rgba(127,176,255,.55)&#x27;;g.lineWidth=2;g.beginPath();trail.forEach(function(q,i){var t=toScreen(q);i?g.lineTo(t[0],t[1]):g.moveTo(t[0],t[1]);});g.stroke();}
+      if(r&gt;3){g.fillStyle=&#x27;rgba(47,111,214,.16)&#x27;;g.strokeStyle=&#x27;rgba(127,176,255,.6)&#x27;;g.lineWidth=1;g.beginPath();g.arc(s[0],s[1],Math.min(r,4000),0,7);g.fill();g.stroke();}
+      if(Number.isFinite(fx.hd)){var a=(fx.hd-90)*Math.PI/180;g.fillStyle=&#x27;rgba(127,176,255,.9)&#x27;;g.beginPath();g.moveTo(s[0]+Math.cos(a)*22,s[1]+Math.sin(a)*22);g.lineTo(s[0]+Math.cos(a+2.6)*10,s[1]+Math.sin(a+2.6)*10);g.lineTo(s[0]+Math.cos(a-2.6)*10,s[1]+Math.sin(a-2.6)*10);g.closePath();g.fill();}
+      g.fillStyle=&#x27;#fff&#x27;;g.beginPath();g.arc(s[0],s[1],9,0,7);g.fill();g.fillStyle=&#x27;#2f6fd6&#x27;;g.beginPath();g.arc(s[0],s[1],6.5,0,7);g.fill();
+      // en yakın eksen noktasına kesik çizgi
+      try{var nr=nearestPrecise(projects[activeProject],[fx.e,fx.n]);if(nr&amp;&amp;nr.distance&lt;=60&amp;&amp;typeof atStation===&#x27;function&#x27;){var z=atStation(projects[activeProject],nr.s);if(z&amp;&amp;z.point){var t2=toScreen(z.point);g.setLineDash([5,4]);g.strokeStyle=&#x27;#e09a50&#x27;;g.lineWidth=1.5;g.beginPath();g.moveTo(s[0],s[1]);g.lineTo(t2[0],t2[1]);g.stroke();g.setLineDash([]);}}}catch(e){}
+      g.restore();}catch(e){console.error(e);}
+  }
+  var D0=draw;draw=function(){var r=D0.apply(this,arguments);overlay();return r;};try{window.draw=draw;}catch(e){}
+  var ilkOdak=true;function center(){if(!fx)return;if(ilkOdak){ilkOdak=false;var nr0=null;try{nr0=nearestPrecise(projects[activeProject],[fx.e,fx.n]);}catch(e){}if(nr0&amp;&amp;nr0.distance&lt;2000)view.scale=Math.max(view.scale,Math.min(W,H)/140);view.cx=fx.e;view.cy=fx.n;return;}var s=toScreen([fx.e,fx.n]);if(s[0]&lt;W*.2||s[0]&gt;W*.8||s[1]&lt;H*.2||s[1]&gt;H*.8){view.cx=fx.e;view.cy=fx.n;}}
+  function cb(f){if(!on)return;if(!f){fx=null;info();draw();return;}fx=f;trail.push([f.e,f.n]);if(trail.length&gt;400)trail.shift();if(follow)center();info();draw();}
+  var subbed=false;
+  btn.addEventListener(&#x27;click&#x27;,function(){
+    if(!G){box.hidden=false;box.innerHTML=&#x27;&lt;span class=&quot;w&quot;&gt;Konum servisi bulunamadı.&lt;/span&gt;&#x27;;return;}
+    if(on){on=false;btn.classList.remove(&#x27;on&#x27;);btn.textContent=&#x27;📍 Konumum&#x27;;box.hidden=true;trail=[];draw();return;}
+    on=true;follow=true;ilkOdak=true;btn.classList.add(&#x27;on&#x27;);btn.textContent=&#x27;📍 Konum açık&#x27;;box.hidden=false;
+    if(!subbed){G.sub(cb);subbed=true;}
+    if(!G.on){var ok=false;try{ok=G.start();}catch(e){}if(!ok){box.innerHTML=&#x27;&lt;span class=&quot;w&quot;&gt;Konum izni verilmedi ya da cihaz desteklemiyor. Tarayıcı ayarlarından konum iznini aç.&lt;/span&gt;&#x27;;}}
+    fx=G.last||null;info();if(fx){center();}draw();
+  });
+  // haritayı elle kaydırınca takip durur; konum düğmesine tekrar basınca sıfırlanır
+  var mp=document.getElementById(&#x27;map&#x27;);if(mp)mp.addEventListener(&#x27;pointerdown&#x27;,function(){if(on)follow=false;});
+  window.__YKkonum={feed:function(f){cb(f);},state:function(){return {on:on,fx:fx};}};
+})();
+
+&lt;/script&gt;
 &lt;script data-ek=&quot;yol_tip_kesit_arayuz.js&quot;&gt;
 /* şev gösterimi: her yerde 1 Dikey : n Yatay (1D:nY) */
 window.__DY=window.__DY||function(n){var v=Math.round(n*100)/100;return &#x27;1D:&#x27;+String(v).replace(&#x27;.&#x27;,&#x27;,&#x27;)+&#x27;Y&#x27;;};
