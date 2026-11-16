@@ -14077,6 +14077,7 @@ function ebb(e) { let b = BBK.m.get(e); if (b !== undefined) return b; b = null;
 /* V7.1.15 — all new and edited areas remain hatched, transparent and labelled.
    Geometric closing edges are shown without modifying source survey geometry.
    This paint layer is CAD-only; area arithmetic and cubage stay unchanged. */
+let ALAN_AKTIF = null; /* Alan Sorgula ile açık olan alan: ekranda belirgin */
 const ALAN_VIS = (()=>{
  let hatchD=0,hatch=null;
  const number=n=>Number(n).toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:3});
@@ -14087,9 +14088,10 @@ const ALAN_VIS = (()=>{
    hatchD=d;hatch=a;return hatch;}
  function ring(g,FX,FY,P){g.beginPath();for(let i=0;i<P.length;i++){const q=P[i];if(i)g.lineTo(FX(q[0]),FY(q[1]));else g.moveTo(FX(q[0]),FY(q[1]));}g.closePath();}
  function fill(g,FX,FY,D,P,o={}){if(!Array.isArray(P)||P.length<3)return;
-   g.save();ring(g,FX,FY,P);g.fillStyle=o.reviewRequired?'rgba(232,117,24,.22)':(o.preview?'rgba(248,188,32,.25)':'rgba(39,184,171,.19)');g.fill();
+   g.save();ring(g,FX,FY,P);g.fillStyle=o.active==='second'?'rgba(255,154,60,.36)':o.active?'rgba(54,195,255,.34)':o.reviewRequired?'rgba(232,117,24,.22)':(o.preview?'rgba(248,188,32,.25)':'rgba(39,184,171,.19)');g.fill();
    g.save();g.clip();const pat=g.createPattern(pattern(D),'repeat');if(pat){g.fillStyle=pat;g.fill();}g.restore();
-   if(o.stroke!==false){g.strokeStyle=o.preview?'#f5ac23':'#067f7d';g.lineWidth=(o.preview?2.5:1.6)*D;g.stroke();}g.restore();}
+   if(o.active){g.shadowColor=o.active==='second'?'rgba(255,154,60,.85)':'rgba(54,195,255,.85)';g.shadowBlur=9*D;g.strokeStyle=o.active==='second'?'#ff9a3c':'#36c3ff';g.lineWidth=3.2*D;g.stroke();g.shadowBlur=0;}
+   else if(o.stroke!==false){g.strokeStyle=o.preview?'#f5ac23':'#067f7d';g.lineWidth=(o.preview?2.5:1.6)*D;g.stroke();}g.restore();}
  // Avoid bounding-box centre labels landing outside long concave contours.
  function point(P){const n=P.length;let a=0,cy=0,cx=0;const org=P[0];for(let i=0;i<n;i++){const p=P[i],q=P[(i+1)%n],x=p[0]-org[0],y=p[1]-org[1],x2=q[0]-org[0],y2=q[1]-org[1],k=x*y2-x2*y;a+=k;cx+=(x+x2)*k;cy+=(y+y2)*k;}
    if(Math.abs(a)>1e-10){const c=[org[0]+cx/(3*a),org[1]+cy/(3*a)];if(inPolyC(P,c[0],c[1]))return c;}
@@ -14149,7 +14151,8 @@ function draw() { liveTick(); { const r = cv.getBoundingClientRect(); if (r.widt
     const b=ebb(e);if(b&&(b[2]<vx0||b[0]>vx1||b[3]<vy0||b[1]>vy1))continue;
     // When editing the same polygon, the moving geometry gets the visible preview instead.
     if(AREA_EDIT_SESSION?.id===e.id&&cmd?.name==='Alan Düzelt'&&cmd.preview?.parts?.length)continue;
-    ALAN_VIS.fill(cx,X,Y,D,e.pts,{stroke:false,reviewRequired:alanKaynakGuncelMi(e)===false||e.areaQuality==='review-required'||(e.areaInferredBridges||[]).some(b=>b.metres>20)});acadAreaLabels.push(e);
+    const act_=AREA_EDIT_SESSION&&AREA_EDIT_SESSION.second===e.id?'second':(sel.has(e.id)||AREA_EDIT_SESSION?.id===e.id||ALAN_AKTIF===e.id?'first':null);
+    ALAN_VIS.fill(cx,X,Y,D,e.pts,{active:act_,stroke:!!act_?true:false,reviewRequired:alanKaynakGuncelMi(e)===false||e.areaQuality==='review-required'||(e.areaInferredBridges||[]).some(b=>b.metres>20)});acadAreaLabels.push(e);
   }
 
   for (const e of ents) { const L = lays[e.lay]; if (!L || !L.on) continue; { const b = ebb(e); if (b && (b[2] < vx0 || b[0] > vx1 || b[3] < vy0 || b[1] > vy1)) continue; if (b && e.t !== "point" && e.t !== "text" && !sel.has(e.id) && (b[2] - b[0] + b[3] - b[1]) * V.s * D < 0.6) continue; } const s = sel.has(e.id); if (!s && !e.fill && (e.t === "line" || e.t === "pline") && e.pts.length > 1) { const lt_ = ltOf(e); if (!lt_ || (!ltDash(lt_, 1) && !(window.LTX && LTX.has(lt_)))) { const col = renk(L.c); let bp = BPATH.get(col); if (!bp) { bp = new Path2D(); BPATH.set(col, bp); } const P = e.pts; let px = X(P[0][0]), py = Y(P[0][1]); bp.moveTo(px, py); for (let i = 1; i < P.length; i++) { const qx = X(P[i][0]), qy = Y(P[i][1]); if (i < P.length - 1 && Math.abs(qx - px) + Math.abs(qy - py) < 0.7) continue; bp.lineTo(qx, qy); px = qx; py = qy; } if (e.closed) bp.closePath(); continue; } } cx.strokeStyle = cx.fillStyle = s ? "#36c3ff" : renk(L.c); cx.lineWidth = (s ? 2 : 1.2) * D; let dsf = false; if (s) { cx.setLineDash([6 * D, 4 * D]); dsf = true; } else if (e.t === "line" || e.t === "pline" || e.t === "circle") { const dd = ltDash(ltOf(e), 1.6 * D); if (dd) { cx.setLineDash(dd); dsf = true; } }
@@ -14931,6 +14934,8 @@ function areaEditorOpen(initial=null,preferredAction='vertex',quickDraw=false){
   const st=document.createElement('style');st.id=cssID;st.textContent=`
   #acadAreaEdit{position:fixed;z-index:77010;right:8px;bottom:8px;width:min(450px,calc(100vw - 16px));max-height:min(77dvh,650px);background:#14283a!important;color:#eaf4fc!important;opacity:1!important;filter:none!important;backdrop-filter:none!important;border:1px solid #7c9cae;border-radius:12px;display:flex;flex-direction:column;font:13px system-ui;box-shadow:0 7px 28px #000a}
   #acadAreaEdit.ae-collapsed .aebody,#acadAreaEdit.ae-collapsed .aefoot{display:none!important}
+  #acadAreaEdit.ae-picking .aebody,#acadAreaEdit.ae-picking .aefoot{display:none!important} /* çizimden seçim yaparken panel küçülür, ekran serbest kalır */
+  #acadAreaEdit.ae-picking .aehead::after{content:'Çizimde seç…';color:#ffce9a;font-size:12px;margin-left:6px}
   #acadAreaEdit .aehead{padding:10px 12px;border-bottom:1px solid #466679;display:flex;justify-content:space-between;align-items:center;gap:8px}
   #acadAreaEdit .aebody{padding:9px 12px;overflow-y:auto;min-height:0;flex:1 1 auto;position:relative;z-index:0;overscroll-behavior:contain}
   #acadAreaEdit .aefoot{padding:10px 12px;border-top:1px solid #466679;display:flex;gap:8px;position:relative;z-index:5;flex:0 0 auto;bottom:auto;background:#14283a!important;isolation:isolate}
@@ -15008,7 +15013,7 @@ function areaEditorOpen(initial=null,preferredAction='vertex',quickDraw=false){
      if($a('aeJump'))$a('aeJump').onchange=()=>{const no=Number($a('aeJump').value);if(!Number.isInteger(no)||no<1||no>pts.length){status('Köşe numarası 1 ile '+pts.length+' arasında olmalı.',true);return;}s.dragIndex=no-1;discard();render();status(`${no}. köşe seçildi. Y/X düzenleyebilir veya CAD üzerinden sürükleyebilirsin.`);};
      const baseSigned=E.signed(pts),originalArea=Math.abs(baseSigned);
      [$a('aeY'),$a('aeX'),...(action==='target'?[$a('aeTarget')]:[])].forEach(el=>el.addEventListener('input',()=>{
-       discard();if(action!=='vertex')return;const y=nval($a('aeY').value),x=nval($a('aeX').value);if(y==null||x==null)return;
+       discard();if(action==='target'){clearTimeout(s._tt);s._tt=setTimeout(()=>{const t=nval($a('aeTarget')?.value);if(t>0)preview();},350);return;}if(action!=='vertex')return;const y=nval($a('aeY').value),x=nval($a('aeX').value);if(y==null||x==null)return;
        const P=pts.map(p=>p.slice());P[s.dragIndex]=[y,x,P[s.dragIndex][2]];
        tool.preview={parts:[P]};
        const i=s.dragIndex,old=pts[i],before=pts[(i+pts.length-1)%pts.length],after=pts[(i+1)%pts.length];
@@ -15032,10 +15037,11 @@ function areaEditorOpen(initial=null,preferredAction='vertex',quickDraw=false){
      $a('aePickCut').onclick=()=>{s.cutPts=[];s.mode='cut';discard();panel.classList.add('ae-picking');prompt_('Kesme çizgisinin iki noktasını CAD ekranından sırayla seç');status('CAD ekranında kesme çizgisinin ilk noktasını seç.');};
    }else if(action==='equal'){
      inputs.innerHTML=`<div class="aerow"><label>Parça sayısı<select id="aeParts">${Array.from({length:9},(_,i)=>`<option value="${i+2}">${i+2} eşit parça</option>`).join('')}</select></label><label>Bölme yönü<select id="aeDirection"><option value="auto">Otomatik · uzun doğrultu</option><option value="y">Y doğrultusu</option><option value="x">X doğrultusu</option></select></label></div>`;
-     inputs.querySelectorAll('select').forEach(q=>q.onchange=discard);
+     inputs.querySelectorAll('select').forEach(q=>q.onchange=()=>{discard();preview();});
    }
  }
- function preview(){if(!available())return status('CAD sayfası değişti; işlem iptal.',true);
+ function preview(){const e_=current();const big=(e_?.pts?.length||0)+(other()?.pts?.length||0)>3000;if(big){status('Hesaplanıyor…');setTimeout(previewNow,30);}else previewNow();}
+ function previewNow(){if(!available())return status('CAD sayfası değişti; işlem iptal.',true);
    const e=current();if(!isClosed(e))return status('Geçerli kapalı alan seçilmedi.',true);
    const op=$a('aeAction').value,A=e.pts;discard();try{
      let r;
@@ -15099,7 +15105,6 @@ function areaEditorOpen(initial=null,preferredAction='vertex',quickDraw=false){
    for(const name of plannedNames){const key=name.toLocaleLowerCase('tr-TR');
      if(namesUsed.has(key))return status(`Alan adı zaten kullanılıyor: ${name}. Başka isim seç.`,true);
      namesUsed.add(key);}
-   if(!confirm(`${pr.parts.length} alan çizime kaydedilecek. ${pr.ids.length} kaynak alan yerine geçecek. Devam edilsin mi?`))return;
    try{
      const src=ents.find(q=>q.id===s.id),oldEnts=ents,oldNid=nid;
      if(!isClosed(src))throw Error('Kaynak alan kayıt sırasında kayboldu');
@@ -15155,12 +15160,12 @@ function areaEditorOpen(initial=null,preferredAction='vertex',quickDraw=false){
      if(canceled){discard();return true;}
      s.dragIndex=t.index;render();if(moved){$a('aeY').value=p[0].toFixed(6);$a('aeX').value=p[1].toFixed(6);preview();}else{status(`${t.index+1}. köşe seçildi. Konumunu sürükle ya da Y/X gir.`);}return true;
    },
-   pt(p){if(s.mode==='second'){const e=polygonAt(p,s.id);panel.classList.remove('ae-picking');if(!e){s.mode='pick';status('İkinci kapalı alan bulunamadı; tekrar seç.',true);return;}s.second=e.id;s.resultName=null;s.mode='pick';render();status(`İkinci alan seçildi: ${e.lay} · ${E.area(e.pts).toFixed(4)} m²`);return;}
+   pt(p){if(s.mode==='second'){const e=polygonAt(p,s.id);panel.classList.remove('ae-picking');if(!e){s.mode='pick';status('İkinci kapalı alan bulunamadı; tekrar seç.',true);return;}s.second=e.id;s.resultName=null;s.mode='pick';render();status(`İkinci alan seçildi: ${e.lay} · ${E.area(e.pts).toFixed(4)} m²`);preview();draw();return;}
      if(s.mode==='cut'){s.cutPts.push(p.slice(0,2));if(s.cutPts.length===2){s.mode='pick';panel.classList.remove('ae-picking');last=null;rub=null;preview();if(!s.preview){s.cutPts=[];s.mode='cut';status('Bu çizgi alanı güvenli bölemedi. Yeni ilk ve son noktayı seç.',true);}}else{last=p.slice(0,2);rub=true;status('✎ Çizgi başladı. İkinci noktaya dokun; bölüm sonucu otomatik gösterilecek.');}draw();return;}
-     const e=polygonAt(p);if(!e){status('Bu konumda kapalı alan bulunamadı.',true);return;}const startCut=s.mode==='area-pick-for-cut';panel.classList.remove('ae-picking');panel.classList.remove('ae-collapsed');$a('aeCollapse').textContent='− Küçült';$a('aeCollapse').setAttribute('aria-expanded','true');s.id=e.id;s.second=null;s.cutPts=[];discard();render();s.mode=startCut?'cut':'pick';if(startCut)panel.classList.add('ae-picking');status(startCut?'Alan seçildi. Kesme çizgisinin ilk noktasını göster.':'Alan seçildi. İşlemi seçip Önizle.');sel.clear();sel.add(e.id);draw();
+     const e=polygonAt(p);if(!e){status('Bu konumda kapalı alan bulunamadı.',true);return;}const startCut=s.mode==='area-pick-for-cut';panel.classList.remove('ae-picking');panel.classList.remove('ae-collapsed');$a('aeCollapse').textContent='− Küçült';$a('aeCollapse').setAttribute('aria-expanded','true');s.id=e.id;s.second=null;s.cutPts=[];discard();render();const two_=['union','difference','intersection'].includes($a('aeAction').value);s.mode=startCut?'cut':two_?'second':'pick';if(startCut||two_)panel.classList.add('ae-picking');status(startCut?'Alan seçildi. Kesme çizgisinin ilk noktasını göster.':two_?'Alan seçildi. Şimdi ikinci alanın içine dokun.':'Alan seçildi. İşlemi seçip Önizle.');sel.clear();sel.add(e.id);if(!startCut&&!two_&&$a('aeAction').value==='equal')preview();draw();
    },
    prev(g,X_,Y_,D){const pr=this.preview;
-     if(!pr?.parts?.length){const e=current();if(isClosed(e))ALAN_VIS.paint(g,X_,Y_,D,e.pts,{preview:true,area:E.area(e.pts)});}
+     if(!pr?.parts?.length){const e=current();if(isClosed(e))ALAN_VIS.fill(g,X_,Y_,D,e.pts,{active:'first'});}
      else for(const P of pr.parts){ALAN_VIS.paint(g,X_,Y_,D,P,{preview:true,area:E.area(P)});}
      const pts=this.cutDrag?[this.cutDrag.start,this.cutDrag.current]:s.cutPts;if(pts.length){g.save();g.strokeStyle='#fc982e';g.lineWidth=3*D;g.setLineDash([8*D,5*D]);g.beginPath();g.moveTo(X_(pts[0][0]),Y_(pts[0][1]));const q=pts[1]||(s.mode==='cut'?hover:null);
        if(q)g.lineTo(X_(q[0]),Y_(q[1]));g.stroke();g.fillStyle='#ffe19a';for(const p of pts){g.beginPath();g.arc(X_(p[0]),Y_(p[1]),4.5*D,0,2*Math.PI);g.fill();}g.restore();}
@@ -15169,10 +15174,10 @@ function areaEditorOpen(initial=null,preferredAction='vertex',quickDraw=false){
  };
  if(!available()){close();return;}
  cmd=tool;
- $a('aeAction').onchange=()=>{s.resultName=null;const cut=$a('aeAction').value==='cut';s.mode=cut?(isClosed(current())?'cut':'area-pick-for-cut'):'pick';panel.classList.toggle('ae-picking',cut);s.cutPts=[];s.second=null;discard();render();status(cut?'✎ İlk kesme noktasına hemen dokun.':'İşlemi hazırlayıp Önizle düğmesine bas.');};
+ $a('aeAction').onchange=()=>{s.resultName=null;const act=$a('aeAction').value,cut=act==='cut',two=['union','difference','intersection'].includes(act)&&isClosed(current());s.mode=cut?(isClosed(current())?'cut':'area-pick-for-cut'):two?'second':'pick';panel.classList.toggle('ae-picking',cut||two);s.cutPts=[];s.second=null;discard();render();status(cut?'✎ İlk kesme noktasına hemen dokun.':two?'İkinci alanın içine dokun; sonuç kendiliğinden gösterilir.':act==='equal'&&isClosed(current())?'Parça sayısını seç; sonuç kendiliğinden gösterilir.':'İşlemi hazırlayıp Önizle düğmesine bas.');if(act==='equal'&&isClosed(current()))preview();};
  $a('aePreview').onclick=preview;$a('aeApply').onclick=apply;
  if(quickDraw&&Math.min(window.visualViewport?.width||Infinity,document.documentElement.clientWidth||Infinity,window.innerWidth)<650){panel.classList.add('ae-collapsed');$a('aeCollapse').textContent='+ Aç';$a('aeCollapse').setAttribute('aria-expanded','false');}
- if(isClosed(current())){render();if(quickDraw){panel.classList.add('ae-picking');status('✎ Kesme çizgisi etkin: haritada ilk noktaya dokun.');}else status('Alan seçili. İşlemi belirleyebilirsin.');}
+ if(isClosed(current())){render();if(quickDraw){panel.classList.add('ae-picking');status('✎ Kesme çizgisi etkin: haritada ilk noktaya dokun.');}else if(['union','difference','intersection'].includes(preferredAction)){s.mode='second';panel.classList.add('ae-picking');status('Alan seçili. Şimdi ikinci alanın içine dokun; sonuç kendiliğinden gösterilir.');}else if(preferredAction==='equal'){status('Parça sayısını seç; sonuç kendiliğinden gösterilir.');preview();}else status('Alan seçili. İşlemi belirleyebilirsin.');}
  else{status(quickDraw?'Bölmek istediğin alanın içine dokun, ardından hemen çizgiyi çiz.':'CAD ekranında kapalı alanın içine dokun.');render();panel.classList.add('ae-picking');requestAnimationFrame(()=>cv.scrollIntoView({block:'center',behavior:'instant'}));}
  prompt_(quickDraw?(isClosed(current())?'Çizgi ile Alan Böl: ilk kesme noktasını çiz':'Çizgi ile Alan Böl: önce alanın içine dokun'):'Alan Düzelt: kapalı alanı seç · ardından panelden işlem seç');draw();
 }
@@ -15378,7 +15383,7 @@ ALIAS.AS='ALANSORGU';
 
 
 /* Alan Sorgula'da da kot işlemleri (üçgen model kotuna getir, istenilen kota getir, yükselt/indir) */
-{ const _aq = acadAreaQueryShow; acadAreaQueryShow = function (e, p) { const r = _aq(e, p); try { const bx = $('arzBox'); if (e && e.t === 'pline' && e.closed && bx && !bx.hidden && !document.getElementById('alanKotWrap')) alanKotPanel(e); } catch (x) { console.error(x); } return r; }; }
+{ const _aq = acadAreaQueryShow; acadAreaQueryShow = function (e, p) { const r = _aq(e, p); try { ALAN_AKTIF = e && e.id; const bx_ = $('arzBox'); if (bx_ && !bx_._akt) { bx_._akt = 1; new MutationObserver(() => { if (bx_.hidden && ALAN_AKTIF != null) { ALAN_AKTIF = null; draw(); } }).observe(bx_, { attributes: true, attributeFilter: ['hidden'] }); } draw(); } catch (x) {} try { const bx = $('arzBox'); if (e && e.t === 'pline' && e.closed && bx && !bx.hidden && !document.getElementById('alanKotWrap')) alanKotPanel(e); } catch (x) { console.error(x); } return r; }; }
 function xform(name, copy) { cmd = { name, prev(g, X_, Y_, D) { if (!this.b || !hover) return; const d = [hover[0] - this.b[0], hover[1] - this.b[1]]; ghost(q => [q[0] + d[0], q[1] + d[1]], D); }, pt(p) { if (!this.b) { this.b = p; last = p; rub = true; prompt_(`${name}: hedef nokta göster ya da @ΔY,ΔX / @mesafe<semt yaz${copy ? " (birden çok kopya, Esc bitir)" : ""}`); return; }
     const d = [p[0] - this.b[0], p[1] - this.b[1]], f = q => [q[0] + d[0], q[1] + d[1]]; snap0();
     if (copy) { const nw = selEnts().map(e => { const c = clone(e); xf(c, f); return add(c); }); say(`${nw.length} nesne kopyalandı (ΔY ${fmt(d[0])} ΔX ${fmt(d[1])})`); IDX = null; persist(); draw(); }
