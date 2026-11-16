@@ -14252,12 +14252,12 @@ function draw() { liveTick(); { const r = cv.getBoundingClientRect(); if (r.widt
   const vis = (x, y) => x > -50 && y > -50 && x < W + 50 && y < H + 50; let nv = 0; for (const e of ents) if (e.t === "point" && vis(X(e.pts[0][0]), Y(e.pts[0][1]))) nv++; const lbl = nv < 600; const occ = new Set(); if (IDX === null || BBK.a !== ents || BBK.n !== ents.length || !BBK.TS) { BBK.m = new Map(); BBK.a = ents; BBK.n = ents.length; BBK.TS = new Set(); for (const e of ents) if (e.t === "text") BBK.TS.add(String(e.s).trim()); } const TS = BBK.TS; const rawZ = TS.size < 10;
   const vx0 = WX(-60), vx1 = WX(W / D + 60), vy1 = WY(-60), vy0 = WY(H / D + 60); const BPATH = new Map();
   const acadAreaLabels=[];
-  for(const e of ents){if(e.t!=='pline'||!e.closed||e.pts?.length<3||!lays[e.lay]?.on||!(e.areaHatch||/^ALAN_CEVIR(?:$|_)/i.test(e.lay)))continue;
+  for(const e of ents){if(e.t!=='pline'||!e.closed||e.pts?.length<3||!lays[e.lay]?.on)continue;const _alanK=!!(e.areaHatch||/^ALAN_CEVIR(?:$|_)/i.test(e.lay));if(!_alanK&&e.id!==ALAN_AKTIF)continue;
     const b=ebb(e);if(b&&(b[2]<vx0||b[0]>vx1||b[3]<vy0||b[1]>vy1))continue;
     // When editing the same polygon, the moving geometry gets the visible preview instead.
     if(AREA_EDIT_SESSION?.id===e.id&&cmd?.name==='Alan Düzelt'&&(cmd.preview?.parts?.length||cmd._liveOn))continue;
     const act_=AREA_EDIT_SESSION&&AREA_EDIT_SESSION.second===e.id?'second':(sel.has(e.id)||AREA_EDIT_SESSION?.id===e.id||ALAN_AKTIF===e.id?'first':null);
-    ALAN_VIS.fill(cx,X,Y,D,e.pts,{active:act_,stroke:!!act_?true:false,reviewRequired:alanKaynakGuncelMi(e)===false||e.areaQuality==='review-required'||(e.areaInferredBridges||[]).some(b=>b.metres>20)});acadAreaLabels.push(e);
+    ALAN_VIS.fill(cx,X,Y,D,e.pts,{active:act_,stroke:!!act_?true:false,reviewRequired:_alanK&&(alanKaynakGuncelMi(e)===false||e.areaQuality==='review-required'||(e.areaInferredBridges||[]).some(b=>b.metres>20))});if(_alanK)acadAreaLabels.push(e);
   }
 
   for (const e of ents) { const L = lays[e.lay]; if (!L || !L.on) continue; { const b = ebb(e); if (b && (b[2] < vx0 || b[0] > vx1 || b[3] < vy0 || b[1] > vy1)) continue; if (b && e.t !== "point" && e.t !== "text" && !sel.has(e.id) && (b[2] - b[0] + b[3] - b[1]) * V.s * D < 0.6) continue; } const s = sel.has(e.id); if (!s && !e.fill && (e.t === "line" || e.t === "pline") && e.pts.length > 1) { const lt_ = ltOf(e); if (!lt_ || (!ltDash(lt_, 1) && !(window.LTX && LTX.has(lt_)))) { const col = renk(L.c); let bp = BPATH.get(col); if (!bp) { bp = new Path2D(); BPATH.set(col, bp); } const P = e.pts; let px = X(P[0][0]), py = Y(P[0][1]); bp.moveTo(px, py); for (let i = 1; i < P.length; i++) { const qx = X(P[i][0]), qy = Y(P[i][1]); if (i < P.length - 1 && Math.abs(qx - px) + Math.abs(qy - py) < 0.7) continue; bp.lineTo(qx, qy); px = qx; py = qy; } if (e.closed) bp.closePath(); continue; } } cx.strokeStyle = cx.fillStyle = s ? "#36c3ff" : renk(L.c); cx.lineWidth = (s ? 2 : 1.2) * D; let dsf = false; if (s) { cx.setLineDash([6 * D, 4 * D]); dsf = true; } else if (e.t === "line" || e.t === "pline" || e.t === "circle") { const dd = ltDash(ltOf(e), 1.6 * D); if (dd) { cx.setLineDash(dd); dsf = true; } }
@@ -15440,9 +15440,9 @@ function acadAreaQueryShow(e,p){
  const name=String(e.areaName||e.lay||'İsimsiz Alan');
  const hasBridges=!!e.areaInferredBridges?.length;
  const stale=alanKaynakGuncelMi(e)===false;
- const review=hasBridges||stale||e.areaQuality==='review-required'||!e.areaHatch;
+ const review=hasBridges||stale||e.areaQuality==='review-required';
  const quality=stale?'⚠ Kaynak koordinatı değişmiş':review?'⚠ Kontrol gerekli / yaklaşık':'Geometri doğrulandı · ölçüm statüsü kaynağa bağlı';
- const P=e.pts.map((q,i)=>({i:i+1,y:q[0],x:q[1],z:Number.isFinite(q[2])?q[2]:null}));
+ const _pp=e.pts.length>3&&Math.hypot(e.pts[0][0]-e.pts[e.pts.length-1][0],e.pts[0][1]-e.pts[e.pts.length-1][1])<1e-6?e.pts.slice(0,-1):e.pts;const P=_pp.map((q,i)=>({i:i+1,y:q[0],x:q[1],z:Number.isFinite(q[2])?q[2]:null}));
  const fmtCoord=q=>acadAlanSay(q,3);
  const table=P.slice(0,200).map(q=>`<tr><td>${q.i}</td><td>${fmtCoord(q.y)}</td><td>${fmtCoord(q.x)}</td><td>${q.z===null?'—':fmtCoord(q.z)}</td></tr>`).join('');
  const reportAnchor=Array.isArray(p)?p.slice(0,2):(e.areaLabelAnchor||e.pts[0]).slice(0,2);
