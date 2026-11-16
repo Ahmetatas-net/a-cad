@@ -5437,9 +5437,9 @@ A.sheet = (D, P) => {
     let ang = Math.atan2(mb[1] - ma[1], mb[0] - ma[0]) * 180 / Math.PI; if (ang > 90) ang -= 180; if (ang < -90) ang += 180; const mid = [(ma[0] + mb[0]) / 2, (ma[1] + mb[1]) / 2], nl = Math.hypot(mb[0] - ma[0], mb[1] - ma[1]) || 1, ex = (mb[0] - ma[0]) / nl, ey = (mb[1] - ma[1]) / nl;
     const out = ccw ? [ey, -ex] : [-ey, ex]; const txt = Lq.toFixed(2), sz = nl < 4 ? Math.min(sz0, 1.4) : sz0, w = A.tw(txt, sz);
     const inOther = c => oth.some(o => A.inPoly(o, c[0], c[1])); const cand = [];
-    const sides = md === "in" ? [-1] : inside ? [-1, 1] : [1, -1]; // 1: dış; "in": parsel sınırındaki bina kenarı, parsel cephesiyle üst üste binmesin diye yalnız içeri
+    const sides = md === "in" ? [-1] : md === "out" ? [1] : inside ? [-1, 1] : [1, -1]; // 1: dış; "in": parsel sınırındaki bina kenarı, parsel cephesiyle üst üste binmesin diye yalnız içeri
     for (const sd of sides) { const offs = [sz * 0.6 + 0.3, sz * 0.6 + 0.7, sz * 0.6 + 1.2]; const slMax = Math.max(0, nl / 2 - w / 2 - 0.3); const sls = [0, 0.8, -0.8, 1.6, -1.6, 2.6, -2.6, 3.8, -3.8].filter(v => Math.abs(v) <= slMax + 1e-9);
-      const pairs = []; if (md === "in") { const o2 = offs[0] + 2.2 * 1.32 + 0.5, o3 = o2 + 0.6; /* parsel cephesi içeri düşerse bina cephesi ikinci satıra: yan yana değil alt alta */ for (const sl of sls) for (const off of [offs[0], o2, o3]) pairs.push([off, sl]); } else for (const off of offs) for (const sl of sls) pairs.push([off, sl]);
+      const pairs = []; if (md === "out") { /* bina cephesiyle aynı çizgideki parsel cephesi: her zaman dışarıda (gerekirse komşu duvar taramasının ötesinde) */ for (const off of [offs[0], offs[0] + 0.8, offs[0] + 1.6, offs[0] + 2.6, offs[0] + 3.6]) for (const sl of sls) pairs.push([off, sl]); } else if (md === "in") { for (const sl of sls) for (const off of offs) pairs.push([off, sl]); } else for (const off of offs) for (const sl of sls) pairs.push([off, sl]);
       for (const [off, sl] of pairs) { const c = [mid[0] + out[0] * off * sd + ex * sl, mid[1] + out[1] * off * sd + ey * sl]; if (sd > 0 && inOther(c)) continue; if (sd < 0 && !A.inPoly(P_.map(M), c[0], c[1]) && !inside && md !== "in") continue; cand.push(c); } }
     if (!cand.length) cand.push([mid[0] - out[0] * (sz * 0.6 + 0.3), mid[1] - out[1] * (sz * 0.6 + 0.3)]);
     T(cand[0][0], cand[0][1], txt, sz, { al: "c", rot: ang, color, pr, cand, lead: false }); }); };
@@ -5495,7 +5495,12 @@ A.sheet = (D, P) => {
     if (!(dB(a_) < tol && dB(b_) < tol && dB(m_) < tol && dB([a_[0] * 0.75 + b_[0] * 0.25, a_[1] * 0.75 + b_[1] * 0.25]) < tol && dB([a_[0] * 0.25 + b_[0] * 0.75, a_[1] * 0.25 + b_[1] * 0.75]) < tol)) return null;
     const same = par.some((v, k) => { const w = par[(k + 1) % par.length], e = 0.02, d = (x, y) => Math.hypot(x[0] - y[0], x[1] - y[1]); return (d(v, a_) < e && d(w, b_) < e) || (d(v, b_) < e && d(w, a_) < e); }); return same ? "skip" : "in"; };
   if (P.cephe !== false) for (const b of D.blocks || []) edgeTxt(b.pts, "#000", false, 1.7, 9, (D.blocks || []).filter(o => o !== b).map(o => o.pts), onPar); // cepheler gri (ROL_CEPHE)
-  if (par.length) edgeTxt(par, "#000", false, 2.2, 7, []); // parsel cepheleri: mavi, büyük, kenara paralel, dışarıda
+  /* parsel kenarı üzerinde ölçüsü farklı bir bina kenarı varsa parsel cephesi çizginin dışına, bina cephesi içine: biri sağda biri solda */
+  const parMode = (a_, b_) => { if (P.cephe === false) return null; const L_ = Math.hypot(b_[0] - a_[0], b_[1] - a_[1]); if (L_ < 0.01) return null; const u = [(b_[0] - a_[0]) / L_, (b_[1] - a_[1]) / L_];
+    const ln = x => Math.abs((x[0] - a_[0]) * u[1] - (x[1] - a_[1]) * u[0]), pr_ = x => (x[0] - a_[0]) * u[0] + (x[1] - a_[1]) * u[1];
+    for (const b of D.blocks || []) for (let k = 0; k < b.pts.length; k++) { const x = b.pts[k], y = b.pts[(k + 1) % b.pts.length]; if (ln(x) > 0.05 || ln(y) > 0.05) continue; const m = onPar(x, y); if (m !== "in") continue;
+      const s0 = Math.min(pr_(x), pr_(y)), s1 = Math.max(pr_(x), pr_(y)); if (Math.min(s1, L_) - Math.max(s0, 0) > 0.1) return "out"; } return null; };
+  if (par.length) edgeTxt(par, "#000", false, 2.2, 7, [], parMode); // parsel cepheleri: mavi, büyük, kenara paralel, dışarıda
   // çekme mesafeleri: kesikli dik ölçü
   if (P.cekme !== false && par.length && (D.blocks || []).length) { const allB = D.blocks.flatMap(b => b.pts), ALL = [];
     par.forEach((a, i) => { const b = par[(i + 1) % par.length], vx = b[0] - a[0], vy = b[1] - a[1], L2 = vx * vx + vy * vy; if (Math.sqrt(L2) * s < 4) return; let best = null;
