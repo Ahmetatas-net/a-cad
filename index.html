@@ -13347,7 +13347,19 @@ if(typeof module==='object'&&module.exports)module.exports=root.ACAD_CRS;
    out.push(b);
   }return out;
  }
- function booleanOp(a0,b0,op){const A=validate(a0),B=validate(b0),segsA=A.map((p,i)=>[p,A[(i+1)%A.length]]),segsB=B.map((p,i)=>[p,B[(i+1)%B.length]]),ta=segsA.map(()=>[0,1]),tb=segsB.map(()=>[0,1]);
+ /* Ortak kenar uyumu: çizimden gelen komşu alanlarda köşeler 1e-10 m gibi kayan nokta farklarıyla ayrışır ve
+    bir alanın köşesi komşunun kenarı üstünde (T kavşağı) durur. Boole işleminden önce 1 mm altındaki köşeler
+    birebir eşitlenir ve kenar üstündeki köşeler komşu kenara eklenir; en çok 1 mm; ölçü hassasiyetinin (cm) çok altında. */
+ function conform(A,B,tol=1e-3){
+   const snapV=(P,Q)=>{const idx=new Map(),cs=Math.max(tol*4,1e-3),k=(x,y)=>Math.floor(x/cs)+','+Math.floor(y/cs);Q.forEach(q=>{const kk=k(q[0],q[1]);(idx.get(kk)||idx.set(kk,[]).get(kk)).push(q);});
+     return P.map(p=>{const gx=Math.floor(p[0]/cs),gy=Math.floor(p[1]/cs);let best=null,bd=tol;for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){const L=idx.get((gx+i)+','+(gy+j));if(L)for(const q of L){const d=dist(p,q);if(d<bd&&d>0){bd=d;best=q;}}}return best?[best[0],best[1],p[2]]:p;});};
+   const insertT=(P,Q)=>{const segs=P.map((p,i)=>[p,P[(i+1)%P.length]]),search=indexSegments(P,segs),add=P.map(()=>[]);
+     for(const q of Q){for(const i of search(q,q)){const [a,b]=segs[i],v=sub(b,a),l2=dot(v,v);if(l2<EPS*EPS)continue;const t=dot(sub(q,a),v)/l2;if(t<=1e-9||t>=1-1e-9)continue;
+       const pr=[a[0]+v[0]*t,a[1]+v[1]*t];if(dist(pr,q)<tol&&dist(q,a)>=tol&&dist(q,b)>=tol)add[i].push([t,[q[0],q[1],validZ(a[2])&&validZ(b[2])?Number(a[2])+(Number(b[2])-Number(a[2]))*t:null]]);}}
+     const out=[];P.forEach((p,i)=>{out.push(p);add[i].sort((x,y)=>x[0]-y[0]).forEach(z=>{const last=out[out.length-1];if(dist(last,z[1])>1e-12)out.push(z[1]);});});return out;};
+   let A2=snapV(A,B),B2=B;A2=insertT(A2,B2);B2=insertT(B2,A2);return [A2,B2];
+ }
+ function booleanOp(a0,b0,op){let A=validate(a0),B=validate(b0);const sa0=area(A),sb0=area(B);try{const c=conform(A,B);A=c[0];B=c[1];}catch(e){}const fixA=area(A)-sa0,fixB=area(B)-sb0;const segsA=A.map((p,i)=>[p,A[(i+1)%A.length]]),segsB=B.map((p,i)=>[p,B[(i+1)%B.length]]),ta=segsA.map(()=>[0,1]),tb=segsB.map(()=>[0,1]);
   const search=indexSegments(B,segsB);let candidateCount=0;
   for(let i=0;i<segsA.length;i++){const [a,b]=segsA[i];for(const j of search(a,b)){if(++candidateCount>1000000)throw Error('Çok karmaşık kavşak ağı: bölgeyi küçült');const [c,d]=segsB[j];for(const [t,u] of intersectSegments(a,b,c,d)){ta[i].push(t);tb[j].push(u);}}}
   const pinA=locator(A),pinB=locator(B),predicate=(x,y)=>op==='union'?(x||y):op==='intersection'?(x&&y):op==='difference'?(x&&!y):false;
@@ -13355,20 +13367,20 @@ if(typeof module==='object'&&module.exports)module.exports=root.ACAD_CRS;
   const key=p=>Math.round((p[0]-anchor[0])/KEY)+','+Math.round((p[1]-anchor[1])/KEY);
   const result=new Map();let splitCount=0;
   const push=(S,ts)=>{for(let i=0;i<S.length;i++){const [a,b]=S[i],v=sub(b,a),l=len(v);if(l<EPS)continue;const t=ts[i].sort((x,y)=>x-y).filter((t,j,arr)=>j===0||t-arr[j-1]>1e-9);
-    for(let k=1;k<t.length;k++){const x=interpolate(a,b,t[k-1]),y=interpolate(a,b,t[k]);if(dist(x,y)<1e-7)continue;if(++splitCount>250000)throw Error('Çok fazla sınır kesişimi');const m=interpolate(x,y,.5),dd=dist(x,y),delta=Math.min(0.002,Math.max(1e-6,dd*1e-3));const normal=[-v[1]/l*delta,v[0]/l*delta],left=[m[0]+normal[0],m[1]+normal[1]],right=[m[0]-normal[0],m[1]-normal[1]];
+    for(let k=1;k<t.length;k++){const x=interpolate(a,b,t[k-1]),y=interpolate(a,b,t[k]);if(dist(x,y)<1e-7)continue;if(++splitCount>250000)throw Error('Çok fazla sınır kesişimi');const m=interpolate(x,y,.5),dd=dist(x,y),delta=Math.min(1e-4,Math.max(1e-7,dd*1e-4));const normal=[-v[1]/l*delta,v[0]/l*delta],left=[m[0]+normal[0],m[1]+normal[1]],right=[m[0]-normal[0],m[1]-normal[1]];
       const isL=predicate(pinA(left),pinB(left)),isR=predicate(pinA(right),pinB(right));if(isL===isR)continue;const p=isL?x:y,q=isL?y:x,ka=key(p),kb=key(q);if(ka===kb)continue;
       const edgeKey=ka+'>'+kb;if(!result.has(edgeKey))result.set(edgeKey,{p,q,ka,kb});
     }
   }};
   push(segsA,ta);push(segsB,tb);
-  const nodes=new Map(),rev=new Map();for(const e of result.values()){if(nodes.has(e.ka)&&nodes.get(e.ka).kb!==e.kb)throw Error('Çatallanan/temas eden sınır: belirsiz alan oluşur');if(rev.has(e.kb)&&rev.get(e.kb)!==e.ka)throw Error('Birleşen sınır: belirsiz alan oluşur');nodes.set(e.ka,e);rev.set(e.kb,e.ka);}
+  const nodes=new Map(),rev=new Map();for(const e of result.values()){if(nodes.has(e.ka)&&nodes.get(e.ka).kb!==e.kb)throw Error('Alanlar yalnızca bir noktada ya da çatallanan sınırla değiyor; sonuç tek parça kapalı alan olmaz. Ortak kenarı olan alanları seç');if(rev.has(e.kb)&&rev.get(e.kb)!==e.ka)throw Error('Alanlar ortak kenar yerine ayrı noktalardan değiyor; aralarında boşluk (delik) kalıyor. Bu ikisi tek alan olarak birleştirilemez');nodes.set(e.ka,e);rev.set(e.kb,e.ka);}
   for(const e of nodes.values())if(!nodes.has(e.kb)||!rev.has(e.ka))throw Error('Açık sınır çıktı: sonuç kaydedilmeyecek');
   const loops=[],seen=new Set();for(const edge of nodes.values()){if(seen.has(edge.ka))continue;const Q=[],start=edge.ka;let k=start;while(!seen.has(k)){const e=nodes.get(k);if(!e)throw Error('Sonuçta kopuk sınır');seen.add(k);Q.push(e.p);k=e.kb;if(Q.length>250000)throw Error('Sınır kapanmadı');}if(k!==start)throw Error('Birden çok halkanın teması: manuel kontrol gerekli');const simp=simplify(Q);if(simp.length<3)continue;if(signed(simp)<-1e-5)throw Error('Delikli alan oluşuyor: CAD tek halka ile kayıpsız gösteremez. İşlem durduruldu.');const v=validate(simp);loops.push(v);}
-  if(!loops.length){if(op==='intersection')return{parts:[],area:0,intersectionPairs:candidateCount,segments:splitCount};throw Error('İşlem sonucunda kapalı alan oluşmadı');}return{parts:loops,area:loops.reduce((s,p)=>s+area(p),0),intersectionPairs:candidateCount,segments:splitCount};
+  if(!loops.length){if(op==='intersection')return{parts:[],area:0,intersectionPairs:candidateCount,segments:splitCount,areaA:area(A),areaB:area(B),fixA,fixB};throw Error('İşlem sonucunda kapalı alan oluşmadı');}return{parts:loops,area:loops.reduce((s,p)=>s+area(p),0),intersectionPairs:candidateCount,segments:splitCount,areaA:area(A),areaB:area(B),fixA,fixB};
  }
  function cutLine(P,a,b){const poly=validate(P),d=sub(b,a),ll=len(d);if(ll<1e-6)throw Error('Kesme çizgisinin iki noktası farklı olmalı');const bb=bbox(poly),R=Math.max(100,Math.hypot(bb[2]-bb[0],bb[3]-bb[1])*5,dist(a,b)*5),u=[d[0]/ll,d[1]/ll],n=[-u[1],u[0]],o=[(a[0]+b[0])/2,(a[1]+b[1])/2],q=(x,y)=>[o[0]+u[0]*x+n[0]*y,o[1]+u[1]*x+n[1]*y,null];
   // Infinite cutter line, not limited to the drawn short pointer segment.
-  const H=[q(-R,0),q(R,0),q(R,R),q(-R,R)];const left=booleanOp(poly,H,'intersection'),right=booleanOp(poly,H,'difference'),a0=area(poly),sum=left.area+right.area;
+  const H=[q(-R,0),q(R,0),q(R,R),q(-R,R)];let left,right;try{left=booleanOp(poly,H,'intersection');right=booleanOp(poly,H,'difference');}catch(er){if(/kapalı alan oluşmadı/.test(er.message))throw Error('Kesme çizgisi alanı iki parçaya ayırmıyor (çizgi alanın dışından geçiyor)');throw er;}const a0=area(poly),sum=left.area+right.area;
   if(Math.abs(sum-a0)>Math.max(1e-4,a0*1e-8))throw Error('Bölme alan toplamı korunmadı: '+(sum-a0).toFixed(6)+' m²');if(left.area<1e-5||right.area<1e-5)throw Error('Kesme çizgisi alanı iki parçaya ayırmıyor');return {parts:left.parts.concat(right.parts),left:left.parts,right:right.parts,area:sum,sourceArea:a0};
  }
  function halfArea(P,c,u,t){
@@ -13383,6 +13395,12 @@ if(typeof module==='object'&&module.exports)module.exports=root.ACAD_CRS;
    return Q.length>=3?area(Q):0;
  }
  function equalSplit(P,n=2,angle=null){
+   if(angle==null){ // otomatik yön: uzun doğrultu bölmüyorsa diğer doğrultular sırayla denenir
+     const bb=bbox(P),first=(bb[2]-bb[0])>=(bb[3]-bb[1])?0:Math.PI/2,tries=[first,first===0?Math.PI/2:0,Math.PI/4,3*Math.PI/4];let last;
+     for(const a of tries){try{const r=equalSplitDir(P,n,a);r.angle=a;r.autoTried=tries.indexOf(a)+1;return r;}catch(e){last=e;}}throw last;}
+   return equalSplitDir(P,n,angle);
+ }
+ function equalSplitDir(P,n=2,angle=null){
    const poly=validate(P);
    if(!Number.isInteger(n)||n<2||n>20)throw Error('Parça sayısı 2–20 olmalı');
    const bb=bbox(poly),dx=bb[2]-bb[0],dy=bb[3]-bb[1];
@@ -13418,8 +13436,28 @@ if(typeof module==='object'&&module.exports)module.exports=root.ACAD_CRS;
    if(Math.abs(sum-totalArea)>Math.max(1e-4,totalArea*1e-8))throw Error('Alan toplamı eşit bölmede korunmadı');
    return {parts,area:sum,sourceArea:totalArea,target:totalArea/n,cuts:thresholds};
  }
+ /* Hedef m²'lik parça ayırma: verilen doğrultuya dik bir çizgi, alanın bir ucundan hedef alan kadar parça kesecek yere kaydırılır.
+    side 'son' ise parça diğer uçtan alınır. Çizginin aynı yanındaki tüm parçaların toplamı hedefi verir. */
+ function targetSplit(P,target,angle=null,side='bas'){
+   const poly=validate(P),total=area(poly);
+   if(!(target>0))throw Error('Hedef m² pozitif sayı olmalı');
+   if(target>=total-1e-6)throw Error('Hedef alan ('+target.toFixed(2)+' m²) toplam alandan ('+total.toFixed(2)+' m²) küçük olmalı');
+   const bb=bbox(poly),dx=bb[2]-bb[0],dy=bb[3]-bb[1],theta=Number.isFinite(angle)?angle:(dx>=dy?0:Math.PI/2);
+   const u=[Math.cos(theta),Math.sin(theta)],v=[-u[1],u[0]],c=poly[0];
+   let low=Infinity,high=-Infinity;for(const p of poly){const t=dot(sub(p,c),u);low=Math.min(low,t);high=Math.max(high,t);}
+   const goal=side==='son'?total-target:target;let lo=low,hi=high;
+   for(let j=0;j<60;j++){const mid=(lo+hi)/2;if(halfArea(poly,c,u,mid)<goal)lo=mid;else hi=mid;}
+   const t=(lo+hi)/2,o=[c[0]+u[0]*t,c[1]+u[1]*t],R=Math.max(100,Math.hypot(dx,dy)*2);
+   const cut=cutLine(poly,[o[0]-v[0]*R,o[1]-v[1]*R],[o[0]+v[0]*R,o[1]+v[1]*R]);
+   const proj=Q=>Q.reduce((s,q)=>s+dot(sub(q,c),u),0)/Q.length;
+   const lowSide=cut.parts.filter(Q=>proj(Q)<t),highSide=cut.parts.filter(Q=>proj(Q)>=t);
+   const piece=side==='son'?highSide:lowSide,rest=side==='son'?lowSide:highSide;
+   const pa=piece.reduce((s,Q)=>s+area(Q),0);
+   if(Math.abs(pa-target)>Math.max(0.001,target*1e-7))throw Error('Hedef alan doğrulanamadı ('+pa.toFixed(4)+' m²); başka yön seç');
+   return {parts:piece.concat(rest),piece,rest,area:cut.area,sourceArea:total,target,cut:t};
+ }
  function moveVertex(P,index,point){const src=validate(P);if(!Number.isInteger(index)||index<0||index>=src.length)throw Error('Köşe numarası geçersiz');if(!point||![point[0],point[1]].every(Number.isFinite))throw Error('Y/X geçersiz');const next=src.map(p=>p.slice());next[index]=[Number(point[0]),Number(point[1]),validZ(point[2])?Number(point[2]):src[index][2]];const Q=validate(next);return{pts:Q,area:area(Q),difference:area(Q)-area(src)};}
- root.ACAD_AREA_EDIT={validate,area,perimeter,signed,booleanOp,cutLine,equalSplit,moveVertex,version:'7.1.06'};
+ root.ACAD_AREA_EDIT={validate,area,perimeter,signed,booleanOp,cutLine,equalSplit,targetSplit,moveVertex,version:'7.1.06'};
  if(typeof module==='object'&&module.exports)module.exports=root.ACAD_AREA_EDIT;
 })(typeof window!=='undefined'?window:globalThis);
 
@@ -15004,8 +15042,16 @@ function areaEditorOpen(initial=null,preferredAction='vertex',quickDraw=false){
    const indices=Array.from({length:n<=400?n:win},(_,j)=>j+from);
    const vs=indices.map(i=>`<option value="${i}">${i+1}. köşe · Y ${pts[i][0].toFixed(3)} / X ${pts[i][1].toFixed(3)}</option>`).join('');
    const jump=n>400?`<label>Köşe no (1–${n})<input id="aeJump" type="number" min="1" max="${n}" step="1" value="${s.dragIndex+1}"></label>`:'';
-   if(action==='vertex'||action==='target'){
-     inputs.innerHTML=`<div class="aerow"><label>Köşe<select id="aeVertex">${vs}</select></label>${jump}${action==='target'?'<label>Hedef alan (m²)<input id="aeTarget" inputmode="decimal" placeholder="örn. 1250,5"></label>':''}</div>
+   if(action==='target'&&(s.tMode||'parca')==='parca'){
+     inputs.innerHTML=`<div class="aerow"><label>Yöntem<select id="aeTMode"><option value="parca" selected>Hedef m²'lik parça ayır</option><option value="kose">Köşe kaydırarak alanı hedefe getir</option></select></label><label>Hedef alan (m²)<input id="aeTarget" inputmode="decimal" placeholder="örn. 1250,5" value="${s.tVal||''}"></label></div>
+      <div class="aerow"><label>Kesme doğrultusu<select id="aeDirection"><option value="auto">Otomatik · uzun doğrultuya dik</option><option value="y">Y doğrultusunda ilerle</option><option value="x">X doğrultusunda ilerle</option></select></label><label>Parça hangi uçtan<select id="aeSide"><option value="bas">Batı / Güney ucundan</option><option value="son">Doğu / Kuzey ucundan</option></select></label></div>
+      <p class="aenote">Hedef değeri yazınca paralel kesme çizgisi kendiliğinden bulunur ve önizlenir; parça tam hedef m² olur, kalan parça ayrı alan olarak kalır.</p>`;
+     $a('aeTMode').onchange=()=>{s.tMode=$a('aeTMode').value;s.tVal=$a('aeTarget').value;discard();render();};
+     const go=()=>{clearTimeout(s._tt);s._tt=setTimeout(()=>{s.tVal=$a('aeTarget').value;const t=nval($a('aeTarget').value);if(t>0)preview();},350);};
+     $a('aeTarget').addEventListener('input',()=>{discard();go();});['aeDirection','aeSide'].forEach(id=>$a(id).onchange=()=>{discard();go();});
+     if(nval($a('aeTarget').value)>0)go();
+   }else if(action==='vertex'||action==='target'){
+     inputs.innerHTML=`<div class="aerow">${action==='target'?'<label>Yöntem<select id="aeTMode"><option value="parca">Hedef m²\'lik parça ayır</option><option value="kose" selected>Köşe kaydırarak alanı hedefe getir</option></select></label>':''}<label>Köşe<select id="aeVertex">${vs}</select></label>${jump}${action==='target'?'<label>Hedef alan (m²)<input id="aeTarget" inputmode="decimal" placeholder="örn. 1250,5" value="${s.tVal||\'\'}"></label>':''}</div>
       <div class="aerow"><label>Y (Doğu)<input id="aeY" inputmode="decimal"></label><label>X (Kuzey)<input id="aeX" inputmode="decimal"></label></div>
       <p class="aenote">Köşeyi fareyle/parmakla sürükle, veya Y/X değerlerini gir. Alan değeri önizlemede canlı güncellenir. Z korunur.</p>`;
      const v=$a('aeVertex');v.value=String(Math.min(pts.length-1,s.dragIndex));
@@ -15013,6 +15059,7 @@ function areaEditorOpen(initial=null,preferredAction='vertex',quickDraw=false){
      v.onchange=()=>{s.dragIndex=+v.value;coords();if($a('aeJump'))$a('aeJump').value=String(s.dragIndex+1);discard();};
      if($a('aeJump'))$a('aeJump').onchange=()=>{const no=Number($a('aeJump').value);if(!Number.isInteger(no)||no<1||no>pts.length){status('Köşe numarası 1 ile '+pts.length+' arasında olmalı.',true);return;}s.dragIndex=no-1;discard();render();status(`${no}. köşe seçildi. Y/X düzenleyebilir veya CAD üzerinden sürükleyebilirsin.`);};
      const baseSigned=E.signed(pts),originalArea=Math.abs(baseSigned);
+     if($a('aeTMode'))$a('aeTMode').onchange=()=>{s.tMode=$a('aeTMode').value;s.tVal=$a('aeTarget')?.value||'';discard();render();};
      [$a('aeY'),$a('aeX'),...(action==='target'?[$a('aeTarget')]:[])].forEach(el=>el.addEventListener('input',()=>{
        discard();if(action==='target'){clearTimeout(s._tt);s._tt=setTimeout(()=>{const t=nval($a('aeTarget')?.value);if(t>0)preview();},350);return;}if(action!=='vertex')return;const y=nval($a('aeY').value),x=nval($a('aeX').value);if(y==null||x==null)return;
        const P=pts.map(p=>p.slice());P[s.dragIndex]=[y,x,P[s.dragIndex][2]];
@@ -15049,18 +15096,23 @@ function areaEditorOpen(initial=null,preferredAction='vertex',quickDraw=false){
      if(op==='vertex'){
        const index=+$a('aeVertex').value,y=nval($a('aeY').value),x=nval($a('aeX').value);
        if(y==null||x==null)throw Error('Y/X koordinatı geçersiz');r={parts:[E.moveVertex(A,index,[y,x,A[index][2]]).pts]};
+     }else if(op==='target'&&(s.tMode||'parca')==='parca'){
+       const t=nval($a('aeTarget').value);if(t==null||t<=0)throw Error('Hedef m² pozitif sayı olmalı');
+       const di=$a('aeDirection').value,angle=di==='y'?0:di==='x'?Math.PI/2:null;
+       r=E.targetSplit(A,t,angle,$a('aeSide').value);
      }else if(op==='target'){
        const index=+$a('aeVertex').value,t=nval($a('aeTarget').value);
        if(t==null||t<=0)throw Error('Hedef m² pozitif sayı olmalı');
        const a=A[(index+A.length-1)%A.length],b=A[(index+1)%A.length],orig=E.signed(A),sign=Math.sign(orig),g=[(b[1]-a[1])*.5,(a[0]-b[0])*.5],gg=g[0]*g[0]+g[1]*g[1];
        if(gg<1e-12)throw Error('Bu köşenin iki komşusu çakışıyor');
        const shift=(sign*t-orig)/gg,q=A[index],point=[q[0]+g[0]*shift,q[1]+g[1]*shift,q[2]];
-       const changed=E.moveVertex(A,index,point);if(Math.abs(changed.area-t)>Math.max(.001,t*1e-8))throw Error('Hedef alan doğrulanamadı');r={parts:[changed.pts]};
+       let changed;try{changed=E.moveVertex(A,index,point);}catch(er){throw Error('Bu köşeyi kaydırmak sınırı kesiyor ('+er.message+'). \'Hedef m²\'lik parça ayır\' yöntemini ya da başka köşeyi seç.');}if(Math.abs(changed.area-t)>Math.max(.001,t*1e-8))throw Error('Hedef alan doğrulanamadı');r={parts:[changed.pts]};
      }else if(op==='union'||op==='difference'||op==='intersection'){
        const second=other();if(!isClosed(second)||e.id===second.id)throw Error('İkinci alanı CAD üzerinden seç');
        r=E.booleanOp(A,second.pts,op);
        if(op==='union'&&r.parts.length!==1)throw Error('Ayrık alanlar birleştirilemez');
-       const a0=E.area(A),a1=E.area(second.pts),rr=op==='intersection'?r:E.booleanOp(A,second.pts,'intersection');
+       const rr=op==='intersection'?r:E.booleanOp(A,second.pts,'intersection'),a0=Number.isFinite(rr.areaA)?rr.areaA:E.area(A),a1=Number.isFinite(rr.areaB)?rr.areaB:E.area(second.pts);
+       const fx=Math.abs(rr.fixA||0)+Math.abs(rr.fixB||0);if(fx>1e-6)r.note='Ortak kenardaki 1 mm altı çizim uyumsuzluğu giderildi (alana etkisi '+fx.toFixed(4)+' m²).';
        const expected=op==='union'?a0+a1-rr.area:op==='difference'?a0-rr.area:rr.area;
        if(Math.abs(r.area-expected)>Math.max(0.0005,expected*1e-7))throw Error('Alan denetimi tutmadı');
      }else if(op==='cut'){
@@ -15072,7 +15124,7 @@ function areaEditorOpen(initial=null,preferredAction='vertex',quickDraw=false){
      if(!r||!Array.isArray(r.parts)||!r.parts.length)throw Error('Sonuç alan oluşmadı');
      for(const q of r.parts)E.validate(q);
      const sum=r.parts.reduce((s,p)=>s+E.area(p),0),original=E.area(A);
-     if((op==='cut'||op==='equal')&&Math.abs(sum-original)>Math.max(.0001,original*1e-8))throw Error('Alan toplamı değişti');
+     if((op==='cut'||op==='equal'||(op==='target'&&(s.tMode||'parca')==='parca'))&&Math.abs(sum-original)>Math.max(.0001,original*1e-8))throw Error('Alan toplamı değişti');
      const ids=[e.id,...(op==='union'?[s.second]:[])];
      const dependencies=[e.id,...((op==='union'||op==='difference'||op==='intersection')?[s.second]:[])];
      const inputStamp=alanKaynakImzasi(dependencies);
@@ -15081,7 +15133,7 @@ function areaEditorOpen(initial=null,preferredAction='vertex',quickDraw=false){
      if(op==='cut'){panel.classList.remove('ae-collapsed');$a('aeCollapse').textContent='− Küçült';$a('aeCollapse').setAttribute('aria-expanded','true');}
      const lines=r.parts.slice(0,12).map((p,i)=>`${i+1}. alan ${E.area(p).toFixed(4)} m²`).join(' · ');
      $a('aeLiveArea').textContent=sum.toLocaleString('tr-TR',{maximumFractionDigits:3})+' m²';
-     status(`Önizleme: ${r.parts.length} alan · toplam ${sum.toFixed(4)} m² · önce ${original.toFixed(4)} m²\n${lines}${r.parts.length>12?' · ...':''}\nKaydet / Uygula ile onayla.`);
+     status(`Önizleme: ${r.parts.length} alan · toplam ${sum.toFixed(4)} m² · önce ${original.toFixed(4)} m²\n${lines}${r.parts.length>12?' · ...':''}${r.note?'\n'+r.note:''}\nKaydet / Uygula ile onayla.`);
      draw();
    }catch(err){console.warn('Alan Düzelt önizleme',err);status(`İşlem uygulanmadı: ${err.message}`,true);}
  }
@@ -18466,7 +18518,7 @@ window.CADX && (CADX._dbg = (x, y) => ents.filter(e => e.t === "pline" && e.clos
 window.CADX && (CADX._ucg = { lasOku, c3: () => C3, v3c: () => V3C, ucgYap, ucgHazir, sinirAyarla: v => UCGSIN = v, hataBul, vAg, vTahmin, vKotYaz, heHesap, HE: () => HE, tKapali, tinBirles, alanKes, alanDisSil, tinSinir, tinDoldur, tConform, faces: () => FACES, setFaces: F => { FACES = F; FC = null; }, lays: () => lays,
   stat(l) { const F = FACES.filter(f => f.lay === l); let a = 0; for (const f of F) a += Math.abs(tCr(f.p[0], f.p[1], f.p[2])) / 2; const S = tinSinir(l); const ar = S.map(P => pAr(P)); const out = Math.abs(ar[0] || 0); const net = S.reduce((s, P) => s + Math.abs(pAr(P)), 0) - 2 * S.slice(1).reduce((s, P) => s + Math.abs(pAr(P)), 0); return { n: F.length, a, loops: S.length, sinirNet: net }; } }), window.CADX && (CADX._kd = (x, y) => ({ z: kotAt(x, y), p: projeKot(x, y) }), CADX._gps = gpsCb);
 window.CADX && (CADX._nczBytes = () => nczBytes()); /* test: NCZ yaz-oku çevrimi */
-window.CADX && (CADX._bridge = { get ents() { return ents; }, get sel() { return sel; }, get lays() { return lays; }, get PLAN() { return PLAN; }, get FACES() { return FACES; }, parcelOfSel, toFD, noOf, projName, areaOf, say, saveDxf }); /* CAD → modül aktarımı (s32) için kapsam köprüsü */
+window.CADX && (CADX._bridge = { get aes() { return AREA_EDIT_SESSION; }, get ents() { return ents; }, get sel() { return sel; }, get lays() { return lays; }, get PLAN() { return PLAN; }, get FACES() { return FACES; }, parcelOfSel, toFD, noOf, projName, areaOf, say, saveDxf }); /* CAD → modül aktarımı (s32) için kapsam köprüsü */
 window.CADX && (CADX._gor = (re, on) => { for (const k in lays) if (re.test(k)) lays[k].on = on; FC = null; renderLays(); zoomAll(ents.filter(e => /^KAZI_/.test(e.lay))); draw(); });
 })();
 
