@@ -4853,11 +4853,25 @@ O.xlsx = () => {
 };
 
 /* ---------- PDF (sayfa başına JPEG) ---------- */
+/* Baskı çözünürlüğü: 300 dpi; tarayıcı tuval sınırı (≈16 MP, 8192 px kenar) aşılmaz. */
+O.PDF_PX = (W, H, dpi = 300) => Math.min(dpi / 25.4, Math.sqrt(16e6 / (W * H)), 8192 / Math.max(W, H));
+/* Kayıpsız sayfa görüntüsü: çizgi ve yazılar JPEG lekesi olmadan keskin kalır (FlateDecode, PNG Up süzgeci). */
+O._flate = async (c) => {
+  if (typeof CompressionStream === "undefined") return null;
+  const w = c.width, h = c.height, ctx = c.getContext("2d"); const out = new Uint8Array((w * 3 + 1) * h);
+  const band = Math.max(1, Math.floor(4e6 / w)); let prev = new Uint8Array(w * 3), cur = new Uint8Array(w * 3), o = 0;
+  for (let y0 = 0; y0 < h; y0 += band) { const hh = Math.min(band, h - y0), d = ctx.getImageData(0, y0, w, hh).data;
+    for (let r = 0; r < hh; r++) { let k = r * w * 4; for (let i = 0; i < w * 3; i += 3, k += 4) { const a = d[k + 3] / 255; cur[i] = d[k] * a + 255 * (1 - a); cur[i + 1] = d[k + 1] * a + 255 * (1 - a); cur[i + 2] = d[k + 2] * a + 255 * (1 - a); }
+      out[o++] = 2; for (let i = 0; i < w * 3; i++) out[o++] = (cur[i] - prev[i]) & 255; const t = prev; prev = cur; cur = t; } }
+  const cs = new Blob([out]).stream().pipeThrough(new CompressionStream("deflate")); return new Uint8Array(await new Response(cs).arrayBuffer());
+};
 O.pdf = async (canvases) => {
   const parts = []; let len = 0; const offs = [];
   const push = x => { const b = typeof x === "string" ? enc(x) : x; parts.push(b); len += b.length; };
   const imgs = [];
-  for (const c of canvases) { const blob = await new Promise(r => c.toBlob(r, "image/jpeg", 0.85)); if (!blob) throw new Error("PDF sayfa görseli üretilemedi (bellek sınırı)"); imgs.push({ pw: c.pw || 841.89, ph: c.ph || 595.28, w: c.width, h: c.height, b: new Uint8Array(await blob.arrayBuffer()) }); }
+  for (const c of canvases) { let fz = null; try { fz = await O._flate(c); } catch (e) { fz = null; }
+    if (fz && fz.length < 9e6) { imgs.push({ pw: c.pw || 841.89, ph: c.ph || 595.28, w: c.width, h: c.height, b: fz, flate: true }); await new Promise(r => setTimeout(r, 0)); continue; }
+    const blob = await new Promise(r => c.toBlob(r, "image/jpeg", 0.95)); if (!blob) throw new Error("PDF sayfa görseli üretilemedi (bellek sınırı)"); imgs.push({ pw: c.pw || 841.89, ph: c.ph || 595.28, w: c.width, h: c.height, b: new Uint8Array(await blob.arrayBuffer()) }); }
   const n = imgs.length;
   push("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n");
   const obj = (id, body) => { offs[id] = len; push(`${id} 0 obj\n`); if (typeof body === "function") body(); else push(body); push("\nendobj\n"); };
@@ -4867,7 +4881,7 @@ O.pdf = async (canvases) => {
     const pid = 3 + i * 3, cid = pid + 1, iid = pid + 2; const W = im.pw, H = im.ph; const cs = `q ${W} 0 0 ${H} 0 0 cm /Im0 Do Q`;
     obj(pid, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /XObject << /Im0 ${iid} 0 R >> >> /Contents ${cid} 0 R >>`);
     obj(cid, `<< /Length ${cs.length} >>\nstream\n${cs}\nendstream`);
-    obj(iid, () => { push(`<< /Type /XObject /Subtype /Image /Width ${im.w} /Height ${im.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${im.b.length} >>\nstream\n`); push(im.b); push("\nendstream"); });
+    obj(iid, () => { push(`<< /Type /XObject /Subtype /Image /Width ${im.w} /Height ${im.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 ${im.flate ? `/Filter /FlateDecode /DecodeParms << /Predictor 15 /Colors 3 /BitsPerComponent 8 /Columns ${im.w} >>` : "/Filter /DCTDecode"} /Length ${im.b.length} >>\nstream\n`); push(im.b); push("\nendstream"); });
   });
   const total = 3 + n * 3; const xref = len;
   let x = `xref\n0 ${total}\n0000000000 65535 f \n`; for (let i = 1; i < total; i++) x += String(offs[i]).padStart(10, "0") + " 00000 n \n";
@@ -7215,7 +7229,7 @@ window.ARZX = (() => {
     G.push({ t: "x", x: m + 3, y: m + tb / 2, s: o.title || "A-CAD plan", size: 3, bold: true, color: "#000" }, { t: "x", x: W - m - 3, y: m + tb / 2, s: `Ölçek 1/${olcY}   ·   ${new Date().toLocaleDateString("tr-TR")}`, size: 2.6, al: "r", color: "#000" });
     /* kuzey oku */ const nx = W - m - 10, ny = H - m - 16; G.push({ t: "l", p: [[nx, ny - 6], [nx, ny + 6]], w: 0.35, color: "#000" }, { t: "l", p: [[nx - 2.5, ny + 2], [nx, ny + 6], [nx + 2.5, ny + 2]], w: 0.35, color: "#000" }, { t: "x", x: nx, y: ny + 9, s: "K", size: 3, al: "c", bold: true, color: "#000" });
     if (o.kase && O.kase) try { O.kase(G, W - m - 35, m + tb + 22, 50); } catch (e) {}
-    const px = Math.min(160 / 25.4, Math.sqrt(16e6 / (W * H))); const c = document.createElement("canvas"); c.width = Math.round(W * px); c.height = Math.round(H * px); O.paint(c.getContext("2d"), G, px, W, H); c.pw = W / 25.4 * 72; c.ph = H / 25.4 * 72; return { c, olcY, G }; }
+    const px = O.PDF_PX(W, H); const c = document.createElement("canvas"); c.width = Math.round(W * px); c.height = Math.round(H * px); O.paint(c.getContext("2d"), G, px, W, H); c.pw = W / 25.4 * 72; c.ph = H / 25.4 * 72; return { c, olcY, G }; }
   return { prims, toDxf, toG, page, box };
 })();
 function pkOpts() { const pap = $("pkPap").value.split("x").map(Number), olc = +$("pkOlc").value || 0; let box = null; if ($("pkAl").value === "ekran") { const r = cv.getBoundingClientRect(); box = [wx(0), wy(r.height), wx(r.width), wy(0)]; }
@@ -7322,7 +7336,7 @@ function profShow(L, ad) { const P = profCalc(L); PROF = { line: L, ad, pts: P.p
   $("prX").onclick = () => { box.remove(); PROF = null; draw(); }; $("prM").value = ST.set.profMod || "degisim"; $("prSt").value = ST.set.profStep || 10; $("prSt").hidden = $("prM").value !== "aralik";
   $("prM").onchange = e => { ST.set.profMod = e.target.value; $("prSt").hidden = e.target.value !== "aralik"; save(); profChart(); }; $("prSt").onchange = e => { const v = K.num(e.target.value); ST.set.profStep = v > 0 ? v : 10; save(); profChart(); };
   $("prC").onclick = async () => { const rows = ["Mesafe;Y;X;Siyah kot;Kirmizi kot;Fark"].concat(P.pts.map(q => [q.d.toFixed(3), q.x.toFixed(3), q.y.toFixed(3), f2(q.s), f2(q.r), q.s != null && q.r != null ? (q.r - q.s).toFixed(3) : ""].join(";"))); await saveFile(fname("csv").replace(/\.csv$/, "_PROFIL.csv"), new Blob(["\ufeff" + rows.join("\r\n")], { type: "text/csv" }), $("oMsg")); };
-  $("prP").onclick = async () => { const G_ = profSheet(); const px = 180 / 25.4, c = document.createElement("canvas"); c.width = Math.round(297 * px); c.height = Math.round(210 * px); O.paint(c.getContext("2d"), G_, px); try { await saveFile(fname("pdf").replace(/\.pdf$/, "_PROFIL.pdf"), await O.pdf([c]), $("oMsg")); } catch (e) {} };
+  $("prP").onclick = async () => { const G_ = profSheet(); const px = O.PDF_PX(297, 210), c = document.createElement("canvas"); c.width = Math.round(297 * px); c.height = Math.round(210 * px); O.paint(c.getContext("2d"), G_, px); try { await saveFile(fname("pdf").replace(/\.pdf$/, "_PROFIL.pdf"), await O.pdf([c]), $("oMsg")); } catch (e) {} };
   setTimeout(profChart, 0); }
 function profLabels(pts, bit, step, gapM) { const key = bit === "s" ? "fS" : "fR"; let L = pts.filter(q => q[bit] != null);
   if ((ST.set.profMod || "degisim") === "aralik") { const st = +ST.set.profStep || 10, res = []; const zAtD = d => { for (let i = 1; i < L.length; i++) if (d >= L[i - 1].d - 1e-9 && d <= L[i].d + 1e-9) { const a = L[i - 1], b = L[i], t = (d - a.d) / Math.max(1e-9, b.d - a.d); return a[bit] + (b[bit] - a[bit]) * t; } return null; };
@@ -8695,7 +8709,7 @@ window.LTX={LIB,has:n=>!!LIB[n],expand,cached,per,grup:GRUP,get u(){return LTS/1
   }
   function ciz() { const haz = R.mod === "haz", gml = R.mod === "gml"; { const c1 = $("k3Plan").closest(".card"), c2 = $("k3Cv3").closest(".card"); if (c1) c1.style.display = haz || gml ? "none" : ""; if (c2) c2.style.display = haz ? "none" : ""; } ["k3Dxf", "k3Cad"].forEach(i => $(i).disabled = haz || gml || !R.kat.length); ozet(); liste(); katSec(); bbTablo(); if (!haz && !gml) plan(); if (!haz) g3(); }
   /* A4 sayfalarında kontrol raporu */
-  function rapor(R) { const px = 150 / 25.4, W = 210, H = 297, pages = []; let cv, c, y; const yeni = () => { cv = document.createElement("canvas"); cv.width = Math.round(W * px); cv.height = Math.round(H * px); cv.pw = W / 25.4 * 72; cv.ph = H / 25.4 * 72; c = cv.getContext("2d"); c.fillStyle = "#fff"; c.fillRect(0, 0, cv.width, cv.height); c.scale(px, px); c.textBaseline = "alphabetic"; y = 18; pages.push(cv); c.fillStyle = "#888"; c.font = "2.6px Arial"; c.fillText(`A-CAD · 3B yapı modeli ön kontrol raporu · ${AD} · sayfa ${pages.length}`, 15, 287); };
+  function rapor(R) { const px = O.PDF_PX(210, 297), W = 210, H = 297, pages = []; let cv, c, y; const yeni = () => { cv = document.createElement("canvas"); cv.width = Math.round(W * px); cv.height = Math.round(H * px); cv.pw = W / 25.4 * 72; cv.ph = H / 25.4 * 72; c = cv.getContext("2d"); c.fillStyle = "#fff"; c.fillRect(0, 0, cv.width, cv.height); c.scale(px, px); c.textBaseline = "alphabetic"; y = 18; pages.push(cv); c.fillStyle = "#888"; c.font = "2.6px Arial"; c.fillText(`A-CAD · 3B yapı modeli ön kontrol raporu · ${AD} · sayfa ${pages.length}`, 15, 287); };
     const sat = (t, o = {}) => { const sz = o.sz || 3.4; c.font = `${o.b ? "bold " : ""}${sz}px Arial`; const sar = []; let l = ""; for (const w of String(t).split(" ")) { const d = l ? l + " " + w : w; if (c.measureText(d).width > (o.w || 175) - (o.x || 0)) { sar.push(l); l = w; } else l = d; } if (l) sar.push(l); for (const s_ of sar) { if (y > 278) yeni(); c.fillStyle = o.r || "#111"; c.fillText(s_, 15 + (o.x || 0), y); y += sz * 1.35; } };
     yeni(); const o = R.ozet, t = new Date();
     sat("3B Sayısal Yapı Modeli — Ön Kontrol Raporu", { sz: 6, b: 1 }); y += 1; sat(`Dosya: ${AD}   ·   Tarih: ${String(t.getDate()).padStart(2, "0")}.${String(t.getMonth() + 1).padStart(2, "0")}.${t.getFullYear()}   ·   Dosya türü: ${R.mod === "haz" ? "yükleme için hazırlanmış DXF" : "doğrulama uygulamasının düzeltme/çıktı DXF'i"}`, { sz: 3 }); y += 2;
@@ -11619,7 +11633,7 @@ $("tpAdd").onclick = () => { TP.kisiler.push({ ad: "", tc: "", hisse: "", baba: 
 $("tpAntet").onclick = () => { const t = S().antet, up = x => String(x || "").toLocaleUpperCase("tr-TR"), v = id => $(id).value.trim(); if (v("tpIl")) t.il = up(v("tpIl")); if (v("tpIlce")) t.ilce = up(v("tpIlce")); if (v("tpMah")) t.mahalle = up(v("tpMah")); if (v("tpPafta")) t.pafta = v("tpPafta"); if (v("tpAda")) t.ada = v("tpAda"); if (v("tpParsel")) t.parselNo = v("tpParsel"); if (v("tpAlan")) t.tapuAlan = v("tpAlan"); if (v("tpNit")) t.cins = v("tpNit"); if (v("tpMevki")) t.mevki = v("tpMevki"); const ad = TP.kisiler.map(k => k.ad).filter(Boolean); if (ad.length) t.malik = ad.map(up).join(", "); fillAntet(); save(); prevA(); tpMsg("Antet bilgileri güncellendi (il, ilçe, mahalle, pafta, ada, parsel, tapu alanı, nitelik, mevkii, malik)."); };
 $("tpTks").onclick = () => { const tk = TKS(), list = TP.kisiler.filter(k => k.ad || k.tc); if (!list.length) { tpMsg("Önce malik bilgisi gir.", true); return; } for (const k of list) { const ex = tk.kisiler.find(x => k.tc && x.tc === k.tc) || tk.kisiler.find(x => !String(x.ad || "").trim() && !String(x.tc || "").trim()); if (ex) { ex.ad = k.ad; ex.tc = k.tc; } else tk.kisiler.push({ ad: k.ad, tc: k.tc }); } tk.on = true; tk.touched = true; renderTks(); save(); prevA(); tpMsg(`${list.length} kişi taksim sözleşmesi listesine eklendi; parçaların maliklerini İfraz kartından seç.`); };
 const P0 = () => Object.assign({}, S().antet, { tarih2: "" });
-const paint = (G, W, H) => { const px = 160 / 25.4; const c = document.createElement("canvas"); c.width = Math.round(W * px); c.height = Math.round(H * px); c._a4 = ($("aoPap") || {}).value === "A4" && (W === 420 || H === 420); O.paint(c.getContext("2d"), G, px, W, H); const f_ = c._a4 ? Math.SQRT1_2 : 1; c.pw = W / 25.4 * 72 * f_; c.ph = H / 25.4 * 72 * f_; return c; }; // A4: A3 pafta √2 küçültülerek
+const paint = (G, W, H) => { const px = O.PDF_PX(W, H); const c = document.createElement("canvas"); c.width = Math.round(W * px); c.height = Math.round(H * px); c._a4 = ($("aoPap") || {}).value === "A4" && (W === 420 || H === 420); O.paint(c.getContext("2d"), G, px, W, H); const f_ = c._a4 ? Math.SQRT1_2 : 1; c.pw = W / 25.4 * 72 * f_; c.ph = H / 25.4 * 72 * f_; return c; }; // A4: A3 pafta √2 küçültülerek
 
 /* İSTİNAT DUVARI: mimari projede (vaziyetle aynı dönüşümle), plankotede ya da elle yazılan koordinatlardan; köşeler İST1, İST2…; yükseklik yazıdan ya da elle */
 const ISTR = /[İI]ST[İI]NAT|ISTINAT|IST[\s._-]*DUV|DAYANMA/i;
@@ -12049,7 +12063,7 @@ function kmPlanData() { const k = KM(); const RS = kmR(k), SN = RS.flat(); const
   const yazilar = FD.texts.filter(t => isFinite(t.e) && t.e > W[0] && t.e < W[2] && t.y > W[1] && t.y < W[3] && /^\s*(YOL|.*CADDE.*|.*SOKAK.*|.*DERE.*|KANAL|ORMAN|MERA)\s*$/i.test(t.s)).map(t => ({ p: [t.e, t.y], s: t.s.trim().toLocaleUpperCase("tr-TR") }));
   const nok = new Map(); const key = p => p[0].toFixed(3) + "," + p[1].toFixed(3); for (const r of k.list) r.pts.forEach((p, i) => { if (A.inRings(RS, p[0], p[1]) || RS.some(SN => SN.some((a, j) => A.segDist(p, a, SN[(j + 1) % SN.length]) < 0.05))) nok.set(key(p), { n: r.names[i], p }); }); (k.yeni || []).forEach(q => nok.set(key(q.p), q));
   return { kgm: kmKgm(), hariciL: k.hariciL || [], sinir: { pts: RS[0], rings: RS }, parseller: k.list.map(r => Object.assign({}, r, { cins: (k.bilgi[kmKey(r)] || {}).cins || "" })), cevre, komsuNo, yazilar, noktalar: [...nok.values()], harici: k.harici, hariciP: k.hariciP, olcek: k.olcek, kagit: k.kagit }; }
-function kmPaint(G, W, H) { const px = Math.min(160 / 25.4, Math.sqrt(15e6 / (W * H))); const c = document.createElement("canvas"); c.width = Math.round(W * px); c.height = Math.round(H * px); O.paint(c.getContext("2d"), G, px, W, H); c.pw = W / 25.4 * 72; c.ph = H / 25.4 * 72; return c; }
+function kmPaint(G, W, H) { const px = O.PDF_PX(W, H); const c = document.createElement("canvas"); c.width = Math.round(W * px); c.height = Math.round(H * px); O.paint(c.getContext("2d"), G, px, W, H); c.pw = W / 25.4 * 72; c.ph = H / 25.4 * 72; return c; }
 function kmPrev() { const k = KM(), cv_ = $("kmPv"); if (!cv_) return; if (!k.list.length) { cv_.hidden = true; return; } try { const pl = A.kamPlan(kmPlanData(), P0()); const px = Math.min(1600 / pl.W, 1100 / pl.H); cv_.width = pl.W * px; cv_.height = pl.H * px; O.paint(cv_.getContext("2d"), pl.G, px, pl.W, pl.H); cv_.hidden = false; $("kmPvInfo").textContent = `Pafta ${Math.round(pl.W)} × ${Math.round(pl.H)} mm · ölçek 1/${pl.olcek}`; } catch (e) { $("kmPvInfo").textContent = "Önizleme yapılamadı: " + e.message; } }
 const kmNeed = () => { const k = KM(); if (!k.list.length) { kmMsg("Önce sınırı belirleyip \"Hesapla\"ya bas.", true); return false; } return true; };
 const kfn = ext => `${(S().antet.mahalle || "KAMULASTIRMA").replace(/\s+/g, "_")}_KAMULASTIRMA_${ext}`.replace(/[^\wÇĞİÖŞÜçğıöşü.\-]+/g, "_");
@@ -17892,7 +17906,7 @@ function pkNcz(G, D) { const m = G.map, W = q => [m.cxw + (q[0] - m.ocx) / m.s, 
   for (const k of D.kotlar || []) I.push(["point", "NOKTA_3B", [k.e, k.y, k.z], k.n || k.kod || ""]); LY.NOKTA_3B = 1;
   for (const fc of FACES) { const L = lays[fc.lay]; if (!L || L.on === false) continue; I.push(["face", "UCGEN", fc.p[0], fc.p[1], fc.p[2]]); LY.UCGEN = 1; }
   return window.NCZW.build({ layers: Object.keys(LY).map(n => ({ n, c: ACI_[n] || 7 })), items: I }); }
-function pkSayfa(G) { const px = 160 / 25.4, cv = document.createElement("canvas"); cv.width = Math.round(297 * px); cv.height = Math.round(420 * px); O.paint(cv.getContext("2d"), G, px, 297, 420); cv.pw = 297 / 25.4 * 72; cv.ph = 420 / 25.4 * 72; return cv; }
+function pkSayfa(G) { const px = O.PDF_PX(297, 420), cv = document.createElement("canvas"); cv.width = Math.round(297 * px); cv.height = Math.round(420 * px); O.paint(cv.getContext("2d"), G, px, 297, 420); cv.pw = 297 / 25.4 * 72; cv.ph = 420 / 25.4 * 72; return cv; }
 CMDS.PLANKOTE = () => { let b = document.getElementById("pkBox"); if (b) b.remove(); const pj = (window.ST && ST.proj) || {}; const v = k => String(pj[k] || "").replace(/"/g, "&quot;"); let pr = {}; try { pr = JSON.parse(localStorage.getItem("acad-pk") || "{}"); } catch (e) {}
   b = document.createElement("div"); b.id = "pkBox"; b.style.cssText = "position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:9999;background:#1d1f24;color:#eee;border:1px solid #555;border-radius:12px;padding:12px;width:min(94vw,420px);max-height:90vh;overflow:auto;box-shadow:0 8px 30px rgba(0,0,0,.5);font-size:14px";
   const f = (id, l, val) => `<label style="display:flex;flex-direction:column;gap:2px;font-size:12px">${l}<input id="${id}" value="${val}" style="padding:6px;border-radius:6px;border:1px solid #555;background:#111;color:#eee"></label>`;
