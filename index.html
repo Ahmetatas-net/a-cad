@@ -1982,8 +1982,8 @@ dpE(&#x27;dpCsv&#x27;).addEventListener(&#x27;click&#x27;,()=&gt;{let o=dpState.
 function dpDXF(o,onlyLayer=null){let surfaces=[[&#x27;HAFRIYAT&#x27;,8],[&#x27;KIRMTAS&#x27;,2],[&#x27;PLENTMIKS&#x27;,3],[&#x27;BITUMLU&#x27;,4],[&#x27;BINDER&#x27;,5],[&#x27;ASINMA&#x27;,1],[&#x27;KALDIRIM_SOL&#x27;,6],[&#x27;KALDIRIM_SAG&#x27;,6]],s=[],line=(code,val)=&gt;{s.push(String(code)+&#x27;\n&#x27;+String(val)+&#x27;\n&#x27;)};
  line(0,&#x27;SECTION&#x27;);line(2,&#x27;HEADER&#x27;);line(9,&#x27;$ACADVER&#x27;);line(1,&#x27;AC1009&#x27;);line(0,&#x27;ENDSEC&#x27;);line(0,&#x27;SECTION&#x27;);line(2,&#x27;TABLES&#x27;);line(0,&#x27;TABLE&#x27;);line(2,&#x27;LTYPE&#x27;);line(70,1);line(0,&#x27;LTYPE&#x27;);line(2,&#x27;CONTINUOUS&#x27;);line(70,0);line(3,&#x27;Solid line&#x27;);line(72,65);line(73,0);line(40,0);line(0,&#x27;ENDTAB&#x27;);line(0,&#x27;TABLE&#x27;);line(2,&#x27;LAYER&#x27;);line(70,surfaces.length+1);for(let [name,color] of [[&#x27;0&#x27;,7],...surfaces]){line(0,&#x27;LAYER&#x27;);line(2,name);line(70,0);line(62,color);line(6,&#x27;CONTINUOUS&#x27;)}line(0,&#x27;ENDTAB&#x27;);line(0,&#x27;ENDSEC&#x27;);line(0,&#x27;SECTION&#x27;);line(2,&#x27;ENTITIES&#x27;);
  let count=0,prev=null;const face=(layer,a,b,c)=&gt;{if(onlyLayer&amp;&amp;layer!==onlyLayer)return;if(![...a,...b,...c].every(Number.isFinite))return;line(0,&#x27;3DFACE&#x27;);line(8,layer);for(let [k,p] of [[10,a],[11,b],[12,c],[13,c]]){line(k,p[0].toFixed(4));line(k+10,p[1].toFixed(4));line(k+20,p[2].toFixed(4))}count++};
- for(let r of o.sec){if(r.invalid||!Number.isFinite(r.black)||!Number.isFinite(r.red)){prev=null;continue}let m=[],offsets=[-r.paveRight,0,r.paveLeft],z=offsets.map(off=&gt;dpCrossZ(r,off,o.cross,o.bank));for(let i=0;i&lt;o.thick.length;i++)m.push(offsets.map((off,j)=&gt;dpSurfaceAt(r,off,z[j]-o.thick.at(-1)+o.thick[i])));
-  const walkPt=(side)=&gt;{let inOff=side&gt;0?r.paveLeft:-r.paveRight,outOff=side&gt;0?r.left:-r.right;let edge=dpCrossZ(r,inOff,o.cross,o.bank);return [dpSurfaceAt(r,inOff,edge+o.curb),dpSurfaceAt(r,outOff,edge+o.curb+o.walkCross*(Math.abs(outOff)-Math.abs(inOff)))]};
+ for(let r of o.sec){if(r.invalid||!Number.isFinite(r.black)||!Number.isFinite(r.red)){prev=null;continue}let m=[],offsets=[-r.paveRight,0,r.paveLeft],z=offsets.map(off=&gt;dpCrossZ(r,off,o.cross,o.bank));for(let i=0;i&lt;o.thick.length;i++)m.push(offsets.map((off,j)=&gt;{const T_=o.thick.at(-1)||1,dep=o.thick.at(-1)-o.thick[i],lw=window.__YK?window.__YK.par(o).lw:0,oo=off===0?0:off+Math.sign(off)*lw*dep/T_;return dpSurfaceAt(r,oo,dpCrossZ(r,oo,o.cross,o.bank)-dep)}));
+  const walkPt=(side)=&gt;{let inOff=side&gt;0?r.paveLeft:-r.paveRight,outOff=side&gt;0?r.left:-r.right;let edge=dpCrossZ(r,inOff,o.cross,o.bank);return [dpSurfaceAt(r,inOff,edge+o.curb),dpSurfaceAt(r,outOff,edge+o.curb-o.walkCross*(Math.abs(outOff)-Math.abs(inOff)))]};
   if(prev&amp;&amp;r.s-prev.s&lt;=Math.max(12,dpN(&#x27;dpStep&#x27;,10)*1.2)){
    for(let k=0;k&lt;6;k++)for(let j=0;j&lt;2;j++){let a=prev.m[k][j],b=prev.m[k][j+1],c=m[k][j],d=m[k][j+1];face(surfaces[k][0],a,c,b);face(surfaces[k][0],b,c,d)}
    let wl=walkPt(1),wr=walkPt(-1);for(let [layer,other,current] of [[&#x27;KALDIRIM_SOL&#x27;,prev.wl,wl],[&#x27;KALDIRIM_SAG&#x27;,prev.wr,wr]]){face(layer,other[0],current[0],other[1]);face(layer,other[1],current[0],current[1])}
@@ -2001,7 +2001,7 @@ dpExample();
 (function(){
  &#x27;use strict&#x27;;
  const $p=id=&gt;document.getElementById(id);
- const prIds=[&#x27;dpWidth&#x27;,&#x27;dpMinWidth&#x27;,&#x27;dpMaxWidth&#x27;,&#x27;dpRadius&#x27;,&#x27;dpGrade&#x27;,&#x27;dpCrown&#x27;,&#x27;dpBank&#x27;,&#x27;dpStep&#x27;,&#x27;dpWalk&#x27;,&#x27;dpCurb&#x27;,&#x27;dpCut&#x27;,&#x27;dpFill&#x27;,&#x27;dpRoadClass&#x27;,&#x27;dpSpeed&#x27;,&#x27;dpTransition&#x27;,&#x27;dpWalkCross&#x27;,&#x27;dpFriction&#x27;,&#x27;dpT0&#x27;,&#x27;dpT1&#x27;,&#x27;dpT2&#x27;,&#x27;dpT3&#x27;,&#x27;dpT4&#x27;,&#x27;dpBoundary&#x27;];
+ const prIds=[&#x27;dpWidth&#x27;,&#x27;dpMinWidth&#x27;,&#x27;dpMaxWidth&#x27;,&#x27;dpRadius&#x27;,&#x27;dpGrade&#x27;,&#x27;dpCrown&#x27;,&#x27;dpBank&#x27;,&#x27;dpStep&#x27;,&#x27;dpWalk&#x27;,&#x27;dpCurb&#x27;,&#x27;dpCut&#x27;,&#x27;dpFill&#x27;,&#x27;dpRoadClass&#x27;,&#x27;dpSpeed&#x27;,&#x27;dpTransition&#x27;,&#x27;dpWalkCross&#x27;,&#x27;dpFriction&#x27;,&#x27;dpT0&#x27;,&#x27;dpT1&#x27;,&#x27;dpT2&#x27;,&#x27;dpT3&#x27;,&#x27;dpT4&#x27;,&#x27;dpBoundary&#x27;,&#x27;dpDitch&#x27;,&#x27;dpDitchW&#x27;,&#x27;dpBermH&#x27;,&#x27;dpBermB&#x27;,&#x27;dpLayerW&#x27;];
  const schema=&#x27;acadyol.offline.project&#x27;,version=1;
  let resultFingerprint=null, terrainMeta=null;
  const report=(message,kind=&#x27;neutral&#x27;)=&gt;{$p(&#x27;prStatus&#x27;).className=kind===&#x27;error&#x27;?&#x27;prError&#x27;:kind===&#x27;ok&#x27;?&#x27;prOk&#x27;:&#x27;prNeutral&#x27;;$p(&#x27;prStatus&#x27;).textContent=message;};
@@ -2445,7 +2445,7 @@ function sourceValue(base,off,which){let a=interp(base.a[which],off),b=interp(ba
 function sourcePaved(base,off){return base.a.intervals?.some(i=&gt;base.b.intervals?.some(j=&gt;off&gt;=Math.max(i[0],j[0])-1e-5&amp;&amp;off&lt;=Math.min(i[1],j[1])+1e-5))}
 function zAt(s,off,layer){let out=design();if(out){let a=rRow(s);if(!a||a.invalid||!finite(a.red))return NaN;
   let xy=[a.x+a.normal[0]*off,a.y+a.normal[1]*off];if(layer===0)return dpGroundAt(out.mesh,xy[0],xy[1]);
-  if(off&lt;-(a.paveRight??0)-1e-6||off&gt;(a.paveLeft??0)+1e-6){const K=window.__YK&amp;&amp;window.__YK.rowSec(out,a);if(!K||layer&lt;1||layer&gt;2)return NaN;return layer===1?K.top(off):K.bottom(off);}
+  if(off&lt;-(a.paveRight??0)-1e-6||off&gt;(a.paveLeft??0)+1e-6){const K=window.__YK&amp;&amp;window.__YK.rowSec(out,a);if(!K||layer&lt;1)return NaN;return layer===1?K.top(off):layer===2?K.bottom(off):K.layerZ(off,layer);}
   let red=dpCrossZ(a,off,out.cross,out.bank);
   if(layer===1)return red;return red-out.thick.at(-1)+out.thick[layer===2?0:layer-2];
  }
@@ -2888,49 +2888,59 @@ window.__roadQualityCheck=(all=false)=&gt;{const pick=all?projects:[projects[act
   var num=function(id,d,min){var e=document.getElementById(id),v=e?Number(e.value):NaN;return Number.isFinite(v)&amp;&amp;v&gt;=(min==null?1e-9:min)?v:d;};
   var f2=function(v,n){return Number.isFinite(v)?v.toFixed(n==null?2:n):&#x27;—&#x27;;};
   var LAY=[[&#x27;Alt temel&#x27;,&#x27;#6f5d45&#x27;],[&#x27;Plentmiks&#x27;,&#x27;#8c7b5d&#x27;],[&#x27;Bitümlü temel&#x27;,&#x27;#3c4048&#x27;],[&#x27;Binder&#x27;,&#x27;#2e3238&#x27;],[&#x27;Aşınma&#x27;,&#x27;#202328&#x27;]];
-  var HK=&#x27;acad-yol-hendek&#x27;;
-  function ditch(){var on=document.getElementById(&#x27;dpDitch&#x27;);return {on:!!(on&amp;&amp;on.value===&#x27;1&#x27;),D:num(&#x27;dpDitchD&#x27;,0.5),B:num(&#x27;dpDitchB&#x27;,0.5,0),n:num(&#x27;dpDitchN&#x27;,1)};}
+  var HK=&#x27;acad-yol-tipkesit&#x27;;
+  function ditch(){var on=document.getElementById(&#x27;dpDitch&#x27;);return {on:!on||on.value!==&#x27;0&#x27;,W:num(&#x27;dpDitchW&#x27;,0.49)};}
   function par(out){return {T:out.thick&amp;&amp;out.thick.length?out.thick[out.thick.length-1]:0,cross:out.cross||0,bank:out.bank||0,walk:Math.max(0,+out.walk||0),curb:Math.max(0,+out.curb||0),
-    wc:+out.walkCross||0,nCut:num(&#x27;dpCut&#x27;,1),nFill:num(&#x27;dpFill&#x27;,1.5),H:ditch()};}
+    wc:+out.walkCross||0,nCut:num(&#x27;dpCut&#x27;,2),nFill:num(&#x27;dpFill&#x27;,3),H:ditch(),bH:num(&#x27;dpBermH&#x27;,7.5,0),bB:num(&#x27;dpBermB&#x27;,5,0),lw:num(&#x27;dpLayerW&#x27;,0.6,0)};}
 
+  /* Tip kesit (mevcut projenin enkesitlerinden): kaplama kenarı → iç bordür (3 cm yüz, 12 cm üst) → kaldırım (dışa doğru eğimli)
+     → dış bordür (15 cm) → bordür dış yüzü düşey → hendek iç yüzü formasyon düzlemine iner (hendek tabanı = formasyon)
+     → şev doğrudan hendek tabanından başlar (yarma yukarı, dolgu aşağı), her palye yüksekliğinde palye (dışa %5).
+     Kaplama tabakaları alttan genişler: alt temel tabanı kaplama kenarından lw kadar dışarıda. */
   function section(out,a){
-    var P=par(out),T=P.T,wc=P.wc;
+    var P=par(out),T=P.T,wc=P.wc,th=out.thick||[0];
     var G=function(off){return dpGroundAt(out.mesh,a.x+a.normal[0]*off,a.y+a.normal[1]*off);};
     var red=function(off){return dpCrossZ(a,off,P.cross,P.bank);};
     var L=+a.paveLeft||0,R=+a.paveRight||0;
     var side=function(sg){
-      var pe=sg&gt;0?L:R,eZ=red(sg*pe),walk=P.walk,wTop=eZ+P.curb,wOut=wTop+wc*walk,outer=pe+walk,top=walk&gt;0?wOut:eZ;
-      var prof=[[pe,eZ]];if(walk&gt;0){prof.push([pe,wTop]);prof.push([outer,wOut]);}
-      var g0=G(sg*outer),mode=null,day=null,n=null,hend=null;
+      var pe=sg&gt;0?L:R,eZ=red(sg*pe),W=P.walk,c=P.curb,form=function(d){return red(sg*d)-T;};
+      var prof=[[pe,eZ]];
+      if(W&gt;0.3){var wt=eZ+c,wo=wt-wc*(W-0.30);prof.push([pe+0.03,wt],[pe+0.15,wt],[pe+W-0.15,wo],[pe+W,wo]);}
+      else if(W&gt;0){prof.push([pe,eZ+c],[pe+W,eZ+c-wc*W]);}
+      var outer=pe+W,oz=prof[prof.length-1][1],hend=null,S;
+      if(P.H.on&amp;&amp;P.H.W&gt;0){if(W&gt;0)prof.push([outer,oz-c]);S=[outer+P.H.W,form(outer+P.H.W)];prof.push(S);hend={d1:outer,d2:S[0],z:S[1]};}
+      else S=[outer,oz];
+      var g0=G(sg*S[0]),mode=null,day=null,n=null;
       if(Number.isFinite(g0)){
-        mode=g0&gt;top+1e-4?&#x27;kazı&#x27;:g0&lt;top-1e-4?&#x27;dolgu&#x27;:&#x27;denge&#x27;;
-        if(mode===&#x27;denge&#x27;)day=outer;
+        mode=g0&gt;S[1]+1e-4?&#x27;kazı&#x27;:g0&lt;S[1]-1e-4?&#x27;dolgu&#x27;:&#x27;denge&#x27;;
+        if(mode===&#x27;denge&#x27;)day=S[0];
         else{
-          n=mode===&#x27;kazı&#x27;?P.nCut:P.nFill;var sgn=mode===&#x27;kazı&#x27;?1:-1,s0=outer,z0=top;
-          if(mode===&#x27;kazı&#x27;&amp;&amp;P.H.on){var d1=outer+P.H.n*P.H.D,d2=d1+P.H.B;prof.push([d1,top-P.H.D]);if(P.H.B&gt;0)prof.push([d2,top-P.H.D]);s0=d2;z0=top-P.H.D;hend={d1:d1,d2:d2,z:top-P.H.D};}
-          var prev=z0-G(sg*s0),d=0,st=0.05;
-          if(!Number.isFinite(prev))prev=sgn&gt;0?-1:1;
-          for(d=st;d&lt;=60;d+=st){var g=G(sg*(s0+d));if(!Number.isFinite(g))break;var df=z0+sgn*d/n-g;
-            if(df===0||(df&gt;0)!==(prev&gt;0)){var t=prev/(prev-df);day=s0+d-st+t*st;break;}prev=df;}
-          if(day==null)day=s0+Math.max(0,d-st);
-          prof.push([day,z0+sgn*(day-s0)/n]);
+          n=mode===&#x27;kazı&#x27;?P.nCut:P.nFill;var sgn=mode===&#x27;kazı&#x27;?1:-1,d=S[0],z=S[1],prev=z-g0,berm=P.bH&gt;0&amp;&amp;P.bB&gt;0;
+          var seg=function(dx,dz){var m=Math.max(1,Math.ceil(dx/0.05));for(var q=1;q&lt;=m;q++){var nd=d+dx*q/m,nz=z+dz*q/m,g=G(sg*nd);
+              if(!Number.isFinite(g)){day=d+dx*(q-1)/m;prof.push([day,z+dz*(q-1)/m]);return true;}
+              var df=nz-g;if(df===0||(df&gt;0)!==(prev&gt;0)){var t=prev/(prev-df),pd=d+dx*(q-1)/m,pz=z+dz*(q-1)/m;day=pd+t*dx/m;prof.push([day,pz+t*dz/m]);return true;}prev=df;}
+            d+=dx;z+=dz;prof.push([d,z]);return false;};
+          for(var k=0;k&lt;20&amp;&amp;day==null&amp;&amp;d&lt;S[0]+90;k++){
+            if(seg(berm?P.bH*n:90,sgn*(berm?P.bH:90/n)))break;
+            if(berm&amp;&amp;seg(P.bB,-0.05*P.bB))break;
+          }
+          if(day==null)day=d;
         }
       }
-      return {pe:pe,eZ:eZ,wTop:wTop,wOut:wOut,outer:outer,top:top,mode:mode,day:day,dayZ:day!=null?G(sg*day):NaN,n:n,hend:hend,prof:prof,
-        reach:day!=null&amp;&amp;Number.isFinite(G(sg*day))};
+      return {pe:pe,eZ:eZ,outer:outer,oz:oz,S:S,mode:mode,day:day,dayZ:day!=null?G(sg*day):NaN,n:n,hend:hend,prof:prof,form:form};
     };
     var SL=side(1),SR=side(-1);
-    var ip=function(S,d){var p=S.prof;for(var i=p.length-1;i&gt;0;i--){var A=p[i-1],B=p[i];if(d&gt;=A[0]-1e-9&amp;&amp;d&lt;=B[0]+1e-9){if(B[0]-A[0]&lt;1e-9)return B[1];return A[1]+(B[1]-A[1])*(d-A[0])/(B[0]-A[0]);}}return NaN;};
-    var top=function(off){var S=off&gt;=0?SL:SR,d=Math.abs(off);if(d&lt;=S.pe)return red(off);if(S.day!=null&amp;&amp;d&gt;S.day+1e-9)return NaN;if(d&gt;S.outer&amp;&amp;S.mode==null)return NaN;return ip(S,d);};
+    var ip=function(S,d){var p=S.prof;for(var i=1;i&lt;p.length;i++){var A=p[i-1],B=p[i];if(d&gt;=A[0]-1e-9&amp;&amp;d&lt;=B[0]+1e-9){if(B[0]-A[0]&lt;1e-9)return i+1&lt;p.length&amp;&amp;p[i+1][0]-B[0]&lt;1e-9?p[i+1][1]:B[1];return A[1]+(B[1]-A[1])*(d-A[0])/(B[0]-A[0]);}}return NaN;};
+    var top=function(off){var S=off&gt;=0?SL:SR,d=Math.abs(off);if(d&lt;=S.pe)return red(off);if(S.day!=null&amp;&amp;d&gt;S.day+1e-9)return NaN;if(d&gt;S.S[0]+1e-9&amp;&amp;S.mode==null)return NaN;return ip(S,d);};
     var bottom=function(off){var S=off&gt;=0?SL:SR,d=Math.abs(off);
-      if(d&lt;=S.pe)return red(off)-T;
-      if(d&lt;=S.outer)return S.wTop+wc*(d-S.pe)-T;
+      if(d&lt;=S.S[0]+1e-9&amp;&amp;d&lt;=Math.max(S.outer,S.S[0]))return S.form(d);
       if(S.mode==null||S.day==null||d&gt;S.day+1e-9)return NaN;return ip(S,d);};
-    var lo=-(SR.day!=null?SR.day:SR.outer),hi=(SL.day!=null?SL.day:SL.outer),cut=0,fill=0,miss=0,st=0.1;
+    var layerZ=function(off,k){var S=off&gt;=0?SL:SR,d=Math.abs(off),i=k-2;if(i&lt;0||i&gt;=th.length)return NaN;var dep=T-th[i],ext=S.pe+P.lw*(T&gt;0?dep/T:0);return d&lt;=ext+1e-9?red(off)-dep:NaN;};
+    var lo=-(SR.day!=null?SR.day:SR.S[0]),hi=(SL.day!=null?SL.day:SL.S[0]),cut=0,fill=0,miss=0,st=0.05;
     for(var x=lo;x&lt;hi-1e-9;x+=st){var w=Math.min(st,hi-x),xm=x+w/2,g=G(xm),b=bottom(xm);if(!Number.isFinite(g)||!Number.isFinite(b)){miss++;continue;}
       if(g&gt;b)cut+=(g-b)*w;else fill+=(b-g)*w;}
-    var br=[0];[SL,SR].forEach(function(S,i){var sg=i?-1:1;S.prof.forEach(function(p){br.push(sg*p[0]);});});
-    return {a:a,T:T,SL:SL,SR:SR,G:G,top:top,bottom:bottom,red:red,lo:lo,hi:hi,cut:cut,fill:fill,miss:miss,ok:SL.mode!=null&amp;&amp;SR.mode!=null,breaks:br};
+    var br=[0];[SL,SR].forEach(function(S,i){var sg=i?-1:1;S.prof.forEach(function(p){br.push(sg*p[0]);});br.push(sg*(S.pe+P.lw));});
+    return {a:a,T:T,P:P,SL:SL,SR:SR,G:G,top:top,bottom:bottom,layerZ:layerZ,red:red,lo:lo,hi:hi,cut:cut,fill:fill,miss:miss,ok:SL.mode!=null&amp;&amp;SR.mode!=null,breaks:br};
   }
   // satır başına önbellek (enkesit görüntüleyici çok sorgular)
   function rowSec(out,row){if(!out||!row||!out.mesh||!row.normal||!Number.isFinite(row.red))return null;
@@ -2953,7 +2963,7 @@ window.__roadQualityCheck=(all=false)=&gt;{const pick=all?projects:[projects[act
     var g=c.getContext(&#x27;2d&#x27;);g.scale(r,r);g.fillStyle=&#x27;#171c23&#x27;;g.fillRect(0,0,w,h);
     var m=2,x0=K.lo-m,x1=K.hi+m,P=[];
     for(var x=x0;x&lt;=x1+1e-9;x+=Math.max(0.1,(x1-x0)/400)){var z=K.G(x);if(Number.isFinite(z))P.push([x,z]);}
-    var zs=P.map(function(p){return p[1];}).concat([K.red(0),K.red(0)-K.T,K.SL.wOut,K.SR.wOut,K.SL.dayZ,K.SR.dayZ].concat(K.SL.prof.map(function(p){return p[1];}),K.SR.prof.map(function(p){return p[1];})).filter(Number.isFinite));
+    var zs=P.map(function(p){return p[1];}).concat([K.red(0),K.red(0)-K.T,K.SL.oz,K.SR.oz,K.SL.dayZ,K.SR.dayZ].concat(K.SL.prof.map(function(p){return p[1];}),K.SR.prof.map(function(p){return p[1];})).filter(Number.isFinite));
     var zmin=Math.min.apply(null,zs)-0.5,zmax=Math.max.apply(null,zs)+0.5;
     var nar=w&lt;560,padL=52,padR=12,padT=nar?40:26,padB=30,W=w-padL-padR,H=h-padT-padB,sx=W/(x1-x0),sz=Math.min(H/(zmax-zmin),sx*10);if(sz&lt;sx)sz=Math.min(H/(zmax-zmin),sx);
     var ex=sz/sx,zc=(zmax+zmin)/2;
@@ -2967,11 +2977,17 @@ window.__roadQualityCheck=(all=false)=&gt;{const pick=all?projects:[projects[act
     var st=Math.max(0.05,(K.hi-K.lo)/600);
     for(var o=K.lo;o&lt;K.hi;o+=st){var om=o+st/2,gz=K.G(om),bz=K.bottom(om);if(!Number.isFinite(gz)||!Number.isFinite(bz))continue;
       g.fillStyle=gz&gt;bz?&#x27;rgba(224,110,90,.42)&#x27;:&#x27;rgba(108,197,140,.38)&#x27;;var y1=Y(Math.max(gz,bz)),y2=Y(Math.min(gz,bz));g.fillRect(X(o),y1,Math.max(1,st*sx+0.5),Math.max(0.5,y2-y1));}
-    var th=out.thick||[0],T=K.T,dq=Math.max(0.1,(K.SL.pe+K.SR.pe)/60);
-    for(var li=th.length-2;li&gt;=0;li--){var bot=T-th[li],tp=T-th[li+1];g.beginPath();var first=true;
-      for(var q=-K.SR.pe;q&lt;=K.SL.pe+1e-9;q+=dq){var px2=X(q),py=Y(K.red(q)-tp);if(first){g.moveTo(px2,py);first=false;}else g.lineTo(px2,py);}
-      for(var q2=K.SL.pe;q2&gt;=-K.SR.pe-1e-9;q2-=dq)g.lineTo(X(q2),Y(K.red(q2)-bot));g.closePath();g.fillStyle=(LAY[li]||LAY[0])[1];g.fill();}
-    [K.SL,K.SR].forEach(function(S,i){var sg=i?-1:1;if(S.outer&lt;=S.pe+1e-6)return;g.beginPath();g.moveTo(X(sg*S.pe),Y(S.eZ));g.lineTo(X(sg*S.pe),Y(S.wTop));g.lineTo(X(sg*S.outer),Y(S.wOut));g.lineTo(X(sg*S.outer),Y(S.wOut-T));g.lineTo(X(sg*S.pe),Y(S.wTop-T));g.closePath();g.fillStyle=&#x27;#808892&#x27;;g.fill();g.strokeStyle=&#x27;#cfd5dc&#x27;;g.lineWidth=1;g.stroke();});
+    var th=out.thick||[0],T=K.T,lw=K.P.lw,ext=function(S,dep){return S.pe+lw*(T&gt;0?dep/T:0);};
+    // kaldırım / bordür dolgusu (üst: kaldırım çizgisi, alt: formasyon ve tabaka kenarı)
+    [K.SL,K.SR].forEach(function(S,i){var sg=i?-1:1;if(S.outer&lt;=S.pe+1e-6)return;g.beginPath();
+      var pts=S.prof.filter(function(p){return p[0]&lt;=S.outer+1e-9;});pts.forEach(function(p,k){k?g.lineTo(X(sg*p[0]),Y(p[1])):g.moveTo(X(sg*p[0]),Y(p[1]));});
+      g.lineTo(X(sg*S.outer),Y(S.form(S.outer)));var e2=Math.min(ext(S,T),S.outer);g.lineTo(X(sg*e2),Y(S.form(e2)));g.closePath();
+      g.fillStyle=&#x27;#5d646d&#x27;;g.fill();g.strokeStyle=&#x27;#c9d0d8&#x27;;g.lineWidth=1;g.stroke();});
+    // kaplama tabakaları: alttan genişleyen (kenarlar eğimli)
+    for(var li=th.length-2;li&gt;=0;li--){var bot=T-th[li],tp=T-th[li+1],aR=ext(K.SR,tp),aL=ext(K.SL,tp),bR=ext(K.SR,bot),bL=ext(K.SL,bot);g.beginPath();
+      var nq=40,q;for(q=0;q&lt;=nq;q++){var o1=-aR+(aL+aR)*q/nq;q?g.lineTo(X(o1),Y(K.red(o1)-tp)):g.moveTo(X(o1),Y(K.red(o1)-tp));}
+      for(q=nq;q&gt;=0;q--){var o2=-bR+(bL+bR)*q/nq;g.lineTo(X(o2),Y(K.red(o2)-bot));}
+      g.closePath();g.fillStyle=(LAY[li]||LAY[0])[1];g.fill();}
     g.strokeStyle=&#x27;#ff6a4d&#x27;;g.lineWidth=2.4;g.beginPath();var f1=true;
     var tops=[];for(var q3=K.lo;q3&lt;=K.hi+1e-9;q3+=st)tops.push(q3);K.breaks.forEach(function(b){tops.push(b);});tops.sort(function(a,b){return a-b;});
     tops.forEach(function(q){var tz=K.top(q);if(!Number.isFinite(tz))return;if(f1){g.moveTo(X(q),Y(tz));f1=false;}else g.lineTo(X(q),Y(tz));});g.stroke();
@@ -2982,7 +2998,7 @@ window.__roadQualityCheck=(all=false)=&gt;{const pick=all?projects:[projects[act
     lab(0,K.red(0),&#x27;K &#x27;+f2(K.red(0),3),&#x27;#ff9b86&#x27;,!sUp);
     if(Number.isFinite(gz0))lab(0,gz0,&#x27;S &#x27;+f2(gz0,3),&#x27;#e6eaef&#x27;,sUp);
     [K.SL,K.SR].forEach(function(S,i){var sg=i?-1:1;if(S.day!=null&amp;&amp;Number.isFinite(S.dayZ)&amp;&amp;S.mode!==&#x27;denge&#x27;)lab(sg*S.day,S.dayZ,(S.mode===&#x27;kazı&#x27;?&#x27;yarma &#x27;:&#x27;dolgu &#x27;)+&#x27;1:&#x27;+S.n+&#x27; · &#x27;+f2(S.day,2)+&#x27; m&#x27;,S.mode===&#x27;kazı&#x27;?&#x27;#ff9a85&#x27;:&#x27;#7fd9a3&#x27;,S.mode!==&#x27;kazı&#x27;);
-      if(S.hend)lab(sg*(S.hend.d1+S.hend.d2)/2,S.hend.z,&#x27;hendek &#x27;+f2(S.hend.z,2),&#x27;#7fb0ff&#x27;,false);});
+      if(S.hend)lab(sg*S.hend.d2,S.hend.z,&#x27;hendek &#x27;+f2(S.hend.z,2),&#x27;#7fb0ff&#x27;,false);});
     g.font=&#x27;700 12px Arial,system-ui&#x27;;g.fillStyle=&#x27;#e6eaef&#x27;;g.fillText(&#x27;GERÇEK ENKESİT · &#x27;+(typeof kmLabel===&#x27;function&#x27;?kmLabel(a.s):f2(a.s,2)),padL,16);
     var A=all(out),kt=&#x27;Kazı &#x27;+f2(K.cut,2)+&#x27; m²  ·  &#x27;,ft=&#x27;Dolgu &#x27;+f2(K.fill,2)+&#x27; m²&#x27;;g.font=&#x27;600 11.5px Arial,system-ui&#x27;;
     var kx=nar?padL:w-padR-g.measureText(kt+ft).width,ky=nar?32:16;g.fillStyle=&#x27;#ff9a85&#x27;;g.fillText(kt,kx,ky);g.fillStyle=&#x27;#7fd9a3&#x27;;g.fillText(ft,kx+g.measureText(kt).width,ky);
@@ -3003,7 +3019,7 @@ window.__roadQualityCheck=(all=false)=&gt;{const pick=all?projects:[projects[act
         var sideP=function(S,sg){return S.prof.filter(function(p){return p[0]&gt;=S.outer-1e-9;}).map(function(p){return P3(sec,sg*p[0],p[1]);});};
         var cur={s:sec.s,L:sideP(K.SL,1),R:sideP(K.SR,-1),mL:K.SL.mode,mR:K.SR.mode};
         ucL.push(P3(sec,K.SL.day,K.SL.prof[K.SL.prof.length-1][1]));ucR.push(P3(sec,-K.SR.day,K.SR.prof[K.SR.prof.length-1][1]));
-        if(K.SL.hend)hL.push(P3(sec,(K.SL.hend.d1+K.SL.hend.d2)/2,K.SL.hend.z));if(K.SR.hend)hR.push(P3(sec,-(K.SR.hend.d1+K.SR.hend.d2)/2,K.SR.hend.z));
+        if(K.SL.hend)hL.push(P3(sec,K.SL.hend.d2,K.SL.hend.z));if(K.SR.hend)hR.push(P3(sec,-K.SR.hend.d2,K.SR.hend.z));
         var xs=K.breaks.slice().sort(function(a,b){return a-b;});poly(&#x27;YOL_ENKESIT&#x27;,xs.map(function(x){return P3(sec,x,K.top(x));}));
         if(prev&amp;&amp;sec.s-prev.s&lt;=step){[[&#x27;L&#x27;,&#x27;mL&#x27;],[&#x27;R&#x27;,&#x27;mR&#x27;]].forEach(function(k){var a=prev[k[0]],b=cur[k[0]];if(a.length&lt;2||b.length&lt;2)return;
             var lay=cur[k[1]]===&#x27;kazı&#x27;?&#x27;YOL_SEV_YARMA&#x27;:&#x27;YOL_SEV_DOLGU&#x27;;
@@ -3018,18 +3034,19 @@ window.__roadQualityCheck=(all=false)=&gt;{const pick=all?projects:[projects[act
         r={text:t,count:r.count+n};}
     }catch(err){console.error(&#x27;yol ek DXF&#x27;,err);}return r;};try{window.dpDXF=dpDXF;}catch(e){}}
 
-  function refresh(){var o=window.dpState&amp;&amp;dpState.result;if(!o)return;if(typeof dpLiveSync===&#x27;function&#x27;)dpLiveSync(o);if(typeof window.__rvReplot===&#x27;function&#x27;)window.__rvReplot();}
+  function refresh(){var o=(typeof dpState!==&#x27;undefined&#x27;&amp;&amp;dpState.result);if(!o)return;if(typeof dpLiveSync===&#x27;function&#x27;)dpLiveSync(o);if(typeof window.__rvReplot===&#x27;function&#x27;)window.__rvReplot();}
   // hendek ayarları (yarmada isteğe bağlı) — tarayıcıda hatırlanır
   (function(){var f=document.getElementById(&#x27;dpFill&#x27;);var lab=f&amp;&amp;f.closest(&#x27;label&#x27;);if(!lab||document.getElementById(&#x27;dpDitch&#x27;))return;
     var sv={};try{sv=JSON.parse(localStorage.getItem(HK)||&#x27;{}&#x27;);}catch(e){}
     var mk=function(html){var t=document.createElement(&#x27;template&#x27;);t.innerHTML=html.trim();return t.content.firstChild;};
-    var els=[mk(&#x27;&lt;label&gt;Hendek (yarmada)&lt;select id=&quot;dpDitch&quot;&gt;&lt;option value=&quot;0&quot;&gt;Yok&lt;/option&gt;&lt;option value=&quot;1&quot;&gt;Var&lt;/option&gt;&lt;/select&gt;&lt;/label&gt;&#x27;),
-      mk(&#x27;&lt;label&gt;Hendek derinliği (m)&lt;input id=&quot;dpDitchD&quot; type=&quot;number&quot; value=&quot;0.5&quot; min=&quot;0.2&quot; max=&quot;2&quot; step=&quot;0.05&quot;&gt;&lt;/label&gt;&#x27;),
-      mk(&#x27;&lt;label&gt;Hendek taban genişliği (m)&lt;input id=&quot;dpDitchB&quot; type=&quot;number&quot; value=&quot;0.5&quot; min=&quot;0&quot; max=&quot;3&quot; step=&quot;0.1&quot;&gt;&lt;/label&gt;&#x27;),
-      mk(&#x27;&lt;label&gt;Hendek iç şevi yatay/düşey (1:n)&lt;input id=&quot;dpDitchN&quot; type=&quot;number&quot; value=&quot;1&quot; min=&quot;0.25&quot; max=&quot;4&quot; step=&quot;0.25&quot;&gt;&lt;/label&gt;&#x27;)];
+    var els=[mk(&#x27;&lt;label&gt;Hendek (bordür dışı, tabanı formasyonda)&lt;select id=&quot;dpDitch&quot;&gt;&lt;option value=&quot;1&quot;&gt;Var&lt;/option&gt;&lt;option value=&quot;0&quot;&gt;Yok&lt;/option&gt;&lt;/select&gt;&lt;/label&gt;&#x27;),
+      mk(&#x27;&lt;label&gt;Hendek yatay genişliği (m)&lt;input id=&quot;dpDitchW&quot; type=&quot;number&quot; value=&quot;0.49&quot; min=&quot;0.1&quot; max=&quot;3&quot; step=&quot;0.01&quot;&gt;&lt;/label&gt;&#x27;),
+      mk(&#x27;&lt;label&gt;Palye her (m yükseklikte, 0 = yok)&lt;input id=&quot;dpBermH&quot; type=&quot;number&quot; value=&quot;7.5&quot; min=&quot;0&quot; max=&quot;30&quot; step=&quot;0.5&quot;&gt;&lt;/label&gt;&#x27;),
+      mk(&#x27;&lt;label&gt;Palye genişliği (m)&lt;input id=&quot;dpBermB&quot; type=&quot;number&quot; value=&quot;5&quot; min=&quot;0&quot; max=&quot;20&quot; step=&quot;0.5&quot;&gt;&lt;/label&gt;&#x27;),
+      mk(&#x27;&lt;label&gt;Tabaka taban genişlemesi (m)&lt;input id=&quot;dpLayerW&quot; type=&quot;number&quot; value=&quot;0.60&quot; min=&quot;0&quot; max=&quot;3&quot; step=&quot;0.05&quot;&gt;&lt;/label&gt;&#x27;)];
     var after=lab;els.forEach(function(e){after.after(e);after=e;});
-    var ids=[&#x27;dpDitch&#x27;,&#x27;dpDitchD&#x27;,&#x27;dpDitchB&#x27;,&#x27;dpDitchN&#x27;];
-    var dep=function(){var on=document.getElementById(&#x27;dpDitch&#x27;).value===&#x27;1&#x27;;ids.slice(1).forEach(function(k){document.getElementById(k).closest(&#x27;label&#x27;).style.opacity=on?1:.45;});};
+    var ids=[&#x27;dpDitch&#x27;,&#x27;dpDitchW&#x27;,&#x27;dpBermH&#x27;,&#x27;dpBermB&#x27;,&#x27;dpLayerW&#x27;];
+    var dep=function(){var on=document.getElementById(&#x27;dpDitch&#x27;).value===&#x27;1&#x27;;ids.slice(1,2).forEach(function(k){document.getElementById(k).closest(&#x27;label&#x27;).style.opacity=on?1:.45;});};
     ids.forEach(function(id){var e=document.getElementById(id);if(sv[id]!=null)e.value=sv[id];
       var h=function(){var o={};ids.forEach(function(k){o[k]=document.getElementById(k).value;});try{localStorage.setItem(HK,JSON.stringify(o));}catch(x){}dep();refresh();};
       e.addEventListener(&#x27;input&#x27;,h);if(e.tagName===&#x27;SELECT&#x27;)e.addEventListener(&#x27;change&#x27;,h);});
@@ -3043,15 +3060,127 @@ window.__roadQualityCheck=(all=false)=&gt;{const pick=all?projects:[projects[act
       var gz=K.G(o),tz=K.top(o),bz=K.bottom(o);tip.textContent=&#x27;Ofset &#x27;+f2(o,2)+&#x27; m · siyah &#x27;+f2(gz,3)+&#x27; · proje &#x27;+f2(tz,3)+(Number.isFinite(gz)&amp;&amp;Number.isFinite(bz)?&#x27; · &#x27;+(gz&gt;bz?&#x27;kazı &#x27;:&#x27;dolgu &#x27;)+f2(Math.abs(gz-bz),3)+&#x27; m&#x27;:&#x27;&#x27;);});
     document.querySelectorAll(&#x27;.liveHint&#x27;).forEach(function(hint){if(/yaklaşık|şematik/i.test(hint.textContent))hint.textContent=&#x27;Gerçek enkesit: siyah arazi yüklenen TIN / siyah enkesit ağından okunur (üçgen dışı tahmin yok). Kazı ve dolgu şevi, hendek ayarlardan alınır; alanlar kaplama altı (formasyon) ve şev çizgisine göre, hacim ortalama alan yöntemiyle hesaplanır. 3B DXF şevleri, hendeği ve şev uçlarını da içerir. Tip kesitle doğrulayın.&#x27;;});
     var b=document.createElement(&#x27;button&#x27;);b.type=&#x27;button&#x27;;b.className=&#x27;btn&#x27;;b.id=&#x27;dpVolCsv&#x27;;b.textContent=&#x27;Kesit kazı/dolgu tablosu CSV&#x27;;b.style.marginTop=&#x27;6px&#x27;;tip.after(b);
-    b.addEventListener(&#x27;click&#x27;,function(){var o=window.dpState&amp;&amp;dpState.result;if(!o)return;var A=all(o),L=[&#x27;KM;Kırmızı;Siyah;Kazı alanı m2;Dolgu alanı m2;Sol şev ucu m;Sağ şev ucu m;Kazı hacmi m3;Dolgu hacmi m3&#x27;],cc=0,ff=0;
+    b.addEventListener(&#x27;click&#x27;,function(){var o=(typeof dpState!==&#x27;undefined&#x27;&amp;&amp;dpState.result);if(!o)return;var A=all(o),L=[&#x27;KM;Kırmızı;Siyah;Kazı alanı m2;Dolgu alanı m2;Sol şev ucu m;Sağ şev ucu m;Kazı hacmi m3;Dolgu hacmi m3&#x27;],cc=0,ff=0;
       A.rows.forEach(function(r,i){if(!r)return;var vc=0,vf=0,p=A.rows[i-1];if(p&amp;&amp;p.ok&amp;&amp;r.ok){vc=(p.cut+r.cut)/2*(r.s-p.s);vf=(p.fill+r.fill)/2*(r.s-p.s);}cc+=vc;ff+=vf;
         L.push([typeof kmLabel===&#x27;function&#x27;?kmLabel(r.s):f2(r.s,2),f2(r.red,3),f2(r.black,3),f2(r.cut,3),f2(r.fill,3),f2(r.dl,2),f2(r.dr,2),f2(vc,2),f2(vf,2)].join(&#x27;;&#x27;).replace(/\./g,&#x27;,&#x27;));});
       L.push([&#x27;TOPLAM&#x27;,&#x27;&#x27;,&#x27;&#x27;,&#x27;&#x27;,&#x27;&#x27;,&#x27;&#x27;,&#x27;&#x27;,f2(cc,2),f2(ff,2)].join(&#x27;;&#x27;).replace(/\./g,&#x27;,&#x27;));
       var bl=new Blob([&#x27;﻿&#x27;+L.join(&#x27;\r\n&#x27;)],{type:&#x27;text/csv;charset=utf-8&#x27;}),u=URL.createObjectURL(bl),x=document.createElement(&#x27;a&#x27;);x.href=u;x.download=&#x27;yol_kesit_kazi_dolgu.csv&#x27;;document.body.appendChild(x);x.click();x.remove();setTimeout(function(){URL.revokeObjectURL(u);},20000);});
     [&#x27;dpCut&#x27;,&#x27;dpFill&#x27;].forEach(function(id){var e=document.getElementById(id);if(e)e.addEventListener(&#x27;input&#x27;,refresh);});
   }
-  window.__YK={section:section,rowSec:rowSec,all:all,ditch:ditch};
+  window.__YK={section:section,rowSec:rowSec,all:all,ditch:ditch,par:par,refresh:refresh};
   window.__yolGercekKesit=window.__YK;
+})();
+
+&lt;/script&gt;
+&lt;script data-ek=&quot;yol_tip_kesit_arayuz.js&quot;&gt;
+/* A-CAD Yol · arayüz eki: (1) tip kesiti mevcut projenin enkesitlerinden okur ve tasarım ayarlarına koyar,
+   (2) kesit/profil ekranının hemen altında önceki/sonraki kesit düğmeleri, (3) basit katman görünümü (tümü / tek tabaka). */
+(function(){
+  var $=function(id){return document.getElementById(id);};
+  var med=function(a){a=a.filter(Number.isFinite).sort(function(x,y){return x-y;});if(!a.length)return NaN;var m=a.length&gt;&gt;1;return a.length%2?a[m]:(a[m-1]+a[m])/2;};
+  var r2=function(v,n){var k=Math.pow(10,n==null?2:n);return Math.round(v*k)/k;};
+  var ip=function(P,x){if(!P||!P.length)return NaN;for(var i=1;i&lt;P.length;i++){var a=P[i-1],b=P[i];if(x&gt;=a[0]-1e-9&amp;&amp;x&lt;=b[0]+1e-9)return b[0]-a[0]&lt;1e-9?b[1]:a[1]+(b[1]-a[1])*(x-a[0])/(b[0]-a[0]);}return NaN;};
+
+  /* ---- 1) tip kesiti projeden oku ---- */
+  function derive(road){
+    var A={e:[],W:[],c:[],wc:[],hw:[],cut:[],fill:[],bH:[],bB:[],lw:[],cr:[],T:[]};
+    (road&amp;&amp;road.sections||[]).forEach(function(s){
+      var iv=s.intervals||[];if(iv.length!==1||!s.top||!s.formation)return;
+      var lo=iv[0][0],hi=iv[0][1],z0=ip(s.top,0),f0=ip(s.formation,0);if(Number.isFinite(z0)&amp;&amp;Number.isFinite(f0))A.T.push(z0-f0);
+      [[-1,lo],[1,hi]].forEach(function(sd){
+        var sg=sd[0],near=s.top.reduce(function(m,q){return Math.abs(q[0]-sd[1])&lt;Math.abs(m[0]-sd[1])?q:m;},s.top[0]),e=Math.abs(near[0]-sd[1])&lt;0.05?Math.abs(near[0]):Math.abs(sd[1]),eZ=ip(s.top,sg*e);if(!Number.isFinite(eZ))return;A.e.push(e);
+        if(Number.isFinite(z0)&amp;&amp;e&gt;1)A.cr.push((z0-eZ)/e);
+        var pts=s.top.filter(function(q){return sg*q[0]&gt;e+0.005;}).map(function(q){return [Math.abs(q[0])-e,q[1]];}).sort(function(a,b){return a[0]-b[0];});
+        if(pts.length&lt;4)return;
+        var inner=pts.filter(function(p){return p[0]&lt;0.2;});if(!inner.length)return;var c=Math.max.apply(null,inner.map(function(p){return p[1];}))-eZ;if(!(c&gt;0.05&amp;&amp;c&lt;0.4))return;
+        var k=-1;for(var i=0;i&lt;pts.length-1;i++){if(pts[i][0]&gt;0.5&amp;&amp;Math.abs(pts[i+1][0]-pts[i][0])&lt;0.01&amp;&amp;pts[i+1][1]&lt;pts[i][1]-0.05){k=i;break;}}
+        if(k&lt;0)return;var W=pts[k][0];A.c.push(c);A.W.push(W);
+        var a1=pts.find(function(p){return p[0]&gt;=0.14&amp;&amp;p[0]&lt;=0.2;}),b1=pts[k-1];if(a1&amp;&amp;b1&amp;&amp;b1[0]-a1[0]&gt;0.3)A.wc.push((a1[1]-b1[1])/(b1[0]-a1[0]));
+        var D=pts[k+2];if(!D)return;A.hw.push(D[0]-W);
+        var fz=ip(s.formation,sg*(e+D[0]));
+        var F=s.formation.filter(function(q){return sg*q[0]&gt;e+0.2&amp;&amp;sg*q[0]&lt;e+1.2;}).map(function(q){return Math.abs(q[0])-e;});if(F.length)A.lw.push(F[0]);
+        var E=pts[k+3];if(!E)return;var dz=E[1]-D[1],dd=E[0]-D[0];if(dd&lt;0.3||Math.abs(dz)&lt;0.05)return;
+        (dz&gt;0?A.cut:A.fill).push(dd/Math.abs(dz));
+        var B=pts[k+4];if(B&amp;&amp;Math.abs((B[1]-E[1])/(B[0]-E[0]))&lt;0.08&amp;&amp;B[0]-E[0]&gt;1){A.bB.push(B[0]-E[0]);A.bH.push(Math.abs(dz));}
+      });
+    });
+    var o={e:med(A.e),W:med(A.W),c:med(A.c),wc:med(A.wc),hw:med(A.hw),nCut:med(A.cut),nFill:med(A.fill),bH:med(A.bH),bB:med(A.bB),lw:(function(v){var M={};v.forEach(function(x){var k=Math.round(x*20)/20;M[k]=(M[k]||0)+1;});var best=NaN,bn=0;for(var k in M)if(M[k]&gt;bn){bn=M[k];best=+k;}return best;})(A.lw),cr:med(A.cr),T:med(A.T),n:A.W.length};
+    return o.n?o:null;
+  }
+  function setv(id,v){var e=$(id);if(!e||!Number.isFinite(v))return false;e.value=String(v);e.dispatchEvent(new Event(&#x27;input&#x27;,{bubbles:true}));return true;}
+  var info=null,auto=true;
+  function apply(silent){
+    var road=(typeof projects!==&#x27;undefined&#x27;&amp;&amp;typeof activeProject!==&#x27;undefined&#x27;)?projects[activeProject]:null;var d=derive(road);
+    if(!d){if(info&amp;&amp;!silent)info.textContent=&#x27;Bu yolun kaynak enkesitlerinden tip kesit okunamadı; ayarlar değiştirilmedi.&#x27;;return null;}
+    var s=[];
+    if(setv(&#x27;dpWalk&#x27;,r2(d.W,2)))s.push(&#x27;kaldırım &#x27;+r2(d.W,2)+&#x27; m&#x27;);
+    if(setv(&#x27;dpCurb&#x27;,r2(d.c*100,0)))s.push(&#x27;bordür &#x27;+r2(d.c*100,0)+&#x27; cm&#x27;);
+    if(Number.isFinite(d.wc)&amp;&amp;setv(&#x27;dpWalkCross&#x27;,r2(Math.max(0,d.wc)*100,1)))s.push(&#x27;kaldırım eğimi %&#x27;+r2(Math.max(0,d.wc)*100,1));
+    if(Number.isFinite(d.cr)&amp;&amp;setv(&#x27;dpCrown&#x27;,r2(d.cr*100,1)))s.push(&#x27;enine %&#x27;+r2(d.cr*100,1));
+    if(Number.isFinite(d.e)&amp;&amp;Number.isFinite(d.W)){var w=r2(2*(d.e+d.W),2);setv(&#x27;dpMinWidth&#x27;,r2(w-0.5,2));setv(&#x27;dpMaxWidth&#x27;,r2(w+0.5,2));setv(&#x27;dpWidth&#x27;,w);s.push(&#x27;toplam genişlik &#x27;+w+&#x27; m&#x27;);}
+    if(Number.isFinite(d.hw)){var dt=$(&#x27;dpDitch&#x27;);if(dt){dt.value=&#x27;1&#x27;;dt.dispatchEvent(new Event(&#x27;change&#x27;,{bubbles:true}));}setv(&#x27;dpDitchW&#x27;,r2(d.hw,2));s.push(&#x27;hendek &#x27;+r2(d.hw,2)+&#x27; m (tabanı formasyonda)&#x27;);}
+    if(setv(&#x27;dpCut&#x27;,r2(d.nCut,2)))s.push(&#x27;yarma 1:&#x27;+r2(d.nCut,2));
+    if(setv(&#x27;dpFill&#x27;,r2(d.nFill,2)))s.push(&#x27;dolgu 1:&#x27;+r2(d.nFill,2));
+    if(Number.isFinite(d.bH)&amp;&amp;Number.isFinite(d.bB)){setv(&#x27;dpBermH&#x27;,r2(d.bH,2));setv(&#x27;dpBermB&#x27;,r2(d.bB,2));s.push(&#x27;palye her &#x27;+r2(d.bH,2)+&#x27; m / &#x27;+r2(d.bB,2)+&#x27; m&#x27;);}
+    var lw5=Math.round(d.lw*20)/20;if(setv(&#x27;dpLayerW&#x27;,lw5))s.push(&#x27;tabaka taban genişlemesi &#x27;+lw5.toFixed(2)+&#x27; m&#x27;);
+    if(info)info.textContent=&#x27;Tip kesit projeden okundu (&#x27;+d.n+&#x27; kesit kenarı): &#x27;+s.join(&#x27; · &#x27;)+&#x27;. Kaplama toplamı kaynakta &#x27;+r2(d.T*100,0)+&#x27; cm.&#x27;;
+    return d;
+  }
+  (function(){
+    var form=document.querySelector(&#x27;#dpPanel .dpForm&#x27;);if(!form)return;
+    var bar=document.createElement(&#x27;div&#x27;);bar.style.cssText=&#x27;display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0&#x27;;
+    var b=document.createElement(&#x27;button&#x27;);b.type=&#x27;button&#x27;;b.className=&#x27;btn&#x27;;b.id=&#x27;dpTplBtn&#x27;;b.textContent=&#x27;📐 Tip kesiti projeden al&#x27;;b.style.flex=&#x27;0 0 auto&#x27;;
+    info=document.createElement(&#x27;span&#x27;);info.id=&#x27;dpTplInfo&#x27;;info.style.cssText=&#x27;font-size:12px;color:#c9d0d8;flex:1 1 260px&#x27;;
+    bar.appendChild(b);bar.appendChild(info);form.before(bar);
+    b.addEventListener(&#x27;click&#x27;,function(){auto=true;apply(false);});
+    form.addEventListener(&#x27;input&#x27;,function(e){if(e.isTrusted)auto=false;},true);
+    var tries=0,boot=function(){if(apply(true)||++tries&gt;25)return;setTimeout(boot,400);};setTimeout(boot,300);
+    var rs=$(&#x27;roadSelect&#x27;);if(rs)rs.addEventListener(&#x27;change&#x27;,function(){if(auto)setTimeout(function(){apply(true);},300);});
+  })();
+  window.__YKtip={derive:derive,apply:apply};
+
+  /* ---- 2) grafiğin hemen altında önceki / sonraki ---- */
+  var css=document.createElement(&#x27;style&#x27;);
+  css.textContent=&#x27;.ykNav{display:flex;gap:8px;align-items:center;margin:6px 0 4px}.ykNav button{flex:0 0 auto;min-width:96px;min-height:42px;border-radius:9px;border:1px solid #474c54;background:#2b3038;color:#e6eaef;font:700 14px Arial,system-ui;cursor:pointer}.ykNav button:active{background:#e09a50;color:#fff}.ykNav span{flex:1;text-align:center;font:700 14px Arial,system-ui;color:#e6eaef}.ykNav small{display:block;font-weight:400;color:#9aa5b3;font-size:11px}&#x27;
+   +&#x27;.ykChips{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 6px}.ykChips button{border-radius:999px;padding:6px 12px;border:1px solid #474c54;background:#22272e;color:#c9d0d8;font:600 12px Arial,system-ui;cursor:pointer}.ykChips button[aria-pressed=true]{background:#e09a50;border-color:#e09a50;color:#fff}&#x27;;
+  document.head.appendChild(css);
+  function navBar(after,prev,next,label){
+    var n=document.createElement(&#x27;div&#x27;);n.className=&#x27;ykNav&#x27;;n.innerHTML=&#x27;&lt;button type=&quot;button&quot;&gt;◀ Önceki&lt;/button&gt;&lt;span&gt;&lt;/span&gt;&lt;button type=&quot;button&quot;&gt;Sonraki ▶&lt;/button&gt;&#x27;;
+    after.after(n);var bs=n.querySelectorAll(&#x27;button&#x27;),sp=n.querySelector(&#x27;span&#x27;);
+    var up=function(){sp.innerHTML=label();};
+    bs[0].addEventListener(&#x27;click&#x27;,function(){prev();setTimeout(up,60);});bs[1].addEventListener(&#x27;click&#x27;,function(){next();setTimeout(up,60);});
+    up();return up;
+  }
+  var ups=[];
+  var rvLabel=function(){var k=$(&#x27;rvKm&#x27;),c=$(&#x27;rvKmCount&#x27;);return (k&amp;&amp;k.value||&#x27;—&#x27;)+&#x27;&lt;small&gt;&#x27;+(c?c.textContent:&#x27;&#x27;)+&#x27;&lt;/small&gt;&#x27;;};
+  var rvPrev=function(){var b=$(&#x27;rvPrev&#x27;);if(b)b.click();},rvNext=function(){var b=$(&#x27;rvNext&#x27;);if(b)b.click();};
+  if($(&#x27;rvCross&#x27;))ups.push(navBar($(&#x27;rvCross&#x27;),rvPrev,rvNext,rvLabel));
+  if($(&#x27;rvProfile&#x27;))ups.push(navBar($(&#x27;rvProfile&#x27;),rvPrev,rvNext,rvLabel));
+  var lv=$(&#x27;dpLiveCross&#x27;);
+  if(lv){var liveIdx=function(){try{return dpLiveIndex;}catch(e){return 0;}};
+    ups.push(navBar(lv,function(){if(typeof dpLiveSelect===&#x27;function&#x27;)dpLiveSelect(liveIdx()-1);},function(){if(typeof dpLiveSelect===&#x27;function&#x27;)dpLiveSelect(liveIdx()+1);},
+      function(){var o=(typeof dpState!==&#x27;undefined&#x27;&amp;&amp;dpState.result);if(!o||!o.sec||!o.sec.length)return &#x27;—&#x27;;var i=liveIdx(),a=o.sec[i];return (typeof kmLabel===&#x27;function&#x27;?kmLabel(a.s):a.s.toFixed(2))+&#x27;&lt;small&gt;&#x27;+(i+1)+&#x27; / &#x27;+o.sec.length+&#x27; kesit&lt;/small&gt;&#x27;;}));}
+  var refreshAll=function(){ups.forEach(function(f){try{f();}catch(e){}});};
+  [&#x27;rvKm&#x27;,&#x27;rvSlider&#x27;,&#x27;rvMode&#x27;,&#x27;dpLiveRange&#x27;,&#x27;dpLiveKm&#x27;,&#x27;roadSelect&#x27;].forEach(function(id){var e=$(id);if(e){e.addEventListener(&#x27;input&#x27;,function(){setTimeout(refreshAll,60);});e.addEventListener(&#x27;change&#x27;,function(){setTimeout(refreshAll,60);});}});
+  [&#x27;rvPrev&#x27;,&#x27;rvNext&#x27;].forEach(function(id){var e=$(id);if(e)e.addEventListener(&#x27;click&#x27;,function(){setTimeout(refreshAll,60);});});
+  var cnt=$(&#x27;rvKmCount&#x27;);if(cnt&amp;&amp;window.MutationObserver)new MutationObserver(refreshAll).observe(cnt,{childList:true,characterData:true,subtree:true});
+  setInterval(function(){if(!document.hidden)refreshAll();},1500);
+  document.addEventListener(&#x27;keydown&#x27;,function(e){if(e.target&amp;&amp;/INPUT|SELECT|TEXTAREA/.test(e.target.tagName))return;
+    if(e.key!==&#x27;ArrowLeft&#x27;&amp;&amp;e.key!==&#x27;ArrowRight&#x27;)return;var page=$(&#x27;rvCrossPage&#x27;),prof=$(&#x27;rvProfilePage&#x27;);
+    if((page&amp;&amp;!page.hidden)||(prof&amp;&amp;!prof.hidden)){e.preventDefault();(e.key===&#x27;ArrowLeft&#x27;?rvPrev:rvNext)();setTimeout(refreshAll,60);}});
+
+  /* ---- 3) basit katman görünümü ---- */
+  var strip=$(&#x27;rvQuickStrip&#x27;);
+  if(strip){
+    var all=document.createElement(&#x27;button&#x27;);all.type=&#x27;button&#x27;;all.id=&#x27;rvAllLayers&#x27;;all.textContent=&#x27;Tüm katmanlar&#x27;;strip.prepend(all);
+    var setAll=function(on){var boxes=[].slice.call(document.querySelectorAll(&#x27;#rvLayers [data-rv-layer]&#x27;));
+      boxes.forEach(function(b){var want=on?true:+b.dataset.rvLayer&lt;2;if(b.checked!==want){b.checked=want;b.dispatchEvent(new Event(&#x27;change&#x27;,{bubbles:true}));}});
+      all.setAttribute(&#x27;aria-pressed&#x27;,String(!!on));if(on)strip.querySelectorAll(&#x27;[data-rv-quick]&#x27;).forEach(function(x){x.setAttribute(&#x27;aria-pressed&#x27;,&#x27;false&#x27;);});};
+    all.addEventListener(&#x27;click&#x27;,function(){setAll(true);});
+    strip.addEventListener(&#x27;click&#x27;,function(e){if(e.target.closest(&#x27;[data-rv-quick]&#x27;))all.setAttribute(&#x27;aria-pressed&#x27;,&#x27;false&#x27;);});
+    var t=document.querySelector(&#x27;.rvQuickTitle&#x27;);if(t&amp;&amp;t.firstChild)t.firstChild.textContent=&#x27;GÖRÜNÜM · TÜMÜ YA DA TEK TABAKA &#x27;;
+    setTimeout(function(){setAll(true);},600);
+  }
 })();
 
 &lt;/script&gt;
