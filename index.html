@@ -15394,7 +15394,40 @@ ALIAS.AS='ALANSORGU';
 
 
 /* Alan Sorgula'da da kot işlemleri (üçgen model kotuna getir, istenilen kota getir, yükselt/indir) */
-{ const _aq = acadAreaQueryShow; acadAreaQueryShow = function (e, p) { const r = _aq(e, p); try { ALAN_AKTIF = e && e.id; const bx_ = $('arzBox'); if (bx_ && !bx_._akt) { bx_._akt = 1; new MutationObserver(() => { if (bx_.hidden && ALAN_AKTIF != null) { ALAN_AKTIF = null; draw(); } }).observe(bx_, { attributes: true, attributeFilter: ['hidden'] }); } draw(); } catch (x) {} try { const bx = $('arzBox'); if (e && e.t === 'pline' && e.closed && bx && !bx.hidden && !document.getElementById('alanKotWrap')) alanKotPanel(e); } catch (x) { console.error(x); } return r; }; }
+/* Alan Sorgula paneli: çalışma ekranını kapatmaz. Masaüstünde sağa yaslanır, telefonda alttan kısa sayfa; küçültülebilir.
+   Sorgulanan alan, panelin kapatmadığı bölgede ortalanır (gerekirse uzaklaşılır) ve vurgulanır. */
+function arzAlanOdak(e) {
+  try { const b = $('arzBox'); if (!e || !e.pts || !e.pts.length) return; const r = cv.getBoundingClientRect(), W = cv.clientWidth, H = cv.clientHeight; if (!(W > 0 && H > 0)) return;
+    let vx0 = 0, vy0 = 0, vx1 = W, vy1 = H;
+    if (b && !b.hidden) { const q = b.getBoundingClientRect(); const L = q.left - r.left, T = q.top - r.top, R = q.right - r.left, B = q.bottom - r.top;
+      if (R > 0 && L < W && B > 0 && T < H) { const sol = L - 0, sag = W - R, ust = T - 0, alt = H - B, best = Math.max(sol, sag, ust, alt);
+        if (best === sol) vx1 = Math.max(0, L - 8); else if (best === sag) vx0 = Math.min(W, R + 8); else if (best === ust) vy1 = Math.max(0, T - 8); else vy0 = Math.min(H, B + 8); } }
+    const vw = vx1 - vx0, vh = vy1 - vy0; if (vw < 60 || vh < 50) return;
+    let mnx = Infinity, mny = Infinity, mxx = -Infinity, mxy = -Infinity; for (const q of e.pts) { mnx = Math.min(mnx, q[0]); mxx = Math.max(mxx, q[0]); mny = Math.min(mny, q[1]); mxy = Math.max(mxy, q[1]); }
+    const sx = x => (x - V.cx) * V.s + W / 2, sy = y => (V.cy - y) * V.s + H / 2, m = 14;
+    const icinde = sx(mnx) >= vx0 + m && sx(mxx) <= vx1 - m && sy(mxy) >= vy0 + m && sy(mny) <= vy1 - m;
+    if (icinde) { draw(); return; }
+    const aw = Math.max(1e-6, mxx - mnx), ah = Math.max(1e-6, mxy - mny), sMax = Math.min((vw * .78) / aw, (vh * .78) / ah);
+    if (V.s > sMax) V.s = sMax;
+    const ccx = (mnx + mxx) / 2, ccy = (mny + mxy) / 2, tx = (vx0 + vx1) / 2, ty = (vy0 + vy1) / 2;
+    V.cx = ccx - (tx - W / 2) / V.s; V.cy = ccy + (ty - H / 2) / V.s; draw();
+  } catch (x) { console.error(x); }
+}
+function arzDock(e) {
+  const b = $('arzBox'); if (!b || b.hidden) return; const set = (k, v) => b.style.setProperty(k, v, 'important');
+  const vw = document.documentElement.clientWidth || innerWidth, vh = window.visualViewport?.height || innerHeight, mob = vw < 760, r = cv.getBoundingClientRect();
+  if (!mob) { const w = Math.round(Math.min(380, Math.max(300, vw * .27))), top = Math.max(8, Math.min(r.top, vh - 300)); set('left', 'auto'); set('right', '12px'); set('transform', 'none'); set('width', w + 'px'); set('max-width', w + 'px'); set('top', top + 'px'); set('bottom', 'auto'); set('max-height', Math.max(240, vh - top - 12) + 'px'); }
+  else { set('left', '8px'); set('right', 'auto'); set('transform', 'none'); set('width', (vw - 16) + 'px'); set('max-width', (vw - 16) + 'px'); set('overflow-x', 'hidden'); b.querySelectorAll('table').forEach(t => { t.style.width = '100%'; t.style.fontSize = '12px'; t.style.tableLayout = 'fixed'; }); set('top', 'auto'); set('bottom', 'max(8px,env(safe-area-inset-bottom))'); set('max-height', b.classList.contains('arz-mini') ? '64px' : '44dvh'); }
+  set('border-radius', '14px'); set('box-shadow', '0 14px 36px rgba(0,0,0,.30)'); set('border-width', '1px');
+  if (b.classList.contains('arz-mini')) { set('max-height', '64px'); set('overflow', 'hidden'); } else set('overflow-y', 'auto');
+  if (!b.querySelector('.arzMinBtn')) { const k = [...b.querySelectorAll('button')].find(x => /Kapat/.test(x.textContent)); const m = document.createElement('button'); m.type = 'button'; m.className = 'arzMinBtn'; m.title = 'Paneli küçült / aç';
+    m.textContent = b.classList.contains('arz-mini') ? '▴ Aç' : '▾ Küçült'; m.style.cssText = 'margin-right:6px;padding:4px 10px;border-radius:8px;font-weight:700';
+    m.onclick = ev => { ev.stopPropagation(); b.classList.toggle('arz-mini'); m.textContent = b.classList.contains('arz-mini') ? '▴ Aç' : '▾ Küçült'; arzDock(e); };
+    if (k && k.parentNode) k.parentNode.insertBefore(m, k); else b.prepend(m); }
+  if (!mob && r.bottom < 80 || r.top > vh - 80) { try { cv.scrollIntoView({ block: 'nearest' }); } catch (x) {} }
+  requestAnimationFrame(() => arzAlanOdak(e));
+}
+{ const _aq = acadAreaQueryShow; acadAreaQueryShow = function (e, p) { const r = _aq(e, p); try { ALAN_AKTIF = e && e.id; arzDock(e); const bx_ = $('arzBox'); if (bx_ && !bx_._akt) { bx_._akt = 1; new MutationObserver(() => { if (bx_.hidden && ALAN_AKTIF != null) { ALAN_AKTIF = null; draw(); } }).observe(bx_, { attributes: true, attributeFilter: ['hidden'] }); } draw(); } catch (x) {} try { const bx = $('arzBox'); if (e && e.t === 'pline' && e.closed && bx && !bx.hidden && !document.getElementById('alanKotWrap')) alanKotPanel(e); } catch (x) { console.error(x); } return r; }; }
 function xform(name, copy) { cmd = { name, prev(g, X_, Y_, D) { if (!this.b || !hover) return; const d = [hover[0] - this.b[0], hover[1] - this.b[1]]; ghost(q => [q[0] + d[0], q[1] + d[1]], D); }, pt(p) { if (!this.b) { this.b = p; last = p; rub = true; prompt_(`${name}: hedef nokta göster ya da @ΔY,ΔX / @mesafe<semt yaz${copy ? " (birden çok kopya, Esc bitir)" : ""}`); return; }
     const d = [p[0] - this.b[0], p[1] - this.b[1]], f = q => [q[0] + d[0], q[1] + d[1]]; snap0();
     if (copy) { const nw = selEnts().map(e => { const c = clone(e); xf(c, f); return add(c); }); say(`${nw.length} nesne kopyalandı (ΔY ${fmt(d[0])} ΔX ${fmt(d[1])})`); IDX = null; persist(); draw(); }
