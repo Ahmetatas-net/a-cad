@@ -14343,7 +14343,7 @@ function draw() { liveTick(); { const r = cv.getBoundingClientRect(); if (r.widt
 function ustler(D, W, H) {
   // lastik çizgi
   if (rub && last && hover) { cx.strokeStyle = "#ffd800"; cx.lineWidth = 1 * D; cx.setLineDash([4 * D, 4 * D]); cx.beginPath(); cx.moveTo(X(last[0]), Y(last[1])); cx.lineTo(X(hover[0]), Y(hover[1])); cx.stroke(); cx.setLineDash([]); }
-  drawAnn(D); if (cmd && cmd.prev) cmd.prev(cx, X, Y, D); if (cmd && cmd.live && hover) cmd.live(cx, X, Y, D);
+  drawAnn(D); try { araCiz(D); } catch (e) {} if (cmd && cmd.prev) cmd.prev(cx, X, Y, D); if (cmd && cmd.live && hover) cmd.live(cx, X, Y, D);
   if (winBox) { const [a, b] = winBox; cx.strokeStyle = b[0] >= a[0] ? "#36c3ff" : "#40e040"; cx.fillStyle = b[0] >= a[0] ? "rgba(54,195,255,.12)" : "rgba(64,224,64,.12)"; cx.lineWidth = 1 * D; if (b[0] < a[0]) cx.setLineDash([5 * D, 4 * D]); cx.fillRect(a[0] * D, a[1] * D, (b[0] - a[0]) * D, (b[1] - a[1]) * D); cx.strokeRect(a[0] * D, a[1] * D, (b[0] - a[0]) * D, (b[1] - a[1]) * D); cx.setLineDash([]); }
   try { if (window.BGI && BGI.drawVec) BGI.drawVec(cx, X, Y, D); } catch (e) {}
   drawGps(D);
@@ -15570,6 +15570,60 @@ CMDS.ALANSORGU=()=>{
  prompt_('Alan Sorgula: alanın içine dokun; özet, koordinatlar ve Excel hazır.');
 };
 ALIAS.AS='ALANSORGU';
+/* ---------- ARA: ada/parsel, nokta adı, yazı (isim), alan adı — Türkçe harf duyarsız; bulunanı yakınlaştırır ve belirgin gösterir ---------- */
+let ARA_HL = null, ARA_SON = [], ARA_T = 0;
+const araSade = s => String(s == null ? "" : s).replace(/İ/g, "i").replace(/I/g, "ı").toLocaleLowerCase("tr").replace(/ı/g, "i").replace(/ş/g, "s").replace(/ğ/g, "g").replace(/ü/g, "u").replace(/ö/g, "o").replace(/ç/g, "c").replace(/\s*\/\s*/g, "/").replace(/\s+/g, " ").trim();
+function araKapsa(e) { const p = e && e.pts && e.pts[0]; if (!p) return null; let best = null, ba = Infinity;
+  for (const o of ents) { if (o.t !== "pline" || !o.closed || !o.pts || o.pts.length < 3) continue; const b = ebb(o); if (b && (p[0] < b[0] || p[0] > b[2] || p[1] < b[1] || p[1] > b[3])) continue; if (!inPolyC(o.pts, p[0], p[1])) continue; const a = Math.abs(window.ACAD_AREA_EDIT.area(o.pts)); if (a < ba) { ba = a; best = o; } } return best; }
+function araBul(q, kapaliDa) { const qs = araSade(q); if (!qs) return []; const R = [], isAP = /^\d{1,6}\/\d{1,6}$/.test(qs), sayi = /^\d+$/.test(qs);
+  const sc = v => { const s = araSade(v); if (!s) return -1; if (s === qs) return 0; if (isAP) return -1; if (s.startsWith(qs) && !sayi) return 1; if (s.split(/[\s/,.;:()_-]+/).includes(qs)) return 2; if (sayi) return s.startsWith(qs) ? 3 : -1; if (s.includes(qs)) return 3; return -1; };
+  for (const e of ents) { const L = lays[e.lay], kapali = !L || L.on === false; if (kapali && !kapaliDa) continue; let v = null, tur = null;
+    if (e.t === "point") { v = e.n; tur = "Nokta"; } else if (e.t === "text") { v = e.s; tur = /^\s*\d{1,6}\s*\/\s*\d{1,6}\s*$/.test(String(e.s)) ? "Parsel" : "Yazı"; } else if (e.t === "pline" && e.closed && e.areaName) { v = e.areaName; tur = "Alan"; }
+    if (v == null || v === "") continue; const s = sc(v); if (s < 0) continue; R.push({ e, s, tur, v: String(v).trim(), lay: e.lay, kapali }); if (R.length > 5000) break; }
+  /* ada ve parsel numarası ayrı yazılmışsa (ör. büyük "100", altında "1"): aynı kapalı alanda ikisi birden → Parsel 100/1 */
+  if (isAP && !R.some(r => r.tur === "Parsel" && r.s === 0)) { const [ada, no] = qs.split("/"); const tx = ents.filter(e => e.t === "text" && (kapaliDa || lays[e.lay]?.on !== false));
+    for (const t of tx) { if (araSade(t.s) !== no) continue; const P = araKapsa(t); if (!P) continue; const b = ebb(P); if (tx.some(u => u !== t && araSade(u.s) === ada && (!b || (u.pts[0][0] >= b[0] && u.pts[0][0] <= b[2] && u.pts[0][1] >= b[1] && u.pts[0][1] <= b[3])) && inPolyC(P.pts, u.pts[0][0], u.pts[0][1]))) R.push({ e: t, poly: P, s: 0, tur: "Parsel", v: ada + "/" + no, lay: P.lay, kapali: false }); } }
+  const sira = { Parsel: 0, Nokta: 1, Alan: 2, "Yazı": 3 }; R.sort((a, b) => a.s - b.s || sira[a.tur] - sira[b.tur] || a.v.localeCompare(b.v, "tr", { numeric: true })); return R; }
+function araGit(r) { if (!r) return; let poly = r.poly || null; if (!poly && (r.tur === "Parsel" || r.tur === "Alan")) poly = r.e.t === "pline" ? r.e : araKapsa(r.e); r.poly = poly;
+  const pts = poly ? poly.pts : (r.e.t === "circle" ? [[r.e.c[0] - r.e.r, r.e.c[1] - r.e.r], [r.e.c[0] + r.e.r, r.e.c[1] + r.e.r]] : r.e.pts || []); if (!pts.length) return;
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const q of pts) { x0 = Math.min(x0, q[0]); x1 = Math.max(x1, q[0]); y0 = Math.min(y0, q[1]); y1 = Math.max(y1, q[1]); }
+  const W = cv.clientWidth || 800, H = cv.clientHeight || 600, box = $("araBox"); let ux = 0, uy = 0, uw = W, uh = H;
+  if (box && !box.hidden) { const a = cv.getBoundingClientRect(), b = box.getBoundingClientRect(); if (b.width > W * 0.6) { uy = Math.max(0, b.bottom - a.top); uh = H - uy; } else { uw = Math.max(80, b.left - a.left); } }
+  const dx = Math.max(x1 - x0, poly ? 2 : 25), dy = Math.max(y1 - y0, poly ? 2 : 25); V.s = Math.min(uw * 0.62 / dx, uh * 0.62 / dy); const cxp = ux + uw / 2, cyp = uy + uh / 2;
+  V.cx = (x0 + x1) / 2 - (cxp - W / 2) / V.s; V.cy = (y0 + y1) / 2 + (cyp - H / 2) / V.s;
+  if (!poly && r.e.t === "text" && r.ctx === undefined) { r.ctx = araKapsa(r.e); const n_ = r.ctx && noOf(r.ctx.pts); r.ctxAd = n_ ? n_.ada + "/" + n_.no : (r.ctx && r.ctx.areaName) || ""; } /* yazı (isim) bulunduysa içinde olduğu parsel de gösterilir */
+  ARA_HL = { r, t0: performance.now() }; sel.clear(); sel.add((poly || r.e).id);
+  say(`${r.tur}: ${r.v}${r.kapali ? " (kapalı tabakada: " + r.lay + ")" : ""} · tabaka ${(poly || r.e).lay}${r.ctxAd ? " · bulunduğu parsel " + r.ctxAd : ""}`); const anim = () => { draw(); if (ARA_HL && performance.now() - ARA_HL.t0 < 2600) requestAnimationFrame(anim); }; anim(); }
+function araCiz(D) { if (!ARA_HL) return; const r = ARA_HL.r, t = (performance.now() - ARA_HL.t0) / 1000, pul = t < 2.6 ? (Math.sin(t * 7) + 1) / 2 : 0.5, C = "#ff2d95";
+  cx.save(); cx.shadowColor = C; cx.shadowBlur = 12 * D;
+  if (!r.poly && r.ctx) { const P = r.ctx.pts; cx.save(); cx.shadowBlur = 0; cx.setLineDash([8 * D, 5 * D]); cx.beginPath(); P.forEach((q, i) => i ? cx.lineTo(X(q[0]), Y(q[1])) : cx.moveTo(X(q[0]), Y(q[1]))); cx.closePath(); cx.fillStyle = "rgba(255,45,149,.08)"; cx.fill(); cx.strokeStyle = C; cx.lineWidth = 2 * D; cx.stroke(); cx.restore(); }
+  if (r.poly) { const P = r.poly.pts; cx.beginPath(); P.forEach((q, i) => i ? cx.lineTo(X(q[0]), Y(q[1])) : cx.moveTo(X(q[0]), Y(q[1]))); cx.closePath(); cx.fillStyle = `rgba(255,45,149,${0.16 + 0.14 * pul})`; cx.fill(); cx.strokeStyle = C; cx.lineWidth = (3 + 2 * pul) * D; cx.stroke(); }
+  const p = r.e.t === "circle" ? r.e.c : (r.e.pts && r.e.pts[0]); if (p && (!r.poly || r.e.t !== "pline")) { const x = X(p[0]), y = Y(p[1]), rr = (12 + 10 * pul) * D; cx.strokeStyle = C; cx.lineWidth = 3 * D; cx.beginPath(); cx.arc(x, y, rr, 0, 7); cx.stroke(); cx.lineWidth = 1.5 * D; cx.beginPath(); cx.moveTo(x - rr - 8 * D, y); cx.lineTo(x - rr + 6 * D, y); cx.moveTo(x + rr - 6 * D, y); cx.lineTo(x + rr + 8 * D, y); cx.moveTo(x, y - rr - 8 * D); cx.lineTo(x, y - rr + 6 * D); cx.moveTo(x, y + rr - 6 * D); cx.lineTo(x, y + rr + 8 * D); cx.stroke();
+    cx.shadowBlur = 0; const lb = `${r.tur}: ${r.v}`; cx.font = `bold ${12 * D}px Arial`; const w = cx.measureText(lb).width + 10 * D; cx.fillStyle = C; cx.fillRect(x + rr + 6 * D, y - rr - 20 * D, w, 17 * D); cx.fillStyle = "#fff"; cx.textAlign = "left"; cx.textBaseline = "middle"; cx.fillText(lb, x + rr + 11 * D, y - rr - 11.5 * D); }
+  cx.restore(); }
+function araKapat() { const b = $("araBox"); if (b) b.hidden = true; ARA_HL = null; draw(); }
+CMDS.ARA = () => { let b = $("araBox"); const host = cv.parentElement || document.body;
+  if (!b) { b = document.createElement("div"); b.id = "araBox"; b.setAttribute("role", "search");
+    b.style.cssText = "position:absolute;top:8px;right:8px;z-index:30;width:min(370px,calc(100% - 16px));max-height:min(62%,520px);display:flex;flex-direction:column;background:rgba(18,24,32,.97);color:#e9eef5;border:1px solid #34404f;border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.45);font:13px system-ui,Arial;overflow:hidden";
+    b.innerHTML = `<div style="display:flex;gap:6px;align-items:center;padding:8px 8px 6px"><span style="font-size:16px">🔎</span><input id="araQ" type="search" autocomplete="off" placeholder="Ara: 100/1 · 1000 · Ahmet · nokta adı" style="flex:1;min-width:0;padding:8px 10px;border-radius:8px;border:1px solid #445266;background:#0e141b;color:#fff;font-size:15px"><button type="button" id="araX" title="Kapat (Esc)" style="padding:6px 10px;border-radius:8px;border:1px solid #445266;background:#1b2430;color:#fff">✕</button></div>
+      <div id="araF" style="display:flex;gap:4px;flex-wrap:wrap;padding:0 8px 6px"></div><div id="araN" style="padding:0 10px 4px;color:#9fb0c3;font-size:12px"></div><div id="araL" style="overflow:auto;padding:0 6px 8px"></div>`;
+    if (getComputedStyle(host).position === "static") host.style.position = "relative"; host.appendChild(b);
+    const F = { tur: "Tümü", kapali: false }; const chips = ["Tümü", "Parsel", "Nokta", "Yazı", "Alan"];
+    const fr = () => { $("araF").innerHTML = chips.map(c => `<button type="button" data-t="${c}" style="padding:3px 9px;border-radius:12px;border:1px solid ${F.tur === c ? "#ff2d95" : "#445266"};background:${F.tur === c ? "#ff2d95" : "transparent"};color:#fff;font-size:12px">${c}</button>`).join("") + `<label style="margin-left:auto;display:inline-flex;gap:4px;align-items:center;font-size:12px;color:#9fb0c3;white-space:nowrap;width:auto"><input type="checkbox" id="araK" style="width:auto;margin:0" ${F.kapali ? "checked" : ""}>Kapalıda da ara</label>`; };
+    const liste = () => { const q = $("araQ").value; ARA_SON = araBul(q, F.kapali).filter(r => F.tur === "Tümü" || r.tur === F.tur); const N = ARA_SON.length;
+      $("araN").textContent = q.trim() ? (N ? `${N} sonuç${N > 200 ? " · ilk 200 gösteriliyor" : ""} · Enter: ilk sonuca git` : (() => { if (F.kapali) return "Sonuç yok. Yazımı ya da filtreyi kontrol et."; const k = araBul(q, true).filter(r => r.kapali && (F.tur === "Tümü" || r.tur === F.tur)).length; return k ? `Açık tabakalarda sonuç yok; kapalı tabakalarda ${k} sonuç var. "Kapalıda da ara" kutusunu işaretle.` : "Sonuç yok. Yazımı ya da filtreyi kontrol et."; })()) : "Ada/parsel (100/1), nokta adı (1000), yazı veya isim (Ahmet) yaz.";
+      const ik = { Parsel: "▱", Nokta: "•", "Yazı": "T", Alan: "▦" }; const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+      $("araL").innerHTML = ARA_SON.slice(0, 200).map((r, i) => `<button type="button" data-i="${i}" style="display:flex;gap:8px;align-items:center;width:100%;text-align:left;padding:7px 8px;margin:2px 0;border-radius:8px;border:1px solid #2b3644;background:#16202b;color:#fff"><span style="width:18px;text-align:center;color:#ff7cc0">${ik[r.tur]}</span><span style="flex:1;min-width:0"><b>${esc(r.tur === "Parsel" ? "Parsel " + r.v : r.v)}</b><br><small style="color:#9fb0c3">${r.tur} · ${esc(r.lay)}${r.kapali ? " · kapalı tabaka" : ""}${r.s === 0 ? " · tam eşleşme" : ""}</small></span></button>`).join(""); };
+    fr(); b.addEventListener("click", ev => { const t = ev.target.closest("[data-t]"); if (t) { F.tur = t.dataset.t; fr(); liste(); return; } const it = ev.target.closest("[data-i]"); if (it) { araGit(ARA_SON[+it.dataset.i]); [...$("araL").children].forEach(c => c.style.borderColor = c === it ? "#ff2d95" : "#2b3644"); } if (ev.target.id === "araX") araKapat(); });
+    b.addEventListener("change", ev => { if (ev.target.id === "araK") { F.kapali = ev.target.checked; liste(); } });
+    $("araQ").addEventListener("input", () => { clearTimeout(ARA_T); ARA_T = setTimeout(liste, 140); });
+    $("araQ").addEventListener("keydown", ev => { ev.stopPropagation(); if (ev.key === "Enter") { ev.preventDefault(); clearTimeout(ARA_T); liste(); if (ARA_SON.length) araGit(ARA_SON[0]); } else if (ev.key === "Escape") araKapat(); });
+    b.addEventListener("pointerdown", ev => ev.stopPropagation()); b.addEventListener("wheel", ev => ev.stopPropagation(), { passive: true }); liste(); }
+  b.hidden = false; setTimeout(() => { const q = $("araQ"); q.focus(); q.select(); }, 30); };
+Object.assign(ALIAS, { ARA: "ARA", BUL: "ARA", FIND: "ARA" });
+document.addEventListener("keydown", ev => { if ((ev.ctrlKey || ev.metaKey) && !ev.altKey && ev.key && ev.key.toLowerCase() === "f") { const v = $("v-cad"); if (v && !v.hidden) { ev.preventDefault(); CMDS.ARA(); } } });
+setTimeout(() => { const nav = $("cadNav"); if (nav && !$("cadAraBtn")) { const bt = document.createElement("button"); bt.type = "button"; bt.id = "cadAraBtn"; bt.textContent = "🔎 Ara"; bt.title = "Ada/parsel, nokta adı, yazı ve isim ara (Ctrl+F)"; bt.style.cssText = "font-weight:700"; bt.addEventListener("click", ev => { ev.stopPropagation(); CMDS.ARA(); }, true); nav.insertBefore(bt, nav.firstChild); } }, 0);
+
 
 
 /* Alan Sorgula'da da kot işlemleri (üçgen model kotuna getir, istenilen kota getir, yükselt/indir) */
