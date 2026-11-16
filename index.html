@@ -14150,7 +14150,7 @@ function draw() { liveTick(); { const r = cv.getBoundingClientRect(); if (r.widt
   for(const e of ents){if(e.t!=='pline'||!e.closed||e.pts?.length<3||!lays[e.lay]?.on||!(e.areaHatch||/^ALAN_CEVIR(?:$|_)/i.test(e.lay)))continue;
     const b=ebb(e);if(b&&(b[2]<vx0||b[0]>vx1||b[3]<vy0||b[1]>vy1))continue;
     // When editing the same polygon, the moving geometry gets the visible preview instead.
-    if(AREA_EDIT_SESSION?.id===e.id&&cmd?.name==='Alan Düzelt'&&cmd.preview?.parts?.length)continue;
+    if(AREA_EDIT_SESSION?.id===e.id&&cmd?.name==='Alan Düzelt'&&(cmd.preview?.parts?.length||cmd._liveOn))continue;
     const act_=AREA_EDIT_SESSION&&AREA_EDIT_SESSION.second===e.id?'second':(sel.has(e.id)||AREA_EDIT_SESSION?.id===e.id||ALAN_AKTIF===e.id?'first':null);
     ALAN_VIS.fill(cx,X,Y,D,e.pts,{active:act_,stroke:!!act_?true:false,reviewRequired:alanKaynakGuncelMi(e)===false||e.areaQuality==='review-required'||(e.areaInferredBridges||[]).some(b=>b.metres>20)});acadAreaLabels.push(e);
   }
@@ -14511,6 +14511,7 @@ function yolAlanGoster(pre){
     const b=$('arzBox');if(b)b.hidden=true;
     draw();prompt_('Akıllı Alan Çevir · 1/2: Birinci sınır çizgisine dokun');say('Birinci çizgiyi seç; sonra ikinci çizgiyi seç.');};
   $('yolAlanVazgec').onclick=()=>{const b=$('arzBox');if(b)b.hidden=true;if(cmd&&cmd.name==='Alan Çevir'){cmd.preview=null;draw();}};
+  {const ia=$('alanKayitAdi');if(ia){ia.addEventListener('keydown',ev=>{if(ev.key==='Enter'){ev.preventDefault();$('yolAlanKaydet').click();}});requestAnimationFrame(()=>{try{ia.focus({preventScroll:true});}catch(x){}});}}
   $('yolAlanKaydet').onclick=()=>{
     if(!cmd||cmd.name!=='Alan Çevir'||cmd.preview!==pre)return say('Önizleme yenilenmiş. Yeniden kontrol et.',true);
     const check=window.ACAD_ROAD_AREA.validate(pre.pts,{});if(check)return say('Alan kaydedilmedi: '+check,true);
@@ -15165,7 +15166,17 @@ function areaEditorOpen(initial=null,preferredAction='vertex',quickDraw=false){
      const e=polygonAt(p);if(!e){status('Bu konumda kapalı alan bulunamadı.',true);return;}const startCut=s.mode==='area-pick-for-cut';panel.classList.remove('ae-picking');panel.classList.remove('ae-collapsed');$a('aeCollapse').textContent='− Küçült';$a('aeCollapse').setAttribute('aria-expanded','true');s.id=e.id;s.second=null;s.cutPts=[];discard();render();const two_=['union','difference','intersection'].includes($a('aeAction').value);s.mode=startCut?'cut':two_?'second':'pick';if(startCut||two_)panel.classList.add('ae-picking');status(startCut?'Alan seçildi. Kesme çizgisinin ilk noktasını göster.':two_?'Alan seçildi. Şimdi ikinci alanın içine dokun.':'Alan seçildi. İşlemi seçip Önizle.');sel.clear();sel.add(e.id);if(!startCut&&!two_&&$a('aeAction').value==='equal')preview();draw();
    },
    prev(g,X_,Y_,D){const pr=this.preview;
-     if(!pr?.parts?.length){const e=current();if(isClosed(e))ALAN_VIS.fill(g,X_,Y_,D,e.pts,{active:'first'});}
+     // canlı bölme: kesme çizgisi çizilirken parçalar ve m² anında gösterilir (kaydetmez)
+     const live=(()=>{if(pr?.parts?.length)return null;const e=current();if(!isClosed(e))return null;let a=null,b=null;
+       if(this.cutDrag){a=this.cutDrag.start;b=this.cutDrag.current;}else if(s.mode==='cut'&&s.cutPts.length===1&&hover){a=s.cutPts[0];b=hover;}
+       if(!a||!b||Math.hypot(b[0]-a[0],b[1]-a[1])<1e-6)return null;
+       const key=a[0]+','+a[1]+'|'+b[0].toFixed(3)+','+b[1].toFixed(3),now=performance.now();
+       if(this._lk===key)return this._lr;if(e.pts.length>3000&&now-(this._lt||0)<150)return this._lr;
+       this._lt=now;this._lk=key;try{const r=E.cutLine(e.pts,a,b);this._lr=r&&r.parts&&r.parts.length>1?r:null;}catch(x){this._lr=null;}return this._lr;})();
+     this._liveOn=!!live;
+     if(live){for(const P of live.parts)ALAN_VIS.paint(g,X_,Y_,D,P,{preview:true,area:E.area(P)});
+       const t='Canlı bölme: '+live.parts.map((P,i)=>(i+1)+'. '+E.area(P).toFixed(2)+' m²').join(' · ')+' — bırak / ikinci noktaya dokun';if($a('aeStatus').textContent!==t)$a('aeStatus').textContent=t;$a('aeLiveArea').textContent=live.parts.map(P=>E.area(P).toLocaleString('tr-TR',{maximumFractionDigits:2})).join(' + ')+' m²';}
+     else if(!pr?.parts?.length){const e=current();if(isClosed(e))ALAN_VIS.fill(g,X_,Y_,D,e.pts,{active:'first'});}
      else for(const P of pr.parts){ALAN_VIS.paint(g,X_,Y_,D,P,{preview:true,area:E.area(P)});}
      const pts=this.cutDrag?[this.cutDrag.start,this.cutDrag.current]:s.cutPts;if(pts.length){g.save();g.strokeStyle='#fc982e';g.lineWidth=3*D;g.setLineDash([8*D,5*D]);g.beginPath();g.moveTo(X_(pts[0][0]),Y_(pts[0][1]));const q=pts[1]||(s.mode==='cut'?hover:null);
        if(q)g.lineTo(X_(q[0]),Y_(q[1]));g.stroke();g.fillStyle='#ffe19a';for(const p of pts){g.beginPath();g.arc(X_(p[0]),Y_(p[1]),4.5*D,0,2*Math.PI);g.fill();}g.restore();}
@@ -15412,7 +15423,7 @@ document.querySelectorAll("#cadSnaps input").forEach(i => { i.checked = !!SN[i.d
 document.addEventListener("keydown", e => { if ($("v-cad").hidden) return; const tg = e.target.tagName; if (tg === "INPUT" && e.target.id !== "cadIn" || tg === "TEXTAREA" || tg === "SELECT") return;
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); undo(); return; } if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") { e.preventDefault(); redo(); return; }
   const inEmpty = e.target.id !== "cadIn" || !e.target.value; if (inEmpty && (e.ctrlKey || e.metaKey) && (e.key === "a" || e.key === "A")) { e.preventDefault(); run("HEPSI"); return; } if (inEmpty && (e.key === "Delete" || e.key === "Backspace") && !cmd && sel.size) { e.preventDefault(); run("SIL"); return; }
-  if (e.key === "Delete" && !cmd) { run("SIL"); return; } if (e.key === "Escape") { esc(); return; } if (e.key === "F8") { e.preventDefault(); ortho = !ortho; markTools(); return; }
+  if (e.key === "Delete" && !cmd) { run("SIL"); return; } if (e.key === "Escape") { esc(); return; } if (e.key === "Enter" && e.target.id !== "cadIn" && !(tg === "BUTTON" || tg === "A")) { e.preventDefault(); enter(); return; } /* Enter: komut satırına odak gerekmeden bitir / son komutu tekrarla */ if (e.key === "F8") { e.preventDefault(); ortho = !ortho; markTools(); return; }
   if (e.target.id !== "cadIn" && e.key.length === 1 && !e.ctrlKey && !e.metaKey) $("cadIn").focus(); });
 
 /* ---------- dokunma / fare ---------- */
