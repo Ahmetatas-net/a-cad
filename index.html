@@ -2001,7 +2001,7 @@ dpExample();
 (function(){
  &#x27;use strict&#x27;;
  const $p=id=&gt;document.getElementById(id);
- const prIds=[&#x27;dpWidth&#x27;,&#x27;dpMinWidth&#x27;,&#x27;dpMaxWidth&#x27;,&#x27;dpRadius&#x27;,&#x27;dpGrade&#x27;,&#x27;dpCrown&#x27;,&#x27;dpBank&#x27;,&#x27;dpStep&#x27;,&#x27;dpWalk&#x27;,&#x27;dpCurb&#x27;,&#x27;dpCut&#x27;,&#x27;dpFill&#x27;,&#x27;dpRoadClass&#x27;,&#x27;dpSpeed&#x27;,&#x27;dpTransition&#x27;,&#x27;dpWalkCross&#x27;,&#x27;dpFriction&#x27;,&#x27;dpT0&#x27;,&#x27;dpT1&#x27;,&#x27;dpT2&#x27;,&#x27;dpT3&#x27;,&#x27;dpT4&#x27;,&#x27;dpBoundary&#x27;,&#x27;dpDitch&#x27;,&#x27;dpDitchW&#x27;,&#x27;dpBermH&#x27;,&#x27;dpBermB&#x27;,&#x27;dpLayerW&#x27;];
+ const prIds=[&#x27;dpWidth&#x27;,&#x27;dpMinWidth&#x27;,&#x27;dpMaxWidth&#x27;,&#x27;dpRadius&#x27;,&#x27;dpGrade&#x27;,&#x27;dpCrown&#x27;,&#x27;dpBank&#x27;,&#x27;dpStep&#x27;,&#x27;dpWalk&#x27;,&#x27;dpCurb&#x27;,&#x27;dpCut&#x27;,&#x27;dpFill&#x27;,&#x27;dpRoadClass&#x27;,&#x27;dpSpeed&#x27;,&#x27;dpTransition&#x27;,&#x27;dpWalkCross&#x27;,&#x27;dpFriction&#x27;,&#x27;dpT0&#x27;,&#x27;dpT1&#x27;,&#x27;dpT2&#x27;,&#x27;dpT3&#x27;,&#x27;dpT4&#x27;,&#x27;dpBoundary&#x27;,&#x27;dpDitch&#x27;,&#x27;dpDitchW&#x27;,&#x27;dpBermH&#x27;,&#x27;dpBermB&#x27;,&#x27;dpLayerW&#x27;,&#x27;dpZemin&#x27;,&#x27;dpTasima&#x27;,&#x27;dpRepl&#x27;];
  const schema=&#x27;acadyol.offline.project&#x27;,version=1;
  let resultFingerprint=null, terrainMeta=null;
  const report=(message,kind=&#x27;neutral&#x27;)=&gt;{$p(&#x27;prStatus&#x27;).className=kind===&#x27;error&#x27;?&#x27;prError&#x27;:kind===&#x27;ok&#x27;?&#x27;prOk&#x27;:&#x27;prNeutral&#x27;;$p(&#x27;prStatus&#x27;).textContent=message;};
@@ -2589,7 +2589,7 @@ function plotCross(){
  ctx.font=&#x27;10px system-ui&#x27;;ctx.fillStyle=&#x27;#adc6d7&#x27;;ctx.strokeStyle=&#x27;#6b727a&#x27;;ctx.strokeRect(left+.5,top+.5,plotW,plotH);
  for(let x=Math.ceil(minX/stepX)*stepX;x&lt;=maxX+1e-8;x+=stepX){const q=px(x);if(q&lt;left||q&gt;right)continue;ctx.fillText(x.toFixed(Math.abs(stepX)&lt;1?1:0),Math.min(right-18,Math.max(left-13,q-12)),bottom+14)}
  for(let z=Math.ceil(minZ/stepZ)*stepZ;z&lt;=maxZ+1e-8;z+=stepZ){const q=py(z);if(q&lt;top||q&gt;bottom)continue;ctx.fillText(z.toFixed(Math.abs(stepZ)&lt;.1?2:1),4,q+3)}
- ctx.fillStyle=&#x27;#d6ebf6&#x27;;ctx.font=&#x27;600 12px system-ui&#x27;;ctx.fillText(`${labelKm(s)}   GERÇEK ENKESİT`,left+7,18);if(CV.area){const t1=`Kazı ${CV.area.cut.toFixed(2)} m²`,t2=`Dolgu ${CV.area.fill.toFixed(2)} m²`,x1=left+7+ctx.measureText(`${labelKm(s)}   GERÇEK ENKESİT`).width+14;ctx.font=&#x27;600 11.5px Arial,system-ui&#x27;;if(x1+ctx.measureText(t1+&#x27;   &#x27;+t2).width&lt;right-120){ctx.fillStyle=&#x27;#ff9a85&#x27;;ctx.fillText(t1,x1,18);ctx.fillStyle=&#x27;#7fd9a3&#x27;;ctx.fillText(t2,x1+ctx.measureText(t1+&#x27;   &#x27;).width,18)}}
+ ctx.fillStyle=&#x27;#d6ebf6&#x27;;ctx.font=&#x27;600 12px system-ui&#x27;;ctx.fillText(`${labelKm(s)}   KESİT`,left+7,18);if(CV.area){const t1=`Kazı ${CV.area.cut.toFixed(2)} m²`,t2=`Dolgu ${CV.area.fill.toFixed(2)} m²`,x1=left+7+ctx.measureText(`${labelKm(s)}   KESİT`).width+14;ctx.font=&#x27;600 11.5px Arial,system-ui&#x27;;if(x1+ctx.measureText(t1+&#x27;   &#x27;+t2).width&lt;right-120){ctx.fillStyle=&#x27;#ff9a85&#x27;;ctx.fillText(t1,x1,18);ctx.fillStyle=&#x27;#7fd9a3&#x27;;ctx.fillText(t2,x1+ctx.measureText(t1+&#x27;   &#x27;).width,18)}}
  ctx.fillStyle=&#x27;#8eb2ca&#x27;;ctx.font=&#x27;10px system-ui&#x27;;ctx.textAlign=&#x27;right&#x27;;ctx.fillText(`X ${CV.zoom.toFixed(1)}× · düşey ${ex}×`,right,18);ctx.textAlign=&#x27;left&#x27;;
  // Read source carriageway widths, including left/right breaks, without drawing pavement across a planted median.
  if(intervals.length){
@@ -2891,7 +2891,7 @@ window.__roadQualityCheck=(all=false)=&gt;{const pick=all?projects:[projects[act
   var HK=&#x27;acad-yol-tipkesit&#x27;;
   function ditch(){var on=document.getElementById(&#x27;dpDitch&#x27;);return {on:!on||on.value!==&#x27;0&#x27;,W:num(&#x27;dpDitchW&#x27;,0.49)};}
   function par(out){return {T:out.thick&amp;&amp;out.thick.length?out.thick[out.thick.length-1]:0,cross:out.cross||0,bank:out.bank||0,walk:Math.max(0,+out.walk||0),curb:Math.max(0,+out.curb||0),
-    wc:+out.walkCross||0,nCut:num(&#x27;dpCut&#x27;,2),nFill:num(&#x27;dpFill&#x27;,3),H:ditch(),bH:num(&#x27;dpBermH&#x27;,7.5,0),bB:num(&#x27;dpBermB&#x27;,5,0),lw:num(&#x27;dpLayerW&#x27;,0.6,0)};}
+    wc:+out.walkCross||0,nCut:num(&#x27;dpCut&#x27;,2),nFill:num(&#x27;dpFill&#x27;,3),H:ditch(),bH:num(&#x27;dpBermH&#x27;,7.5,0),bB:num(&#x27;dpBermB&#x27;,5,0),lw:num(&#x27;dpLayerW&#x27;,0.6,0),Dr:num(&#x27;dpRepl&#x27;,0,0),zm:(document.getElementById(&#x27;dpZemin&#x27;)||{}).value||&#x27;proje&#x27;};}
 
   /* Tip kesit (mevcut projenin enkesitlerinden): kaplama kenarı → iç bordür (3 cm yüz, 12 cm üst) → kaldırım (dışa doğru eğimli)
      → dış bordür (15 cm) → bordür dış yüzü düşey → hendek iç yüzü formasyon düzlemine iner (hendek tabanı = formasyon)
@@ -2915,7 +2915,8 @@ window.__roadQualityCheck=(all=false)=&gt;{const pick=all?projects:[projects[act
         mode=g0&gt;S[1]+1e-4?&#x27;kazı&#x27;:g0&lt;S[1]-1e-4?&#x27;dolgu&#x27;:&#x27;denge&#x27;;
         if(mode===&#x27;denge&#x27;)day=S[0];
         else{
-          n=mode===&#x27;kazı&#x27;?P.nCut:P.nFill;var sgn=mode===&#x27;kazı&#x27;?1:-1,d=S[0],z=S[1],prev=z-g0,berm=P.bH&gt;0&amp;&amp;P.bB&gt;0;
+          n=mode===&#x27;kazı&#x27;?P.nCut:P.nFill;var nsrc=&#x27;ayar&#x27;;try{var sn=window.__YKtip&amp;&amp;window.__YKtip.slopeNear(a.x+a.normal[0]*sg*S[0],a.y+a.normal[1]*sg*S[0],mode);if(sn){n=sn.n;nsrc=sn.sinif?&#x27;zemin&#x27;:&#x27;proje&#x27;;}}catch(e){}
+          var sgn=mode===&#x27;kazı&#x27;?1:-1,d=S[0],z=S[1],prev=z-g0,berm=P.bH&gt;0&amp;&amp;P.bB&gt;0;
           var seg=function(dx,dz){var m=Math.max(1,Math.ceil(dx/0.05));for(var q=1;q&lt;=m;q++){var nd=d+dx*q/m,nz=z+dz*q/m,g=G(sg*nd);
               if(!Number.isFinite(g)){day=d+dx*(q-1)/m;prof.push([day,z+dz*(q-1)/m]);return true;}
               var df=nz-g;if(df===0||(df&gt;0)!==(prev&gt;0)){var t=prev/(prev-df),pd=d+dx*(q-1)/m,pz=z+dz*(q-1)/m;day=pd+t*dx/m;prof.push([day,pz+t*dz/m]);return true;}prev=df;}
@@ -2927,7 +2928,7 @@ window.__roadQualityCheck=(all=false)=&gt;{const pick=all?projects:[projects[act
           if(day==null)day=d;
         }
       }
-      return {pe:pe,eZ:eZ,outer:outer,oz:oz,S:S,mode:mode,day:day,dayZ:day!=null?G(sg*day):NaN,n:n,hend:hend,prof:prof,form:form};
+      return {pe:pe,eZ:eZ,outer:outer,oz:oz,S:S,mode:mode,day:day,dayZ:day!=null?G(sg*day):NaN,n:n,nsrc:typeof nsrc!==&#x27;undefined&#x27;?nsrc:null,hend:hend,prof:prof,form:form};
     };
     var SL=side(1),SR=side(-1);
     var ip=function(S,d){var p=S.prof;for(var i=1;i&lt;p.length;i++){var A=p[i-1],B=p[i];if(d&gt;=A[0]-1e-9&amp;&amp;d&lt;=B[0]+1e-9){if(B[0]-A[0]&lt;1e-9)return i+1&lt;p.length&amp;&amp;p[i+1][0]-B[0]&lt;1e-9?p[i+1][1]:B[1];return A[1]+(B[1]-A[1])*(d-A[0])/(B[0]-A[0]);}}return NaN;};
@@ -2939,20 +2940,23 @@ window.__roadQualityCheck=(all=false)=&gt;{const pick=all?projects:[projects[act
     var lo=-(SR.day!=null?SR.day:SR.S[0]),hi=(SL.day!=null?SL.day:SL.S[0]),cut=0,fill=0,miss=0,st=0.05;
     for(var x=lo;x&lt;hi-1e-9;x+=st){var w=Math.min(st,hi-x),xm=x+w/2,g=G(xm),b=bottom(xm);if(!Number.isFinite(g)||!Number.isFinite(b)){miss++;continue;}
       if(g&gt;b)cut+=(g-b)*w;else fill+=(b-g)*w;}
+    // zemin iyileştirme (malzeme değişimi): platform altında (hendek tabanından hendek tabanına) formasyon ya da araziden (hangisi alttaysa) Dr derinlik
+    var rl=-SR.S[0],rh=SL.S[0],repl=0,rTop=function(off){var g=G(off),b=bottom(off);if(!Number.isFinite(g)||!Number.isFinite(b))return NaN;return Math.min(g,b);};
+    if(P.Dr&gt;0)for(var xr=rl;xr&lt;rh-1e-9;xr+=st){var wr=Math.min(st,rh-xr);if(Number.isFinite(rTop(xr+wr/2)))repl+=P.Dr*wr;}
     var br=[0];[SL,SR].forEach(function(S,i){var sg=i?-1:1;S.prof.forEach(function(p){br.push(sg*p[0]);});br.push(sg*(S.pe+P.lw));});
-    return {a:a,T:T,P:P,SL:SL,SR:SR,G:G,top:top,bottom:bottom,layerZ:layerZ,red:red,lo:lo,hi:hi,cut:cut,fill:fill,miss:miss,ok:SL.mode!=null&amp;&amp;SR.mode!=null,breaks:br};
+    return {a:a,T:T,P:P,SL:SL,SR:SR,G:G,top:top,bottom:bottom,layerZ:layerZ,red:red,lo:lo,hi:hi,cut:cut,fill:fill,miss:miss,repl:repl,rl:rl,rh:rh,rTop:rTop,ok:SL.mode!=null&amp;&amp;SR.mode!=null,breaks:br};
   }
   // satır başına önbellek (enkesit görüntüleyici çok sorgular)
   function rowSec(out,row){if(!out||!row||!out.mesh||!row.normal||!Number.isFinite(row.red))return null;
-    var key=[row.s,row.red,row.paveLeft,row.paveRight,JSON.stringify(par(out))].join(&#x27;|&#x27;),m=RC.get(out);if(!m){m=new Map();RC.set(out,m);}
+    var ss=document.getElementById(&#x27;dpSlopeSrc&#x27;),key=[row.s,row.red,row.paveLeft,row.paveRight,JSON.stringify(par(out)),ss?ss.value:&#x27;&#x27;,typeof activeProject!==&#x27;undefined&#x27;?activeProject:&#x27;&#x27;].join(&#x27;|&#x27;),m=RC.get(out);if(!m){m=new Map();RC.set(out,m);}
     var k=m.get(key);if(k)return k;try{k=section(out,row);}catch(e){return null;}if(!k.ok)return null;if(m.size&gt;400)m.clear();m.set(key,k);return k;}
 
   function all(out){
-    var key=JSON.stringify([out.sec.length,out.redEdits,par(out)]);
+    var ss2=document.getElementById(&#x27;dpSlopeSrc&#x27;),key=JSON.stringify([out.sec.length,out.redEdits,par(out),ss2?ss2.value:&#x27;&#x27;]);
     var c=CACHE.get(out);if(c&amp;&amp;c.key===key)return c;
-    var rows=out.sec.map(function(a){if(a.invalid||!Number.isFinite(a.red)||!a.normal)return null;var k=rowSec(out,a);return k?{s:a.s,cut:k.cut,fill:k.fill,ok:true,red:a.red,black:a.black,dl:k.SL.day,dr:k.SR.day,ml:k.SL.mode,mr:k.SR.mode,K:k}:{s:a.s,ok:false,red:a.red,black:a.black};});
-    var V={cut:0,fill:0,n:0};
-    for(var i=1;i&lt;rows.length;i++){var p=rows[i-1],q=rows[i];if(!p||!q||!p.ok||!q.ok)continue;var L=q.s-p.s;V.cut+=(p.cut+q.cut)/2*L;V.fill+=(p.fill+q.fill)/2*L;V.n++;}
+    var rows=out.sec.map(function(a){if(a.invalid||!Number.isFinite(a.red)||!a.normal)return null;var k=rowSec(out,a);return k?{s:a.s,cut:k.cut,fill:k.fill,repl:k.repl,ok:true,red:a.red,black:a.black,dl:k.SL.day,dr:k.SR.day,ml:k.SL.mode,mr:k.SR.mode,nl:k.SL.n,nr:k.SR.n,K:k}:{s:a.s,ok:false,red:a.red,black:a.black};});
+    var V={cut:0,fill:0,repl:0,n:0};
+    for(var i=1;i&lt;rows.length;i++){var p=rows[i-1],q=rows[i];if(!p||!q||!p.ok||!q.ok)continue;var L=q.s-p.s;V.cut+=(p.cut+q.cut)/2*L;V.fill+=(p.fill+q.fill)/2*L;V.repl+=((p.repl||0)+(q.repl||0))/2*L;V.n++;}
     c={key:key,rows:rows,V:V};CACHE.set(out,c);return c;
   }
 
@@ -2977,6 +2981,9 @@ window.__roadQualityCheck=(all=false)=&gt;{const pick=all?projects:[projects[act
     var st=Math.max(0.05,(K.hi-K.lo)/600);
     for(var o=K.lo;o&lt;K.hi;o+=st){var om=o+st/2,gz=K.G(om),bz=K.bottom(om);if(!Number.isFinite(gz)||!Number.isFinite(bz))continue;
       g.fillStyle=gz&gt;bz?&#x27;rgba(224,110,90,.42)&#x27;:&#x27;rgba(108,197,140,.38)&#x27;;var y1=Y(Math.max(gz,bz)),y2=Y(Math.min(gz,bz));g.fillRect(X(o),y1,Math.max(1,st*sx+0.5),Math.max(0.5,y2-y1));}
+    if(K.repl&gt;0){g.save();g.fillStyle=&#x27;rgba(224,154,80,.38)&#x27;;g.strokeStyle=&#x27;rgba(224,154,80,.9)&#x27;;g.lineWidth=1;g.beginPath();var rf=true,rq;
+      for(rq=K.rl;rq&lt;=K.rh+1e-9;rq+=st){var tz=K.rTop(rq);if(!Number.isFinite(tz))continue;rf?g.moveTo(X(rq),Y(tz)):g.lineTo(X(rq),Y(tz));rf=false;}
+      for(rq=K.rh;rq&gt;=K.rl-1e-9;rq-=st){var tz2=K.rTop(rq);if(!Number.isFinite(tz2))continue;g.lineTo(X(rq),Y(tz2-K.P.Dr));}g.closePath();g.fill();g.stroke();g.restore();}
     var th=out.thick||[0],T=K.T,lw=K.P.lw,ext=function(S,dep){return S.pe+lw*(T&gt;0?dep/T:0);};
     // kaldırım / bordür dolgusu (üst: kaldırım çizgisi, alt: formasyon ve tabaka kenarı)
     [K.SL,K.SR].forEach(function(S,i){var sg=i?-1:1;if(S.outer&lt;=S.pe+1e-6)return;g.beginPath();
@@ -2997,14 +3004,14 @@ window.__roadQualityCheck=(all=false)=&gt;{const pick=all?projects:[projects[act
     var gz0=K.G(0),sUp=Number.isFinite(gz0)&amp;&amp;gz0&gt;K.red(0);
     lab(0,K.red(0),&#x27;K &#x27;+f2(K.red(0),3),&#x27;#ff9b86&#x27;,!sUp);
     if(Number.isFinite(gz0))lab(0,gz0,&#x27;S &#x27;+f2(gz0,3),&#x27;#e6eaef&#x27;,sUp);
-    [K.SL,K.SR].forEach(function(S,i){var sg=i?-1:1;if(S.day!=null&amp;&amp;Number.isFinite(S.dayZ)&amp;&amp;S.mode!==&#x27;denge&#x27;)lab(sg*S.day,S.dayZ,(S.mode===&#x27;kazı&#x27;?&#x27;yarma &#x27;:&#x27;dolgu &#x27;)+&#x27;1:&#x27;+S.n+&#x27; · &#x27;+f2(S.day,2)+&#x27; m&#x27;,S.mode===&#x27;kazı&#x27;?&#x27;#ff9a85&#x27;:&#x27;#7fd9a3&#x27;,S.mode!==&#x27;kazı&#x27;);
+    [K.SL,K.SR].forEach(function(S,i){var sg=i?-1:1;if(S.day!=null&amp;&amp;Number.isFinite(S.dayZ)&amp;&amp;S.mode!==&#x27;denge&#x27;)lab(sg*S.day,S.dayZ,(S.mode===&#x27;kazı&#x27;?&#x27;yarma &#x27;:&#x27;dolgu &#x27;)+&#x27;1:&#x27;+S.n+(S.nsrc===&#x27;proje&#x27;?&#x27; (proje)&#x27;:S.nsrc===&#x27;zemin&#x27;?&#x27; (zemin)&#x27;:&#x27;&#x27;)+&#x27; · &#x27;+f2(S.day,2)+&#x27; m&#x27;,S.mode===&#x27;kazı&#x27;?&#x27;#ff9a85&#x27;:&#x27;#7fd9a3&#x27;,S.mode!==&#x27;kazı&#x27;);
       if(S.hend)lab(sg*S.hend.d2,S.hend.z,&#x27;hendek &#x27;+f2(S.hend.z,2),&#x27;#7fb0ff&#x27;,false);});
-    g.font=&#x27;700 12px Arial,system-ui&#x27;;g.fillStyle=&#x27;#e6eaef&#x27;;g.fillText(&#x27;GERÇEK ENKESİT · &#x27;+(typeof kmLabel===&#x27;function&#x27;?kmLabel(a.s):f2(a.s,2)),padL,16);
-    var A=all(out),kt=&#x27;Kazı &#x27;+f2(K.cut,2)+&#x27; m²  ·  &#x27;,ft=&#x27;Dolgu &#x27;+f2(K.fill,2)+&#x27; m²&#x27;;g.font=&#x27;600 11.5px Arial,system-ui&#x27;;
-    var kx=nar?padL:w-padR-g.measureText(kt+ft).width,ky=nar?32:16;g.fillStyle=&#x27;#ff9a85&#x27;;g.fillText(kt,kx,ky);g.fillStyle=&#x27;#7fd9a3&#x27;;g.fillText(ft,kx+g.measureText(kt).width,ky);
+    g.font=&#x27;700 12px Arial,system-ui&#x27;;g.fillStyle=&#x27;#e6eaef&#x27;;g.fillText(&#x27;KESİT · &#x27;+(typeof kmLabel===&#x27;function&#x27;?kmLabel(a.s):f2(a.s,2)),padL,16);
+    var A=all(out),kt=&#x27;Kazı &#x27;+f2(K.cut,2)+&#x27; m²  ·  &#x27;,ft=&#x27;Dolgu &#x27;+f2(K.fill,2)+&#x27; m²&#x27;+(K.repl&gt;0?&#x27;  ·  &#x27;:&#x27;&#x27;),it=K.repl&gt;0?&#x27;İyileştirme &#x27;+f2(K.repl,2)+&#x27; m²&#x27;:&#x27;&#x27;;g.font=&#x27;600 11.5px Arial,system-ui&#x27;;
+    var kx=nar?padL:w-padR-g.measureText(kt+ft+it).width,ky=nar?32:16;g.fillStyle=&#x27;#ff9a85&#x27;;g.fillText(kt,kx,ky);g.fillStyle=&#x27;#7fd9a3&#x27;;g.fillText(ft,kx+g.measureText(kt).width,ky);if(it){g.fillStyle=&#x27;#e09a50&#x27;;g.fillText(it,kx+g.measureText(kt+ft).width,ky);}
     g.font=&#x27;10px Arial,system-ui&#x27;;g.fillStyle=&#x27;#9aa5b3&#x27;;var sc=&#x27;yatay 1× · düşey &#x27;+(ex&gt;1.05?ex.toFixed(1)+&#x27;×&#x27;:&#x27;1×&#x27;)+&#x27; · ofset (m)&#x27;;g.fillText(sc,w-padR-g.measureText(sc).width,h-6);
     var stEl=document.getElementById(&#x27;dpLiveStatus&#x27;);
-    if(stEl){var base=stEl.textContent.split(&#x27;\n▣&#x27;)[0];stEl.textContent=base+&#x27;\n▣ Bu kesit: kazı &#x27;+f2(K.cut,2)+&#x27; m² · dolgu &#x27;+f2(K.fill,2)+&#x27; m²&#x27;+(K.miss?&#x27; (arazi verisi eksik bölüm var)&#x27;:&#x27;&#x27;)+&#x27;  |  Güzergâh toplamı (ortalama alan, &#x27;+A.V.n+&#x27; aralık): kazı &#x27;+f2(A.V.cut,1)+&#x27; m³ · dolgu &#x27;+f2(A.V.fill,1)+&#x27; m³&#x27;;}
+    if(stEl){var base=stEl.textContent.split(&#x27;\n▣&#x27;)[0];stEl.textContent=base+&#x27;\n▣ Bu kesit: kazı &#x27;+f2(K.cut,2)+&#x27; m² · dolgu &#x27;+f2(K.fill,2)+&#x27; m²&#x27;+(K.repl&gt;0?&#x27; · iyileştirme (ek kazı = seçme dolgu) &#x27;+f2(K.repl,2)+&#x27; m²&#x27;:&#x27;&#x27;)+(K.miss?&#x27; (arazi verisi eksik bölüm var)&#x27;:&#x27;&#x27;)+&#x27;  |  Güzergâh toplamı (ortalama alan, &#x27;+A.V.n+&#x27; aralık): kazı &#x27;+f2(A.V.cut,1)+&#x27; m³ · dolgu &#x27;+f2(A.V.fill,1)+&#x27; m³&#x27;+(A.V.repl&gt;0?&#x27; · zemin iyileştirme &#x27;+f2(A.V.repl,1)+&#x27; m³ ek kazı + &#x27;+f2(A.V.repl,1)+&#x27; m³ seçme malzeme&#x27;:&#x27;&#x27;);}
     c._K=K;c._map={x0:x0,sx:sx,padL:padL};
   }
   dpLiveCross=draw;try{window.dpLiveCross=draw;}catch(e){}
@@ -3012,7 +3019,7 @@ window.__roadQualityCheck=(all=false)=&gt;{const pick=all?projects:[projects[act
   // 3B tasarım DXF: şevler, hendek, kaldırım dış kenarı ve şev uçları da yazılır
   if(typeof dpDXF===&#x27;function&#x27;){var DX0=dpDXF;dpDXF=function(o,onlyLayer){var r=DX0(o,onlyLayer);try{
       var add=[],n=0,L=function(c,v){add.push(String(c)+&#x27;\n&#x27;+String(v)+&#x27;\n&#x27;);},P3=function(r,off,z){return [r.x+r.normal[0]*off,r.y+r.normal[1]*off,z];};
-      var face=function(lay,a,b,c){if(onlyLayer&amp;&amp;onlyLayer!==lay)return;if(![].concat(a,b,c).every(Number.isFinite))return;L(0,&#x27;3DFACE&#x27;);L(8,lay);[[10,a],[11,b],[12,c],[13,c]].forEach(function(kp){L(kp[0],kp[1][0].toFixed(4));L(kp[0]+10,kp[1][1].toFixed(4));L(kp[0]+20,kp[1][2].toFixed(4));});n++;};
+      var face=function(lay,a,b,c){if(onlyLayer&amp;&amp;onlyLayer!==lay)return;if(![].concat(a,b,c).every(Number.isFinite))return;if(Math.abs((b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]))&lt;1e-9)return;/* planda alanı sıfır (düşey) üçgen yüzey modeline yazılmaz; düşey yüz 3B çizgide kalır */L(0,&#x27;3DFACE&#x27;);L(8,lay);[[10,a],[11,b],[12,c],[13,c]].forEach(function(kp){L(kp[0],kp[1][0].toFixed(4));L(kp[0]+10,kp[1][1].toFixed(4));L(kp[0]+20,kp[1][2].toFixed(4));});n++;};
       var poly=function(lay,pts){if(onlyLayer&amp;&amp;onlyLayer!==lay)return;pts=pts.filter(function(p){return p&amp;&amp;p.every(Number.isFinite);});if(pts.length&lt;2)return;L(0,&#x27;POLYLINE&#x27;);L(8,lay);L(66,1);L(70,8);L(10,0);L(20,0);L(30,0);pts.forEach(function(p){L(0,&#x27;VERTEX&#x27;);L(8,lay);L(10,p[0].toFixed(4));L(20,p[1].toFixed(4));L(30,p[2].toFixed(4));L(70,32);});L(0,&#x27;SEQEND&#x27;);L(8,lay);n++;};
       var A=all(o),prev=null,ucL=[],ucR=[],hL=[],hR=[],step=Math.max(12,(typeof dpN===&#x27;function&#x27;?dpN(&#x27;dpStep&#x27;,10):10)*1.2);
       A.rows.forEach(function(row,i){var sec=o.sec[i];if(!row||!row.ok||!sec){prev=null;return;}var K=row.K;
@@ -3020,7 +3027,7 @@ window.__roadQualityCheck=(all=false)=&gt;{const pick=all?projects:[projects[act
         var cur={s:sec.s,L:sideP(K.SL,1),R:sideP(K.SR,-1),mL:K.SL.mode,mR:K.SR.mode};
         ucL.push(P3(sec,K.SL.day,K.SL.prof[K.SL.prof.length-1][1]));ucR.push(P3(sec,-K.SR.day,K.SR.prof[K.SR.prof.length-1][1]));
         if(K.SL.hend)hL.push(P3(sec,K.SL.hend.d2,K.SL.hend.z));if(K.SR.hend)hR.push(P3(sec,-K.SR.hend.d2,K.SR.hend.z));
-        var xs=K.breaks.slice().sort(function(a,b){return a-b;});poly(&#x27;YOL_ENKESIT&#x27;,xs.map(function(x){return P3(sec,x,K.top(x));}));
+        var xs=K.breaks.slice().sort(function(a,b){return a-b;});poly(&#x27;YOL_ENKESIT&#x27;,xs.map(function(x){return P3(sec,x,K.top(x));}));if(K.repl&gt;0){var rp=[];for(var xq=K.rl;xq&lt;=K.rh+1e-9;xq+=0.5){var tq=K.rTop(xq);if(Number.isFinite(tq))rp.push(P3(sec,xq,tq-K.P.Dr));}poly(&#x27;YOL_ZEMIN_IYILESTIRME&#x27;,rp);}
         if(prev&amp;&amp;sec.s-prev.s&lt;=step){[[&#x27;L&#x27;,&#x27;mL&#x27;],[&#x27;R&#x27;,&#x27;mR&#x27;]].forEach(function(k){var a=prev[k[0]],b=cur[k[0]];if(a.length&lt;2||b.length&lt;2)return;
             var lay=cur[k[1]]===&#x27;kazı&#x27;?&#x27;YOL_SEV_YARMA&#x27;:&#x27;YOL_SEV_DOLGU&#x27;;
             if(a.length===b.length){for(var j=0;j&lt;a.length-1;j++){face(lay,a[j],b[j],a[j+1]);face(lay,a[j+1],b[j],b[j+1]);}}
@@ -3028,7 +3035,7 @@ window.__roadQualityCheck=(all=false)=&gt;{const pick=all?projects:[projects[act
         prev=cur;});
       poly(&#x27;YOL_SEV_UCU_SOL&#x27;,ucL);poly(&#x27;YOL_SEV_UCU_SAG&#x27;,ucR);if(hL.length&gt;1)poly(&#x27;YOL_HENDEK_SOL&#x27;,hL);if(hR.length&gt;1)poly(&#x27;YOL_HENDEK_SAG&#x27;,hR);
       var t=r.text,k=t.lastIndexOf(&#x27;0\nENDSEC\n0\nEOF&#x27;);if(k&gt;0&amp;&amp;add.length){
-        var lays=[&#x27;YOL_SEV_YARMA&#x27;,30,&#x27;YOL_SEV_DOLGU&#x27;,3,&#x27;YOL_SEV_UCU_SOL&#x27;,1,&#x27;YOL_SEV_UCU_SAG&#x27;,1,&#x27;YOL_HENDEK_SOL&#x27;,5,&#x27;YOL_HENDEK_SAG&#x27;,5,&#x27;YOL_ENKESIT&#x27;,8],lt=&#x27;&#x27;;
+        var lays=[&#x27;YOL_SEV_YARMA&#x27;,30,&#x27;YOL_SEV_DOLGU&#x27;,3,&#x27;YOL_SEV_UCU_SOL&#x27;,1,&#x27;YOL_SEV_UCU_SAG&#x27;,1,&#x27;YOL_HENDEK_SOL&#x27;,5,&#x27;YOL_HENDEK_SAG&#x27;,5,&#x27;YOL_ENKESIT&#x27;,8,&#x27;YOL_ZEMIN_IYILESTIRME&#x27;,40],lt=&#x27;&#x27;;
         for(var q=0;q&lt;lays.length;q+=2)lt+=&#x27;0\nLAYER\n2\n&#x27;+lays[q]+&#x27;\n70\n0\n62\n&#x27;+lays[q+1]+&#x27;\n6\nCONTINUOUS\n&#x27;;
         t=t.slice(0,k)+add.join(&#x27;&#x27;)+t.slice(k);var e=t.indexOf(&#x27;0\nENDTAB\n0\nENDSEC\n0\nSECTION\n2\nENTITIES&#x27;);if(e&gt;0)t=t.slice(0,e)+lt+t.slice(e);
         r={text:t,count:r.count+n};}
@@ -3058,12 +3065,12 @@ window.__roadQualityCheck=(all=false)=&gt;{const pick=all?projects:[projects[act
     var tip=document.createElement(&#x27;div&#x27;);tip.id=&#x27;dpLiveTip&#x27;;tip.style.cssText=&#x27;font:12px Arial,system-ui;color:#e6eaef;min-height:16px;margin-top:4px&#x27;;cv.after(tip);
     cv.addEventListener(&#x27;pointermove&#x27;,function(e){var K=cv._K,M=cv._map;if(!K||!M)return;var rc=cv.getBoundingClientRect(),o=M.x0+(e.clientX-rc.left-M.padL)/M.sx;
       var gz=K.G(o),tz=K.top(o),bz=K.bottom(o);tip.textContent=&#x27;Ofset &#x27;+f2(o,2)+&#x27; m · siyah &#x27;+f2(gz,3)+&#x27; · proje &#x27;+f2(tz,3)+(Number.isFinite(gz)&amp;&amp;Number.isFinite(bz)?&#x27; · &#x27;+(gz&gt;bz?&#x27;kazı &#x27;:&#x27;dolgu &#x27;)+f2(Math.abs(gz-bz),3)+&#x27; m&#x27;:&#x27;&#x27;);});
-    document.querySelectorAll(&#x27;.liveHint&#x27;).forEach(function(hint){if(/yaklaşık|şematik/i.test(hint.textContent))hint.textContent=&#x27;Gerçek enkesit: siyah arazi yüklenen TIN / siyah enkesit ağından okunur (üçgen dışı tahmin yok). Kazı ve dolgu şevi, hendek ayarlardan alınır; alanlar kaplama altı (formasyon) ve şev çizgisine göre, hacim ortalama alan yöntemiyle hesaplanır. 3B DXF şevleri, hendeği ve şev uçlarını da içerir. Tip kesitle doğrulayın.&#x27;;});
+    document.querySelectorAll(&#x27;.liveHint&#x27;).forEach(function(hint){if(/yaklaşık|şematik/i.test(hint.textContent))hint.textContent=&#x27;Kesit: siyah arazi yüklenen TIN / siyah enkesit ağından okunur (üçgen dışı tahmin yok). Kazı ve dolgu şevi, hendek ayarlardan alınır; alanlar kaplama altı (formasyon) ve şev çizgisine göre, hacim ortalama alan yöntemiyle hesaplanır. 3B DXF şevleri, hendeği ve şev uçlarını da içerir. Tip kesitle doğrulayın.&#x27;;});
     var b=document.createElement(&#x27;button&#x27;);b.type=&#x27;button&#x27;;b.className=&#x27;btn&#x27;;b.id=&#x27;dpVolCsv&#x27;;b.textContent=&#x27;Kesit kazı/dolgu tablosu CSV&#x27;;b.style.marginTop=&#x27;6px&#x27;;tip.after(b);
-    b.addEventListener(&#x27;click&#x27;,function(){var o=(typeof dpState!==&#x27;undefined&#x27;&amp;&amp;dpState.result);if(!o)return;var A=all(o),L=[&#x27;KM;Kırmızı;Siyah;Kazı alanı m2;Dolgu alanı m2;Sol şev ucu m;Sağ şev ucu m;Kazı hacmi m3;Dolgu hacmi m3&#x27;],cc=0,ff=0;
-      A.rows.forEach(function(r,i){if(!r)return;var vc=0,vf=0,p=A.rows[i-1];if(p&amp;&amp;p.ok&amp;&amp;r.ok){vc=(p.cut+r.cut)/2*(r.s-p.s);vf=(p.fill+r.fill)/2*(r.s-p.s);}cc+=vc;ff+=vf;
-        L.push([typeof kmLabel===&#x27;function&#x27;?kmLabel(r.s):f2(r.s,2),f2(r.red,3),f2(r.black,3),f2(r.cut,3),f2(r.fill,3),f2(r.dl,2),f2(r.dr,2),f2(vc,2),f2(vf,2)].join(&#x27;;&#x27;).replace(/\./g,&#x27;,&#x27;));});
-      L.push([&#x27;TOPLAM&#x27;,&#x27;&#x27;,&#x27;&#x27;,&#x27;&#x27;,&#x27;&#x27;,&#x27;&#x27;,&#x27;&#x27;,f2(cc,2),f2(ff,2)].join(&#x27;;&#x27;).replace(/\./g,&#x27;,&#x27;));
+    b.addEventListener(&#x27;click&#x27;,function(){var o=(typeof dpState!==&#x27;undefined&#x27;&amp;&amp;dpState.result);if(!o)return;var A=all(o),L=[&#x27;KM;Kırmızı;Siyah;Kazı alanı m2;Dolgu alanı m2;Sol şev;Sol şev ucu m;Sağ şev;Sağ şev ucu m;Kazı hacmi m3;Dolgu hacmi m3;İyileştirme alanı m2;İyileştirme hacmi m3 (ek kazı = seçme dolgu)&#x27;],cc=0,ff=0,rr=0;
+      A.rows.forEach(function(r,i){if(!r)return;var vc=0,vf=0,vr=0,p=A.rows[i-1];if(p&amp;&amp;p.ok&amp;&amp;r.ok){vc=(p.cut+r.cut)/2*(r.s-p.s);vf=(p.fill+r.fill)/2*(r.s-p.s);vr=((p.repl||0)+(r.repl||0))/2*(r.s-p.s);}cc+=vc;ff+=vf;rr+=vr;
+        L.push([typeof kmLabel===&#x27;function&#x27;?kmLabel(r.s):f2(r.s,2),f2(r.red,3),f2(r.black,3),f2(r.cut,3),f2(r.fill,3),(r.ml||&#x27;&#x27;)+(r.nl?&#x27; 1:&#x27;+r.nl:&#x27;&#x27;),f2(r.dl,2),(r.mr||&#x27;&#x27;)+(r.nr?&#x27; 1:&#x27;+r.nr:&#x27;&#x27;),f2(r.dr,2),f2(vc,2),f2(vf,2),f2(r.repl||0,3),f2(vr,2)].join(&#x27;;&#x27;).replace(/\./g,&#x27;,&#x27;));});
+      L.push([&#x27;TOPLAM&#x27;,&#x27;&#x27;,&#x27;&#x27;,&#x27;&#x27;,&#x27;&#x27;,&#x27;&#x27;,&#x27;&#x27;,&#x27;&#x27;,&#x27;&#x27;,f2(cc,2),f2(ff,2),&#x27;&#x27;,f2(rr,2)].join(&#x27;;&#x27;).replace(/\./g,&#x27;,&#x27;));
       var bl=new Blob([&#x27;﻿&#x27;+L.join(&#x27;\r\n&#x27;)],{type:&#x27;text/csv;charset=utf-8&#x27;}),u=URL.createObjectURL(bl),x=document.createElement(&#x27;a&#x27;);x.href=u;x.download=&#x27;yol_kesit_kazi_dolgu.csv&#x27;;document.body.appendChild(x);x.click();x.remove();setTimeout(function(){URL.revokeObjectURL(u);},20000);});
     [&#x27;dpCut&#x27;,&#x27;dpFill&#x27;].forEach(function(id){var e=document.getElementById(id);if(e)e.addEventListener(&#x27;input&#x27;,refresh);});
   }
@@ -3137,7 +3144,41 @@ window.__roadQualityCheck=(all=false)=&gt;{const pick=all?projects:[projects[act
     var tries=0,boot=function(){if(apply(true)||++tries&gt;25)return;setTimeout(boot,400);};setTimeout(boot,300);
     var rs=$(&#x27;roadSelect&#x27;);if(rs)rs.addEventListener(&#x27;change&#x27;,function(){if(auto)setTimeout(function(){apply(true);},300);});
   })();
-  window.__YKtip={derive:derive,apply:apply};
+  /* zemin etüdüne göre km km şev: kaynak kesitlerdeki şev eğimi, hendek tabanının plandaki yerine göre bulunur */
+  var TB={road:null,list:null};
+  function table(){
+    var road=(typeof projects!==&#x27;undefined&#x27;&amp;&amp;typeof activeProject!==&#x27;undefined&#x27;)?projects[activeProject]:null;if(!road||typeof XY!==&#x27;function&#x27;)return [];
+    if(TB.road===road&amp;&amp;TB.list)return TB.list;var L=[];
+    (road.sections||[]).forEach(function(s){var iv=s.intervals||[];if(iv.length!==1||!s.top)return;
+      [[-1,iv[0][0]],[1,iv[0][1]]].forEach(function(sd){var sg=sd[0],near=s.top.reduce(function(m,q){return Math.abs(q[0]-sd[1])&lt;Math.abs(m[0]-sd[1])?q:m;},s.top[0]),e=Math.abs(near[0]-sd[1])&lt;0.05?Math.abs(near[0]):Math.abs(sd[1]);
+        var pts=s.top.filter(function(q){return sg*q[0]&gt;e+0.005;}).map(function(q){return [Math.abs(q[0])-e,q[1]];}).sort(function(a,b){return a[0]-b[0];});
+        var k=-1;for(var i=0;i&lt;pts.length-1;i++){if(pts[i][0]&gt;0.5&amp;&amp;Math.abs(pts[i+1][0]-pts[i][0])&lt;0.01&amp;&amp;pts[i+1][1]&lt;pts[i][1]-0.05){k=i;break;}}
+        var D=k&gt;=0?pts[k+2]:null,E=k&gt;=0?pts[k+3]:null;if(!D||!E)return;var dz=E[1]-D[1],dd=E[0]-D[0];if(dd&lt;0.3||Math.abs(dz)&lt;0.05)return;
+        var n=dd/Math.abs(dz);if(n&lt;0.5||n&gt;6)return;var p=XY(road,s.s,sg*(e+D[0]));if(!p)return;L.push({x:p[0],y:p[1],s:s.s,mode:dz&gt;0?&#x27;kazı&#x27;:&#x27;dolgu&#x27;,n:Math.round(n*100)/100});});});
+    TB.road=road;TB.list=L;return L;}
+  function slopeNear(x,y,mode){var L=table(),best=null,bd=1e18;
+    for(var i=0;i&lt;L.length;i++){var q=L[i];if(q.mode!==mode)continue;var d=(q.x-x)*(q.x-x)+(q.y-y)*(q.y-y);if(d&lt;bd){bd=d;best=q;}}
+    return best&amp;&amp;bd&lt;=45*45?{n:best.n,s:best.s,d:Math.sqrt(bd)}:null;}
+  /* zemin: şev eğimi ve zemin iyileştirme (malzeme değişimi). Değerler zemin etüdüne göre girilir; varsayılanlar yalnız başlangıç önerisidir. */
+  var ZS={saglam:[1,1.5,0],orta:[1.5,2,0],zayif:[2,3,0.5]};
+  (function(){var f=document.getElementById(&#x27;dpFill&#x27;),lab=f&amp;&amp;f.closest(&#x27;label&#x27;);if(!lab||document.getElementById(&#x27;dpZemin&#x27;))return;
+    var t=document.createElement(&#x27;template&#x27;);t.innerHTML=(&#x27;&lt;label&gt;Zemin / şev eğimi&lt;select id=&quot;dpZemin&quot;&gt;&lt;option value=&quot;proje&quot;&gt;Projedeki şev (çizilmiş kesitlerden)&lt;/option&gt;&lt;option value=&quot;saglam&quot;&gt;Sağlam zemin&lt;/option&gt;&lt;option value=&quot;orta&quot;&gt;Orta zemin&lt;/option&gt;&lt;option value=&quot;zayif&quot;&gt;Zayıf zemin&lt;/option&gt;&lt;/select&gt;&lt;/label&gt;&#x27;
+      +&#x27;&lt;label&gt;Zemin taşıma gücü (kg/cm², etütten)&lt;input id=&quot;dpTasima&quot; type=&quot;number&quot; min=&quot;0&quot; max=&quot;50&quot; step=&quot;0.1&quot; placeholder=&quot;boş&quot;&gt;&lt;/label&gt;&#x27;
+      +&#x27;&lt;label&gt;Zemin iyileştirme: malzeme değişimi derinliği (m)&lt;input id=&quot;dpRepl&quot; type=&quot;number&quot; value=&quot;0&quot; min=&quot;0&quot; max=&quot;5&quot; step=&quot;0.05&quot;&gt;&lt;/label&gt;&#x27;).trim();
+    var els=[].slice.call(t.content.children),after=lab;els.forEach(function(e){after.after(e);after=e;});
+    var note=document.createElement(&#x27;p&#x27;);note.id=&#x27;dpZeminNot&#x27;;note.style.cssText=&#x27;font-size:12px;color:#c9d0d8;margin:2px 0 8px;grid-column:1/-1&#x27;;after.after(note);
+    var z=document.getElementById(&#x27;dpZemin&#x27;),ts=document.getElementById(&#x27;dpTasima&#x27;),rp=document.getElementById(&#x27;dpRepl&#x27;);
+    var say=function(){var v=z.value,r=+rp.value||0;note.textContent=(v===&#x27;proje&#x27;?&#x27;Şev eğimleri projedeki çizilmiş kesitlerden, plandaki en yakın kesite göre alınır.&#x27;:&#x27;Şev eğimi &#x27;+({saglam:&#x27;sağlam&#x27;,orta:&#x27;orta&#x27;,zayif:&#x27;zayıf&#x27;})[v]+&#x27; zemine göre en az yarma 1:&#x27;+document.getElementById(&#x27;dpCut&#x27;).value+&#x27;, dolgu 1:&#x27;+document.getElementById(&#x27;dpFill&#x27;).value+&#x27;; projedeki şev daha yatıksa o kullanılır, şev projeden dik yapılmaz (etüt değeriyle değiştirebilirsin).&#x27;)
+      +(r&gt;0?&#x27; Platform altında &#x27;+r.toFixed(2)+&#x27; m zayıf zemin kazılıp seçme malzemeyle kırmızı kota göre sıkıştırılarak doldurulur (ek kazı + seçme dolgu ayrı hesaplanır).&#x27;:&#x27;&#x27;);};
+    var ref=function(){if(window.__YK&amp;&amp;window.__YK.refresh)window.__YK.refresh();say();};
+    z.addEventListener(&#x27;change&#x27;,function(){var v=z.value;if(v===&#x27;proje&#x27;){try{var road=projects[activeProject],d=derive(road);if(d){if(Number.isFinite(d.nCut))document.getElementById(&#x27;dpCut&#x27;).value=Math.round(d.nCut*100)/100;if(Number.isFinite(d.nFill))document.getElementById(&#x27;dpFill&#x27;).value=Math.round(d.nFill*100)/100;}}catch(e){}}if(ZS[v]){var c=document.getElementById(&#x27;dpCut&#x27;),fl=document.getElementById(&#x27;dpFill&#x27;),dd=null;try{dd=derive(projects[activeProject]);}catch(e){}var pc=dd&amp;&amp;Number.isFinite(dd.nCut)?Math.round(dd.nCut*100)/100:0,pf=dd&amp;&amp;Number.isFinite(dd.nFill)?Math.round(dd.nFill*100)/100:0;c.value=Math.max(ZS[v][0],pc);fl.value=Math.max(ZS[v][1],pf);
+        if(v===&#x27;zayif&#x27;&amp;&amp;!(+rp.value&gt;0))rp.value=ZS[v][2];if(v!==&#x27;zayif&#x27;&amp;&amp;+rp.value===ZS.zayif[2])rp.value=0;}ref();});
+    ts.addEventListener(&#x27;input&#x27;,function(){var q=+ts.value;if(!(q&gt;0))return;var v=q&lt;1?&#x27;zayif&#x27;:q&lt;2?&#x27;orta&#x27;:&#x27;saglam&#x27;;if(z.value!==v){z.value=v;z.dispatchEvent(new Event(&#x27;change&#x27;));}});
+    rp.addEventListener(&#x27;input&#x27;,ref);[&#x27;dpCut&#x27;,&#x27;dpFill&#x27;].forEach(function(id){var e=document.getElementById(id);if(e)e.addEventListener(&#x27;input&#x27;,say);});say();})();
+  /* proje dışı zemin sınıfında eğim projedekinden dik olamaz: n = en yatık (büyük) olanı */
+  function slopeNear2(x,y,mode){var z=document.getElementById(&#x27;dpZemin&#x27;),r=slopeNear(x,y,mode);if(!z||z.value===&#x27;proje&#x27;)return r;
+    var n=+document.getElementById(mode===&#x27;kazı&#x27;?&#x27;dpCut&#x27;:&#x27;dpFill&#x27;).value;if(!(n&gt;0))return r;if(r&amp;&amp;r.n&gt;n)return {n:r.n,s:r.s,d:r.d,proje:1};return {n:n,s:null,d:null,sinif:1};}
+  window.__YKtip={derive:derive,apply:apply,table:table,slopeNear:slopeNear2};
 
   /* ---- 2) grafiğin hemen altında önceki / sonraki ---- */
   var css=document.createElement(&#x27;style&#x27;);
@@ -3181,6 +3222,26 @@ window.__roadQualityCheck=(all=false)=&gt;{const pick=all?projects:[projects[act
     var t=document.querySelector(&#x27;.rvQuickTitle&#x27;);if(t&amp;&amp;t.firstChild)t.firstChild.textContent=&#x27;GÖRÜNÜM · TÜMÜ YA DA TEK TABAKA &#x27;;
     setTimeout(function(){setAll(true);},600);
   }
+})();
+
+/* DXF çıktısı NCZ ile birlikte: yol modülünden inen her .dxf, aynı veriden yazılmış .ncz ile tek ZIP&#x27;te iner.
+   NCZ, A-CAD&#x27;in NCZ yazıcısıyla (tabaka renkleri, 3B yüzeyler, 3B çoklu çizgiler, noktalar, yazılar) üretilir. */
+(function(){
+  var P=window.parent;if(!P||P===window)return;
+  var orig=HTMLAnchorElement.prototype.click;
+  HTMLAnchorElement.prototype.click=function(){
+    var a=this,nm=a.download||&#x27;&#x27;;
+    if(!/\.dxf$/i.test(nm)||!/^blob:/.test(a.href||&#x27;&#x27;)||a.__ykNcz)return orig.apply(this,arguments);
+    try{if(!P.O||!P.O.zip||!P.NCZW||!P.NCZW.ready())return orig.apply(this,arguments);}catch(e){return orig.apply(this,arguments);}
+    var href=a.href;
+    fetch(href).then(function(r){return r.text();}).then(function(txt){
+      var ncz=null;try{ncz=P.O.nczOf(txt);}catch(e){console.error(e);}
+      if(!ncz){var b=document.createElement(&#x27;a&#x27;);b.href=href;b.download=nm;b.__ykNcz=1;document.body.appendChild(b);orig.call(b);b.remove();return;}
+      var zip=P.O.zip([{name:nm,data:txt},{name:nm.replace(/\.dxf$/i,&#x27;.ncz&#x27;),data:ncz}],{nczYok:1});
+      var blob=zip instanceof Blob?zip:new Blob([zip],{type:&#x27;application/zip&#x27;}),u=URL.createObjectURL(blob),z=document.createElement(&#x27;a&#x27;);
+      z.href=u;z.download=nm.replace(/\.dxf$/i,&#x27;_DXF_NCZ.zip&#x27;);z.__ykNcz=1;document.body.appendChild(z);orig.call(z);z.remove();setTimeout(function(){URL.revokeObjectURL(u);},30000);
+    }).catch(function(e){console.error(e);var b=document.createElement(&#x27;a&#x27;);b.href=href;b.download=nm;b.__ykNcz=1;document.body.appendChild(b);orig.call(b);b.remove();});
+  };
 })();
 
 &lt;/script&gt;
@@ -3737,12 +3798,17 @@ K.parseDXF = text => {
 /* ---------- Netcad NCZ okuma (ikili çizim dosyası) ----------
    Kayıt: [işaret 0x15/0x1B/0x1D][uint32 uzunluk][veri]. Veri: [?][tip][tabaka] N(double) E(double) Z(float) … sınır kutusu … tipe özel alan (0x51'den).
    Tipler: 1 nokta, 2 çizgi, 5 yazı, 7 çoklu çizgi, 12 üçgen. 251/9 dosyalarında DXF karşılıklarıyla birebir doğrulandı. */
+K.aciHex = c => { c = Math.abs(+c || 7); const F = { 1: "#ff0000", 2: "#ffff00", 3: "#00ff00", 4: "#00ffff", 5: "#0000ff", 6: "#ff00ff", 7: "#ffffff", 8: "#808080", 9: "#c0c0c0" }; if (F[c]) return F[c];
+  if (c >= 250) { const g = Math.round([0.2, 0.31, 0.43, 0.55, 0.7, 1][c - 250] * 255); return "#" + [g, g, g].map(v => v.toString(16).padStart(2, "0")).join(""); }
+  if (c < 10) return "#ffffff"; const h = Math.floor((c - 10) / 10) * 15, k = c % 10, V = [1, 1, .8, .8, .6, .6, .5, .5, .3, .3][k], S = k % 2 ? .5 : 1;
+  const f = n => { const kk = (n + h / 60) % 6; return V - V * S * Math.max(0, Math.min(kk, 4 - kk, 1)); }; return "#" + [f(5), f(3), f(1)].map(v => Math.round(v * 255).toString(16).padStart(2, "0")).join(""); };
+K.hexAci = h => { const m = /^#?([0-9a-f]{6})$/i.exec(String(h || "")); if (!m) return 7; const v = parseInt(m[1], 16), r = v >> 16, g = v >> 8 & 255, b = v & 255; let best = 7, bd = 1e9; for (let c = 1; c < 256; c++) { const w = parseInt(K.aciHex(c).slice(1), 16), d = (r - (w >> 16)) ** 2 + (g - (w >> 8 & 255)) ** 2 + (b - (w & 255)) ** 2; if (d < bd) { bd = d; best = c; } } return best; };
 K.parseNCZ = buf => {
   const d = buf instanceof Uint8Array ? buf : new Uint8Array(buf), n = d.length, dv = new DataView(d.buffer, d.byteOffset, d.byteLength);
   const dec = new TextDecoder("windows-1254");
   // tabaka tablosu: 29 baytlık girişler, öncesinde giriş sayısı
   const sig = q => q + 29 <= n && d[q] === 0 && (d[q + 1] === 0xfc || d[q + 1] === 0xfd) && (d[q + 2] === 0 || d[q + 2] === 0x80) && d[q + 3] === 0x12 && d[q + 4] === 0 && d[q + 5] > 0 && d[q + 5] <= 23;
-  let lays = [];
+  let lays = [], layCol = {};
   // giriş: [?][bayrak: bit0 = görünür][?][?][?][ad uzunluğu][ad, 23 bayt]; ilk giriş imzayla bulunur, kalanlar uzunluk/ad geçerliliğiyle okunur
   const ent = q => q + 29 <= n && d[q + 5] > 0 && d[q + 5] <= 23 && d.subarray(q + 6, q + 6 + d[q + 5]).every(b => b >= 0x20);
   const hid = [];
@@ -3758,7 +3824,7 @@ K.parseNCZ = buf => {
         let ok = true;
         for (let i = 0; i < count; i++) if (!ent(first + i * 29)) { ok = false; break; }
         if (ok) {
-          for (let i = 0; i < count; i++) { const b = first + i * 29, nm = dec.decode(d.subarray(b + 6, b + 6 + d[b + 5])); lays.push(nm); if (!(d[b + 1] & 1)) hid.push(nm); }
+          for (let i = 0; i < count; i++) { const b = first + i * 29, nm = dec.decode(d.subarray(b + 6, b + 6 + d[b + 5])); lays.push(nm); layCol[nm] = d[b + 26]; if (!(d[b + 1] & 1)) hid.push(nm); }
           layerTableSource = "header-section-06";
         }
       }
@@ -3766,7 +3832,7 @@ K.parseNCZ = buf => {
   }
   // Başlık/bölüm bilgisi olmayan eski varyantlar için önceki güvenli tarama yedeği.
   if (!lays.length) for (let q = 1; q < n - 34; q++) if (sig(q)) { const c = d[q - 1]; let ok = c > 0; for (let i = 0; ok && i < c; i++) ok = ent(q + 29 * i);
-    if (ok) { for (let i = 0; i < c; i++) { const b = q + 29 * i, nm = dec.decode(d.subarray(b + 6, b + 6 + d[b + 5])); lays.push(nm); if (!(d[b + 1] & 1)) hid.push(nm); } layerTableSource = "legacy-signature"; break; } }
+    if (ok) { for (let i = 0; i < c; i++) { const b = q + 29 * i, nm = dec.decode(d.subarray(b + 6, b + 6 + d[b + 5])); lays.push(nm); layCol[nm] = d[b + 26]; if (!(d[b + 1] & 1)) hid.push(nm); } layerTableSource = "legacy-signature"; break; } }
   // nesne zinciri: dosya sonuna tam ulaşan en uzun kayıt zinciri
   /* V7098: Kayit baslangiclarinin seyrek indeksi. Eski kod her DOSYA BAYTI icin
      bir int32 ayiriyordu (47 MB NCZ icin 188 MB); yalniz gercek kayit
@@ -3782,7 +3848,7 @@ K.parseNCZ = buf => {
     return memo.get(p0) ?? res; };
   let best = -1, start = -1;
   for (let p = 0; p < n - 8; p++) if (d[p] === 0x15 && [1, 2, 5, 7, 12, 14].includes(d[p + 6]) && (d[p + 5] === 0 || d[p + 5] === d[p + 6])) { const c = walk(p); if (c > best) { best = c; start = p; } }
-  const out = { points: [], faces: [], lines: [], polys: [], texts: {}, textList: [], layers: lays, hidden: hid };
+  const out = { points: [], faces: [], lines: [], polys: [], texts: {}, textList: [], layers: lays, hidden: hid, layerColors: layCol };
   out.nczDiagnostics = { layerTableSource, layerTableFound: lays.length > 0, recordChainFound: start >= 0, recordCount: Math.max(0, best), skippedInvalidRecords: 0, skippedDegenerateFaces: 0, unmodeledRecords: 0, unmodeledKinds: {}, warning: lays.length ? "" : "NCZ tabaka adları doğrulanamadı; sayısal tabaka kimlikleri kullanılıyor." };
   if (start < 0) return out;
   // Tabaka indeksi doğrulanamıyorsa kimliği koru; yanlış tabaka adı tahmin etme.
@@ -4501,7 +4567,9 @@ O.dxfToNczM = text => { if (typeof K === "undefined" || !K.parseDXF) return null
   for (const p of D.points) { L.add(p.lay); I.push(["point", p.lay, [p.e, p.y, p.z]]); } for (const l of D.lines) { L.add(l.lay); I.push(["line", l.lay, l.pts[0], l.pts[1]]); }
   for (const q of D.polys) { if (q.pts.length < 2) continue; L.add(q.lay); I.push(["pline", q.lay, q.pts, q.closed]); } for (const f of D.faces) { L.add(f.lay); I.push(["face", f.lay, f.p[0], f.p[1], f.p[2]]); }
   for (const t of D.textList) { if (!t.s || !isFinite(t.e)) continue; L.add(t.lay); I.push(["text", t.lay, [t.e, t.y, 0], un(t.s), t.h || 1, t.rot || 0, "l"]); }
-  return { layers: [...L].map(n => ({ n, c: 7 })), items: I }; };
+  /* tabaka renkleri ve kapalı tabakalar DXF LAYER tablosundan taşınır (veri kaybı olmasın) */
+  const LC = {}; try { const t0 = text.indexOf("TABLES"), t1 = t0 < 0 ? -1 : text.indexOf("ENDSEC", t0); if (t0 >= 0 && t1 > t0) { const ln = text.slice(t0, t1).split(/\r?\n/).map(x => x.trim()); for (let i = 0; i < ln.length - 1; i++) { if (ln[i] === "0" && ln[i + 1] === "LAYER") { let nm = null, c = 7; for (let j = i + 2; j < ln.length - 1 && !(ln[j] === "0" && j > i + 2); j += 2) { if (ln[j] === "2") nm = ln[j + 1]; else if (ln[j] === "62") c = parseInt(ln[j + 1], 10) || 7; } if (nm && nm !== "LAYER") LC[nm] = c; } } } } catch (e) {}
+  return { layers: [...new Set([...L, ...Object.keys(LC).filter(n => n !== "0")])].map(n => ({ n, c: Math.abs(LC[n] || 7), hidden: (LC[n] || 7) < 0 })), items: I }; };
 O.nczOf = data => { try { if (!window.NCZW || !window.NCZW.ready()) return null; let s = typeof data === "string" ? data : null; if (s === null && data instanceof Uint8Array) s = new TextDecoder("windows-1254").decode(data); if (s === null) return null; const a = O._DXREG.get(s); if (a) { O._DXREG.delete(s); return a.ncz(); } if (!/^\s*0\s*\r?\n\s*SECTION/.test(s.slice(0, 200))) return null; const M = O.dxfToNczM(s); return M && M.items.length ? window.NCZW.buildSync(M) : null; } catch (e) { console.error(e); return null; } };
 O.zip = (files, opt) => { // [{name, data:Uint8Array|string}] — içindeki her DXF'in yanına aynı adla NCZ de konur
   if (!(opt && opt.nczYok)) { const ad = new Set(files.map(f => f.name.toLowerCase())), ek = []; for (const f of files) { if (!/\.dxf$/i.test(f.name)) continue; const nn = f.name.replace(/\.dxf$/i, ".ncz"); if (ad.has(nn.toLowerCase())) continue; const u = O.nczOf(f.data); if (u) ek.push({ name: nn, data: u }); } if (ek.length) { files = files.concat(ek); O._sonNcz = 1; } }
@@ -4720,10 +4788,10 @@ A.parseCAD = (src, opt = {}) => { const lite = opt.lite === true ? 1 : +opt.lite
   emit(ents, (x, y, z) => [x, y, z || 0], null, 1, 0);
   // V7101: DXF TABLES içindeki boş tabakalar da gerçek proje verisidir.
   // Sadece içinde nesne bulunan tabakaları açmak, kaydet-aç çevriminde tabaka kaybı oluşturur.
-  out.hidden = layoff; out.layers = Object.keys(laycol); return out;
+  out.hidden = layoff; out.layers = Object.keys(laycol); out.layerColors = laycol; return out;
 };
 /* NCZ / DXF (K) çıktısını aynı biçime getir */
-A.fromK = D => ({ hidden: D.hidden || [], layers: D.layers || [], circles: (D.circles || []).map(c => ({ lay: String(c.lay), pts: c.pts })), lines: D.lines.map(l => ({ lay: String(l.lay), pts: l.pts })), polys: D.polys.map(p => ({ lay: String(p.lay), closed: p.closed, pts: p.pts })),
+A.fromK = D => ({ hidden: D.hidden || [], layers: D.layers || [], layerColors: D.layerColors || {}, circles: (D.circles || []).map(c => ({ lay: String(c.lay), pts: c.pts })), lines: D.lines.map(l => ({ lay: String(l.lay), pts: l.pts })), polys: D.polys.map(p => ({ lay: String(p.lay), closed: p.closed, pts: p.pts })),
   texts: (D.textList || []).map(t => ({ lay: String(t.lay), s: String(t.s), e: t.e, y: t.y, h: t.h || 0, rot: t.rot || 0, ...(t.pno ? { pno: true } : {}) })), points: D.points.map(p => ({ lay: String(p.lay), n: p.n, e: p.e, y: p.y, z: p.z })),
   /* V7098: CAD yukleyici ucgenleri yeniden NCZ ayrisitirmadan kullanir. */
   faces: D.faces || [], nczDiagnostics: D.nczDiagnostics || null });
@@ -7905,7 +7973,7 @@ const R={
  line(l,a,b,lt){const w=new W(101);common(w,2,l,a[1],a[0],a[2],BB([a,b]));LTI(w,lt);w.d(81,b[1]);w.d(89,b[0]);w.f(97,b[2]||0);return w.b;},
  face(l,a,b,c){const w=new W(129),z=[a[2]||0,b[2]||0,c[2]||0];common(w,12,l,a[1],a[0],a[2],BB([a,b,c]));w.d(81,b[1]);w.d(89,b[0]);w.f(97,z[1]);w.d(101,c[1]);w.d(109,c[0]);w.f(117,z[2]);w.f(121,Math.min(...z));w.f(125,Math.max(...z));return w.b;},
  circle(l,c,r){const w=new W(89);common(w,3,l,c[1],c[0],c[2],[c[1]-r,c[0]-r,c[1]+r,c[0]+r]);w.d(81,r);return w.b;},
- pline(l,V,closed,lt){V=V.slice();if(closed && V.length>=3){const f=V[0],z=V[V.length-1];if(Math.abs(f[0]-z[0])>1e-9||Math.abs(f[1]-z[1])>1e-9)V.push(f);}
+ pline(l,V,closed,lt,acikKapali){V=V.slice();if(closed && V.length>=3 && !acikKapali){const f=V[0],z=V[V.length-1];if(Math.abs(f[0]-z[0])>1e-9||Math.abs(f[1]-z[1])>1e-9)V.push(f);}
   const w=new W(0x6c+24*V.length);common(w,7,l,0,0,0,BB(V));w.b[0x60]=closed?1:0;LTI(w,lt);V.forEach((p,i)=>{const o=0x6c+24*i;w.d(o,p[1]);w.d(o+8,p[0]);w.d(o+16,p[2]||0);});return w.b;},
  text(l,p,s,h,rotDeg,al,vm){const e=enc(s).slice(0,255);h=+h||1;const r=(rotDeg||0)*Math.PI/180,cs=Math.cos(r),sn=Math.sin(r),wd=0.78*h*e.length,sh=al==="c"?wd/2:al==="r"?wd:0,sv=vm?h/2:0;
   const E0=p[0]-sh*cs+sv*sn,N0=p[1]-sh*sn-sv*cs,Q=[[0,0],[wd,0],[0,h],[wd,h]].map(([x,y])=>[E0+x*cs-y*sn,N0+x*sn+y*cs]);
@@ -7917,7 +7985,7 @@ function buildS(M,T){ /* M={layers:[{n,c}], items:[[kind, layerName, ...args]]} 
  const S=secs(T);{const D8=S.find(s=>s.t===8).D,dec=new TextDecoder("windows-1254");LTN=[];for(let o=82;o+219<=D8.length;o+=219)LTN.push(dec.decode(D8.subarray(o+1,o+1+D8[o])));}const _x=0,L=[["0",7]],LI={"0":0};
  const li=n=>{n=String(n||"0");if(LI[n]===undefined){if(L.length>=250)return 0;LI[n]=L.length;L.push([n,7]);}return LI[n];};
  const hiddenLayers = new Set();
- for(const y of M.layers||[]){li(y.n);L[LI[String(y.n)]][1]=y.c||7;if(y.hidden)hiddenLayers.add(String(y.n));}
+ for(const y of M.layers||[]){li(y.n);L[LI[String(y.n)]][1]=y.c==null?7:y.c;if(y.hidden)hiddenLayers.add(String(y.n));}
  const recs=[];for(const it of M.items){const f=R[it[0]];if(!f)continue;try{recs.push(f(li(it[1]),...it.slice(2)));}catch(e){}}
  const l6=S.find(s=>s.t===6).D,lay=new Uint8Array(13+29*L.length);lay.set(l6.subarray(0,11));new DataView(lay.buffer).setUint16(11,L.length,true);
  L.forEach(([n,c],i)=>{const o=13+29*i,e=enc(n).slice(0,20);lay[o]=hiddenLayers.has(n)?0xfc:0xfd;lay[o+2]=0x12;lay[o+4]=e.length;lay.set(e,o+5);lay[o+25]=c&255;lay[o+27]=1;});
@@ -15834,7 +15902,7 @@ function renderLays() { const el = $("cadLays"); const cnt = {}, tip = {}; ents.
   el.querySelectorAll("[data-gx]").forEach(i => i.addEventListener("click", () => { const g = i.dataset.gx; GOPEN.has(g) ? GOPEN.delete(g) : GOPEN.add(g); try { localStorage.setItem("acad-lgrp", JSON.stringify([...GOPEN])); } catch (e) {} renderLays(); }));
   el.querySelectorAll("[data-go]").forEach(i => i.addEventListener("change", () => { grpL(i.dataset.go).forEach(n => lays[n].on = i.checked); IDX = null; FC = null; renderLays(); draw(); persist(); }));
   el.querySelectorAll("[data-gt]").forEach(i => i.addEventListener("click", () => layPanel(i.dataset.gt, grpL(i.dataset.gt))));
-  el.querySelectorAll("[data-lc]").forEach(i => i.addEventListener("input", () => { lays[i.dataset.lc].c = i.value; draw(); persist(); }));
+  el.querySelectorAll("[data-lc]").forEach(i => i.addEventListener("input", () => { lays[i.dataset.lc].c = i.value; delete lays[i.dataset.lc].aci; draw(); persist(); }));
   el.querySelectorAll("[data-lo]").forEach(i => i.addEventListener("change", () => { lays[i.dataset.lo].on = i.checked; IDX = null; draw(); persist(); }));
   el.querySelectorAll("[data-lk]").forEach(i => i.addEventListener("click", () => { cur = i.dataset.lk; renderLays(); persist(); }));
   el.querySelectorAll("[data-lt]").forEach(i => i.addEventListener("click", () => layPanel(i.dataset.lt))); }
@@ -16003,7 +16071,7 @@ async function loadFile(f, append) { say("Okunuyor…"); try { if (/\.dwg$/i.tes
     /* eklenen dosyada çizimde zaten olan tabaka adı varsa ayrı tabakaya (AD~dosya) ve ayrı renge: eski ile yeni karışmasın, fark görülsün */
     const L = l => { let t = l == null || l === "" ? base : String(l); if (append && ESKI.has(t)) { t = t + "~" + base; return layer(t, yc); } return layer(t); };
     D.lines.forEach(l => { add({ t: "line", pts: l.pts.map(p => [p[0], p[1], p[2] || 0]), lay: L(l.lay), ...(l.lt ? { lt: l.lt } : {}) }); n++; });
-    D.polys.forEach(p => { add({ t: "pline", pts: p.pts.map(q => [q[0], q[1], q[2] || 0]), closed: !!p.closed, lay: L(p.lay), ...(p.lt ? { lt: p.lt } : {}) }); n++; });
+    D.polys.forEach(p => { const P_ = p.pts, kp = !!p.closed && /\.ncz$/i.test(f.name) && P_.length >= 3 && (Math.abs(P_[0][0] - P_[P_.length - 1][0]) > 1e-9 || Math.abs(P_[0][1] - P_[P_.length - 1][1]) > 1e-9); add({ t: "pline", pts: P_.map(q => [q[0], q[1], q[2] || 0]), closed: !!p.closed, lay: L(p.lay), ...(p.lt ? { lt: p.lt } : {}), ...(kp ? { nczKapanisYok: 1 } : {}) }); n++; });
     (D.circles || []).forEach(c => { add({ t: "pline", pts: c.pts.map(q => [q[0], q[1], 0]), closed: true, lay: L(c.lay) }); n++; });
     D.points.forEach(p => { const e_ = add({ t: "point", n: p.n || "", pts: [[p.e, p.y, p.z==null||p.z===''||!Number.isFinite(Number(p.z))?null:Number(p.z)]], lay: L(p.lay) }); if (p.kod) e_.kod = p.kod; n++; });
     D.texts.filter(t => isFinite(t.e) && t.e && t.s).forEach(t => { const o = { t: "text", s: t.s, h: t.h || 1, pts: [[t.e, t.y, 0]], lay: L(t.lay) }; if (t.rot) o.rot = t.rot; if (t.al && t.al !== "l") o.al = t.al; add(o); n++; });
@@ -16022,7 +16090,7 @@ async function loadFile(f, append) { say("Okunuyor…"); try { if (/\.dwg$/i.tes
       zeroInvalid=zeroRemoved+zeroFaces;
       if (zeroInvalid) DIRTY=true;
     }
-    const off = (D.hidden || []).filter(l => !!lays[l]); off.forEach(l => lays[l].on = false); let FARK = ""; if (append && !KAY) try { FARK = farkAnaliz(id0); } catch (er) { console.error(er); } IDX = null; renderLays(); zoomAll(); persist();
+    const off = (D.hidden || []).filter(l => !!lays[l]); off.forEach(l => lays[l].on = false); if (D.layerColors && K.aciHex) for (const [l, c] of Object.entries(D.layerColors)) if (lays[l] && c >= 0 && c < 256) { lays[l].aci = c; if (c > 0) lays[l].c = c === 7 ? "#ffffff" : K.aciHex(c); } /* NCZ tabaka renkleri korunur */ let FARK = ""; if (append && !KAY) try { FARK = farkAnaliz(id0); } catch (er) { console.error(er); } IDX = null; renderLays(); zoomAll(); persist();
     /* Mobilde dosya seçicinin kapanması ve CAD panelinin boyutlanması sonrasında tekrar sığdır. */
     if (!append) requestAnimationFrame(() => requestAnimationFrame(() => {
       if (!cmd && ptr.size===0 && !$('v-cad').hidden && ents.length+FACES.length) zoomAll();
@@ -16066,10 +16134,10 @@ function annot(A_) { const RL = ["PARSEL_CEPHE", "BINA_CEPHE", "IFRAZ_CEPHE", "C
   all.forEach((row, r) => { let x = tx; row.forEach((v, c) => { if (v) add({ t: "text", s: v, h: r ? h * 0.8 : h * 0.85, al: "c", pts: [[x + W[c] / 2, ty - r * rh - rh * 0.72, 0]], lay: L }); x += W[c]; }); }); }
 async function save_(name, data) { if (typeof saveFile === "function") return saveFile(name, data, $("cadMsg")); }
 $("cadDxf").addEventListener("click", () => saveAs("dxf"));
-async function saveDxf(nm, onlyBuild) { const D = O.dxf(); const lmap = {}; const ci = c => { const m = { "#ff4040": 1, "#ffd800": 2, "#40e040": 3, "#40e0e0": 4, "#4080ff": 5, "#ff40ff": 6, "#ffffff": 7 }; return m[c] || 7; };
+async function saveDxf(nm, onlyBuild) { const D = O.dxf(); const lmap = {}; const ci = c => { const m = { "#ff4040": 1, "#ffd800": 2, "#40e040": 3, "#40e0e0": 4, "#4080ff": 5, "#ff40ff": 6, "#ffffff": 7 }; return m[c] || (K.hexAci ? K.hexAci(c) : 7); };
   // V7101: Görünmez tabaka veri kaybı değildir: DXF LAYER/62 negatif renk, tabaka kapalı.
   // Nesnelerin tamamı dışa aktarılır; durum yalnız ekranda/kaydedilen layer flag'inde korunur.
-  for (const [n, L] of Object.entries(lays)) lmap[n] = D.lay(n, L.on === false ? -ci(L.c) : ci(L.c), L.lt);
+  for (const [n, L] of Object.entries(lays)) { const cc = L.aci ? L.aci : ci(L.c); lmap[n] = D.lay(n, L.on === false ? -cc : cc, L.lt); }
   const LXM = { kesik: "KESİK", eksen: "EKSEN", nokta: "NOKTALI" };
   for (const e of ents) { const l = lmap[e.lay], elt = e.lt && e.lt !== "tabaka" ? e.lt : null, lx_ = (e.t === "line" || e.t === "pline") && window.LTX && LTX.has(ltOf(e)) && !LTIP[ltOf(e)] ? ltOf(e) : null; if (lx_) { const R_ = LTX.expand(e.pts, lx_, LTX.u, e.closed); for (const [a, b] of R_.L) D.line(l, a, b, 0); for (const k of R_.C) { const pts = []; for (let i = 0; i < 24; i++) pts.push([k.c[0] + k.r * Math.cos(i / 12 * Math.PI), k.c[1] + k.r * Math.sin(i / 12 * Math.PI)]); D.poly(l, pts, true); } for (const t of R_.T) { let r_ = t.rot; if (Math.cos(r_) < 0) r_ += Math.PI; D.text(l, t.p[0], t.p[1], t.h, t.s, r_ * 180 / Math.PI, "c"); } continue; } if (e.t === "line") D.line(l, e.pts[0], e.pts[1], 0, elt); else if (e.t === "pline") { if (e.pts.some(q => Math.abs(q[2] || 0) > 1e-6)) D.poly3(l, e.pts, e.closed, 0); else D.poly(l, e.pts, e.closed, 0, undefined, elt); } else if (e.t === "point") { D.point(l, e.pts[0][0], e.pts[0][1], e.pts[0][2] || 0); if (e.n) D.text(l, e.pts[0][0] + 0.3, e.pts[0][1] + 0.3, 0.6, e.n); if (e.kod) D.text(D.lay("NOKTA_KOD", 3), e.pts[0][0] + 0.3, e.pts[0][1] - 0.7, 0.5, String(e.kod)); } else if (e.t === "text") D.text(l, e.pts[0][0], e.pts[0][1], e.h || 1, e.s, e.rot || 0, e.al || "l"); else if (e.t === "circle") { const pts = []; for (let i = 0; i < 64; i++) pts.push([e.c[0] + e.r * Math.cos(i / 32 * Math.PI), e.c[1] + e.r * Math.sin(i / 32 * Math.PI)]); D.poly(l, pts, true); } }
   for (const fc of FACES) { const L = lays[fc.lay]; if (!L) continue; D.face(lmap[fc.lay] || (lmap[fc.lay] = D.lay(fc.lay, L.on === false ? -ci(L.c) : ci(L.c))), fc.p[0], fc.p[1], fc.p[2]); }
@@ -16089,9 +16157,9 @@ async function saveDxf(nm, onlyBuild) { const D = O.dxf(); const lmap = {}; cons
     if(riskySource) say("DXF geometri çıktısı hazır. NCZ özel kayıtları DXF dosyasına dönüştürülmedi; kaynak NCZ ayrıca korunuyor.",true);
     else if (ap.length) say('DXF: çizim + arazi ('+[CARZ.tin&&'üçgenler',CARZ.egri&&'eğriler'].filter(Boolean).join(', ')+')');
     return ok; }); }
-function nczM_() { const ci = c => { const m = { "#ff4040": 1, "#ffd800": 2, "#40e040": 3, "#40e0e0": 4, "#4080ff": 5, "#ff40ff": 6, "#ffffff": 7 }; return m[c] || 7; }, M = { layers: Object.entries(lays).map(([n, L]) => ({ n, c: ci(L.c), hidden: L.on === false })), items: [] }, I = M.items;
+function nczM_() { const ci = c => { const m = { "#ff4040": 1, "#ffd800": 2, "#40e040": 3, "#40e0e0": 4, "#4080ff": 5, "#ff40ff": 6, "#ffffff": 7 }; return m[c] || (K.hexAci ? K.hexAci(c) : 7); }, M = { layers: Object.entries(lays).map(([n, L]) => ({ n, c: L.aci != null ? L.aci : ci(L.c), hidden: L.on === false })), items: [] }, I = M.items;
   const LXM = { kesik: "KESİK", eksen: "EKSEN", nokta: "NOKTALI" };
-  for (const e of ents) { const P = e.pts || []; let lt_ = (e.t === "line" || e.t === "pline") ? ltOf(e) : ""; lt_ = LXM[lt_] || lt_; if (lt_ && window.LTX && LTX.has(lt_) && !(LTX.LIB[lt_].src === "ncz" && window.NCZW.ltVar(lt_))) { const R_ = LTX.expand(P, lt_, LTX.u, e.closed); for (const [a, b] of R_.L) I.push(["line", e.lay, [a[0], a[1], 0], [b[0], b[1], 0]]); for (const k of R_.C) I.push(["circle", e.lay, [k.c[0], k.c[1], 0], k.r]); for (const t of R_.T) { let r_ = t.rot; if (Math.cos(r_) < 0) r_ += Math.PI; I.push(["text", e.lay, [t.p[0], t.p[1], 0], t.s, t.h, r_ * 180 / Math.PI, "c"]); } continue; } const lo = lt_ && window.LTX && LTX.has(lt_) ? lt_ : null; if (e.t === "line") I.push(["line", e.lay, P[0], P[1], lo]); else if (e.t === "pline") I.push(["pline", e.lay, P, !!e.closed, lo]); else if (e.t === "point") { I.push(["point", e.lay, P[0], e.n]); if (e.kod) { if (!M.layers.some(y => y.n === "NOKTA_KOD")) M.layers.push({ n: "NOKTA_KOD", c: 3 }); I.push(["text", "NOKTA_KOD", [P[0][0] + 0.3, P[0][1] - 0.7, 0], String(e.kod), 0.5, 0, "l"]); } } else if (e.t === "text") I.push(["text", e.lay, P[0], e.s, e.h || 1, e.rot || 0, e.al || "l"]); else if (e.t === "circle") I.push(["circle", e.lay, e.c, e.r]); }
+  for (const e of ents) { const P = e.pts || []; let lt_ = (e.t === "line" || e.t === "pline") ? ltOf(e) : ""; lt_ = LXM[lt_] || lt_; if (lt_ && window.LTX && LTX.has(lt_) && !(LTX.LIB[lt_].src === "ncz" && window.NCZW.ltVar(lt_))) { const R_ = LTX.expand(P, lt_, LTX.u, e.closed); for (const [a, b] of R_.L) I.push(["line", e.lay, [a[0], a[1], 0], [b[0], b[1], 0]]); for (const k of R_.C) I.push(["circle", e.lay, [k.c[0], k.c[1], 0], k.r]); for (const t of R_.T) { let r_ = t.rot; if (Math.cos(r_) < 0) r_ += Math.PI; I.push(["text", e.lay, [t.p[0], t.p[1], 0], t.s, t.h, r_ * 180 / Math.PI, "c"]); } continue; } const lo = lt_ && window.LTX && LTX.has(lt_) ? lt_ : null; if (e.t === "line") I.push(["line", e.lay, P[0], P[1], lo]); else if (e.t === "pline") I.push(["pline", e.lay, P, !!e.closed, lo, !!e.nczKapanisYok]); else if (e.t === "point") { I.push(["point", e.lay, P[0], e.n]); if (e.kod) { if (!M.layers.some(y => y.n === "NOKTA_KOD")) M.layers.push({ n: "NOKTA_KOD", c: 3 }); I.push(["text", "NOKTA_KOD", [P[0][0] + 0.3, P[0][1] - 0.7, 0], String(e.kod), 0.5, 0, "l"]); } } else if (e.t === "text") I.push(["text", e.lay, P[0], e.s, e.h || 1, e.rot || 0, e.al || "l"]); else if (e.t === "circle") I.push(["circle", e.lay, e.c, e.r]); }
   for (const fc of FACES) { I.push(["face", fc.lay, fc.p[0], fc.p[1], fc.p[2]]); }
   const ap = arzPrims(); if (ap.length) { try { const R = O.dxf(); ARZX.toDxf(R, ap, +PVO.olc || 1000); const m = R.nczM(); const ln = new Set(M.layers.map(y => y.n)); for (const y of m.layers) if (!ln.has(y.n)) M.layers.push(y); for (const it of m.items) I.push(it); } catch (e) { console.error(e); } } /* arazi: üçgen + eğriler de NCZ'ye */
   return M; }
@@ -18216,6 +18284,7 @@ try { let roT = 0; new ResizeObserver(() => { clearTimeout(roT); roT = setTimeou
 window.CADX && (CADX._dbg = (x, y) => ents.filter(e => e.t === "pline" && e.closed).map(e => [e.lay, e.pts.length, KZL.test(e.lay), !!(lays[e.lay] && lays[e.lay].on), inPolyC(e.pts, x, y)]));
 window.CADX && (CADX._ucg = { lasOku, c3: () => C3, v3c: () => V3C, ucgYap, ucgHazir, sinirAyarla: v => UCGSIN = v, hataBul, vAg, vTahmin, vKotYaz, heHesap, HE: () => HE, tKapali, tinBirles, alanKes, alanDisSil, tinSinir, tinDoldur, tConform, faces: () => FACES, setFaces: F => { FACES = F; FC = null; }, lays: () => lays,
   stat(l) { const F = FACES.filter(f => f.lay === l); let a = 0; for (const f of F) a += Math.abs(tCr(f.p[0], f.p[1], f.p[2])) / 2; const S = tinSinir(l); const ar = S.map(P => pAr(P)); const out = Math.abs(ar[0] || 0); const net = S.reduce((s, P) => s + Math.abs(pAr(P)), 0) - 2 * S.slice(1).reduce((s, P) => s + Math.abs(pAr(P)), 0); return { n: F.length, a, loops: S.length, sinirNet: net }; } }), window.CADX && (CADX._kd = (x, y) => ({ z: kotAt(x, y), p: projeKot(x, y) }), CADX._gps = gpsCb);
+window.CADX && (CADX._nczBytes = () => nczBytes()); /* test: NCZ yaz-oku çevrimi */
 window.CADX && (CADX._bridge = { get ents() { return ents; }, get sel() { return sel; }, get lays() { return lays; }, get PLAN() { return PLAN; }, get FACES() { return FACES; }, parcelOfSel, toFD, noOf, projName, areaOf, say, saveDxf }); /* CAD → modül aktarımı (s32) için kapsam köprüsü */
 window.CADX && (CADX._gor = (re, on) => { for (const k in lays) if (re.test(k)) lays[k].on = on; FC = null; renderLays(); zoomAll(ents.filter(e => /^KAZI_/.test(e.lay))); draw(); });
 })();
