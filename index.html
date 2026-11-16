@@ -3118,7 +3118,7 @@ window.__DY=window.__DY||function(n){var v=Math.round(n*100)/100;return &#x27;1D
     else if(nr){var d=nr.distance;h+=&#x27;&lt;small&gt;&#x27;+(p.id||&#x27;Yol&#x27;)+&#x27; · en yakın KM&lt;/small&gt;&lt;b class=&quot;km&quot;&gt;KM &#x27;+km(nr.s)+&#x27;&lt;/b&gt;&lt;span class=&quot;w&quot;&gt;Yoldan &#x27;+(d&gt;1000?f2(d/1000,2)+&#x27; km&#x27;:f2(d,0)+&#x27; m&#x27;)+&#x27; uzaktasın&lt;/span&gt; · GPS &#x27;+acc;
       if(d&gt;5000)h+=&#x27;&lt;br&gt;&lt;small class=&quot;w&quot;&gt;Çok uzak: proje koordinat sistemi / dilim orta meridyeni (DOM &#x27;+((P.ST&amp;&amp;P.ST.set&amp;&amp;P.ST.set.cm)||33)+&#x27;) ayarını kontrol et.&lt;/small&gt;&#x27;;}
     if(dn&amp;&amp;dn.distance&lt;=200)h+=&#x27;&lt;br&gt;&lt;small&gt;Yeni yol: KM &#x27;+km(dn.s)+&#x27; · &#x27;+side(dn.off,true).toLocaleLowerCase(&#x27;tr&#x27;)+&#x27;&lt;/small&gt;&#x27;;
-    h+=&#x27;&lt;br&gt;&lt;small&gt;Y &#x27;+f2(fx.e,3)+&#x27; · X &#x27;+f2(fx.n,3)+(Number.isFinite(fx.alt)?&#x27; · GPS yüksekliği &#x27;+f2(fx.alt,1)+&#x27; m (kot değildir)&#x27;:&#x27;&#x27;)+&#x27;&lt;/small&gt;&#x27;;
+    h+=&#x27;&lt;br&gt;&lt;small&gt;Y &#x27;+f2(fx.e,3)+&#x27; · X &#x27;+f2(fx.n,3)+&#x27;&lt;/small&gt;&#x27;;
     box.innerHTML=h;
   }
   function overlay(){
