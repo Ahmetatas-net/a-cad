@@ -14821,7 +14821,7 @@ function acadAreaQueryShow(e,p){
      if(ents.find(q=>q.id===e.id)!==e)throw Error('Alan değişti; yeniden sorgula');
      const Xb=O.xlsx(),th={b:true,fill:'DDECF4',border:'thin'},tx={border:'thin'},nm={border:'thin',nf:'0.000'};
      const S=Xb.sheet('ALAN_OZETI');S.col(0,23);S.col(1,39);
-     const data=[['Alan adı',name],['Tabaka',e.lay||''],['Alan (m²)',ar],['Çevre (m)',pr],['Köşe sayısı',P.length],['Durum',quality],['Kaynak dosya',CDOC?.name||'CAD çizimi'],['Ölçülmemiş köprü adedi',(e.areaInferredBridges||[]).length],['Kaynak nesne ID',e.id]];
+     const data=[['Alan adı',name],['Tabaka',e.lay||''],['Alan (m²)',ar],['Çevre (m)',pr],['Köşe sayısı',P.length],['Kaynak dosya',CDOC?.name||'CAD çizimi'],['Ölçülmemiş köprü adedi',(e.areaInferredBridges||[]).length],['Kaynak nesne ID',e.id]];
      S.set('A1','ALAN SORGULA · ÖZET',th);S.set('B1','Değer',th);
      data.forEach((r,i)=>{S.set('A'+(i+2),r[0],tx);S.set('B'+(i+2),r[1],typeof r[1]==='number'?nm:tx);});
      const K=Xb.sheet('KOŞE_KOORDINATLARI');[10,19,19,17].forEach((w,i)=>K.col(i,w));
@@ -14833,15 +14833,15 @@ function acadAreaQueryShow(e,p){
    }catch(err){say('Excel aktarımı tamamlanamadı: '+err.message,true);}
  };
  box.querySelector('#acadAreaPaste').onclick=()=>{
-   const lines=[`ALAN ÇIKTISI · ${name}`,`Alan: ${acadAlanSay(ar,4)} m²`,`Çevre: ${acadAlanSay(pr,3)} m`,`Tabaka: ${e.lay||'—'} · Köşe: ${P.length}`,`Durum: ${quality}`,`Kaynak: ${CDOC?.name||'CAD çizimi'}`];
+   const lines=[`${name}`,`Alan: ${acadAlanSay(ar,2)} m²`];
    acadReportPlacement(e,lines,'ALAN_CIKTISI',box);
  };
  box.querySelector('#acadCoordPaste').onclick=()=>{
-   const rows=[`ALAN ÇIKTISI · ${name}`,`Alan: ${acadAlanSay(ar,4)} m²  ·  Çevre: ${acadAlanSay(pr,3)} m  ·  Köşe: ${P.length}`,`Tabaka: ${e.lay||'—'} · Durum: ${quality}`,`KOORDİNAT ÖZETİ`,`Köşe    Y                X                Z`];
-   const take=Math.min(P.length,195);
+   const rows=[`${name}`,`Alan: ${acadAlanSay(ar,2)} m²`,`KOORDİNAT ÖZETİ`,`No      Y                X${P.some(q=>q.z!==null)?'                Z':''}`];
+   const take=Math.min(P.length,195),zv=P.some(q=>q.z!==null);
    for(let i=0;i<take;i++){
      const q=P[i],f=n=>Number(n).toFixed(3);
-     rows.push(`${String(i+1).padStart(3,'0')}   ${f(q.y)}   ${f(q.x)}   ${q.z===null?'—':f(q.z)}`);
+     rows.push(`${String(i+1).padStart(3,'0')}   ${f(q.y)}   ${f(q.x)}${zv?'   '+(q.z===null?'—':f(q.z)):''}`);
    }
    if(P.length>take)rows.push(`${P.length-take} ek köşe: tamamı Excel'de`);
    acadReportPlacement(e,rows,'KOORDINAT_OZETI',box);
