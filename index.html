@@ -14186,17 +14186,20 @@ let ALAN_AKTIF = null; /* Alan Sorgula ile açık olan alan: ekranda belirgin */
 const ALAN_VIS = (()=>{
  let hatchD=0,hatch=null;
  const number=n=>Number(n).toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:3});
- function pattern(D){const d=Math.max(1,Math.round(D*100)/100);if(hatch&&hatchD===d)return hatch;
+ const PATS=new Map();
+ function rgb(c){try{c=String(c||'').trim();let m=/^#([0-9a-f]{3})$/i.exec(c);if(m)c='#'+m[1].split('').map(h=>h+h).join('');m=/^#([0-9a-f]{6})/i.exec(c);if(m){const n=parseInt(m[1],16);return[(n>>16)&255,(n>>8)&255,n&255];}m=/rgba?\(([^)]+)\)/i.exec(c);if(m){const v=m[1].split(',').map(Number);if(v.length>=3&&v.slice(0,3).every(Number.isFinite))return v.slice(0,3);}}catch(x){}return null;}
+ function pattern(D,col){const d=Math.max(1,Math.round(D*100)/100),k=d+'|'+(col||'');if(PATS.has(k))return PATS.get(k);
    const side=Math.max(12,Math.round(14*d)),a=document.createElement('canvas');a.width=a.height=side;
-   const c=a.getContext('2d');c.strokeStyle='rgba(2,93,101,.5)';c.lineWidth=Math.max(1,d);
+   const c=a.getContext('2d');c.strokeStyle=col?'rgba('+col.join(',')+',.55)':'rgba(2,93,101,.5)';c.lineWidth=Math.max(1,d);
    c.beginPath();for(let x=-side;x<side*2;x+=side){c.moveTo(x,side);c.lineTo(x+side,0);}c.stroke();
-   hatchD=d;hatch=a;return hatch;}
+   if(PATS.size>40)PATS.clear();PATS.set(k,a);return a;}
  function ring(g,FX,FY,P){g.beginPath();for(let i=0;i<P.length;i++){const q=P[i];if(i)g.lineTo(FX(q[0]),FY(q[1]));else g.moveTo(FX(q[0]),FY(q[1]));}g.closePath();}
  function fill(g,FX,FY,D,P,o={}){if(!Array.isArray(P)||P.length<3)return;
-   g.save();ring(g,FX,FY,P);g.fillStyle=o.active==='second'?'rgba(255,154,60,.36)':o.active?'rgba(54,195,255,.34)':o.reviewRequired?'rgba(232,117,24,.22)':(o.preview?'rgba(248,188,32,.25)':'rgba(39,184,171,.19)');g.fill();
-   g.save();g.clip();const pat=g.createPattern(pattern(D),'repeat');if(pat){g.fillStyle=pat;g.fill();}g.restore();
+   const lc=(!o.active&&!o.preview&&!o.reviewRequired&&o.color)?rgb(o.color):null;
+   g.save();ring(g,FX,FY,P);g.fillStyle=o.active==='second'?'rgba(255,154,60,.36)':o.active?'rgba(54,195,255,.34)':o.reviewRequired?'rgba(232,117,24,.22)':(o.preview?'rgba(248,188,32,.25)':lc?'rgba('+lc.join(',')+',.18)':'rgba(39,184,171,.19)');g.fill();
+   g.save();g.clip();const pat=g.createPattern(pattern(D,lc),'repeat');if(pat){g.fillStyle=pat;g.fill();}g.restore();
    if(o.active){g.shadowColor=o.active==='second'?'rgba(255,154,60,.85)':'rgba(54,195,255,.85)';g.shadowBlur=9*D;g.strokeStyle=o.active==='second'?'#ff9a3c':'#36c3ff';g.lineWidth=3.2*D;g.stroke();g.shadowBlur=0;}
-   else if(o.stroke!==false){g.strokeStyle=o.preview?'#f5ac23':'#067f7d';g.lineWidth=(o.preview?2.5:1.6)*D;g.stroke();}g.restore();}
+   else if(o.stroke!==false){g.strokeStyle=o.preview?'#f5ac23':lc?'rgb('+lc.join(',')+')':'#067f7d';g.lineWidth=(o.preview?2.5:1.6)*D;g.stroke();}g.restore();}
  // Avoid bounding-box centre labels landing outside long concave contours.
  function point(P){const n=P.length;let a=0,cy=0,cx=0;const org=P[0];for(let i=0;i<n;i++){const p=P[i],q=P[(i+1)%n],x=p[0]-org[0],y=p[1]-org[1],x2=q[0]-org[0],y2=q[1]-org[1],k=x*y2-x2*y;a+=k;cx+=(x+x2)*k;cy+=(y+y2)*k;}
    if(Math.abs(a)>1e-10){const c=[org[0]+cx/(3*a),org[1]+cy/(3*a)];if(inPolyC(P,c[0],c[1]))return c;}
@@ -14257,7 +14260,7 @@ function draw() { liveTick(); { const r = cv.getBoundingClientRect(); if (r.widt
     // When editing the same polygon, the moving geometry gets the visible preview instead.
     if(AREA_EDIT_SESSION?.id===e.id&&cmd?.name==='Alan Düzelt'&&(cmd.preview?.parts?.length||cmd._liveOn))continue;
     const act_=AREA_EDIT_SESSION&&AREA_EDIT_SESSION.second===e.id?'second':(sel.has(e.id)||AREA_EDIT_SESSION?.id===e.id||ALAN_AKTIF===e.id?'first':null);
-    ALAN_VIS.fill(cx,X,Y,D,e.pts,{active:act_,stroke:!!act_?true:false,reviewRequired:_alanK&&(alanKaynakGuncelMi(e)===false||e.areaQuality==='review-required'||(e.areaInferredBridges||[]).some(b=>b.metres>20))});if(_alanK)acadAreaLabels.push(e);
+    ALAN_VIS.fill(cx,X,Y,D,e.pts,{active:act_,color:(()=>{try{return renk(lays[e.lay].c);}catch(x){return lays[e.lay]?.c;}})(),stroke:!!act_?true:false,reviewRequired:_alanK&&(alanKaynakGuncelMi(e)===false||e.areaQuality==='review-required'||(e.areaInferredBridges||[]).some(b=>b.metres>20))});if(_alanK)acadAreaLabels.push(e);
   }
 
   for (const e of ents) { const L = lays[e.lay]; if (!L || !L.on) continue; { const b = ebb(e); if (b && (b[2] < vx0 || b[0] > vx1 || b[3] < vy0 || b[1] > vy1)) continue; if (b && e.t !== "point" && e.t !== "text" && !sel.has(e.id) && (b[2] - b[0] + b[3] - b[1]) * V.s * D < 0.6) continue; } const s = sel.has(e.id); if (!s && !e.fill && (e.t === "line" || e.t === "pline") && e.pts.length > 1) { const lt_ = ltOf(e); if (!lt_ || (!ltDash(lt_, 1) && !(window.LTX && LTX.has(lt_)))) { const col = renk(L.c); let bp = BPATH.get(col); if (!bp) { bp = new Path2D(); BPATH.set(col, bp); } const P = e.pts; let px = X(P[0][0]), py = Y(P[0][1]); bp.moveTo(px, py); for (let i = 1; i < P.length; i++) { const qx = X(P[i][0]), qy = Y(P[i][1]); if (i < P.length - 1 && Math.abs(qx - px) + Math.abs(qy - py) < 0.7) continue; bp.lineTo(qx, qy); px = qx; py = qy; } if (e.closed) bp.closePath(); continue; } } cx.strokeStyle = cx.fillStyle = s ? "#36c3ff" : renk(L.c); cx.lineWidth = (s ? 2 : 1.2) * D; let dsf = false; if (s) { cx.setLineDash([6 * D, 4 * D]); dsf = true; } else if (e.t === "line" || e.t === "pline" || e.t === "circle") { const dd = ltDash(ltOf(e), 1.6 * D); if (dd) { cx.setLineDash(dd); dsf = true; } }
