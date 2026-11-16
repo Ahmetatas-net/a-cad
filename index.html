@@ -15752,7 +15752,7 @@ function annot(A_) { const RL = ["PARSEL_CEPHE", "BINA_CEPHE", "IFRAZ_CEPHE", "C
   all.forEach((row, r) => { let x = tx; row.forEach((v, c) => { if (v) add({ t: "text", s: v, h: r ? h * 0.8 : h * 0.85, al: "c", pts: [[x + W[c] / 2, ty - r * rh - rh * 0.72, 0]], lay: L }); x += W[c]; }); }); }
 async function save_(name, data) { if (typeof saveFile === "function") return saveFile(name, data, $("cadMsg")); }
 $("cadDxf").addEventListener("click", () => saveAs("dxf"));
-async function saveDxf(nm) { const D = O.dxf(); const lmap = {}; const ci = c => { const m = { "#ff4040": 1, "#ffd800": 2, "#40e040": 3, "#40e0e0": 4, "#4080ff": 5, "#ff40ff": 6, "#ffffff": 7 }; return m[c] || 7; };
+async function saveDxf(nm, onlyBuild) { const D = O.dxf(); const lmap = {}; const ci = c => { const m = { "#ff4040": 1, "#ffd800": 2, "#40e040": 3, "#40e0e0": 4, "#4080ff": 5, "#ff40ff": 6, "#ffffff": 7 }; return m[c] || 7; };
   // V7101: Görünmez tabaka veri kaybı değildir: DXF LAYER/62 negatif renk, tabaka kapalı.
   // Nesnelerin tamamı dışa aktarılır; durum yalnız ekranda/kaydedilen layer flag'inde korunur.
   for (const [n, L] of Object.entries(lays)) lmap[n] = D.lay(n, L.on === false ? -ci(L.c) : ci(L.c), L.lt);
@@ -15760,6 +15760,7 @@ async function saveDxf(nm) { const D = O.dxf(); const lmap = {}; const ci = c =>
   for (const e of ents) { const l = lmap[e.lay], elt = e.lt && e.lt !== "tabaka" ? e.lt : null, lx_ = (e.t === "line" || e.t === "pline") && window.LTX && LTX.has(ltOf(e)) && !LTIP[ltOf(e)] ? ltOf(e) : null; if (lx_) { const R_ = LTX.expand(e.pts, lx_, LTX.u, e.closed); for (const [a, b] of R_.L) D.line(l, a, b, 0); for (const k of R_.C) { const pts = []; for (let i = 0; i < 24; i++) pts.push([k.c[0] + k.r * Math.cos(i / 12 * Math.PI), k.c[1] + k.r * Math.sin(i / 12 * Math.PI)]); D.poly(l, pts, true); } for (const t of R_.T) { let r_ = t.rot; if (Math.cos(r_) < 0) r_ += Math.PI; D.text(l, t.p[0], t.p[1], t.h, t.s, r_ * 180 / Math.PI, "c"); } continue; } if (e.t === "line") D.line(l, e.pts[0], e.pts[1], 0, elt); else if (e.t === "pline") { if (e.pts.some(q => Math.abs(q[2] || 0) > 1e-6)) D.poly3(l, e.pts, e.closed, 0); else D.poly(l, e.pts, e.closed, 0, undefined, elt); } else if (e.t === "point") { D.point(l, e.pts[0][0], e.pts[0][1], e.pts[0][2] || 0); if (e.n) D.text(l, e.pts[0][0] + 0.3, e.pts[0][1] + 0.3, 0.6, e.n); if (e.kod) D.text(D.lay("NOKTA_KOD", 3), e.pts[0][0] + 0.3, e.pts[0][1] - 0.7, 0.5, String(e.kod)); } else if (e.t === "text") D.text(l, e.pts[0][0], e.pts[0][1], e.h || 1, e.s, e.rot || 0, e.al || "l"); else if (e.t === "circle") { const pts = []; for (let i = 0; i < 64; i++) pts.push([e.c[0] + e.r * Math.cos(i / 32 * Math.PI), e.c[1] + e.r * Math.sin(i / 32 * Math.PI)]); D.poly(l, pts, true); } }
   for (const fc of FACES) { const L = lays[fc.lay]; if (!L) continue; D.face(lmap[fc.lay] || (lmap[fc.lay] = D.lay(fc.lay, L.on === false ? -ci(L.c) : ci(L.c))), fc.p[0], fc.p[1], fc.p[2]); }
   const ap = arzPrims(); if (ap.length) ARZX.toDxf(D, ap, +PVO.olc || 1000);
+  if (onlyBuild) return D.build();
   const riskySource = Number(CDOC.nczUnmodeledRecords||0)>0;
   let nz = null;
   if (!riskySource) try { nz = await nczBytes(); } catch (e) { console.error(e); }
@@ -17386,7 +17387,7 @@ function parcelOfSel() { const L = selEnts(); const cl = L.filter(e => e.t === "
   if (!ch.length || !window.A || !A.faces) return null; const F = A.faces(ch).map(f => A.clean(f, 0.002, true)).filter(f => f.length >= 3 && A.area(f) > 1).sort((a, b) => A.area(b) - A.area(a)); return F[0] || null; }
 // parsel içindeki "ada/parsel" yazısı
 function noOf(P) { if (!P) return null; for (const e of ents) if (e.t === "text" && window.A && A.inPoly(P, e.pts[0][0], e.pts[0][1])) { const m = String(e.s).trim().match(/^(\d{1,5})\s*\/\s*(\d{1,5})$/); if (m) return { ada: m[1], no: m[2] }; } return null; }
-const projName = () => (Object.keys(lays).find(l => l !== "0") || "Çizim");
+const projName = () => (CDOC && CDOC.name ? String(CDOC.name).replace(/\.[^.]+$/, "") : "") || (Object.keys(lays).find(l => l !== "0") || "Çizim");
 function flowTo(m) { if (!ents.length) return say("Önce 📂 Dosya aç ile bir proje yükle", true); if (PLAN) return say("Önce açık düzenlemeyi ✓ Uygula ya da ✕ Vazgeç ile bitir", true);
   let P = sel.size ? parcelOfSel() : null; if (!sel.size) { const C = ents.filter(e => e.t === "pline" && e.closed && e.pts.length >= 3 && lays[e.lay] && lays[e.lay].on); if (C.length === 1) P = C[0].pts.map(q => [q[0], q[1]]); } if (sel.size && !P) return say("Seçimden kapalı bir parsel sınırı çıkmadı. Kapalı çizgiyi ya da parseli oluşturan çizgileri seç.", true);
   const a = window.APLT.S(); if (m === "apl" && a.ifz && a.ifz.parts && a.ifz.parts.length && !flowTo.arm) { flowTo.arm = 1; setTimeout(() => flowTo.arm = 0, 5000); return say("İfraz sekmesindeki bölme sonucu, yeni parsel aktarılınca silinir. Çıktılarını aldıysan ya da ⬅ Sonucu çizime al ile çizime eklediysen ② Yapı APL'ye tekrar bas.", true); } flowTo.arm = 0;
@@ -17901,6 +17902,7 @@ try { let roT = 0; new ResizeObserver(() => { clearTimeout(roT); roT = setTimeou
 window.CADX && (CADX._dbg = (x, y) => ents.filter(e => e.t === "pline" && e.closed).map(e => [e.lay, e.pts.length, KZL.test(e.lay), !!(lays[e.lay] && lays[e.lay].on), inPolyC(e.pts, x, y)]));
 window.CADX && (CADX._ucg = { lasOku, c3: () => C3, v3c: () => V3C, ucgYap, ucgHazir, sinirAyarla: v => UCGSIN = v, hataBul, vAg, vTahmin, vKotYaz, heHesap, HE: () => HE, tKapali, tinBirles, alanKes, alanDisSil, tinSinir, tinDoldur, tConform, faces: () => FACES, setFaces: F => { FACES = F; FC = null; }, lays: () => lays,
   stat(l) { const F = FACES.filter(f => f.lay === l); let a = 0; for (const f of F) a += Math.abs(tCr(f.p[0], f.p[1], f.p[2])) / 2; const S = tinSinir(l); const ar = S.map(P => pAr(P)); const out = Math.abs(ar[0] || 0); const net = S.reduce((s, P) => s + Math.abs(pAr(P)), 0) - 2 * S.slice(1).reduce((s, P) => s + Math.abs(pAr(P)), 0); return { n: F.length, a, loops: S.length, sinirNet: net }; } }), window.CADX && (CADX._kd = (x, y) => ({ z: kotAt(x, y), p: projeKot(x, y) }), CADX._gps = gpsCb);
+window.CADX && (CADX._bridge = { get ents() { return ents; }, get sel() { return sel; }, get lays() { return lays; }, get PLAN() { return PLAN; }, get FACES() { return FACES; }, parcelOfSel, toFD, noOf, projName, areaOf, say, saveDxf }); /* CAD → modül aktarımı (s32) için kapsam köprüsü */
 window.CADX && (CADX._gor = (re, on) => { for (const k in lays) if (re.test(k)) lays[k].on = on; FC = null; renderLays(); zoomAll(ents.filter(e => /^KAZI_/.test(e.lay))); draw(); });
 })();
 
@@ -18458,7 +18460,7 @@ try { window.IFC = IFC; } catch (e) {}
   // Nokta kimlikleri sadece açıkça adlandırılmış CAD POINT varlıklarından alınır.
   function cadTransferAudit(poly, entities, tolerance){
     var tol=Number.isFinite(tolerance)&&tolerance>0?tolerance:0.002;
-    var errors=[], warnings=[], ids=new Map(), grid=new Map(), matched=[], unnamed=[];
+    var errors=[], warnings=[], ids=new Map(), grid=new Map(), matched=[], unnamed=[], conflict=new Set();
     var key=function(x,y){return Math.floor(x/tol)+','+Math.floor(y/tol);};
     var norm=function(s){return String(s==null?'':s).trim();};
     for(var i=0;i<entities.length;i++){
@@ -18468,7 +18470,7 @@ try { window.IFC = IFC; } catch (e) {}
       if(!name)continue;
       var prior=ids.get(name);
       if(prior){
-        if(Math.hypot(prior[0]-p[0],prior[1]-p[1])>=tol)errors.push('Aynı numara farklı koordinatta: '+name);
+        if(Math.hypot(prior[0]-p[0],prior[1]-p[1])>=tol)conflict.add(name);
         else warnings.push('Aynı numaralı CAD noktası tekrar ediyor: '+name);
       }else ids.set(name,[p[0],p[1]]);
       var k=key(p[0],p[1]);if(!grid.has(k))grid.set(k,[]);grid.get(k).push({name:name,p:p});
@@ -18502,6 +18504,10 @@ try { window.IFC = IFC; } catch (e) {}
       if(span>100000)warnings.push('Çok geniş koordinat aralığı ('+span.toFixed(2)+' m): birim ve koordinat sistemini doğrulayın.');
       if(span>0&&span<0.01)warnings.push('Çok küçük koordinat aralığı: metre/birim bilgisini doğrulayın.');
     }
+    // Aynı ad farklı koordinatta: parsel köşesine eşleşen adlarda aktarımı durdur; parselle ilgisiz noktalar yalnız uyarı.
+    if(conflict.size){var used=new Set(matched.map(function(m){return m.name;})),bad=[...conflict].filter(function(n){return used.has(n);}),other=conflict.size-bad.length;
+      bad.forEach(function(n){errors.push('Parsel köşesindeki nokta adı çizimde farklı koordinatta da var: '+n);});
+      if(other)warnings.push(other+' nokta adı çizimde farklı koordinatlarda tekrar ediyor (parsel köşesi değil).');}
     if(unnamed.length)warnings.push(unnamed.length+' köşenin gerçek CAD nokta numarası yok: '+unnamed.slice(0,15).join(', ')+(unnamed.length>15?'…':''));
     return {errors:[...new Set(errors)],warnings:[...new Set(warnings)],matched:matched,unnamed:unnamed,pointCount:ids.size,cornerCount:poly.length,perimeter:perimeter,bounds:Number.isFinite(minX)?{minX:minX,maxX:maxX,minY:minY,maxY:maxY}:null};
   }
@@ -18510,6 +18516,8 @@ try { window.IFC = IFC; } catch (e) {}
   document.querySelectorAll('#v-cad [data-cad-dest]').forEach(function(b){
     b.addEventListener('click',async function(){
       var t=b.getAttribute('data-cad-dest');
+      var B=window.CADX&&window.CADX._bridge;if(!B){alert('CAD modülü yüklenmedi.');return;}
+      var ents=B.ents,sel=B.sel,lays=B.lays,PLAN=B.PLAN,FACES=B.FACES,parcelOfSel=B.parcelOfSel,toFD=B.toFD,noOf=B.noOf,projName=B.projName,areaOf=B.areaOf,say=B.say,saveDxf=B.saveDxf;
       var target=document.querySelector('.tabs button[data-tab="'+t+'"]');
       if(!target){alert('Modül bulunamadı: '+t);return;}
       // V7.0.16: Aplikasyon Krokisi CAD aktarımı, mevcut CAD→parsel motorunu kullanır.
@@ -18592,9 +18600,74 @@ try { window.IFC = IFC; } catch (e) {}
           target.click();}
         catch(e){alert('Halihazır bağlantı hatası: '+e.message);} return;
       }
-      // Henüz doğrulanmış aktarımı bulunmayan diğer modüller.
-      if(typeof window.confirm==='function' && !window.confirm('Bu modüle geçilsin mi? CAD çizimi korunur. Bu modüle otomatik veri aktarımı doğrulanmadı; ilgili modüldeki aktarım/hesap adımını ayrıca yapın.'))return;
-      target.click();
+      // CAD → Yola Terk / Kamulaştırma / Yol Projesi / 3B Kadastro: çizim ilgili modüle aktarılır; CAD çizimi değişmez.
+      try{
+        if(typeof ents==='undefined'||(!ents.length&&!FACES.length)){alert('CAD çizimi boş; önce dosya açın.');return;}
+        if(typeof PLAN!=='undefined'&&PLAN){alert('Önce açık CAD düzenlemesini ✓ Uygula ya da ✕ Vazgeç ile bitirin.');return;}
+        var secPoly=function(){
+          if(sel.size)return parcelOfSel();
+          var C=ents.filter(function(e){return e.t==='pline'&&e.closed&&e.pts.length>=3&&lays[e.lay]&&lays[e.lay].on!==false;});
+          return C.length===1?C[0].pts.map(function(q){return [q[0],q[1]];}):null;
+        };
+        var ifzVar=function(){var st=window.APLT&&window.APLT.S&&window.APLT.S();return !!(st&&st.ifz&&st.ifz.parts&&st.ifz.parts.length);};
+        var fmt2=function(v){return Math.abs(v).toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2});};
+        if(t==='trk'||t==='kam'){
+          if(!window.APLT||!window.APLT.fromCad){alert('Modül yüklenmedi.');return;}
+          if(ifzVar()&&!confirm('İfraz sekmesinde kaydedilmemiş bölme sonucu var; aktarımda silinir. Devam edilsin mi?'))return;
+          var P=secPoly(); if(sel.size&&!P){alert('Seçimden kapalı bir alan çıkmadı. Kapalı çizgiyi ya da onu oluşturan çizgileri seç.');return;}
+          var fd=toFD(ents);
+          if(t==='trk'){
+            var no=P?noOf(P):null;
+            window.APLT.fromCad(fd,projName(),P,no);
+            target.click(); setTimeout(function(){try{window.APLT.fitA();}catch(x){}},60);
+            say(P?('Parsel Yola Terk / İhdas’a aktarıldı ('+fmt2(areaOf(P))+' m²'+(no?' · '+(no.ada?no.ada+'/':'')+no.no:'')+'). İmar hattını seçip hesapla.'):'Çizim Yola Terk / İhdas’a aktarıldı. Parselin içine dokunarak parseli seç.');
+          }else{
+            // Kamulaştırma: çizim parsel kaynağı olur. Sınır: seçili kapalı alan, yoksa adı KAMU… olan tek kapalı tabaka çizgisi.
+            var sinir=sel.size?P:null,kaynak='CAD seçimi';
+            if(!sinir){var K_=ents.filter(function(e){return e.t==='pline'&&e.closed&&e.pts.length>=3&&/KAMU|ISTIMLAK|İSTİMLAK/i.test(e.lay||'')&&lays[e.lay]&&lays[e.lay].on!==false;});
+              if(K_.length===1){sinir=K_[0].pts.map(function(q){return [q[0],q[1]];});kaynak='CAD '+K_[0].lay+' tabakası';}}
+            window.APLT.fromCad(fd,projName(),null,null);
+            target.click();
+            if(sinir){try{window.APLT.kmSetSinir(sinir,kaynak);}catch(x){console.error(x);}}
+            setTimeout(function(){try{window.APLT.fitA();}catch(x){}},60);
+            say('Çizim Kamulaştırma’ya aktarıldı'+(sinir?(' · sınır: '+kaynak+' ('+fmt2(areaOf(sinir))+' m²). ▶ Hesapla ile parselleri bul.'):'. Kamulaştırma sınırını seç ya da çiz.'));
+          }
+          return;
+        }
+        if(t==='yol'){
+          // Yol Projesi: CAD üçgen ağı (siyah arazi TIN) 3DFACE olarak aktarılır.
+          var F=FACES.filter(function(f){return lays[f.lay]&&lays[f.lay].on!==false;});if(!F.length)F=FACES.slice();
+          target.click();
+          if(!F.length){say('Yol Projesi açıldı. CAD’de üçgen ağ yok; arazi TIN’i aktarmak için önce Üçgen › Üçgen oluştur.',true);return;}
+          var o=['0','SECTION','2','ENTITIES'],n3=function(v){return (+v||0).toFixed(4);};
+          F.forEach(function(f){o.push('0','3DFACE','8',String(f.lay||'TIN').replace(/[^\w-]/g,'_'));
+            for(var i=0;i<4;i++){var q=f.p[Math.min(i,2)];o.push(String(10+i),n3(q[0]),String(20+i),n3(q[1]),String(30+i),n3(q[2]));}});
+          o.push('0','ENDSEC','0','EOF');
+          var file=new File([o.join('\r\n')+'\r\n'],(projName()||'CAD')+'_arazi_TIN.dxf',{type:'application/dxf'});
+          var tries=0,load=function(){
+            var fr=document.getElementById('acadYolV5'),d=null;try{d=fr&&fr.contentDocument;}catch(x){}
+            var inp=d&&d.getElementById('dpTerrain');
+            if(!inp||d.readyState!=='complete'){if(++tries<60)return setTimeout(load,150);say('Yol Projesi hazır değil; TIN aktarılamadı.',true);return;}
+            var dt=new DataTransfer();dt.items.add(file);inp.files=dt.files;inp.dispatchEvent(new Event('change',{bubbles:true}));
+            var pn=d.getElementById('dpPanel');if(pn&&'open' in pn)pn.open=true;
+            say('Arazi TIN’i Yol Projesi’ne aktarıldı ('+F.length.toLocaleString('tr-TR')+' üçgen). Güzergâhı çizip yolu oluştur.');
+          };
+          load(); return;
+        }
+        if(t==='kad'){
+          var gml=Object.keys(lays).filter(function(l){return /^GML_/i.test(l);});
+          target.click();
+          if(!gml.length){say('3B Kadastro açıldı. CAD’de GML_ tabakası yok; mimari projeyi önce 3B Kadastro › sadeleştir adımından geçir.',true);return;}
+          var data=await saveDxf((projName()||'CAD')+'_3B',true);
+          var kf=new File([data],(projName()||'CAD')+'_3B.dxf',{type:'application/dxf'});
+          var tries2=0,load2=function(){var inp=document.getElementById('k3F');
+            if(!inp){if(++tries2<40)return setTimeout(load2,150);say('3B Kadastro hazır değil.',true);return;}
+            var dt=new DataTransfer();dt.items.add(kf);inp.files=dt.files;inp.dispatchEvent(new Event('change',{bubbles:true}));
+            say('CAD çizimi 3B Kadastro’ya aktarıldı ('+gml.length+' GML tabakası).');};
+          load2(); return;
+        }
+        target.click();
+      }catch(err){alert('Modül aktarımı tamamlanamadı: '+err.message);}
     });
   });
 })();
