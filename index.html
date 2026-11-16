@@ -2870,6 +2870,147 @@ byId(&#x27;roadSelect&#x27;).addEventListener(&#x27;change&#x27;,()=&gt;{if(last
 window.__roadQualityCheck=(all=false)=&gt;{const pick=all?projects:[projects[activeProject]];return pick.flatMap(validateRoad).concat(all?[]:testDesign())};
 })();
 &lt;/script&gt;
+&lt;script data-ek=&quot;yol_gercek_kesit.js&quot;&gt;
+/* A-CAD Yol · Gerçek enkesit (ek katman). Özgün dpLiveCross korunur; arazi verisi yoksa özgün şematik çizim kullanılır.
+   Arazi: yalnız gerçek siyah TIN / siyah enkesit ağından (dpGroundAt) okunur, üçgen dışı tahmin yapılmaz.
+   Kesit: kırmızı (asfalt üstü) enine eğimli, kaplama tabakaları, kaldırım + bordür, kazı 1:n / dolgu 1:n şevi.
+   Alan: toprak işi çizgisi = kaplama altı (formasyon) ve şev; kazı/dolgu alanı sayısal integral; hacim ortalama alan. */
+(function(){
+  if(typeof dpLiveCross!==&#x27;function&#x27;||typeof dpGroundAt!==&#x27;function&#x27;||typeof dpCrossZ!==&#x27;function&#x27;)return;
+  var ORIG=dpLiveCross, CACHE=new WeakMap();
+  var num=function(id,d){var e=document.getElementById(id),v=e?Number(e.value):NaN;return Number.isFinite(v)&amp;&amp;v&gt;0?v:d;};
+  var f2=function(v,n){return Number.isFinite(v)?v.toFixed(n==null?2:n):&#x27;—&#x27;;};
+  var LAY=[[&#x27;Alt temel&#x27;,&#x27;#6b5a43&#x27;],[&#x27;Plentmiks&#x27;,&#x27;#8a7a5c&#x27;],[&#x27;Bitümlü temel&#x27;,&#x27;#3a3f46&#x27;],[&#x27;Binder&#x27;,&#x27;#2c3036&#x27;],[&#x27;Aşınma&#x27;,&#x27;#1d2024&#x27;]];
+
+  function section(out,a){
+    var T=out.thick&amp;&amp;out.thick.length?out.thick[out.thick.length-1]:0, cross=out.cross||0, bank=out.bank||0;
+    var walk=Math.max(0,+out.walk||0), curb=Math.max(0,+out.curb||0), wc=+out.walkCross||0;
+    var nCut=num(&#x27;dpCut&#x27;,1), nFill=num(&#x27;dpFill&#x27;,1.5);
+    var G=function(off){return dpGroundAt(out.mesh,a.x+a.normal[0]*off,a.y+a.normal[1]*off);};
+    var red=function(off){return dpCrossZ(a,off,cross,bank);};
+    var L=+a.paveLeft||0, R=+a.paveRight||0;
+    // üst yüzey (asfalt + kaldırım) ve toprak işi çizgisi (kaplama altı)
+    var side=function(sg){ // sg=+1 sol (paveLeft), -1 sağ (paveRight)
+      var pe=sg&gt;0?L:R, eZ=red(sg*pe), wTop=eZ+curb, wOut=wTop+wc*walk, outer=pe+walk, top=walk&gt;0?wOut:eZ;
+      var g0=G(sg*outer), mode=null, day=null, dz=NaN;
+      if(Number.isFinite(g0)){
+        mode=g0&gt;top+1e-4?&#x27;kazı&#x27;:g0&lt;top-1e-4?&#x27;dolgu&#x27;:&#x27;denge&#x27;;
+        if(mode===&#x27;denge&#x27;)day=outer;
+        else{var n=mode===&#x27;kazı&#x27;?nCut:nFill,sgn=mode===&#x27;kazı&#x27;?1:-1,prev=top-g0,d=0;
+          for(d=0.05;d&lt;=60;d+=0.05){var g=G(sg*(outer+d));if(!Number.isFinite(g))break;var z=top+sgn*d/n,df=z-g;
+            if(df===0||(df&gt;0)!==(prev&gt;0)){var t=prev/(prev-df);day=outer+d-0.05+t*0.05;break;}prev=df;}
+          if(day==null){day=outer+d-0.05;}
+        }
+        dz=G(sg*day);
+      }
+      return {pe:pe,eZ:eZ,wTop:wTop,wOut:wOut,outer:outer,top:top,mode:mode,day:day,dayZ:dz,n:mode===&#x27;kazı&#x27;?nCut:nFill,
+        reach:day!=null&amp;&amp;Number.isFinite(G(sg*day))};
+    };
+    var SL=side(1), SR=side(-1);
+    // tasarım alt çizgisi (toprak işi): o ofsette
+    var bottom=function(off){
+      var sg=off&gt;=0?1:-1, S=sg&gt;0?SL:SR, d=Math.abs(off);
+      if(d&lt;=S.pe)return red(off)-T;
+      if(d&lt;=S.outer)return S.wTop+wc*(d-S.pe)-T;
+      if(S.mode==null||S.day==null||d&gt;S.day)return NaN;
+      return S.top+(S.mode===&#x27;kazı&#x27;?1:-1)*(d-S.outer)/S.n;
+    };
+    var top=function(off){var sg=off&gt;=0?1:-1,S=sg&gt;0?SL:SR,d=Math.abs(off);
+      if(d&lt;=S.pe)return red(off); if(d&lt;=S.outer)return S.wTop+wc*(d-S.pe);
+      if(S.mode==null||S.day==null||d&gt;S.day)return NaN; return S.top+(S.mode===&#x27;kazı&#x27;?1:-1)*(d-S.outer)/S.n;};
+    // alan integrali (0.1 m)
+    var lo=-(SR.day!=null?SR.day:SR.outer), hi=(SL.day!=null?SL.day:SL.outer), cut=0, fill=0, miss=0, st=0.1;
+    for(var x=lo;x&lt;hi-1e-9;x+=st){var xm=Math.min(hi,x+st/2),g=G(xm),b=bottom(xm);if(!Number.isFinite(g)||!Number.isFinite(b)){miss++;continue;}
+      var w=Math.min(st,hi-x);if(g&gt;b)cut+=(g-b)*w;else fill+=(b-g)*w;}
+    return {a:a,T:T,SL:SL,SR:SR,G:G,top:top,bottom:bottom,red:red,lo:lo,hi:hi,cut:cut,fill:fill,miss:miss,ok:SL.mode!=null&amp;&amp;SR.mode!=null};
+  }
+
+  function all(out){
+    var key=JSON.stringify([out.sec.length,out.redEdits,num(&#x27;dpCut&#x27;,1),num(&#x27;dpFill&#x27;,1.5),out.thick,out.walk]);
+    var c=CACHE.get(out); if(c&amp;&amp;c.key===key)return c;
+    var rows=out.sec.map(function(a){try{if(!Number.isFinite(a.red)||!a.normal)return null;var k=section(out,a);return {s:a.s,cut:k.cut,fill:k.fill,ok:k.ok,red:a.red,black:a.black,dl:k.SL.day,dr:k.SR.day,ml:k.SL.mode,mr:k.SR.mode};}catch(e){return null;}});
+    var V={cut:0,fill:0,n:0};
+    for(var i=1;i&lt;rows.length;i++){var p=rows[i-1],q=rows[i];if(!p||!q||!p.ok||!q.ok)continue;var L=q.s-p.s;V.cut+=(p.cut+q.cut)/2*L;V.fill+=(p.fill+q.fill)/2*L;V.n++;}
+    c={key:key,rows:rows,V:V}; CACHE.set(out,c); return c;
+  }
+
+  function draw(out,a){
+    var c=document.getElementById(&#x27;dpLiveCross&#x27;); if(!c||!a)return;
+    if(!out.mesh||!a.normal||!Number.isFinite(a.red))return ORIG(out,a);
+    var K=section(out,a); if(!K.ok)return ORIG(out,a);
+    var w=c.clientWidth||330,h=c.clientHeight||300,r=Math.min(window.devicePixelRatio||1,2);c.width=Math.round(w*r);c.height=Math.round(h*r);
+    var g=c.getContext(&#x27;2d&#x27;);g.scale(r,r);g.fillStyle=&#x27;#0e1c2b&#x27;;g.fillRect(0,0,w,h);
+    var m=2, x0=K.lo-m, x1=K.hi+m, P=[];
+    for(var x=x0;x&lt;=x1+1e-9;x+=Math.max(0.1,(x1-x0)/400)){var z=K.G(x);if(Number.isFinite(z))P.push([x,z]);}
+    var zs=P.map(function(p){return p[1];}).concat([K.red(0),K.red(0)-K.T,K.SL.wOut,K.SR.wOut,K.SL.dayZ,K.SR.dayZ].filter(Number.isFinite));
+    var zmin=Math.min.apply(null,zs)-0.5, zmax=Math.max.apply(null,zs)+0.5;
+    var nar=w&lt;560,padL=52,padR=12,padT=nar?40:26,padB=30,W=w-padL-padR,H=h-padT-padB, sx=W/(x1-x0), sz=Math.min(H/(zmax-zmin), sx*10); if(sz&lt;sx)sz=Math.min(H/(zmax-zmin),sx);
+    var ex=sz/sx, zc=(zmax+zmin)/2;
+    var X=function(o){return padL+(o-x0)*sx;}, Y=function(z){return padT+H/2-(z-zc)*sz;};
+    // ızgara + kot ekseni
+    g.font=&#x27;10px system-ui&#x27;;g.strokeStyle=&#x27;rgba(160,190,210,.12)&#x27;;g.fillStyle=&#x27;#8fa9bd&#x27;;g.lineWidth=1;
+    var zstep=[0.1,0.2,0.25,0.5,1,2,5,10].find(function(s){return s*sz&gt;=26;})||10;
+    for(var zz=Math.ceil((zc-H/2/sz)/zstep)*zstep;zz&lt;=zc+H/2/sz;zz+=zstep){var yy=Y(zz);g.beginPath();g.moveTo(padL,yy);g.lineTo(w-padR,yy);g.stroke();g.fillText(zz.toFixed(zstep&lt;1?2:1),4,yy+3);}
+    var xstep=[1,2,5,10,20].find(function(s){return W/((x1-x0)/s)&gt;=40;})||20;
+    for(var xx=Math.ceil(x0/xstep)*xstep;xx&lt;=x1;xx+=xstep){var px=X(xx);g.beginPath();g.moveTo(px,padT);g.lineTo(px,padT+H);g.stroke();g.fillText(String(xx),px-6,h-padB+13);}
+    // arazi altı dolgusu
+    if(P.length&gt;1){g.beginPath();g.moveTo(X(P[0][0]),Y(P[0][1]));P.forEach(function(p){g.lineTo(X(p[0]),Y(p[1]));});g.lineTo(X(P[P.length-1][0]),padT+H);g.lineTo(X(P[0][0]),padT+H);g.closePath();g.fillStyle=&#x27;rgba(120,95,60,.18)&#x27;;g.fill();}
+    // kazı / dolgu alanları
+    var st=Math.max(0.05,(K.hi-K.lo)/600);
+    for(var o=K.lo;o&lt;K.hi;o+=st){var om=o+st/2,gz=K.G(om),bz=K.bottom(om);if(!Number.isFinite(gz)||!Number.isFinite(bz))continue;
+      g.fillStyle=gz&gt;bz?&#x27;rgba(235,80,70,.42)&#x27;:&#x27;rgba(70,200,120,.38)&#x27;;var y1=Y(Math.max(gz,bz)),y2=Y(Math.min(gz,bz));g.fillRect(X(o),y1,Math.max(1,st*sx+0.5),Math.max(0.5,y2-y1));}
+    // kaplama tabakaları (asfalt kenarları arası)
+    var th=out.thick||[0], T=K.T;
+    for(var li=th.length-2;li&gt;=0;li--){var bot=T-th[li], tp=T-th[li+1]; // üstten derinlik
+      g.beginPath();var first=true;for(var q=-K.SR.pe;q&lt;=K.SL.pe+1e-9;q+=Math.max(0.1,(K.SL.pe+K.SR.pe)/60)){var px2=X(q),py=Y(K.red(q)-tp);if(first){g.moveTo(px2,py);first=false;}else g.lineTo(px2,py);}
+      for(var q2=K.SL.pe;q2&gt;=-K.SR.pe-1e-9;q2-=Math.max(0.1,(K.SL.pe+K.SR.pe)/60))g.lineTo(X(q2),Y(K.red(q2)-bot));
+      g.closePath();g.fillStyle=(LAY[li]||LAY[0])[1];g.fill();}
+    // kaldırımlar + bordür
+    [K.SL,K.SR].forEach(function(S,i){var sg=i?-1:1;if(S.outer&lt;=S.pe+1e-6)return;g.beginPath();g.moveTo(X(sg*S.pe),Y(S.eZ));g.lineTo(X(sg*S.pe),Y(S.wTop));g.lineTo(X(sg*S.outer),Y(S.wOut));g.lineTo(X(sg*S.outer),Y(S.wOut-T));g.lineTo(X(sg*S.pe),Y(S.wTop-T));g.closePath();g.fillStyle=&#x27;#7d8790&#x27;;g.fill();g.strokeStyle=&#x27;#c9d2da&#x27;;g.lineWidth=1;g.stroke();});
+    // kırmızı üst yüzey + şevler
+    g.strokeStyle=&#x27;#ff6a4d&#x27;;g.lineWidth=2.4;g.beginPath();var f1=true;
+    for(var q3=K.lo;q3&lt;=K.hi+1e-9;q3+=st){var tz=K.top(q3);if(!Number.isFinite(tz))continue;if(f1){g.moveTo(X(q3),Y(tz));f1=false;}else g.lineTo(X(q3),Y(tz));}g.stroke();
+    // siyah arazi
+    g.strokeStyle=&#x27;#e6eef5&#x27;;g.lineWidth=1.6;g.beginPath();P.forEach(function(p,i){i?g.lineTo(X(p[0]),Y(p[1])):g.moveTo(X(p[0]),Y(p[1]));});g.stroke();
+    // eksen
+    g.setLineDash([5,4]);g.strokeStyle=&#x27;#9fd4ff&#x27;;g.lineWidth=1;g.beginPath();g.moveTo(X(0),padT);g.lineTo(X(0),padT+H);g.stroke();g.setLineDash([]);
+    // etiketler
+    var lab=function(o,z,t,col,up){var px=X(o),py=Y(z);g.fillStyle=col;g.beginPath();g.arc(px,py,2.6,0,7);g.fill();g.font=&#x27;600 10.5px system-ui&#x27;;var tw=g.measureText(t).width;var lx=Math.max(padL+2,Math.min(w-padR-tw-2,px-tw/2)),ly=up?py-7:py+14;g.fillStyle=&#x27;rgba(14,28,43,.8)&#x27;;g.fillRect(lx-2,ly-10,tw+4,13);g.fillStyle=col;g.fillText(t,lx,ly);};
+    lab(0,K.red(0),&#x27;K &#x27;+f2(K.red(0),3),&#x27;#ff9b86&#x27;,true);
+    var gz0=K.G(0); if(Number.isFinite(gz0))lab(0,gz0,&#x27;S &#x27;+f2(gz0,3),&#x27;#e6eef5&#x27;,false);
+    [K.SL,K.SR].forEach(function(S,i){var sg=i?-1:1;if(S.day!=null&amp;&amp;Number.isFinite(S.dayZ))lab(sg*S.day,S.dayZ,(S.mode===&#x27;kazı&#x27;?&#x27;yarma &#x27;:&#x27;dolgu &#x27;)+&#x27;1:&#x27;+S.n+&#x27; · &#x27;+f2(S.day,2)+&#x27; m&#x27;,S.mode===&#x27;kazı&#x27;?&#x27;#ff8f80&#x27;:&#x27;#7fe0a6&#x27;,S.mode!==&#x27;kazı&#x27;);});
+    // başlık ve özet
+    g.font=&#x27;700 12px system-ui&#x27;;g.fillStyle=&#x27;#dbe9f5&#x27;;g.fillText(&#x27;GERÇEK ENKESİT · &#x27;+(typeof kmLabel===&#x27;function&#x27;?kmLabel(a.s):f2(a.s,2)),padL,16);
+    var A=all(out),txt=&#x27;Kazı &#x27;+f2(K.cut,2)+&#x27; m²  ·  Dolgu &#x27;+f2(K.fill,2)+&#x27; m²&#x27;;g.font=&#x27;600 11.5px system-ui&#x27;;var tw2=g.measureText(txt).width;
+    var kx=nar?padL:w-padR-tw2,ky=nar?32:16,kt=&#x27;Kazı &#x27;+f2(K.cut,2)+&#x27; m²  ·  &#x27;;g.fillStyle=&#x27;#ffb0a5&#x27;;g.fillText(kt,kx,ky);g.fillStyle=&#x27;#8fe6b4&#x27;;g.fillText(&#x27;Dolgu &#x27;+f2(K.fill,2)+&#x27; m²&#x27;,kx+g.measureText(kt).width,ky);
+    g.font=&#x27;10px system-ui&#x27;;g.fillStyle=&#x27;#8fa9bd&#x27;;var sc=&#x27;yatay 1× · düşey &#x27;+(ex&gt;1.05?ex.toFixed(1)+&#x27;×&#x27;:&#x27;1×&#x27;)+&#x27; · ofset (m)&#x27;;g.fillText(sc,w-padR-g.measureText(sc).width,h-6);
+    // durum satırı
+    var stEl=document.getElementById(&#x27;dpLiveStatus&#x27;);
+    if(stEl){var base=stEl.textContent.split(&#x27;\n▣&#x27;)[0];stEl.textContent=base+&#x27;\n▣ Bu kesit: kazı &#x27;+f2(K.cut,2)+&#x27; m² · dolgu &#x27;+f2(K.fill,2)+&#x27; m²&#x27;+(K.miss?&#x27; (arazi verisi eksik bölüm var)&#x27;:&#x27;&#x27;)+&#x27;  |  Güzergâh toplamı (ortalama alan, &#x27;+A.V.n+&#x27; aralık): kazı &#x27;+f2(A.V.cut,1)+&#x27; m³ · dolgu &#x27;+f2(A.V.fill,1)+&#x27; m³&#x27;;}
+    c._K=K;c._map={X:X,Y:Y,x0:x0,sx:sx,sz:sz,zc:zc,padL:padL,padT:padT,H:H};
+  }
+  dpLiveCross=draw; try{window.dpLiveCross=draw;}catch(e){}
+
+  // dokunarak sorgu: ofset, siyah, kırmızı/şev kotu, fark
+  var cv=document.getElementById(&#x27;dpLiveCross&#x27;);
+  if(cv){cv.style.height=&#x27;300px&#x27;;cv.style.touchAction=&#x27;manipulation&#x27;;
+    var tip=document.createElement(&#x27;div&#x27;);tip.id=&#x27;dpLiveTip&#x27;;tip.style.cssText=&#x27;font:12px system-ui;color:#dbe9f5;min-height:16px;margin-top:4px&#x27;;cv.after(tip);
+    cv.addEventListener(&#x27;pointermove&#x27;,function(e){var K=cv._K,M=cv._map;if(!K||!M)return;var rc=cv.getBoundingClientRect(),o=M.x0+(e.clientX-rc.left-M.padL)/M.sx;
+      var gz=K.G(o),tz=K.top(o),bz=K.bottom(o);tip.textContent=&#x27;Ofset &#x27;+f2(o,2)+&#x27; m · siyah &#x27;+f2(gz,3)+&#x27; · proje &#x27;+f2(tz,3)+(Number.isFinite(gz)&amp;&amp;Number.isFinite(bz)?&#x27; · &#x27;+(gz&gt;bz?&#x27;kazı &#x27;:&#x27;dolgu &#x27;)+f2(Math.abs(gz-bz),3)+&#x27; m&#x27;:&#x27;&#x27;);});
+    var hint=document.querySelector(&#x27;#dpLive .liveHint&#x27;); if(hint)hint.textContent=&#x27;Gerçek enkesit: siyah arazi yüklenen TIN / siyah enkesit ağından okunur (üçgen dışı tahmin yok). Kazı şevi 1:&#x27;+num(&#x27;dpCut&#x27;,1)+&#x27;, dolgu şevi 1:&#x27;+num(&#x27;dpFill&#x27;,1.5)+&#x27; ayarlardan alınır; alanlar kaplama altı (formasyon) çizgisine göre, hacim ortalama alan yöntemiyle hesaplanır. Tip kesitle doğrulayın.&#x27;;
+    // kazı/dolgu tablosu CSV
+    var b=document.createElement(&#x27;button&#x27;);b.type=&#x27;button&#x27;;b.className=&#x27;btn&#x27;;b.id=&#x27;dpVolCsv&#x27;;b.textContent=&#x27;Kesit kazı/dolgu tablosu CSV&#x27;;b.style.marginTop=&#x27;6px&#x27;;tip.after(b);
+    b.addEventListener(&#x27;click&#x27;,function(){var o=dpState&amp;&amp;dpState.result;if(!o)return;var A=all(o),L=[&#x27;KM;Kırmızı;Siyah;Kazı alanı m2;Dolgu alanı m2;Sol şev ucu m;Sağ şev ucu m;Kazı hacmi m3;Dolgu hacmi m3&#x27;],cc=0,ff=0;
+      A.rows.forEach(function(r,i){if(!r)return;var vc=0,vf=0,p=A.rows[i-1];if(p&amp;&amp;p.ok&amp;&amp;r.ok){vc=(p.cut+r.cut)/2*(r.s-p.s);vf=(p.fill+r.fill)/2*(r.s-p.s);}cc+=vc;ff+=vf;
+        L.push([typeof kmLabel===&#x27;function&#x27;?kmLabel(r.s):f2(r.s,2),f2(r.red,3),f2(r.black,3),f2(r.cut,3),f2(r.fill,3),f2(r.dl,2),f2(r.dr,2),f2(vc,2),f2(vf,2)].join(&#x27;;&#x27;).replace(/\./g,&#x27;,&#x27;));});
+      L.push([&#x27;TOPLAM&#x27;,&#x27;&#x27;,&#x27;&#x27;,&#x27;&#x27;,&#x27;&#x27;,&#x27;&#x27;,&#x27;&#x27;,f2(cc,2),f2(ff,2)].join(&#x27;;&#x27;).replace(/\./g,&#x27;,&#x27;));
+      var bl=new Blob([&#x27;﻿&#x27;+L.join(&#x27;\r\n&#x27;)],{type:&#x27;text/csv;charset=utf-8&#x27;}),u=URL.createObjectURL(bl),x=document.createElement(&#x27;a&#x27;);x.href=u;x.download=&#x27;yol_kesit_kazi_dolgu.csv&#x27;;document.body.appendChild(x);x.click();x.remove();setTimeout(function(){URL.revokeObjectURL(u);},20000);});
+    [&#x27;dpCut&#x27;,&#x27;dpFill&#x27;].forEach(function(id){var e=document.getElementById(id);if(e)e.addEventListener(&#x27;input&#x27;,function(){var o=dpState&amp;&amp;dpState.result;if(o&amp;&amp;typeof dpLiveSync===&#x27;function&#x27;)dpLiveSync(o);});});
+  }
+  window.__yolGercekKesit={section:section,all:all};
+})();
+
+&lt;/script&gt;
 &lt;/body&gt;&lt;/html&gt;" loading="lazy"
         style="display:block;width:100%;height:max(700px,calc(100dvh - 175px));border:0;background:#0a1220"
         referrerpolicy="no-referrer"></iframe>
