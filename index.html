@@ -14430,7 +14430,7 @@ function draw() { liveTick(); { const r = cv.getBoundingClientRect(); if (r.widt
 function ustler(D, W, H) {
   // lastik çizgi
   if (rub && last && hover) { cx.strokeStyle = "#ffd800"; cx.lineWidth = 1 * D; cx.setLineDash([4 * D, 4 * D]); cx.beginPath(); cx.moveTo(X(last[0]), Y(last[1])); cx.lineTo(X(hover[0]), Y(hover[1])); cx.stroke(); cx.setLineDash([]); }
-  drawAnn(D); try { araCiz(D); } catch (e) {} try { if (MIM_ADAY) MIM_ADAY.forEach((c, i) => { const P = c.o.c.e.pts; cx.save(); cx.strokeStyle = '#ff9a3c'; cx.lineWidth = 3 * D; cx.setLineDash([10 * D, 6 * D]); cx.beginPath(); P.forEach((q, k) => k ? cx.lineTo(X(q[0]), Y(q[1])) : cx.moveTo(X(q[0]), Y(q[1]))); cx.closePath(); cx.fillStyle = 'rgba(255,154,60,.14)'; cx.fill(); cx.stroke(); cx.setLineDash([]); const x = X((c.bb[0] + c.bb[2]) / 2), y = Y((c.bb[1] + c.bb[3]) / 2); cx.fillStyle = '#ff9a3c'; cx.beginPath(); cx.arc(x, y, 16 * D, 0, 7); cx.fill(); cx.fillStyle = '#000'; cx.font = `bold ${16 * D}px Arial`; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText(String(i + 1), x, y); cx.restore(); }); } catch (e) {} if (cmd && cmd.prev) cmd.prev(cx, X, Y, D); if (cmd && cmd.live && hover) cmd.live(cx, X, Y, D);
+  drawAnn(D); try { araCiz(D); } catch (e) {} try { peCiz(D); } catch (e) {} try { if (MIM_ADAY) MIM_ADAY.forEach((c, i) => { const P = c.o.c.e.pts; cx.save(); cx.strokeStyle = '#ff9a3c'; cx.lineWidth = 3 * D; cx.setLineDash([10 * D, 6 * D]); cx.beginPath(); P.forEach((q, k) => k ? cx.lineTo(X(q[0]), Y(q[1])) : cx.moveTo(X(q[0]), Y(q[1]))); cx.closePath(); cx.fillStyle = 'rgba(255,154,60,.14)'; cx.fill(); cx.stroke(); cx.setLineDash([]); const x = X((c.bb[0] + c.bb[2]) / 2), y = Y((c.bb[1] + c.bb[3]) / 2); cx.fillStyle = '#ff9a3c'; cx.beginPath(); cx.arc(x, y, 16 * D, 0, 7); cx.fill(); cx.fillStyle = '#000'; cx.font = `bold ${16 * D}px Arial`; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText(String(i + 1), x, y); cx.restore(); }); } catch (e) {} if (cmd && cmd.prev) cmd.prev(cx, X, Y, D); if (cmd && cmd.live && hover) cmd.live(cx, X, Y, D);
   if (winBox) { const [a, b] = winBox; cx.strokeStyle = b[0] >= a[0] ? "#36c3ff" : "#40e040"; cx.fillStyle = b[0] >= a[0] ? "rgba(54,195,255,.12)" : "rgba(64,224,64,.12)"; cx.lineWidth = 1 * D; if (b[0] < a[0]) cx.setLineDash([5 * D, 4 * D]); cx.fillRect(a[0] * D, a[1] * D, (b[0] - a[0]) * D, (b[1] - a[1]) * D); cx.strokeRect(a[0] * D, a[1] * D, (b[0] - a[0]) * D, (b[1] - a[1]) * D); cx.setLineDash([]); }
   try { if (window.BGI && BGI.drawVec) BGI.drawVec(cx, X, Y, D); } catch (e) {}
   drawGps(D);
@@ -15869,6 +15869,16 @@ function cadSheetNew(){cadSheetsFlush();const i=cadSheets.length;const next=1+Ma
 try { const saved=JSON.parse(localStorage.getItem(CAD_SHEETS_KEY)||"null");if(saved&&Array.isArray(saved.sheets)&&saved.sheets.length){cadSheets=saved.sheets;cadSheets.forEach((sh,i)=>{if(/^Çizim \d+$/.test(sh.name))sh.name="Sayfa "+(i+1)});cadSheetIndex=Math.min(Math.max(0,saved.active||0),cadSheets.length-1);cadSheetRestore(cadSheets[cadSheetIndex].data);} }catch(e){}
 if(!cadSheets.length)cadSheets=[{name:"Sayfa 1",crs:"TUREF_TM33",crsConfirmed:false,data:cadSheetSnap()}];cadTabsRender();
 /* ACAD_POINT_EDITOR_V7094_START — CAD / Hesap / Nokta Editörü */
+/* Nokta editörü açıkken seçilen nokta CAD'de belirgin (pembe halka + artı + ad/kot etiketi), işaretlenenler turuncu halka */
+let PE_HL = null;
+function peCiz(D) { const P = PE_HL; if (!P) return; cx.save(); const inV = (x, y) => x > -40 && y > -40 && x < cv.width + 40 && y < cv.height + 40;
+  if (P.picked && P.picked.length) { cx.strokeStyle = '#ffb020'; cx.lineWidth = 2 * D; for (const e of P.picked) { const p = e.pts && e.pts[0]; if (!p) continue; const x = X(p[0]), y = Y(p[1]); if (!inV(x, y)) continue; cx.beginPath(); cx.arc(x, y, 7 * D, 0, 7); cx.stroke(); } }
+  const e = P.sel, p = e && e.pts && e.pts[0]; if (p && Number.isFinite(p[0]) && Number.isFinite(p[1])) { const x = X(p[0]), y = Y(p[1]); const k = Math.max(0, 1 - (performance.now() - (P.t0 || 0)) / 1500);
+    cx.fillStyle = 'rgba(255,64,255,.22)'; cx.beginPath(); cx.arc(x, y, 15 * D, 0, 7); cx.fill(); cx.strokeStyle = '#ff40ff'; cx.lineWidth = 3 * D; cx.beginPath(); cx.arc(x, y, 15 * D, 0, 7); cx.stroke();
+    if (k > 0) { cx.globalAlpha = k; cx.lineWidth = 2.5 * D; cx.beginPath(); cx.arc(x, y, (18 + 40 * (1 - k)) * D, 0, 7); cx.stroke(); cx.globalAlpha = 1; }
+    cx.strokeStyle = '#ffd800'; cx.lineWidth = 1.6 * D; cx.beginPath(); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { cx.moveTo(x + dx * 20 * D, y + dy * 20 * D); cx.lineTo(x + dx * 34 * D, y + dy * 34 * D); } cx.stroke();
+    const t = `${e.n ?? e.id}  ·  Z ${p[2] == null || !Number.isFinite(+p[2]) ? '—' : K.fz(+p[2])}`; cx.font = `700 ${13 * D}px system-ui,Arial`; const w = cx.measureText(t).width; let rx = cv.width; try { const pb = document.querySelector('#acadPointEditor:not(.pe-full) .pe-box'); if (pb) { const r = cv.getBoundingClientRect(), b = pb.getBoundingClientRect(); if (b.left > r.left + 40 && b.left < r.right) rx = (b.left - r.left) * dpr; } } catch (_) {} const lx = x + 20 * D + w + 14 * D > rx - 4 * D ? x - 20 * D - w - 14 * D : x + 20 * D; cx.fillStyle = 'rgba(10,20,30,.88)'; cx.fillRect(lx, y - 40 * D, w + 14 * D, 22 * D); cx.strokeStyle = '#ff40ff'; cx.lineWidth = 1.5 * D; cx.strokeRect(lx, y - 40 * D, w + 14 * D, 22 * D); cx.fillStyle = '#fff'; cx.textAlign = 'left'; cx.textBaseline = 'middle'; cx.fillText(t, lx + 7 * D, y - 29 * D); }
+  cx.restore(); }
 function cadPointSafeNumber(raw) {
   const s=String(raw??'').trim().replace(/\s/g,'');
   if(!/^[+-]?(?:(?:\d+(?:[.,]\d*)?)|(?:[.,]\d+))(?:e[+-]?\d+)?$/i.test(s)) return null;
@@ -15899,8 +15909,13 @@ function pointEditorOpen(){
   const perPage=75;
   let css=document.getElementById('acadPointEditorCss');
   if(!css){css=document.createElement('style');css.id='acadPointEditorCss';css.textContent=`
-   #acadPointEditor {position:fixed;inset:0;z-index:75000;background:#000d;display:flex;align-items:center;justify-content:center;padding:10px;color:#eaf4fc;box-sizing:border-box;overscroll-behavior:contain}
-   #acadPointEditor .pe-box {width:min(1240px,100%);height:min(94vh,940px);height:min(94dvh,940px);max-height:100%;min-height:0;box-sizing:border-box;display:flex;flex-direction:column;gap:0;overflow:hidden;background:#142331;border:1px solid #547085;border-radius:12px;box-shadow:0 8px 40px #000a;font-size:13px}
+   #acadPointEditor {position:fixed;top:8px;right:8px;bottom:8px;width:min(600px,47vw);z-index:75000;display:flex;color:#eaf4fc;box-sizing:border-box;overscroll-behavior:contain;pointer-events:none}
+   #acadPointEditor.pe-full {inset:0;width:auto;background:#000d;padding:10px;align-items:center;justify-content:center;pointer-events:auto}
+   #acadPointEditor .pe-box {pointer-events:auto;width:100%;height:100%;max-height:100%;}
+   #acadPointEditor.pe-full .pe-box {width:min(1240px,100%);height:min(94dvh,940px);}
+   #acadPointEditor tr.pe-on td {background:#5a2a63}
+   #acadPointEditor tbody tr {cursor:pointer}
+   #acadPointEditor .pe-box {min-height:0;box-sizing:border-box;display:flex;flex-direction:column;gap:0;overflow:hidden;background:#142331;border:1px solid #547085;border-radius:12px;box-shadow:0 8px 40px #000a;font-size:13px}
    #acadPointEditor .pe-head {flex:none;padding:12px 12px 8px;border-bottom:1px solid #365466}
    #acadPointEditor .pe-main {flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:10px 12px 14px;display:flex;flex-direction:column;gap:9px}
    #acadPointEditor .pe-row {display:flex;align-items:center;flex-wrap:wrap;gap:8px}
@@ -15927,8 +15942,10 @@ function pointEditorOpen(){
    #acadPointEditor #peApply {font-size:14px;font-weight:700;min-height:44px;min-width:155px}
    #acadPointEditor [hidden] {display:none !important}
    @media(max-width:700px){
-    #acadPointEditor{padding:3px;align-items:stretch}
-    #acadPointEditor .pe-box{width:100%;height:auto;max-height:calc(100vh - 6px);max-height:calc(100dvh - 6px);border-radius:8px}
+    #acadPointEditor{top:auto;left:0;right:0;bottom:0;width:auto;height:52vh;height:52dvh;padding:0}
+    #acadPointEditor.pe-full{top:0;height:100dvh;padding:3px}
+    #acadPointEditor .pe-box{width:100%;height:100%;max-height:100%;border-radius:12px 12px 0 0}
+    #acadPointEditor.pe-full .pe-box{border-radius:8px}
     #acadPointEditor .pe-head{padding:8px 10px}
     #acadPointEditor .pe-main{padding:8px 9px 12px;gap:9px}
     #acadPointEditor .pe-scroll{min-height:132px;max-height:30vh;max-height:30dvh}
@@ -15944,9 +15961,9 @@ function pointEditorOpen(){
    }
    @media(max-height:520px){#acadPointEditor .pe-scroll{max-height:150px;min-height:94px}#acadPointEditor .pe-head{padding:5px 9px}}
   `;document.head.appendChild(css);}
-  const box=document.createElement('div');box.id='acadPointEditor';box.setAttribute('role','dialog');box.setAttribute('aria-modal','true');box.setAttribute('aria-label','Nokta Editörü');
+  const box=document.createElement('div');box.id='acadPointEditor';box.setAttribute('role','dialog');box.setAttribute('aria-modal','false');box.setAttribute('aria-label','Nokta Editörü');
   box.innerHTML=`<div class="pe-box">
-   <div class="pe-head"><div class="pe-row" style="justify-content:space-between"><b style="font-size:17px">📍 Hesap · Nokta Editörü</b><button type="button" id="peClose">✕ Kapat</button></div></div>
+   <div class="pe-head"><div class="pe-row" style="justify-content:space-between"><b style="font-size:17px">📍 Nokta Editörü</b><span class="pe-row"><button type="button" id="peFull" title="Paneli tam ekran yap / küçült">⤢ Büyüt</button><button type="button" id="peClose">✕ Kapat</button></span></div></div>
    <div class="pe-main" id="peMain">
    <div class="pe-muted">Aktif CAD sayfasındaki bütün ölçü noktaları listelenir (gizli tabakalar dahil). Y / X yatay koordinat, Z kot (metre). Başka CAD sayfaları değişmez.</div>
    <div class="pe-row"><label>Tabaka <select class="pe-filter" id="peLayer"></select></label><label>Ara <input class="pe-filter" id="peSearch" placeholder="Nokta no / kod" autocomplete="off"></label><b id="peCount"></b></div>
@@ -15960,7 +15977,7 @@ function pointEditorOpen(){
    <div class="pe-row"><label class="pe-copy-label"><input type="checkbox" id="peCopy" checked> İlk değişiklikten önce çizimi yeni CAD sayfasına kopyala (önerilir)</label><button id="peBackup" type="button">⬇ CAD sayfa yedeği indir</button></div>
    <div class="pe-pan" id="pePreview" hidden></div>
    </div>
-   <div class="pe-foot"><div class="pe-foot-status"><div id="peMsg" class="pe-msg" role="status" aria-live="polite"></div><div id="peFooterHint" class="pe-muted">Çift dokun: CAD'de göster · Düzenle: noktayı değiştir.</div></div><div class="pe-foot-actions"><button id="peApply" type="button" class="pe-primary" disabled>Önce nokta düzenle</button></div></div>
+   <div class="pe-foot"><div class="pe-foot-status"><div id="peMsg" class="pe-msg" role="status" aria-live="polite"></div><div id="peFooterHint" class="pe-muted">Satıra dokun: CAD'de göster · CAD'de noktaya dokun: satırı aç · Düzenle: noktayı değiştir.</div></div><div class="pe-foot-actions"><button id="peApply" type="button" class="pe-primary" disabled>Önce nokta düzenle</button></div></div>
   </div>`;
   document.body.appendChild(box);
   const $pe=id=>box.querySelector('#'+id);
@@ -15972,13 +15989,25 @@ function pointEditorOpen(){
     else{btn.disabled=true;btn.textContent='Önce nokta düzenle';hint.textContent='Nokta düzenle veya toplu kot işlemi seç';}
   }
   $pe('peApply').onclick=()=>{if(proposal)applyProposal();else if(editId!==null)$pe('peEditPreview')?.click();};
-  const close=()=>{box.removeEventListener('click',onBackdrop);document.removeEventListener('keydown',onEsc,true);box.remove();};
+  let selId=null;
+  /* CAD'de bir noktaya dokununca editörde o satır açılır */
+  let peDown=null;const cvDown=ev=>{peDown=[ev.clientX,ev.clientY];};
+  const cvUp=ev=>{if(!peDown||Math.hypot(ev.clientX-peDown[0],ev.clientY-peDown[1])>6||cmd)return;const r=cv.getBoundingClientRect(),sx=(ev.clientX-r.left)*dpr,sy=(ev.clientY-r.top)*dpr;let best=null,bd=(14*dpr)**2;
+    for(const e of all){const q=e.pts[0];if(!q||lays[e.lay]?.on===false)continue;const dx=X(q[0])-sx,dy=Y(q[1])-sy,d=dx*dx+dy*dy;if(d<bd){bd=d;best=e;}}
+    if(!best)return;const list=filters();let i=list.findIndex(x=>x.id===best.id);if(i<0){layerFilter='*';search='';$pe('peLayer').value='*';$pe('peSearch').value='';i=filters().findIndex(x=>x.id===best.id);}
+    page=Math.floor(Math.max(0,i)/perPage);selId=best.id;renderRows();const tr=$pe('peRows').querySelector(`tr[data-peid="${best.id}"]`);if(tr){tr.classList.add('pe-on');tr.scrollIntoView({block:'nearest'});}peSync();peAnim();
+    const q=best.pts[0];msg(`${best.n??best.id} seçildi · Y ${K.fk(q[0])} · X ${K.fk(q[1])} · Z ${q[2]==null?'boş':K.fz(q[2])}`);};
+  cv.addEventListener('pointerdown',cvDown,true);cv.addEventListener('pointerup',cvUp);
+  const close=()=>{box.removeEventListener('click',onBackdrop);document.removeEventListener('keydown',onEsc,true);cv.removeEventListener('pointerdown',cvDown,true);cv.removeEventListener('pointerup',cvUp);box.remove();PE_HL=null;try{draw()}catch(_){}};
   box.__close=close;
   const onBackdrop=e=>{if(e.target===box)msg('Çıkmak için sağ üstteki Kapat düğmesine dokun.');};
   const onEsc=e=>{if(e.key==='Escape'){e.stopPropagation();close();}};
   box.addEventListener('click',onBackdrop);
   document.addEventListener('keydown',onEsc,true);
   $pe('peClose').onclick=close;
+  $pe('peFull').onclick=()=>{const f=box.classList.toggle('pe-full');$pe('peFull').textContent=f?'⤡ Küçült':'⤢ Büyüt';};
+  const peSync=()=>{PE_HL={sel:selId==null?null:all.find(x=>x.id===selId)||null,picked:picked.size?all.filter(x=>picked.has(x.id)).slice(0,5000):[],t0:PE_HL?PE_HL.t0:0};try{draw()}catch(_){}};
+  const peAnim=()=>{if(!PE_HL)return;PE_HL.t0=performance.now();const f=()=>{if(!PE_HL)return;try{draw()}catch(_){}if(performance.now()-PE_HL.t0<1600)requestAnimationFrame(f)};requestAnimationFrame(f)};
   const sameSheet=()=>{if(cadSheetIndex!==sheetId){msg('CAD sayfası değişti; editörü kapatıp yeniden aç.',true);return false;}return true;};
   const isGood=e=>Array.isArray(e.pts[0])&&e.pts[0].length>=2&&Number.isFinite(e.pts[0][0])&&Number.isFinite(e.pts[0][1])&&(e.pts[0][2]==null||Number.isFinite(e.pts[0][2]));
   const valP=e=>[e.pts[0][0],e.pts[0][1],e.pts[0][2]??null];
@@ -15996,18 +16025,17 @@ function pointEditorOpen(){
     if(!sameSheet())return;
     const e=all.find(e=>e.id===id),p=e?.pts?.[0];
     if(!p||!Number.isFinite(p[0])||!Number.isFinite(p[1]))return msg('Noktanın XY koordinatı geçersiz.',true);
-    close();V.cx=p[0];V.cy=p[1];
+    selId=id;
+    if(box.classList.contains('pe-full')){box.classList.remove('pe-full');$pe('peFull').textContent='⤢ Büyüt';}
     // Bir başka projedeki aşırı küçük/büyük ölçekli görünüm taşınmaz.
     V.s=Number.isFinite(V.s)?Math.max(2,Math.min(24,V.s)):7;
-    IDX=null;draw();persist();
-    cv.scrollIntoView({block:'center',behavior:'instant'});
-    const rect=cv.getBoundingClientRect(),m=document.createElement('div');
-    m.id='acadPointLocateMark';m.setAttribute('role','status');
-    m.textContent=`⌖ ${e.n||e.id} · Y ${Number(p[0]).toFixed(3)} · X ${Number(p[1]).toFixed(3)} · Z ${p[2]==null?'boş':Number(p[2]).toFixed(3)}`;
-    m.style.cssText='position:fixed;z-index:70000;pointer-events:none;left:50%;transform:translateX(-50%);top:'+Math.max(8,Math.min(window.innerHeight-70,rect.top+rect.height/2-30))+'px;background:#12344e;color:white;border:2px solid #ffcf54;border-radius:8px;padding:6px 10px;font:600 13px system-ui;max-width:90vw;box-shadow:0 5px 15px #0008;';
-    document.getElementById('acadPointLocateMark')?.remove();document.body.appendChild(m);
-    setTimeout(()=>{if(m.isConnected)m.remove();},6000);
-    say(`⌖ ${e.n||e.id} noktasına gidildi (Y ${p[0].toFixed(3)}, X ${p[1].toFixed(3)}).`);
+    { let r=cv.getBoundingClientRect(); if(r.bottom<60||r.top>innerHeight-60){cv.scrollIntoView({block:'start',behavior:'instant'});r=cv.getBoundingClientRect();}
+      const b=box.querySelector('.pe-box').getBoundingClientRect(); let L=Math.max(r.left,0),Rr=Math.min(r.right,innerWidth),T=Math.max(r.top,0),B=Math.min(r.bottom,innerHeight);
+      if(b.left>L+40&&b.left<Rr)Rr=b.left; else if(b.top>T+40&&b.top<B)B=b.top;
+      const tx=((L+Rr)/2-r.left)*dpr,ty=((T+B)/2-r.top)*dpr; V.cx=p[0]-(tx-cv.width/2)/(V.s*dpr); V.cy=p[1]+(ty-cv.height/2)/(V.s*dpr); }
+    IDX=null;peSync();peAnim();persist();
+    $pe('peRows').querySelectorAll('tr').forEach(tr=>tr.classList.toggle('pe-on',tr.dataset.peid===String(id)));
+    say(`⌖ ${e.n||e.id} · Y ${K.fk(p[0])} · X ${K.fk(p[1])} · Z ${p[2]==null?'boş':K.fz(p[2])}`);
   }
   function renderRows(){
     const list=filters(),total=Math.ceil(list.length/perPage);page=Math.max(0,Math.min(page,Math.max(total-1,0)));
@@ -16015,16 +16043,13 @@ function pointEditorOpen(){
     $pe('peCount').textContent=`${all.length.toLocaleString('tr-TR')} nokta · filtre ${list.length.toLocaleString('tr-TR')}`;
     $pe('pePicked').textContent=`${picked.size.toLocaleString('tr-TR')} nokta seçili`;
     $pe('peRows').innerHTML=visible.map(e=>{const p=e.pts[0],hide=lays[e.lay]?.on===false;
-      return `<tr${hide?' class="pe-hidden"':''}><td><input type="checkbox" data-pepick="${e.id}" ${picked.has(e.id)?'checked':''} aria-label="${esc_(String(e.n||e.id))} seç"></td><td data-pelocate="${e.id}" title="Çift dokun: CAD'de göster">${esc_(e.n??String(e.id))}</td><td>${esc_(e.lay||'0')}${hide?' (gizli)':''}</td><td data-pelocate="${e.id}" title="Çift dokun: CAD'de göster">${digits(p[0])}</td><td data-pelocate="${e.id}" title="Çift dokun: CAD'de göster">${digits(p[1])}</td><td data-pelocate="${e.id}" title="Çift dokun: CAD'de göster">${digits(p[2])}</td><td>${esc_(e.kod||'')}</td><td><button type="button" data-peedit="${e.id}">Düzenle</button><button type="button" data-peshow="${e.id}">CAD'de göster</button></td></tr>`;
+      return `<tr data-peid="${e.id}" class="${hide?'pe-hidden':''}${e.id===selId?' pe-on':''}"><td><input type="checkbox" data-pepick="${e.id}" ${picked.has(e.id)?'checked':''} aria-label="${esc_(String(e.n||e.id))} seç"></td><td data-pelocate="${e.id}" title="Dokun: CAD'de göster">${esc_(e.n??String(e.id))}</td><td>${esc_(e.lay||'0')}${hide?' (gizli)':''}</td><td data-pelocate="${e.id}" title="Dokun: CAD'de göster">${digits(p[0])}</td><td data-pelocate="${e.id}" title="Dokun: CAD'de göster">${digits(p[1])}</td><td data-pelocate="${e.id}" title="Dokun: CAD'de göster">${digits(p[2])}</td><td>${esc_(e.kod||'')}</td><td><button type="button" data-peedit="${e.id}">Düzenle</button><button type="button" data-peshow="${e.id}">CAD'de göster</button></td></tr>`;
     }).join('')||'<tr><td colspan="8">Bu filtrede nokta bulunamadı.</td></tr>';
-    $pe('peRows').querySelectorAll('[data-pepick]').forEach(t=>t.onchange=()=>{const id=Number(t.dataset.pepick);if(t.checked)picked.add(id);else picked.delete(id);$pe('pePicked').textContent=`${picked.size.toLocaleString('tr-TR')} nokta seçili`;hidePreview();});
-    $pe('peRows').querySelectorAll('[data-peedit]').forEach(t=>t.onclick=()=>{editId=Number(t.dataset.peedit);renderDetail();hidePreview();});
+    $pe('peRows').querySelectorAll('[data-pepick]').forEach(t=>t.onchange=()=>{const id=Number(t.dataset.pepick);if(t.checked)picked.add(id);else picked.delete(id);$pe('pePicked').textContent=`${picked.size.toLocaleString('tr-TR')} nokta seçili`;hidePreview();peSync();});
+    $pe('peRows').querySelectorAll('[data-peedit]').forEach(t=>t.onclick=()=>{editId=Number(t.dataset.peedit);renderDetail();hidePreview();pointToCad(editId);});
     $pe('peRows').querySelectorAll('[data-peshow]').forEach(t=>t.onclick=()=>pointToCad(Number(t.dataset.peshow)));
-    let lastTouchId=null,lastTouchTime=0;
-    $pe('peRows').querySelectorAll('[data-pelocate]').forEach(t=>{
-      t.addEventListener('dblclick',()=>pointToCad(Number(t.dataset.pelocate)));
-      t.addEventListener('touchend',e=>{const id=Number(t.dataset.pelocate),now=Date.now();if(lastTouchId===id&&now-lastTouchTime<450){e.preventDefault();pointToCad(id);}else{lastTouchId=id;lastTouchTime=now;}},{passive:false});
-    });
+    $pe('peRows').querySelectorAll('tr[data-peid]').forEach(tr=>tr.addEventListener('click',ev=>{if(ev.target.closest('button,input,select,label'))return;pointToCad(Number(tr.dataset.peid));}));
+    peSync();
     $pe('pePageText').textContent=`${list.length?`${page*perPage+1}–${Math.min((page+1)*perPage,list.length)} / ${list.length}`:'0'} · ${page+1}/${Math.max(1,total)} sayfa`;
     $pe('pePrev').disabled=page<=0;$pe('peNext').disabled=page>=total-1;
   }
