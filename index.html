@@ -1397,8 +1397,8 @@ X Y (en az 3 köşe)&quot;&gt;&lt;/textarea&gt;&lt;/label&gt;
  &lt;div class=&quot;rvViewer&quot; id=&quot;rvViewer&quot;&gt;
   &lt;div class=&quot;rvTop&quot;&gt;&lt;button id=&quot;rvPrev&quot; type=&quot;button&quot; aria-label=&quot;Önceki kilometre&quot;&gt;◀&lt;/button&gt;
    &lt;label&gt;KM&lt;input id=&quot;rvKm&quot; type=&quot;text&quot; inputmode=&quot;decimal&quot; placeholder=&quot;0+020,00&quot;&gt;&lt;/label&gt;
-   &lt;button id=&quot;rvNext&quot; type=&quot;button&quot; aria-label=&quot;Sonraki kilometre&quot;&gt;▶&lt;/button&gt;
-   &lt;label&gt;Kesit aralığı&lt;select id=&quot;rvMode&quot; style=&quot;min-height:42px;background:#292e36;color:#fff;border-radius:8px;padding:6px&quot;&gt;&lt;option value=&quot;stations&quot;&gt;Mevcut kesitler&lt;/option&gt;&lt;option value=&quot;10&quot;&gt;10 m&lt;/option&gt;&lt;/select&gt;&lt;/label&gt;
+   &lt;button id=&quot;rvNext&quot; type=&quot;button&quot; aria-label=&quot;Sonraki kilometre&quot;&gt;▶&lt;/button&gt;&lt;button id=&quot;rvM1&quot; type=&quot;button&quot; title=&quot;1 m geri&quot; style=&quot;min-width:52px&quot;&gt;−1 m&lt;/button&gt;&lt;button id=&quot;rvP1&quot; type=&quot;button&quot; title=&quot;1 m ileri&quot; style=&quot;min-width:52px&quot;&gt;+1 m&lt;/button&gt;
+   &lt;label&gt;Kesit aralığı&lt;select id=&quot;rvMode&quot; style=&quot;min-height:42px;background:#292e36;color:#fff;border-radius:8px;padding:6px&quot;&gt;&lt;option value=&quot;stations&quot;&gt;Mevcut kesitler&lt;/option&gt;&lt;option value=&quot;10&quot;&gt;10 m&lt;/option&gt;&lt;option value=&quot;5&quot;&gt;5 m&lt;/option&gt;&lt;option value=&quot;1&quot; selected&gt;1 m (her metre)&lt;/option&gt;&lt;/select&gt;&lt;/label&gt;
    &lt;span id=&quot;rvKmCount&quot; style=&quot;font-size:12px;color:#b8d4e8&quot;&gt;&lt;/span&gt;
   &lt;/div&gt;
   &lt;input id=&quot;rvSlider&quot; class=&quot;rvRange&quot; type=&quot;range&quot; min=&quot;0&quot; max=&quot;1&quot; value=&quot;0&quot; step=&quot;1&quot; aria-label=&quot;Kilometreler arasında ilerle&quot;&gt;
@@ -2451,7 +2451,7 @@ function zAt(s,off,layer){let out=design();if(out){let a=rRow(s);if(!a||a.invali
   if(layer===1)return red;return red-out.thick.at(-1)+out.thick[layer===2?0:layer-2];
  }
  const base=validSource(s);if(!base)return NaN;
- if(layer===0)return sourceValue(base,off,&#x27;ground&#x27;);
+ if(layer===0){if(base.a!==base.b&amp;&amp;dpState.terrain){const xy=XY(pRoad(),s,off);if(xy){const g=dpGroundAt(dpState.terrain,xy[0],xy[1]);if(finite(g))return g}}return sourceValue(base,off,&#x27;ground&#x27;);}
  if(layer===1)return sourceValue(base,off,&#x27;top&#x27;);
  const formation=sourceValue(base,off,&#x27;formation&#x27;);
  if(layer===2)return formation; // Çiçeklik/refüj altında da hafriyat kotu vardır.
@@ -2468,12 +2468,12 @@ function offsets(s){let lim=crossLimits(s);if(!lim||!finite(lim[0])||!finite(lim
  let out=design();if(out&amp;&amp;window.__YK){const K=window.__YK.rowSec(out,rRow(s));if(K)K.breaks.forEach(v=&gt;arr.push(v))}if(!out){let b=validSource(s);if(b)for(const r of [b.a,b.b])for(const k of [&#x27;ground&#x27;,&#x27;top&#x27;,&#x27;formation&#x27;])for(const v of r[k]||[])if(v[0]&gt;=lim[0]&amp;&amp;v[0]&lt;=lim[1])arr.push(v[0])}
  return [...new Set(arr.map(v=&gt;Number(v.toFixed(3))))].sort((a,b)=&gt;a-b).slice(0,300);
 }
-function refreshList(){let p=pRoad(),o=design();let old=current(),stations=(o?o.sec:p.sections).map(q=&gt;Number(q.s)).filter(finite);
- if(el(&#x27;rvMode&#x27;).value===&#x27;10&#x27;&amp;&amp;stations.length){let end=o?o.path.length:p.length;let min=stations[0],max=stations.at(-1);stations=[];for(let t=Math.ceil(min/10)*10;t&lt;=max+1e-8;t+=10)stations.push(t);if(!stations.length)stations=[min]}
+function refreshList(){let p=pRoad(),o=design();let old=finite(RV.want)?RV.want:current(),stations=(o?o.sec:p.sections).map(q=&gt;Number(q.s)).filter(finite);
+ {const stp=Number(el(&#x27;rvMode&#x27;).value);if(stp&gt;0&amp;&amp;stations.length){let min=stations[0],max=stations.at(-1);stations=[];for(let t=Math.ceil(min/stp-1e-9)*stp;t&lt;=max+1e-8;t+=stp)stations.push(+t.toFixed(3));if(!stations.length)stations=[min]}if(finite(RV.keep)&amp;&amp;stations.length&amp;&amp;RV.keep&gt;=stations[0]-1e-6&amp;&amp;RV.keep&lt;=stations.at(-1)+1e-6)stations.push(RV.keep);else RV.keep=null}
  RV.stations=[...new Set(stations)].sort((a,b)=&gt;a-b);invalidateProfile();let near=RV.stations.reduce((best,s,i)=&gt;Math.abs(s-old)&lt;Math.abs((RV.stations[best]??0)-old)?i:best,0);RV.index=Math.max(0,near);el(&#x27;rvSlider&#x27;).max=Math.max(0,RV.stations.length-1);setIndex(RV.index);
 }
 function setIndex(i){const newIndex=Math.max(0,Math.min(Math.round(i),Math.max(0,RV.stations.length-1)));if(RV.index!==newIndex)resetCross();RV.index=newIndex;
- let s=current();el(&#x27;rvSlider&#x27;).value=RV.index;el(&#x27;rvKm&#x27;).value=RV.stations.length?labelKm(s):&#x27;—&#x27;;el(&#x27;rvKmCount&#x27;).textContent=RV.stations.length?`${RV.index+1} / ${RV.stations.length} kesit`:&#x27;Kesit yok&#x27;;render()}
+ let s=current();el(&#x27;rvSlider&#x27;).value=RV.index;if(typeof draw===&#x27;function&#x27;&amp;&amp;!RV.planRaf)RV.planRaf=requestAnimationFrame(()=&gt;{RV.planRaf=0;try{draw()}catch(_){}});el(&#x27;rvKm&#x27;).value=RV.stations.length?labelKm(s):&#x27;—&#x27;;el(&#x27;rvKmCount&#x27;).textContent=RV.stations.length?`${RV.index+1} / ${RV.stations.length} kesit`:&#x27;Kesit yok&#x27;;render()}
 function canvasSetup(c){let r=c.getBoundingClientRect(),w=Math.max(250,Math.round(r.width||350)),h=Math.max(150,Math.round(r.height||220));let scale=Math.min(2,window.devicePixelRatio||1);const cw=Math.round(w*scale),ch=Math.round(h*scale);if(c.width!==cw)c.width=cw;if(c.height!==ch)c.height=ch;let x=c.getContext(&#x27;2d&#x27;);x.setTransform(scale,0,0,scale,0,0);x.fillStyle=&#x27;#131820&#x27;;x.fillRect(0,0,w,h);return {ctx:x,w,h}}
 function line(ctx,pts,col,width=2){let pen=false;ctx.strokeStyle=col;ctx.lineWidth=width;ctx.beginPath();for(const p of pts){if(!p||!finite(p[0])||!finite(p[1])){pen=false;continue}if(!pen){ctx.moveTo(...p);pen=true}else ctx.lineTo(...p)}ctx.stroke()}
 let profileVersion=0,profileCache={version:-1,plot:null,vals:null};function invalidateProfile(){profileVersion++}
@@ -2526,7 +2526,7 @@ function plotCross(){
  for(let z=Math.ceil(minZ/stepZ)*stepZ;z&lt;=maxZ+1e-8;z+=stepZ){let q=py(z);ctx.strokeStyle=&#x27;#343941&#x27;;ctx.beginPath();ctx.moveTo(left,q);ctx.lineTo(right,q);ctx.stroke()}
  // Draw a very light actual-earth underside. The source ground polyline retains its measured break points.
  if(profiles[0]?.length&gt;1){
-   const p=profiles[0];ctx.beginPath();ctx.moveTo(px(p[0][0]),py(minZ));for(const a of p)ctx.lineTo(px(a[0]),py(a[1]));ctx.lineTo(px(p.at(-1)[0]),py(minZ));ctx.closePath();ctx.fillStyle=&#x27;rgba(146,164,183,.075)&#x27;;ctx.fill();
+   const p=profiles[0];ctx.beginPath();ctx.moveTo(px(p[0][0]),py(minZ));for(const a of p)ctx.lineTo(px(a[0]),py(a[1]));ctx.lineTo(px(p.at(-1)[0]),py(minZ));ctx.closePath();{const g_=ctx.createLinearGradient(0,top,0,bottom);g_.addColorStop(0,&#x27;rgba(150,112,66,.42)&#x27;);g_.addColorStop(1,&#x27;rgba(70,50,30,.30)&#x27;);ctx.fillStyle=g_;ctx.fill();ctx.save();ctx.clip();ctx.strokeStyle=&#x27;rgba(205,170,120,.13)&#x27;;ctx.lineWidth=1;for(let q=left-h;q&lt;right;q+=9){ctx.beginPath();ctx.moveTo(q,bottom);ctx.lineTo(q+(bottom-top),top);ctx.stroke()}ctx.restore();}
  }
  // A-CAD: kazı/dolgu alanı arazi ile toprak işi çizgisi (kaplama altı/formasyon, dışında şev) arasında boyanır ve hesaplanır.
  CV.area=null;
@@ -2557,7 +2557,6 @@ function plotCross(){
    let a=interval[0],b=interval[1];if(!finite(a)||!finite(b)||b&lt;=a)continue;
    const n=Math.max(2,Math.min(65,Math.ceil((b-a)/.3)));
    for(let k=3;k&lt;=7;k++){
-     if(!RV.selected[k]||!RV.selected[k-1])continue;
      const lower=[],upper=[];
      for(let j=0;j&lt;=n;j++){
        const o=a+(b-a)*j/n,z0=zAt(s,o,k-1),z1=zAt(s,o,k);
@@ -2566,7 +2565,7 @@ function plotCross(){
      }
      if(lower.length&gt;1&amp;&amp;upper.length&gt;1){
        ctx.beginPath();ctx.moveTo(...lower[0]);for(const p of lower.slice(1))ctx.lineTo(...p);
-       for(const p of upper.reverse())ctx.lineTo(...p);ctx.closePath();ctx.fillStyle=bandColors[k-3];ctx.fill();
+       for(const p of upper.reverse())ctx.lineTo(...p);ctx.closePath();ctx.fillStyle=[&#x27;#a08c66&#x27;,&#x27;#bba980&#x27;,&#x27;#62666b&#x27;,&#x27;#4b4f54&#x27;,&#x27;#34373b&#x27;][k-3];ctx.globalAlpha=.92;ctx.fill();ctx.globalAlpha=1;ctx.strokeStyle=&#x27;rgba(0,0,0,.35)&#x27;;ctx.lineWidth=.6;ctx.stroke();
      }
    }
  }
@@ -2584,7 +2583,7 @@ function plotCross(){
    });ctx.setLineDash([]);
  }
  // Centre line and project-axis tick.
- if(px(0)&gt;=left&amp;&amp;px(0)&lt;=right){ctx.strokeStyle=&#x27;#768794&#x27;;ctx.lineWidth=.8;ctx.setLineDash([5,5]);ctx.beginPath();ctx.moveTo(px(0),top);ctx.lineTo(px(0),bottom);ctx.stroke();ctx.setLineDash([])}
+ if(px(0)&gt;=left&amp;&amp;px(0)&lt;=right){ctx.strokeStyle=&#x27;#768794&#x27;;ctx.lineWidth=.8;ctx.setLineDash([5,5]);ctx.beginPath();ctx.moveTo(px(0),top);ctx.lineTo(px(0),bottom);ctx.stroke();ctx.setLineDash([]);const zr=zAt(s,0,1),zg=zAt(s,0,0),X0=px(0);ctx.font=&#x27;600 11px Arial,system-ui&#x27;;ctx.textAlign=&#x27;left&#x27;;let yy=top+16;const bg=(t,c)=&gt;{const w_=ctx.measureText(t).width;ctx.fillStyle=&#x27;rgba(9,14,22,.78)&#x27;;ctx.fillRect(X0+3,yy-11,w_+6,14);ctx.fillStyle=c;ctx.fillText(t,X0+6,yy);yy+=15};if(finite(zr))bg(&#x27;Proje (kırmızı) &#x27;+zr.toFixed(3),&#x27;#ff8f7a&#x27;);if(finite(zg))bg(&#x27;Arazi (siyah) &#x27;+zg.toFixed(3),&#x27;#e3e8ee&#x27;);if(finite(zr)&amp;&amp;finite(zg)){const dh=zr-zg;bg((dh&gt;=0?&#x27;Dolgu h = &#x27;:&#x27;Kazı h = &#x27;)+Math.abs(dh).toFixed(2)+&#x27; m&#x27;,dh&gt;=0?&#x27;#86e0a8&#x27;:&#x27;#f3a585&#x27;)}}for(const iv of intervals)for(const ed of iv){const zt=zAt(s,ed,1),X=px(ed);if(!finite(zt)||X&lt;left+20||X&gt;right-20)continue;ctx.save();ctx.translate(X+3,py(zt)-6);ctx.rotate(-Math.PI/2);ctx.font=&#x27;10px Arial,system-ui&#x27;;ctx.fillStyle=&#x27;#ffb3a6&#x27;;ctx.fillText(zt.toFixed(3),0,0);ctx.restore()}
  ctx.restore();
  // CAD-style measured offsets and axes, outside the clipped drawing area.
  ctx.font=&#x27;10px system-ui&#x27;;ctx.fillStyle=&#x27;#adc6d7&#x27;;ctx.strokeStyle=&#x27;#6b727a&#x27;;ctx.strokeRect(left+.5,top+.5,plotW,plotH);
@@ -2620,7 +2619,7 @@ function plotCross(){
  if(CV.marks.length){CV.marks.forEach((m,i)=&gt;{drawCircle(ctx,px(m.o),py(m.z),6,i?&#x27;#f1b171&#x27;:&#x27;#7de3cf&#x27;);ctx.fillStyle=&#x27;#e9fcff&#x27;;ctx.font=&#x27;bold 12px system-ui&#x27;;ctx.fillText(String(i+1),px(m.o)+8,py(m.z)-6)});
    if(CV.marks.length===2){ctx.setLineDash([4,3]);ctx.lineWidth=1.5;ctx.strokeStyle=&#x27;#e8c477&#x27;;ctx.beginPath();ctx.moveTo(px(CV.marks[0].o),py(CV.marks[0].z));ctx.lineTo(px(CV.marks[1].o),py(CV.marks[1].z));ctx.stroke();ctx.setLineDash([])}
  }
- message(`Enkesit ${labelKm(s)}${CV.area?` · Kazı ${CV.area.cut.toFixed(2)} m² · Dolgu ${CV.area.fill.toFixed(2)} m²`:&#x27;&#x27;} · ${exact?&#x27;Kaynak CAD kırık noktaları birebir çizildi&#x27;:source?&#x27;İki kaynak enkesit arasında interpolasyon&#x27;:&#x27;Tasarım hesabından kesit&#x27;} · ${intervals.length} taşıt yolu kaplama aralığı · ${intervals.length&gt;1?&#x27;Refüjde üst kaplama yok; hafriyat çizgisi korunur&#x27;:&#x27;Yol kenarı geometrisi kaynak kesitten alındı&#x27;}.`);
+ message(`Enkesit ${labelKm(s)}${CV.area?` · Kazı ${CV.area.cut.toFixed(2)} m² · Dolgu ${CV.area.fill.toFixed(2)} m²`:&#x27;&#x27;} · ${exact?&#x27;Projecinin kesiti: CAD kırık noktaları birebir&#x27;:source?(dpState.terrain?&#x27;Ara kesit: arazi siyah TIN üçgeninden, proje iki kesit arasından&#x27;:&#x27;Ara kesit: iki proje kesiti arasından&#x27;):&#x27;Tasarım hesabından kesit&#x27;} · ${intervals.length} taşıt yolu kaplama aralığı · ${intervals.length&gt;1?&#x27;Refüjde üst kaplama yok; hafriyat çizgisi korunur&#x27;:&#x27;Yol kenarı geometrisi kaynak kesitten alındı&#x27;}.`);
  crossSummary();
 }
 window.__rvReplot=()=&gt;{try{plotCross()}catch(e){console.error(e)}};
@@ -2636,12 +2635,12 @@ function centerZ(s,layer){let out=design();if(out){let a=rRow(s);if(!a)return Na
 function plotProfile(){let c=el(&#x27;rvProfile&#x27;);if(!c||el(&#x27;rvProfilePage&#x27;).hidden)return;let {ctx,w,h}=canvasSetup(c),sts=RV.stations;if(sts.length&lt;2){message(&#x27;Profil için en az iki kesit gerekiyor.&#x27;);return}
  if(profileCache.version!==profileVersion){const plot=RV.selected.map((v,i)=&gt;v?i:-1).filter(i=&gt;i&gt;=0).map(i=&gt;({i,p:sts.map(s=&gt;[s,centerZ(s,i)])}));profileCache={version:profileVersion,plot,vals:plot.flatMap(x=&gt;x.p.map(a=&gt;a[1])).filter(finite)}}
  let {plot,vals}=profileCache;if(!vals.length){message(&#x27;Profil verisi bulunamadı.&#x27;);return}
- let min=Math.min(...vals)-.5,max=Math.max(...vals)+.5,x0=sts[0],x1=sts.at(-1);const px=v=&gt;44+(w-59)*(v-x0)/(x1-x0||1),py=v=&gt;h-30-(h-64)*(v-min)/(max-min||1);
+ let min=Math.min(...vals)-.5,max=Math.max(...vals)+.5,x0=sts[0],x1=sts.at(-1);const px=v=&gt;44+(w-59)*(v-x0)/(x1-x0||1),py=v=&gt;h-30-(h-64)*(v-min)/(max-min||1);RV.pf={x0,x1,w};
  ctx.strokeStyle=&#x27;#4a4f57&#x27;;ctx.font=&#x27;11px system-ui&#x27;;ctx.fillStyle=&#x27;#a8cada&#x27;;for(let i=0;i&lt;=4;i++){let z=min+(max-min)*i/4,y=py(z);ctx.beginPath();ctx.moveTo(40,y);ctx.lineTo(w-10,y);ctx.stroke();ctx.fillText(z.toFixed(1),1,y-4)}
  for(let i=0;i&lt;=4;i++){let st=x0+(x1-x0)*i/4;ctx.fillText(labelKm(st),Math.max(4,px(st)-25),h-7)}
  plot.forEach(a=&gt;line(ctx,a.p.map(p=&gt;finite(p[1])?[px(p[0]),py(p[1])]:null),palette[a.i],a.i===1?2.5:1.5));
  let x=px(current());ctx.strokeStyle=&#x27;#fbd48c&#x27;;ctx.setLineDash([5,5]);ctx.beginPath();ctx.moveTo(x,26);ctx.lineTo(x,h-30);ctx.stroke();ctx.setLineDash([]);
- ctx.fillStyle=&#x27;#d8f2ff&#x27;;ctx.fillText(&#x27;Boyprofil · 0 ofset / eksen&#x27;,45,15);message(`Profil: ${labelKm(x0)}–${labelKm(x1)}. Kesit eksenindeki kaynak siyah ve proje kotları.`)
+ {const s_=current(),zr=centerZ(s_,1),zg=centerZ(s_,0);ctx.font=&#x27;600 11px Arial,system-ui&#x27;;const t=`${labelKm(s_)}${finite(zr)?&#x27;  ·  proje &#x27;+zr.toFixed(3):&#x27;&#x27;}${finite(zg)?&#x27;  ·  arazi &#x27;+zg.toFixed(3):&#x27;&#x27;}`,tw=ctx.measureText(t).width,tx=Math.max(44,Math.min(w-tw-8,x-tw/2));ctx.fillStyle=&#x27;rgba(9,14,22,.85)&#x27;;ctx.fillRect(tx-4,28,tw+8,16);ctx.fillStyle=&#x27;#fbd48c&#x27;;ctx.fillText(t,tx,40);if(finite(zr)){ctx.fillStyle=&#x27;#ff8f7a&#x27;;ctx.beginPath();ctx.arc(x,py(zr),3.5,0,7);ctx.fill()}if(finite(zg)){ctx.fillStyle=&#x27;#e3e8ee&#x27;;ctx.beginPath();ctx.arc(x,py(zg),3,0,7);ctx.fill()}ctx.font=&#x27;11px system-ui&#x27;}ctx.fillStyle=&#x27;#d8f2ff&#x27;;ctx.fillText(&#x27;Boyprofil · dokun ya da sürükle: o metrenin kesiti&#x27;,45,15);message(`Profil: ${labelKm(x0)}–${labelKm(x1)}. Kesit eksenindeki kaynak siyah ve proje kotları.`)
 }
 function listPoints(){let s=current(),off=offsets(s),selectedLayer=RV.selected.findLastIndex(Boolean);if(selectedLayer&lt;0)selectedLayer=7;
  RV.lastRows=off.map(o=&gt;{let xy=XYAt(s,o);return {o,x:xy?.[0],y:xy?.[1],black:zAt(s,o,0),red:zAt(s,o,1),layer:zAt(s,o,selectedLayer)}});
@@ -2671,16 +2670,15 @@ syncQuick();
 document.querySelectorAll(&#x27;#roadViewSuite .rvTab&#x27;).forEach(b=&gt;b.addEventListener(&#x27;click&#x27;,()=&gt;switchTab(b.dataset.rv)));
 let sliderFrame=0,sliderPending=0;
 el(&#x27;rvSlider&#x27;).addEventListener(&#x27;input&#x27;,e=&gt;{sliderPending=+e.target.value;let next=RV.stations[sliderPending];if(finite(next))el(&#x27;rvKm&#x27;).value=labelKm(next);if(!sliderFrame)sliderFrame=requestAnimationFrame(()=&gt;{sliderFrame=0;setIndex(sliderPending)})});el(&#x27;rvPrev&#x27;).addEventListener(&#x27;click&#x27;,()=&gt;setIndex(RV.index-1));el(&#x27;rvNext&#x27;).addEventListener(&#x27;click&#x27;,()=&gt;setIndex(RV.index+1));
-el(&#x27;rvKm&#x27;).addEventListener(&#x27;change&#x27;,e=&gt;{let km=parseKm(e.target.value);if(!finite(km)){message(&#x27;Kilometre biçimi geçersiz.&#x27;);return}let best=RV.stations.reduce((bi,s,i)=&gt;Math.abs(s-km)&lt;Math.abs((RV.stations[bi]??0)-km)?i:bi,0);setIndex(best)});
-el(&#x27;rvMode&#x27;).addEventListener(&#x27;change&#x27;,refreshList);el(&#x27;rvExaggeration&#x27;).addEventListener(&#x27;change&#x27;,render);el(&#x27;roadSelect&#x27;).addEventListener(&#x27;change&#x27;,()=&gt;{RV.designRoad=-1;refreshList()});
+el(&#x27;rvKm&#x27;).addEventListener(&#x27;change&#x27;,e=&gt;{let km=parseKm(e.target.value);if(!finite(km)){message(&#x27;Kilometre biçimi geçersiz. Örnek: 1805 ya da 1+805,50&#x27;);return}goKm(km)});el(&#x27;rvM1&#x27;).addEventListener(&#x27;click&#x27;,()=&gt;goKm(current()-1));el(&#x27;rvP1&#x27;).addEventListener(&#x27;click&#x27;,()=&gt;goKm(current()+1));
+el(&#x27;rvMode&#x27;).addEventListener(&#x27;change&#x27;,refreshList);el(&#x27;rvExaggeration&#x27;).addEventListener(&#x27;change&#x27;,render);el(&#x27;roadSelect&#x27;).addEventListener(&#x27;change&#x27;,()=&gt;{RV.designRoad=-1;RV.keep=null;refreshList()});
 el(&#x27;rvExportPoints&#x27;).addEventListener(&#x27;click&#x27;,()=&gt;{listPoints();let h=[&#x27;KM&#x27;,&#x27;Ofset&#x27;,&#x27;X&#x27;,&#x27;Y&#x27;,&#x27;Siyah Z&#x27;,&#x27;Kirmizi Z&#x27;,&#x27;Secili tabaka Z&#x27;];let s=current();let csv=[h.join(&#x27;;&#x27;),...RV.lastRows.map(a=&gt;[labelKm(s),a.o,a.x,a.y,a.black,a.red,a.layer].map(v=&gt;finite(v)?Number(v).toFixed(3):String(v??&#x27;&#x27;)).join(&#x27;;&#x27;))].join(&#x27;\r\n&#x27;);
  let blob=new Blob([&#x27;\ufeff&#x27;+csv],{type:&#x27;text/csv;charset=utf-8&#x27;}),u=URL.createObjectURL(blob),a=document.createElement(&#x27;a&#x27;);a.href=u;a.download=pRoad().id+&#x27;_NOKTA_TABLOSU_&#x27;+Math.round(s)+&#x27;m.csv&#x27;;a.click();setTimeout(()=&gt;URL.revokeObjectURL(u),2000)});
 // Detect actual computation changes; won&#x27;t observe other UI or modify the design engine.
 let designFrame=0;const obs=new MutationObserver(()=&gt;{if(dpState.result&amp;&amp;!designFrame)designFrame=requestAnimationFrame(()=&gt;{designFrame=0;RV.designRoad=activeProject;refreshList()})});obs.observe(el(&#x27;dpRows&#x27;),{childList:true});
 // Map point queries also update selected KM in profile and cross-section tabs.
 if(el(&#x27;km&#x27;))new MutationObserver(()=&gt;{let value=parseKm(el(&#x27;km&#x27;).textContent);if(!finite(value)||!RV.stations.length)return;
- let best=RV.stations.reduce((bi,s,i)=&gt;Math.abs(s-value)&lt;Math.abs(RV.stations[bi]-value)?i:bi,0);
- if(best!==RV.index)setIndex(best);
+ if(Math.abs(value-current())&gt;.005)goKm(value);
 }).observe(el(&#x27;km&#x27;),{characterData:true,childList:true,subtree:true});
 // Touch-friendly cross-section CAD controls. One-finger pan; two-finger pinch; tap-to-snap.
 el(&#x27;rvMeasure&#x27;).addEventListener(&#x27;click&#x27;,()=&gt;{CV.mode=CV.mode===&#x27;measure&#x27;?&#x27;move&#x27;:&#x27;measure&#x27;;CV.marks=[];CV.probe=null;el(&#x27;rvMeasure&#x27;).setAttribute(&#x27;aria-pressed&#x27;,String(CV.mode===&#x27;measure&#x27;));el(&#x27;rvMeasure&#x27;).textContent=CV.mode===&#x27;measure&#x27;?&#x27;Ölçüm açık&#x27;:&#x27;Ölç&#x27;;crossSummary();plotCross()});
@@ -2699,6 +2697,16 @@ crossCanvas.addEventListener(&#x27;pointerup&#x27;,e=&gt;{const start=dragStart,
 crossCanvas.addEventListener(&#x27;pointercancel&#x27;,e=&gt;{CV.pointers.delete(e.pointerId);if(CV.pointers.size===0){dragStart=null;pinchDist=null}});
 crossCanvas.addEventListener(&#x27;wheel&#x27;,e=&gt;{e.preventDefault();crossZoom(e.deltaY&lt;0?1.25:.8)},{passive:false});
 // Initial project/section list is populated by the source module before this block.
+function goKm(km){const st=RV.stations;if(!st.length||!finite(km))return;const nat=st.filter(v=&gt;v!==RV.keep);if(!nat.length)return;km=+Math.max(nat[0],Math.min(nat.at(-1),km)).toFixed(2);let i=nat.findIndex(v=&gt;Math.abs(v-km)&lt;.005);if(i&gt;=0){RV.keep=null;RV.stations=nat}else{RV.keep=km;nat.push(km);nat.sort((a,b)=&gt;a-b);RV.stations=nat;i=nat.indexOf(km)}el(&#x27;rvSlider&#x27;).max=Math.max(0,RV.stations.length-1);setIndex(i)}
+window.__rvGoKm=goKm;
+{const pc=el(&#x27;rvProfile&#x27;);let dn=false,raf=0,want=null;const at=e=&gt;{const f=RV.pf;if(!f)return NaN;const r=pc.getBoundingClientRect(),X=e.clientX-r.left;return f.x0+(X-44)/((f.w-59)||1)*(f.x1-f.x0)};
+ const go=e=&gt;{const v=at(e);if(!finite(v))return;want=Math.round(v);if(!raf)raf=requestAnimationFrame(()=&gt;{raf=0;if(finite(want))goKm(want)})};
+ if(pc){pc.style.cursor=&#x27;ew-resize&#x27;;pc.style.touchAction=&#x27;pan-y&#x27;;pc.addEventListener(&#x27;pointerdown&#x27;,e=&gt;{dn=true;try{pc.setPointerCapture(e.pointerId)}catch(_){}go(e)});pc.addEventListener(&#x27;pointermove&#x27;,e=&gt;{if(dn)go(e)});const up=()=&gt;{dn=false};pc.addEventListener(&#x27;pointerup&#x27;,up);pc.addEventListener(&#x27;pointercancel&#x27;,up)}}
+window.__roadDesignOverlay=(function(prev){return function(ctx,toS,view,W,H){if(prev)try{prev.apply(this,arguments)}catch(_){}
+ try{if(!RV.stations.length)return;const s=current(),lim=crossLimits(s);if(!lim)return;const a=XYAt(s,lim[0]),b=XYAt(s,lim[1]),c=XYAt(s,0);if(!a||!b)return;const A=toS(a),B=toS(b);
+  ctx.save();ctx.strokeStyle=&#x27;#ff40ff&#x27;;ctx.lineWidth=2.5;ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(A[0],A[1]);ctx.lineTo(B[0],B[1]);ctx.stroke();
+  for(const P of [A,B]){ctx.beginPath();ctx.arc(P[0],P[1],3.5,0,7);ctx.fillStyle=&#x27;#ff40ff&#x27;;ctx.fill()}
+  if(c){const C=toS(c),t=&#x27;KESİT &#x27;+labelKm(s);ctx.font=&#x27;700 12px Arial,system-ui&#x27;;const tw=ctx.measureText(t).width;ctx.fillStyle=&#x27;rgba(9,14,22,.85)&#x27;;ctx.fillRect(C[0]+8,C[1]-24,tw+10,17);ctx.fillStyle=&#x27;#ff9cff&#x27;;ctx.fillText(t,C[0]+13,C[1]-11)}ctx.restore()}catch(_){}}})(window.__roadDesignOverlay);
 refreshList();window.addEventListener(&#x27;resize&#x27;,()=&gt;{if(RV.tab!==&#x27;plan&#x27;)requestAnimationFrame(render)});
 window.__roadViewsRefresh=refreshList;
 })();
