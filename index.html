@@ -14270,22 +14270,84 @@ let PV = (() => { try { return Object.assign({ sym: true, ad: true, kot: null },
 const pvMark = () => document.querySelectorAll('#cadTools [data-c^="NG"]').forEach(b => b.classList.toggle("on", b.dataset.c === "NGSYM" ? PV.sym : b.dataset.c === "NGAD" ? PV.ad : PV.kot === true));
 const pvTog = k => { if (k === "kot") PV.kot = PV.kot !== true; /* kapalı/otomatik → açık (tüm kotlar) → kapalı */ else PV[k] = !PV[k]; try { localStorage.setItem("acad-cad-pv", JSON.stringify(PV)); } catch (e) {} pvMark(); draw(); say(`Nokta ${k === "sym" ? "işareti" : k === "ad" ? "adı" : "kotu"} ${(k === "kot" ? PV.kot === true : PV[k]) ? "açık" : "kapalı"} (yalnız görünüm; veri ve kayıt değişmez)`); };
 const arzSave = () => { try { localStorage.setItem("acad-cad-arz", JSON.stringify(CARZ)); } catch (e) {} document.querySelectorAll('#cadTools [data-c="ARZTIN"],#cadTools [data-c="ARZEGRI"]').forEach(b => b.classList.toggle("on", !!CARZ[b.dataset.c === "ARZTIN" ? "tin" : "egri"])); };
-function arzBox(html) {
+/* Sorgu / bilgi paneli. Telefonda alttan açılan ince sayfa (tutamaktan sürükle: büyüt / küçült / kapat),
+   masaüstünde çizimin sağ üstünde küçük kart. Çizimi olabildiğince açık bırakır. */
+const ARZ_CSS = `#arzBox{font:13px/1.45 Arial,'Liberation Sans',system-ui,sans-serif}
+#arzBox .arzH{position:sticky;top:-1px;z-index:2;display:flex;align-items:center;gap:6px;margin:-10px -12px 6px;padding:12px 10px 7px 14px;background:#fff;border-bottom:1px solid #e6ebf0}
+#arzBox .arzGrip{position:absolute;left:50%;top:4px;width:38px;height:4px;margin-left:-19px;border-radius:3px;background:#c9d2da}
+#arzBox .arzT{flex:1;min-width:0;font-weight:700;font-size:14px;color:#14212b!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#arzBox .arzT *{font-size:14px!important;margin:0!important;color:#14212b!important}
+#arzBox .arzI{flex:0 0 auto;width:30px;height:30px;min-height:30px!important;padding:0!important;border-radius:50%!important;border:0!important;background:#eef2f5!important;color:#33485a!important;font-size:15px!important;line-height:30px;cursor:pointer}
+#arzBox .arzI:hover{background:#dfe6ec!important}
+#arzBox>b,#arzBox p,#arzBox p b,#arzBox .note{color:#3d5162!important;opacity:1!important;text-shadow:none!important}
+#arzBox .note{font-size:12px!important;margin:3px 0!important}
+#arzBox b{color:#14212b}
+#arzBox p.road-gap-warning{color:#7a3c00!important;background:#fff1d6!important;border:1px solid #e5c58a;padding:6px 8px;border-radius:8px;font-weight:700!important}
+#arzBox .stat{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(68px,1fr));gap:5px!important;margin:6px 0!important}
+#arzBox .stat>div{display:flex!important;flex-direction:column;background:#f3f6f8!important;border:0!important;border-radius:9px!important;padding:4px 7px!important;min-width:0}
+#arzBox .stat .k{font-size:10.5px!important;color:#5c6f7e!important;text-transform:none;letter-spacing:.2px;order:2}
+#arzBox .stat .v{font-size:14px!important;font-weight:700;color:#14212b!important;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#arzBox table{border-collapse:collapse;width:100%;font-size:12px!important;font-variant-numeric:tabular-nums}
+#arzBox th{font-size:11px;color:#5c6f7e;font-weight:600;text-align:right;padding:3px 5px;border-bottom:1px solid #e1e7ec}
+#arzBox td{padding:3px 5px;text-align:right;border-bottom:1px solid #f0f3f5}
+#arzBox th:first-child,#arzBox td:first-child{text-align:left}
+#arzBox details>summary{cursor:pointer;color:#19384f!important;font-size:12.5px!important;padding:3px 0}
+#arzBox details summary *{font-size:12.5px!important}
+#arzBox button{opacity:1!important}
+#arzBox button:not(.arzI){min-height:32px!important;padding:5px 10px!important;border-radius:8px!important;font-size:12.5px!important;line-height:1.2!important}
+#arzBox select,#arzBox input:not([type=checkbox]):not([type=radio]),#arzBox textarea{font-size:13px!important;border-radius:7px!important;background:#fff!important;color:#14212b!important;border:1px solid #c9d3da!important;padding:4px 7px!important;min-height:30px}
+#arzBox.arz-mini>*:not(.arzH){display:none!important}
+#arzBox.arz-pc .arzGrip{display:none}
+#arzBox.arz-pc .arzH{padding-top:8px}
+#arzBox.arz-mini .arzH{margin-bottom:-10px;border-bottom:0}`;
+const arzTel = () => (document.documentElement.clientWidth || innerWidth) < 760;
+function arzYerles(b) {
+  b = b || document.getElementById("arzBox"); if (!b || b.hidden) return;
+  if (b.dataset.dock) { /* kendi yerini ayarlayan panel (Paftala vb.): yalnız küçült / aç */ const mini = b.classList.contains("arz-mini");
+    if (mini) { b.style.setProperty("height", "auto", "important"); b.style.setProperty("max-height", "52px", "important"); b.style.setProperty("overflow-y", "hidden", "important"); } else if (b._dockCss) b.style.cssText = b._dockCss;
+    const m = b.querySelector(".arzMinBtn"); if (m) { m.textContent = mini ? "▴" : "▾"; m.title = mini ? "Aç" : "Küçült"; } return; }
+  const set = (k, v) => b.style.setProperty(k, v, "important");
+  const vw = Math.max(280, Math.min(document.documentElement.clientWidth || Infinity, window.visualViewport?.width || Infinity, innerWidth));
+  const vh = window.visualViewport?.height || innerHeight, kb = Math.max(0, innerHeight - vh);
+  b.classList.toggle("arz-pc", !arzTel());
+  if (arzTel()) { const mod = b.classList.contains("arz-mini") ? "mini" : b.classList.contains("arz-tam") ? "tam" : "orta";
+    set("left", "0"); set("right", "0"); set("top", "auto"); set("transform", "none"); set("bottom", kb + "px"); set("width", vw + "px"); set("max-width", vw + "px");
+    set("border-radius", "16px 16px 0 0"); set("border-width", "1px 0 0 0"); set("padding-bottom", "max(10px,env(safe-area-inset-bottom))");
+    set("max-height", mod === "mini" ? "52px" : mod === "tam" ? "82dvh" : (b.dataset.boy || "40dvh")); set("box-shadow", "0 -8px 28px rgba(16,32,48,.22)");
+  } else { let r = null; try { r = cv.getBoundingClientRect(); } catch (e) {} const top = Math.max(8, Math.min(r && r.height ? r.top + 8 : 80, vh - 260)), w = Math.round(Math.min(380, Math.max(300, vw * .26)));
+    set("left", "auto"); set("right", Math.max(12, r && r.width ? vw - r.right + 10 : 12) + "px"); set("transform", "none"); set("top", top + "px"); set("bottom", "auto"); set("width", w + "px"); set("max-width", w + "px");
+    set("border-radius", "12px"); set("border-width", "1px"); set("padding-bottom", "10px"); set("box-shadow", "0 10px 30px rgba(16,32,48,.22)");
+    set("max-height", b.classList.contains("arz-mini") ? "52px" : Math.max(220, (r && r.height ? Math.min(vh, r.bottom) : vh) - top - 8) + "px"); }
+  set("overflow-y", b.classList.contains("arz-mini") ? "hidden" : "auto");
+  const m = b.querySelector(".arzMinBtn"); if (m) { const mini = b.classList.contains("arz-mini"); m.textContent = mini ? "▴" : "▾"; m.title = mini ? "Aç" : "Küçült"; m.setAttribute("aria-expanded", String(!mini)); }
+}
+function arzBox(html, o) {
   let b=document.getElementById("arzBox");
-  if(!b){b=document.createElement("div");b.id="arzBox";document.body.appendChild(b);}
-  b.setAttribute("role","dialog");b.setAttribute("aria-label","CAD sorgu ve işlem bilgileri");
-  // Reset on EVERY opening. Older dialogs and mobile CSS must not leave a translucent/cropped pane.
-  b.style.cssText="position:fixed!important;z-index:2147483000!important;left:50%!important;right:auto!important;bottom:max(12px,env(safe-area-inset-bottom))!important;top:auto!important;transform:translateX(-50%)!important;width:min(560px,calc(100vw - 16px))!important;max-width:calc(100vw - 16px)!important;max-height:min(72dvh,660px)!important;overflow-x:hidden!important;overflow-y:auto!important;box-sizing:border-box!important;opacity:1!important;filter:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:#f8fafc!important;background-color:#f8fafc!important;color:#172536!important;border:2px solid #366888!important;border-radius:12px!important;box-shadow:0 12px 38px rgba(0,0,0,.58)!important;padding:12px 14px!important;font-size:14px!important;line-height:1.45!important;isolation:isolate!important;overscroll-behavior:contain!important;touch-action:pan-y!important;color-scheme:light!important";
-  // Use the VISUAL viewport; unrelated CAD toolbar min-width can enlarge innerWidth on phones.
-  const availableWidth=Math.max(280, Math.min(document.documentElement.clientWidth||Infinity,window.visualViewport?.width||Infinity,window.innerWidth));
-  b.style.setProperty('width',Math.min(560,availableWidth-16)+'px','important');
-  b.style.setProperty('max-width',(availableWidth-16)+'px','important');
-  b.style.setProperty('left',(availableWidth/2)+'px','important');
-  // iOS/Android may report a taller layout viewport than the actual visible window.
-  b.style.setProperty('bottom',(Math.max(0,window.innerHeight-(window.visualViewport?.height||document.documentElement.clientHeight||window.innerHeight))+12)+'px','important');
-  b.innerHTML=`<style>#arzBox>b,#arzBox p,#arzBox p b,#arzBox .note{color:#24384a!important;opacity:1!important;text-shadow:none!important}#arzBox p.road-gap-warning{color:#7a3c00!important;background:#fff1d6!important;border:1px solid #d7ad61;padding:7px 9px;border-radius:6px;font-weight:700!important}#arzBox button{opacity:1!important}</style><div style="display:flex;justify-content:space-between;align-items:center;gap:9px;margin-bottom:7px;border-bottom:1px solid #c9d5df;padding-bottom:6px"><b style="color:#19384f">CAD · Bilgi / İşlem</b><button type="button" id="arzX" style="padding:7px 12px;min-height:36px;background:#e5edf2;color:#19384f;border:1px solid #a0b7c6;border-radius:6px">Kapat ✕</button></div>`+html;
-  b.classList.remove('acadAreaPreviewCompact');b.hidden=false;b.scrollTop=0;
+  if(!b){b=document.createElement("div");b.id="arzBox";document.body.appendChild(b);
+    addEventListener("resize",()=>arzYerles());window.visualViewport?.addEventListener("resize",()=>arzYerles());}
+  b.setAttribute("role","dialog");b.setAttribute("aria-label","CAD sorgu ve işlem bilgileri");delete b.dataset.dock;if(o&&o.boy)b.dataset.boy=o.boy;else delete b.dataset.boy;
+  // Her açılışta sıfırla: eski panellerin ya da mobil CSS'in bıraktığı yarı saydam / kırpılmış görünüm kalmasın.
+  b.style.cssText="position:fixed!important;z-index:2147483000!important;box-sizing:border-box!important;overflow-x:hidden!important;overflow-y:auto!important;opacity:1!important;filter:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:#fff!important;background-color:#fff!important;color:#1d2b38!important;border:1px solid #d5dde4!important;padding:10px 12px!important;line-height:1.45!important;isolation:isolate!important;overscroll-behavior:contain!important;touch-action:pan-y!important;color-scheme:light!important;transition:max-height .18s ease";
+  b.classList.remove('acadAreaPreviewCompact','arz-mini','arz-tam');
+  b.innerHTML=`<style>${ARZ_CSS}</style><div class="arzH"><span class="arzGrip" aria-hidden="true"></span><div class="arzT"></div><button type="button" class="arzI arzMinBtn" aria-label="Küçült" title="Küçült">▾</button><button type="button" class="arzI" id="arzX" aria-label="Kapat" title="Kapat (Esc)">✕</button></div>`+html;
+  // İçeriğin kendi başlığı başlık satırına alınır: bir satır kazanılır.
+  const H=b.querySelector(".arzH"), T=b.querySelector(".arzT"), ilk=H.nextElementSibling;
+  if(ilk&&(ilk.tagName==="B"||(ilk.tagName==="DIV"&&/font-weight:\s*[6-9]00/.test(ilk.getAttribute("style")||"")&&!ilk.querySelector("input,select,button,table")))&&ilk.textContent.trim().length<90){T.title=ilk.textContent.trim();T.appendChild(ilk);}
+  else T.textContent="Bilgi";
+  b.hidden=false;b.scrollTop=0;
   document.getElementById("arzX").onclick=()=>{b.hidden=true;};
+  const mini=b.querySelector(".arzMinBtn");mini.onclick=ev=>{ev.stopPropagation();b.classList.remove("arz-tam");b.classList.toggle("arz-mini");arzYerles(b);};
+  // Tutamaktan sürükle (telefon): yukarı büyüt, aşağı küçült; küçükken aşağı: kapat. Dokun: küçült / aç.
+  let y0=null,dy=0;
+  H.onpointerdown=ev=>{if(ev.target.closest("button"))return;y0=ev.clientY;dy=0;try{H.setPointerCapture(ev.pointerId);}catch(e){}};
+  H.onpointermove=ev=>{if(y0==null)return;dy=ev.clientY-y0;};
+  H.onpointerup=()=>{if(y0==null)return;const d=dy;y0=null;const c=b.classList;
+    if(Math.abs(d)<8){if(c.contains("arz-mini"))c.remove("arz-mini");else if(arzTel())c.add("arz-mini");}
+    else if(d<-30){if(c.contains("arz-mini"))c.remove("arz-mini");else c.add("arz-tam");}
+    else if(d>30){if(c.contains("arz-tam"))c.remove("arz-tam");else if(!c.contains("arz-mini"))c.add("arz-mini");else if(d>60){b.hidden=true;return;}}
+    arzYerles(b);};
+  H.style.touchAction="none";H.style.cursor=arzTel()?"grab":"default";
+  arzYerles(b);
 }
 const f3_ = v => v == null || !isFinite(v) ? "—" : (+v).toFixed(3), noModel = () => !(typeof MS !== "undefined" && MS && MS.tri && MS.tri.length);
 const inPolyC = (P, x, y) => { let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const a = P[i], b = P[j]; if ((a[1] > y) !== (b[1] > y) && x < (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]) + a[0]) c = !c; } return c; };
@@ -15804,23 +15866,22 @@ function acadAreaQueryShow(e,p){
  const reportAnchor=Array.isArray(p)?p.slice(0,2):(e.areaLabelAnchor||e.pts[0]).slice(0,2);
  const layer=esc_(e.lay||'—'),safeName=esc_(name);
  arzBox(`<b>▱ Alan Sorgula</b><p class="note">${safeName} · ${layer}</p>
-  <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;font-variant-numeric:tabular-nums">
-   <div><b style="font-size:16px;color:inherit">${acadAlanSay(ar,window.K.H.a)} m²</b><div>Alan</div></div>
-   <div><b style="font-size:16px;color:inherit">${acadAlanSay(pr,window.K.H.u)} m</b><div>Çevre</div></div>
-   <div><b style="font-size:16px;color:inherit">${P.length}</b><div>Köşe</div></div>
-   <div><b style="font-size:16px;color:inherit">${review?'Yaklaşık':'Kontrollü'}</b><div>Durum</div></div>
+  <div class="stat">
+   <div><div class="v">${acadAlanSay(ar,window.K.H.a)} m²</div><div class="k">Alan</div></div>
+   <div><div class="v">${acadAlanSay(pr,window.K.H.u)} m</div><div class="k">Çevre</div></div>
+   <div><div class="v">${P.length}</div><div class="k">Köşe</div></div>
+   <div><div class="v">${review?'Yaklaşık':'Kontrollü'}</div><div class="k">Durum</div></div>
   </div><p class="note" style="color:${review?'#a64c09':'inherit'}">${quality}</p>
-  <details open><summary>Y / X / Z koordinatları (${P.length} köşe)</summary>
+  <details${arzTel()?'':' open'}><summary>Y / X / Z koordinatları (${P.length} köşe)</summary>
   <div style="max-height:30dvh;overflow:auto"><table class="tbl" style="width:100%"><thead><tr><th>No</th><th>Y</th><th>X</th><th>Z</th></tr></thead><tbody data-kotlar="${esc_(String(e.id))}">${table}</tbody></table>${P.length>200?'<small>İlk 200 köşe gösteriliyor; tamamı Excel dosyasında.</small>':''}</div></details>
   <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
-    <button type="button" id="acadAreaXlsx" class="primary">⬇ Excel'e Aktar</button>
-    <button type="button" id="acadAreaPaste">▤ Alan Çıktısı (tek başına) Yapıştır</button>
-    <button type="button" id="acadCoordPaste">▦ Alan Çıktısı + Koordinat Özeti Yapıştır</button>
-    <button type="button" id="acadAreaClose">Kapat</button>
+    <button type="button" id="acadAreaXlsx" class="primary" title="Köşe koordinatlarını Excel'e aktar">⬇ Excel</button>
+    <button type="button" id="acadAreaPaste" title="Alan çıktısını (tek başına) çizime yapıştır">▤ Alan çıktısı</button>
+    <button type="button" id="acadCoordPaste" title="Alan çıktısı + koordinat özetini çizime yapıştır">▦ + Koordinatlar</button>
   </div>`);
  const box=$('arzBox');
  box.style.pointerEvents='none'; clearTimeout(box._pe); box._pe=setTimeout(()=>{box.style.pointerEvents='';},450); /* alanı seçen dokunuş, açılan paneldeki 'yapıştır' düğmesine düşmesin */
- box.querySelector('#acadAreaClose').onclick=()=>box.hidden=true;
+
  box.querySelector('#acadAreaXlsx').onclick=()=>{
    try{
      if(ents.find(q=>q.id===e.id)!==e)throw Error('Alan değişti; yeniden sorgula');
@@ -15959,17 +16020,9 @@ function arzAlanOdak(e) {
   } catch (x) { console.error(x); }
 }
 function arzDock(e) {
-  const b = $('arzBox'); if (!b || b.hidden) return; const set = (k, v) => b.style.setProperty(k, v, 'important');
-  const vw = document.documentElement.clientWidth || innerWidth, vh = window.visualViewport?.height || innerHeight, mob = vw < 760, r = cv.getBoundingClientRect();
-  if (!mob) { const w = Math.round(Math.min(380, Math.max(300, vw * .27))), top = Math.max(8, Math.min(r.top, vh - 300)); set('left', 'auto'); set('right', '12px'); set('transform', 'none'); set('width', w + 'px'); set('max-width', w + 'px'); set('top', top + 'px'); set('bottom', 'auto'); set('max-height', Math.max(240, vh - top - 12) + 'px'); }
-  else { set('left', '8px'); set('right', 'auto'); set('transform', 'none'); set('width', (vw - 16) + 'px'); set('max-width', (vw - 16) + 'px'); set('overflow-x', 'hidden'); b.querySelectorAll('table').forEach(t => { t.style.width = '100%'; t.style.fontSize = '12px'; t.style.tableLayout = 'fixed'; }); set('top', 'auto'); set('bottom', 'max(8px,env(safe-area-inset-bottom))'); set('max-height', b.classList.contains('arz-mini') ? '64px' : '44dvh'); }
-  set('border-radius', '14px'); set('box-shadow', '0 14px 36px rgba(0,0,0,.30)'); set('border-width', '1px');
-  if (b.classList.contains('arz-mini')) { set('max-height', '64px'); set('overflow', 'hidden'); } else set('overflow-y', 'auto');
-  if (!b.querySelector('.arzMinBtn')) { const k = [...b.querySelectorAll('button')].find(x => /Kapat/.test(x.textContent)); const m = document.createElement('button'); m.type = 'button'; m.className = 'arzMinBtn'; m.title = 'Paneli küçült / aç';
-    m.textContent = b.classList.contains('arz-mini') ? '▴ Aç' : '▾ Küçült'; m.style.cssText = 'margin-right:6px;padding:4px 10px;border-radius:8px;font-weight:700';
-    m.onclick = ev => { ev.stopPropagation(); b.classList.toggle('arz-mini'); m.textContent = b.classList.contains('arz-mini') ? '▴ Aç' : '▾ Küçült'; arzDock(e); };
-    if (k && k.parentNode) k.parentNode.insertBefore(m, k); else b.prepend(m); }
-  if (!mob && r.bottom < 80 || r.top > vh - 80) { try { cv.scrollIntoView({ block: 'nearest' }); } catch (x) {} }
+  const b = $('arzBox'); if (!b || b.hidden) return; arzYerles(b);
+  const r = cv.getBoundingClientRect(), vh = window.visualViewport?.height || innerHeight;
+  if (!arzTel() && r.bottom < 80 || r.top > vh - 80) { try { cv.scrollIntoView({ block: 'nearest' }); } catch (x) {} }
   requestAnimationFrame(() => arzAlanOdak(e));
 }
 { const _aq = acadAreaQueryShow; acadAreaQueryShow = function (e, p) { const r = _aq(e, p); try { ALAN_AKTIF = e && e.id; arzDock(e); const bx_ = $('arzBox'); if (bx_ && !bx_._akt) { bx_._akt = 1; new MutationObserver(() => { if (bx_.hidden && ALAN_AKTIF != null) { ALAN_AKTIF = null; draw(); } }).observe(bx_, { attributes: true, attributeFilter: ['hidden'] }); } draw(); } catch (x) {} try { const bx = $('arzBox'); if (e && e.t === 'pline' && e.closed && bx && !bx.hidden && !document.getElementById('alanKotWrap')) alanKotPanel(e); } catch (x) { console.error(x); } return r; }; }
@@ -18203,7 +18256,7 @@ function bolgePanel(B) { const base = (CDOC.name ? CDOC.name.replace(/\.[^.]+$/,
         <label ${T("display:block;margin-top:4px")}>PDF başlığı <input id="bBas" value="${esc_(po.title)}" placeholder="boşsa dosya adı" style="width:100%"></label>
         <label ${T("display:flex;flex-direction:row;gap:6px;align-items:center;margin-top:6px")}><input type="checkbox" id="bSinir"${sinir ? " checked" : ""} style="width:auto;margin:0"> Bölge sınırını çiz (BOLGE_SINIRI)</label>
         <label ${T("display:flex;flex-direction:row;gap:6px;align-items:center;margin-top:4px")}><input type="checkbox" id="bGizli"${gizli ? " checked" : ""} style="width:auto;margin:0"> Kapalı tabakaları da al</label></details>
-      <div style="margin-top:6px;font-size:.85rem;color:#5b6b75">Asıl çizim değişmez · kaydedince pencere kapanır · Esc / Kapat = vazgeç</div>`);
+      <div style="margin-top:6px;font-size:.85rem;color:#5b6b75">Asıl çizim değişmez · kaydedince pencere kapanır · Esc / Kapat = vazgeç</div>`, { boy: "62dvh" });
     const bx = $("arzBox"); if (!bx) return; const x = bx.querySelector("#arzX"); if (x) x.onclick = kapat;
     bx.querySelectorAll("input[name=bmod]").forEach(i => i.onchange = () => { mod = i.value; ciz(); });
     bx.querySelector("#bGizli").onchange = e => { gizli = e.target.checked; say_(); }; bx.querySelector("#bSinir").onchange = e => { sinir = e.target.checked; };
@@ -18389,7 +18442,7 @@ function pafPanel() { const S = pafAyar(); let LS = null, mesgul = false, sec = 
   const kapat = () => { const b = $("arzBox"); if (b) b.hidden = true; document.removeEventListener("keydown", escK, true); if (cmd && cmd.name === "Pafta seç") { cmd = null; rub = null; prompt_("Komut:"); markTools(); } ANN = []; draw(); };
   const escK = e => { if (e.key === "Escape" && !document.getElementById("pafOnz") && $("arzBox") && !$("arzBox").hidden) { e.preventDefault(); e.stopPropagation(); kapat(); } }; document.addEventListener("keydown", escK, true);
   /* ekranı kapatmaz: bilgisayarda sağda yan panel, telefonda alt yarıda */
-  const dock = () => { const b = $("arzBox"); if (!b) return; const tel = innerWidth < 760; b.style.cssText += tel ? ";left:0!important;right:0!important;top:auto!important;bottom:0!important;transform:none!important;width:100vw!important;max-width:100vw!important;height:50dvh!important;max-height:50dvh!important;border-radius:14px 14px 0 0!important" : ";left:auto!important;right:8px!important;top:8px!important;bottom:8px!important;transform:none!important;width:min(440px,38vw)!important;max-width:min(440px,38vw)!important;max-height:none!important;height:auto!important"; };
+  const dock = () => { const b = $("arzBox"); if (!b) return; const tel = innerWidth < 760; b.dataset.dock = "1"; b.style.cssText += tel ? ";left:0!important;right:0!important;top:auto!important;bottom:0!important;transform:none!important;width:100vw!important;max-width:100vw!important;height:50dvh!important;max-height:50dvh!important;border-radius:14px 14px 0 0!important" : ";left:auto!important;right:8px!important;top:8px!important;bottom:8px!important;transform:none!important;width:min(440px,38vw)!important;max-width:min(440px,38vw)!important;max-height:none!important;height:auto!important"; b.classList.remove("arz-mini"); b._dockCss = b.style.cssText; };
   const gorunur = () => { const r = cv.getBoundingClientRect(), b = $("arzBox")?.getBoundingClientRect(); let L = Math.max(r.left, 0), Rr = Math.min(r.right, innerWidth), Tp = Math.max(r.top, 0), B = Math.min(r.bottom, innerHeight); if (b && !$("arzBox").hidden) { if (b.left > L + 60 && b.left < Rr) Rr = b.left; else if (b.top < B) B = Math.max(Tp, b.top); } return { r, L, Rr, Tp, B }; };
   const sigdir = () => { if (!LS || !LS.length) return; let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const p of LS) for (const q of p.poly) { x0 = Math.min(x0, q[0]); y0 = Math.min(y0, q[1]); x1 = Math.max(x1, q[0]); y1 = Math.max(y1, q[1]); }
     let g = gorunur(); if (g.B - g.Tp < 160 || innerWidth < 760) { cv.scrollIntoView({ block: "start", behavior: "instant" }); g = gorunur(); } const w = Math.max(60, g.Rr - g.L), h = Math.max(60, g.B - g.Tp); V.s = Math.min(w / ((x1 - x0) * 1.12), h / ((y1 - y0) * 1.12)); const tx = ((g.L + g.Rr) / 2 - g.r.left) * dpr, ty = ((g.Tp + g.B) / 2 - g.r.top) * dpr; const cxw = (x0 + x1) / 2, cyw = (y0 + y1) / 2; V.cx = cxw - (tx - cv.width / 2) / (V.s * dpr); V.cy = cyw + (ty - cv.height / 2) / (V.s * dpr); IDX = null; draw(); };
