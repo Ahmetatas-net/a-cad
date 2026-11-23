@@ -13,7 +13,16 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
 
-<script id="acad-canli-v2">/* V7.1.16.19: canlı görünüm (açık tema + bej çizim ekranı, Claude önizlemesiyle aynı) eski kayıtlı tema seçimlerinin üstüne bir kez yeniden uygulanır; sonra kullanıcının seçimi korunur */try{if(!localStorage.getItem("acad-canli-v2")){localStorage.setItem("acad48-look","day");localStorage.setItem("acad-bg","#f3ecd9");localStorage.removeItem("acad-tema");localStorage.setItem("acad-canli-v1","1");localStorage.setItem("acad-canli-v2","1");}}catch(e){}try{if(localStorage.getItem("acad48-look")==="night")document.getElementById("acad-cs").content="dark";}catch(e){}</script>
+<script id="acad-canli-v2">try {
+  if (!localStorage.getItem("acad48-look")) localStorage.setItem("acad48-look","day");
+  if (!localStorage.getItem("acad-white-default-v1")) {
+    const old = localStorage.getItem("acad-bg");
+    if (!old || (old === "#f3ecd9" && localStorage.getItem("acad-canli-v2") && localStorage.getItem("acad48-look") === "day"))
+      localStorage.setItem("acad-bg","#ffffff");
+    localStorage.setItem("acad-white-default-v1","1");
+  }
+  if (localStorage.getItem("acad48-look") === "night") document.getElementById("acad-cs").content = "dark";
+} catch (_) {}</script>
 
 <script>
 (() => {
@@ -1187,7 +1196,11 @@ html[data-cad-query-tone] body :is(#arzBox#arzBox,#cadInfo#cadInfo,#cadProp#cadP
   body.cadmasa #v-cad .cadstat #acad100CanvasTools button {min-height:22px}
 }
 </style>
-</head>
+<style>
+#cadTools .cad-area-display[aria-pressed=true]{background:#d9f4ef!important;color:#104e48!important;border-color:#70b4a9!important}
+#cadTools .cad-area-display[aria-pressed=false]{background:#f2f5f7!important;color:#475866!important;border-color:#aebac2!important}
+#cadTools .cad-area-display:focus-visible{outline:2px solid #087c85;outline-offset:-2px}
+</style></head>
 <body>
 <script>/* ===== A-CAD kullanıcı girişi (telefon uygulaması sürümü) =====
    Hesaplar sunucudaki users.json dosyasındadır. Dosya yöneticinin özel anahtarıyla imzalıdır;
@@ -1702,7 +1715,7 @@ html[data-cad-query-tone] body :is(#arzBox#arzBox,#cadInfo#cadInfo,#cadProp#cadP
       <div class="grp" data-g="hhz" data-cap="Hidro"><button data-c="HZ_DERE" data-n="Dere">Dere</button><button data-c="HZ_KURUDERE" data-n="Kuru dere">Kuru dere</button><button data-c="HZ_KANAL" data-n="Kanal">Kanal</button><button data-c="HZ_HAVUZ" data-n="Havuz">Havuz</button><button data-c="HZ_DEPO" data-n="Su deposu">Su deposu</button><button data-c="HZ_CESME" data-n="Çeşme">⛲ Çeşme</button><button data-c="HZ_KUYU" data-n="Kuyu / artezyen">⊙ Kuyu</button></div>
       <div class="grp" data-g="hhz" data-cap="Enerji · altyapı"><button data-c="HZ_ELEKTRIK" data-n="Elektrik hattı">Elektrik hattı</button><button data-c="HZ_TELEFON" data-n="Telefon hattı">Telefon hattı</button><button data-c="HZ_DIREK" data-n="Elektrik direği">⊙ Direk</button><button data-c="HZ_TELDIREK" data-n="Telefon direği">⊙ Telefon direği</button><button data-c="HZ_YGDIREK" data-n="Yüksek gerilim direği">⊠ YG direği</button><button data-c="HZ_AYDINLATMA" data-n="Aydınlatma direği">✺ Aydınlatma</button><button data-c="HZ_TRAFO" data-n="Trafo">⚡ Trafo</button><button data-c="HZ_ROGAR" data-n="Rögar">⊠ Rögar</button><button data-c="HZ_VANA" data-n="Vana">⋈ Vana</button><button data-c="HZ_YANGIN" data-n="Yangın musluğu">Ⓨ Yangın musluğu</button></div>
       <div class="grp" data-g="hhz" data-cap="Sembol · kot"><button data-c="HZ_AGAC" data-n="Ağaç">🌲 Ağaç</button><button data-c="HZ_ABIDE" data-n="Abide / anıt">⌂ Abide</button><button data-c="HZ_POLIGON" data-n="Poligon noktası">⊙ Poligon</button><button data-c="HZ_NIRENGI" data-n="Nirengi noktası">△ Nirengi</button><button data-c="HZ_KUTUP" data-n="Sembol kütüphanesi">📚 Kütüphane</button><button data-c="HZ_KOT" data-n="Kot noktası">⁺¹⁰²⁴ Kot yaz</button></div>
-      <div class="grp" data-g="gor" data-cap="Seçim ve görünüm"><button type="button" id="cadAreaHatchToggle" title="Alan içi tarama ve dolguyu göster veya gizle" aria-pressed="true">Alan taraması açık</button><button data-c="PENCERE">⬚ Pencere <kbd>W</kbd></button><button data-c="HEPSI">Tümünü seç</button><button data-c="TUMU">⛶ Tümünü göster <kbd>Z</kbd></button><button data-c="GERI">↶ Geri <kbd>U</kbd></button><button data-c="ILERI">↷ İleri</button></div>      <div class="grp" data-g="gor" data-cap="Performans"><button type="button" id="acadPerfOpen" title="CAD çizim performansını ölç (salt okunur)" title="Salt okunur proje yükü ve ekran çizim hızını ölç">⚡ Hız merkezi</button></div>
+      <div class="grp" data-g="gor" data-cap="Seçim ve görünüm"><button type="button" id="cadAreaHatchToggle" class="cad-area-display" aria-pressed="true">Alan taraması açık</button><button type="button" id="cadAreaNameToggle" class="cad-area-display" aria-pressed="true">Alan adı açık</button><button type="button" id="cadFrontageToggle" class="cad-area-display" aria-pressed="true">Alan cephesi açık</button><button data-c="PENCERE">⬚ Pencere <kbd>W</kbd></button><button data-c="HEPSI">Tümünü seç</button><button data-c="TUMU">⛶ Tümünü göster <kbd>Z</kbd></button><button data-c="GERI">↶ Geri <kbd>U</kbd></button><button data-c="ILERI">↷ İleri</button></div>      <div class="grp" data-g="gor" data-cap="Performans"><button type="button" id="acadPerfOpen" title="CAD çizim performansını ölç (salt okunur)" title="Salt okunur proje yükü ve ekran çizim hızını ölç">⚡ Hız merkezi</button></div>
 <div class="grp" data-g="gor" data-cap="Nokta görünümü"><button data-c="NGSYM" class="tg" title="Nokta işaretlerini göster / gizle (yalnız görünüm; veri silinmez, kayıtta korunur)">○ Nokta aç/kapa</button><button data-c="NGAD" class="tg" title="Nokta adlarını (numaralarını) göster / gizle (yalnız görünüm)">№ Nokta adı aç/kapa</button><button data-c="NGKOT" class="tg" title="Noktanın kotunu göster / gizle (yalnız görünüm; yazılmış kot yazıları etkilenmez)">▲ Nokta kotu aç/kapa</button></div>
     </div>
 
@@ -1744,7 +1757,7 @@ html[data-cad-query-tone] body :is(#arzBox#arzBox,#cadInfo#cadInfo,#cadProp#cadP
     </div>
     <div class="cadstat"><strong id="cadCursor77" style="font:600 12px monospace;white-space:pre">Y —   X —   Z —</strong><span id="cadMsg" class="note"></span><span style="flex:1"></span>
       <span id="cadSnaps" class="row" style="gap:8px">Yakala: <label><input type="checkbox" data-s="end">Uç</label><label><input type="checkbox" data-s="mid">Orta</label><label><input type="checkbox" data-s="int">Kesişim</label><label><input type="checkbox" data-s="per">Dik</label><label><input type="checkbox" data-s="cen">Merkez</label><label><input type="checkbox" data-s="nod">Nokta</label><label><input type="checkbox" data-s="nea">Üzerinde</label></span>
-      <span class="row masaonly" style="gap:3px;align-items:center"><button type="button" data-dar="sol" title="Tabaka panelini gizle / göster">◧ Tabaka</button><button type="button" data-dar="ust" title="Araç şeridini gizle / göster">▭ Şerit</button><button type="button" data-dar="sag" title="Sağ paneli gizle / göster">◨ Panel</button><button type="button" data-dar="tam" title="Tam ekran çizim (F11 gibi): bütün panelleri gizle / göster">⛶ Tam ekran</button><button type="button" id="cadGrid" title="Izgara (kareli zemin)">▦ Izgara</button><button type="button" id="cadTema" title="Koyu / açık menü">◐ Tema</button><button type="button" id="cadYum" class="tg" title="Parlak, göz yoran saf renkleri ekran rengine uygun yumuşak tonlarla gösterir (çizimdeki renkler değişmez)">🎨 Yumuşak renk</button></span><span class="row" style="gap:3px;align-items:center" title="Ekran rengi">Ekran: <button type="button" data-bgc="#000000" title="Siyah" style="width:22px;height:22px;padding:0;border-radius:5px;background:#000000;border:1px solid #889"></button><button type="button" data-bgc="#252b33" title="Göz dostu (koyu mavi-gri)" style="width:22px;height:22px;padding:0;border-radius:5px;background:#252b33;border:1px solid #889"></button><button type="button" data-bgc="#1c2127" title="Koyu" style="width:22px;height:22px;padding:0;border-radius:5px;background:#1c2127;border:1px solid #889"></button><button type="button" data-bgc="#5b6168" title="Gri" style="width:22px;height:22px;padding:0;border-radius:5px;background:#5b6168;border:1px solid #889"></button><button type="button" data-bgc="#f3ecd9" title="Bej" style="width:22px;height:22px;padding:0;border-radius:5px;background:#f3ecd9;border:1px solid #889"></button><button type="button" data-bgc="#ffffff" title="Beyaz" style="width:22px;height:22px;padding:0;border-radius:5px;background:#ffffff;border:1px solid #889"></button></span><button id="cadOrtho" type="button">Orto <kbd>F8</kbd></button><button id="cadGrad" type="button">Açı: grad</button></div>
+      <span class="row masaonly" style="gap:3px;align-items:center"><button type="button" data-dar="sol" title="Tabaka panelini gizle / göster">◧ Tabaka</button><button type="button" data-dar="ust" title="Araç şeridini gizle / göster">▭ Şerit</button><button type="button" data-dar="sag" title="Sağ paneli gizle / göster">◨ Panel</button><button type="button" data-dar="tam" title="Tam ekran çizim (F11 gibi): bütün panelleri gizle / göster">⛶ Tam ekran</button><button type="button" id="cadGrid" title="Izgara (kareli zemin)">▦ Izgara</button><button type="button" id="cadTema" title="Koyu / açık menü">◐ Tema</button><button type="button" id="cadYum" class="tg" title="Parlak, göz yoran saf renkleri ekran rengine uygun yumuşak tonlarla gösterir (çizimdeki renkler değişmez)">🎨 Yumuşak renk</button></span><span class="row" style="gap:3px;align-items:center" title="Ekran rengi">Ekran: <button type="button" data-bgc="#000000" title="Siyah" style="width:22px;height:22px;padding:0;border-radius:5px;background:#000000;border:1px solid #889"></button><button type="button" data-bgc="#252b33" title="Göz dostu (koyu mavi-gri)" style="width:22px;height:22px;padding:0;border-radius:5px;background:#252b33;border:1px solid #889"></button><button type="button" data-bgc="#1c2127" title="Koyu" style="width:22px;height:22px;padding:0;border-radius:5px;background:#1c2127;border:1px solid #889"></button><button type="button" data-bgc="#5b6168" title="Gri" style="width:22px;height:22px;padding:0;border-radius:5px;background:#5b6168;border:1px solid #889"></button><button type="button" data-bgc="#f3ecd9" title="Bej" style="width:22px;height:22px;padding:0;border-radius:5px;background:#f3ecd9;border:1px solid #889"></button><button type="button" data-bgc="#ffffff" aria-label="Bembeyaz çizim zemini" title="Bembeyaz çizim zemini" style="width:22px;height:22px;padding:0;border-radius:5px;background:#fff!important;opacity:1!important;filter:none!important;box-shadow:none!important;border:1px solid #8294a1;color-scheme:only light"></button></span><button id="cadOrtho" type="button">Orto <kbd>F8</kbd></button><button id="cadGrad" type="button">Açı: grad</button></div>
     <div class="card" data-g="dos">
       <h2>Dosya</h2><div id="cadDwgStatus" class="note" role="status" aria-live="polite">V98 · Kaynak DWG/NCZ/DXF birebir koruma + desteklenen geometri geri-okuma kontrolü. Gerçek DWG kaydı ODA gerektirir; NCZ özel kayıtları native kopyada kaybolabilir, kaynak korunur.</div>
       <div class="grid">
@@ -18949,7 +18962,7 @@ function drawAnn(D) { if (KLBL) { let n = 0; cx.font = `${10 * D}px monospace`; 
     else if (a.t === "hl") { cx.strokeStyle = "#ff7a00"; cx.lineWidth = 4 * D; cx.globalAlpha = 0.8; if (a.e.t === "point") { const x = X(a.e.pts[0][0]), y = Y(a.e.pts[0][1]); cx.beginPath(); cx.arc(x, y, 9 * D, 0, 7); cx.stroke(); } else if (a.e.t === "circle") { cx.beginPath(); cx.arc(X(a.e.c[0]), Y(a.e.c[1]), a.e.r * V.s * D, 0, 7); cx.stroke(); } else if (a.e.t === "text") { const x = X(a.e.pts[0][0]), y = Y(a.e.pts[0][1]); cx.beginPath(); cx.arc(x, y, 7 * D, 0, 7); cx.stroke(); } else { cx.beginPath(); a.e.pts.forEach((q, i) => i ? cx.lineTo(X(q[0]), Y(q[1])) : cx.moveTo(X(q[0]), Y(q[1]))); if (a.e.closed) cx.lineTo(X(a.e.pts[0][0]), Y(a.e.pts[0][1])); cx.stroke(); } cx.globalAlpha = 1; }
     else if (a.t === "pt") { const x = X(a.p[0]), y = Y(a.p[1]); cx.strokeStyle = a.col || "#ffd800"; cx.lineWidth = 2 * D; cx.beginPath(); cx.arc(x, y, 6 * D, 0, 7); cx.stroke(); if (a.lines) lbl(cx, x, y - 20 * D, a.lines, D, a.col); } } }
 const annClr = () => { if (ANN.length) { ANN = []; draw(); } };
-let BGC = (() => { try { return localStorage.getItem("acad-bg") || "#1c2127"; } catch (e) { return "#1c2127"; } })();
+let BGC = (() => { try { return localStorage.getItem("acad-bg") || "#ffffff"; } catch (e) { return "#ffffff"; } })();
 const lum_ = c => { const m = /^#?([0-9a-f]{6})$/i.exec(String(c || "")); if (!m) return 0.5; const n = parseInt(m[1], 16); return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255; };
 let YUM = (() => { try { return localStorage.getItem("acad-yum") !== "0"; } catch (e) { return true; } })(); /* yumuşak renk: parlak, göz yoran saf renkler ekran rengine göre dinlendirilir (çizime yazılan renk değişmez) */
 const yumusat = (c, bgl) => { const m = /^#?([0-9a-f]{6})$/i.exec(String(c || "")); if (!m) return c; const n = parseInt(m[1], 16); let r = (n >> 16) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255; const mx = Math.max(r, g, b), mn = Math.min(r, g, b); let h = 0, s_ = 0, l = (mx + mn) / 2; const d = mx - mn;
@@ -18977,20 +18990,26 @@ function ebb(e) { let b = BBK.m.get(e); if (b !== undefined) return b; b = null;
    Geometric closing edges are shown without modifying source survey geometry.
    This paint layer is CAD-only; area arithmetic and cubage stay unchanged. */
 let ALAN_AKTIF = null; /* Alan Sorgula ile açık olan alan: ekranda belirgin */
-let showAreaHatch = true;
-try { showAreaHatch = localStorage.getItem("acad-area-hatch-visible") !== "0"; } catch (_) {}
-const hatchToggle = document.getElementById("cadAreaHatchToggle");
-function syncHatchToggle() {
-  hatchToggle.setAttribute("aria-pressed", String(showAreaHatch));
-  hatchToggle.textContent = showAreaHatch ? "Alan taraması açık" : "Alan taraması kapalı";
+function areaDisplayPreference(id,key,label) {
+  const button=document.getElementById(id);
+  let visible=true;
+  try { visible=localStorage.getItem(key)!=="0"; } catch (_) {}
+  function sync() {
+    button.setAttribute("aria-pressed",String(visible));
+    button.textContent=label+(visible?" açık":" kapalı");
+  }
+  sync();
+  button.addEventListener("click",()=>{
+    visible=!visible;
+    try { localStorage.setItem(key,visible?"1":"0"); } catch (_) {}
+    sync();
+    draw();
+  });
+  return ()=>visible;
 }
-syncHatchToggle();
-hatchToggle.addEventListener("click", () => {
-  showAreaHatch = !showAreaHatch;
-  try { localStorage.setItem("acad-area-hatch-visible", showAreaHatch ? "1" : "0"); } catch (_) {}
-  syncHatchToggle();
-  draw();
-});
+const showAreaHatch=areaDisplayPreference("cadAreaHatchToggle","acad-area-hatch-visible","Alan taraması");
+const showAreaName=areaDisplayPreference("cadAreaNameToggle","acad-area-name-visible","Alan adı");
+const showFrontages=areaDisplayPreference("cadFrontageToggle","acad-area-frontages-visible","Alan cephesi");
 const ALAN_VIS = (()=>{
  let hatchD=0,hatch=null;
  const number=n=>Number(n).toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:3});
@@ -19005,7 +19024,7 @@ const ALAN_VIS = (()=>{
  function fill(g,FX,FY,D,P,o={}){if(!Array.isArray(P)||P.length<3)return;
    const lc=(!o.active&&!o.preview&&!o.reviewRequired&&o.color)?rgb(o.color):null;
    g.save();ring(g,FX,FY,P);
-   if(showAreaHatch){g.fillStyle=o.active==='second'?'rgba(255,154,60,.36)':o.active?'rgba(54,195,255,.34)':o.reviewRequired?'rgba(232,117,24,.22)':(o.preview?'rgba(248,188,32,.25)':lc?'rgba('+lc.join(',')+',.18)':'rgba(39,184,171,.19)');g.fill();
+   if(showAreaHatch()){g.fillStyle=o.active==='second'?'rgba(255,154,60,.36)':o.active?'rgba(54,195,255,.34)':o.reviewRequired?'rgba(232,117,24,.22)':(o.preview?'rgba(248,188,32,.25)':lc?'rgba('+lc.join(',')+',.18)':'rgba(39,184,171,.19)');g.fill();
    g.save();g.clip();const pat=g.createPattern(pattern(D,lc),'repeat');if(pat){g.fillStyle=pat;g.fill();}g.restore();}
    if(o.active){g.shadowColor=o.active==='second'?'rgba(255,154,60,.85)':'rgba(54,195,255,.85)';g.shadowBlur=9*D;g.strokeStyle=o.active==='second'?'#ff9a3c':'#36c3ff';g.lineWidth=3.2*D;g.stroke();g.shadowBlur=0;}
    else if(o.stroke!==false){g.strokeStyle=o.preview?'#f5ac23':lc?'rgb('+lc.join(',')+')':'#067f7d';g.lineWidth=(o.preview?2.5:1.6)*D;g.stroke();}g.restore();}
@@ -19039,7 +19058,7 @@ const ALAN_VIS = (()=>{
    }
    if(!Number.isFinite(x+y)||x<-65*D||y<-35*D||x>g.canvas.width+65*D||y>g.canvas.height+35*D)return;
    const txt=(o.sourceChanged?'⚠ KAYNAK DEĞİŞTİ · ≈ ':(o.reviewRequired?'⚠ ≈ ':o.inferred?'≈ ':''))+number(n)+' m²';
-   const name=String(o.name||'').trim().slice(0,60);
+   const name=showAreaName()?String(o.name||'').trim().slice(0,60):'';
    D *= o.labelScale ?? 1;
    g.save();g.font=`700 ${13*D}px system-ui,Arial`;g.textAlign='center';g.textBaseline='middle';
    const valueW=g.measureText(txt).width;
@@ -19139,8 +19158,8 @@ function draw() { liveTick(); if(CAD_RESIZE_DIRTY){
     // When editing the same polygon, the moving geometry gets the visible preview instead.
     if(AREA_EDIT_SESSION?.id===e.id&&cmd?.name==='Alan Düzelt'&&(cmd.preview?.parts?.length||cmd._liveOn))continue;
     const act_=AREA_EDIT_SESSION&&AREA_EDIT_SESSION.second===e.id?'second':(sel.has(e.id)||AREA_EDIT_SESSION?.id===e.id||ALAN_AKTIF===e.id?'first':null);
-    if(e.showFrontages||_alanK||e.areaName)drawFrontages74(cx,e.pts,v=>[X(v[0]),Y(v[1])],D,true);
-    ALAN_VIS.fill(cx,X,Y,D,e.pts,{active:act_,color:(()=>{try{return renk(lays[e.lay].c);}catch(x){return lays[e.lay]?.c;}})(),stroke:!!act_?true:false,reviewRequired:_alanK&&(alanKaynakGuncelMi(e)===false||e.areaQuality==='review-required'||(e.areaInferredBridges||[]).some(b=>b.metres>20))});if(_alanK)acadAreaLabels.push(e);else if(e.areaName&&acadPlainAreaNames.length<120&&areaLabelScale(b)>0)acadPlainAreaNames.push(e);
+    if(showFrontages()&&(e.showFrontages||_alanK||e.areaName))drawFrontages74(cx,e.pts,v=>[X(v[0]),Y(v[1])],D,true);
+    ALAN_VIS.fill(cx,X,Y,D,e.pts,{active:act_,color:(()=>{try{return renk(lays[e.lay].c);}catch(x){return lays[e.lay]?.c;}})(),stroke:!!act_?true:false,reviewRequired:_alanK&&(alanKaynakGuncelMi(e)===false||e.areaQuality==='review-required'||(e.areaInferredBridges||[]).some(b=>b.metres>20))});if(_alanK)acadAreaLabels.push(e);else if(showAreaName()&&e.areaName&&acadPlainAreaNames.length<120&&areaLabelScale(b)>0)acadPlainAreaNames.push(e);
   }
 
   for (const e of visibleEntities) { const L = lays[e.lay]; if (!L || !L.on) continue; { const b = ebb(e); if (b && (b[2] < vx0 || b[0] > vx1 || b[3] < vy0 || b[1] > vy1)) continue; if (b && e.t !== "point" && e.t !== "text" && !sel.has(e.id) && (b[2] - b[0] + b[3] - b[1]) * V.s * D < 0.6) continue; } const s = sel.has(e.id); if (!s && !e.fill && (e.t === "line" || e.t === "pline") && e.pts.length > 1) { const lt_ = ltOf(e); if (!lt_ || (!ltDash(lt_, 1) && !(window.LTX && LTX.has(lt_)))) { const col = renk(L.c); let bp = BPATH.get(col); if (!bp) { bp = new Path2D(); BPATH.set(col, bp); } const P = e.pts; let px = X(P[0][0]), py = Y(P[0][1]); bp.moveTo(px, py); for (let i = 1; i < P.length; i++) { const qx = X(P[i][0]), qy = Y(P[i][1]); if (i < P.length - 1 && Math.abs(qx - px) + Math.abs(qy - py) < 0.7) continue; bp.lineTo(qx, qy); px = qx; py = qy; } if (e.closed) bp.closePath(); continue; } } cx.strokeStyle = cx.fillStyle = s ? "#36c3ff" : renk(L.c); cx.lineWidth = (s ? 2 : 1.2) * D; let dsf = false; if (s) { cx.setLineDash([6 * D, 4 * D]); dsf = true; } else if (e.t === "line" || e.t === "pline" || e.t === "circle") { const dd = ltDash(ltOf(e), 1.6 * D); if (dd) { cx.setLineDash(dd); dsf = true; } }
