@@ -2,6 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="utf-8">
+<meta name="color-scheme" id="acad-cs" content="only light">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>A-CAD</title>
 <link rel="manifest" href="manifest.webmanifest">
@@ -12,7 +13,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
 
-<script id="acad-canli-v2">/* V7.1.16.19: canlı görünüm (açık tema + bej çizim ekranı, Claude önizlemesiyle aynı) eski kayıtlı tema seçimlerinin üstüne bir kez yeniden uygulanır; sonra kullanıcının seçimi korunur */try{if(!localStorage.getItem("acad-canli-v2")){localStorage.setItem("acad48-look","day");localStorage.setItem("acad-bg","#f3ecd9");localStorage.removeItem("acad-tema");localStorage.setItem("acad-canli-v1","1");localStorage.setItem("acad-canli-v2","1");}}catch(e){}</script>
+<script id="acad-canli-v2">/* V7.1.16.19: canlı görünüm (açık tema + bej çizim ekranı, Claude önizlemesiyle aynı) eski kayıtlı tema seçimlerinin üstüne bir kez yeniden uygulanır; sonra kullanıcının seçimi korunur */try{if(!localStorage.getItem("acad-canli-v2")){localStorage.setItem("acad48-look","day");localStorage.setItem("acad-bg","#f3ecd9");localStorage.removeItem("acad-tema");localStorage.setItem("acad-canli-v1","1");localStorage.setItem("acad-canli-v2","1");}}catch(e){}try{if(localStorage.getItem("acad48-look")==="night")document.getElementById("acad-cs").content="dark";}catch(e){}</script>
 
 <script>
 (() => {
@@ -825,7 +826,7 @@ body.cadmasa #v-cad.acad-complete.acad-wide-canvas #cadBox{grid-column:2!importa
 <style id="acad48-calm-ui">
 /* v7.1.15.48: view-level ergonomics only. Canvas pixels != coordinate precision. */
 :root[data-acad-look="night"]{color-scheme:dark;--bg:#141b24;--card:#202b37;--ink:#e7edf3;--muted:#b3c1cd;--line:#354654;--accent:#d4a16c;--soft:#344251;--ok:#77c6a1;--bad:#ff9b95;--blue:#8dc5df;--acad48-head:#192532;--acad48-ink:#eaf1f5;--acad48-edge:#344655;--acad48-input:#17232e}
-:root[data-acad-look="day"]{color-scheme:light;--bg:#f2f5f6;--card:#ffffff;--ink:#263544;--muted:#5b6b78;--line:#d4e0e5;--accent:#98622d;--soft:#eff4f6;--ok:#266e52;--bad:#bf3f3b;--blue:#257d9f;--acad48-head:#ecf3f7;--acad48-ink:#263544;--acad48-edge:#cbdde6;--acad48-input:#fff}
+:root[data-acad-look="day"]{color-scheme:only light;--bg:#f2f5f6;--card:#ffffff;--ink:#263544;--muted:#5b6b78;--line:#d4e0e5;--accent:#98622d;--soft:#eff4f6;--ok:#266e52;--bad:#bf3f3b;--blue:#257d9f;--acad48-head:#ecf3f7;--acad48-ink:#263544;--acad48-edge:#cbdde6;--acad48-input:#fff}
 html{scrollbar-gutter:stable}body{font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;letter-spacing:.002em}
 .wrap{gap:9px} .wrap>header{border-bottom:1px solid var(--line);padding:6px 2px 10px;align-items:center!important}
 .wrap>header h1{font-size:1.5rem;font-weight:770;letter-spacing:.012em}
@@ -31258,6 +31259,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  let theme='day';try{theme=localStorage.getItem('acad48-look')||'day';}catch(e){}
  if(theme!=='night'&&theme!=='day')theme='night';
  root.dataset.acadLook=theme;
+ /* V7.1.16.20: tarayıcının otomatik koyulaştırması (Chrome/Samsung) açık temayı karartmasın */
+ const cs=()=>{const m=document.getElementById('acad-cs');if(m)m.content=root.dataset.acadLook==='night'?'dark':'only light';};cs();
  const hdr=document.querySelector('.wrap>header');
  if(hdr){
   const quick=hdr.querySelector('#wideBtn')?.parentElement;
@@ -31266,7 +31269,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
    const label=()=>btn.textContent=root.dataset.acadLook==='night'?'☼ Açık tema':'☾ Sakin koyu';label();
    btn.title='Yalnız görünümü değiştirir. Koordinat, kot ve pafta verileri etkilenmez.';
    btn.addEventListener('click',()=>{root.dataset.acadLook=root.dataset.acadLook==='night'?'day':'night';
-    try{localStorage.setItem('acad48-look',root.dataset.acadLook)}catch(e){}label();});
+    try{localStorage.setItem('acad48-look',root.dataset.acadLook)}catch(e){}cs();label();});
    quick.prepend(btn);
   }
   const old=hdr.querySelector('#copyUrl')?.closest('.row');
