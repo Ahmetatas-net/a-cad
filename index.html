@@ -13379,7 +13379,7 @@ const msg = (id, t, bad) => { const e = $(id); e.className = "msg" + (bad ? " er
 
 /* ---------- dosya okuma ---------- */
 // büyük DXF arka planda (Web Worker) okunur: sayfa donmaz; olmazsa ana iş parçacığında okunur
-function parseWorker(buf, opt) {
+function parseWorker(buf, opt, ncz=false, audit=null) {
   return new Promise((resolve, reject) => {
     let worker, url, timer;
     const finish = (error, data) => {
@@ -13392,8 +13392,11 @@ function parseWorker(buf, opt) {
       const source = name => document.querySelector('script[data-src="' + name + '"]')?.textContent;
       const core = source('core.js'), apl = source('apl.js');
       if (!core || !apl) throw Error('DXF okuyucu kaynağı eksik.');
+      const reader = ncz ? 'A.fromK(K.parseNCZ(bytes))' : 'A.parseCAD(bytes,e.data.opt)';
+      const inspect = audit ? 'D.dwgSourceAudit=('+audit.toString()+')(bytes);' : '';
       const script = 'self.window=self;\n' + core + '\n' + apl +
-        '\nonmessage=e=>{try{postMessage({ok:true,D:A.parseCAD(new Uint8Array(e.data.buf),e.data.opt)})}catch(error){postMessage({ok:false,m:String(error.message||error)})}}';
+        '\nonmessage=e=>{try{const bytes=new Uint8Array(e.data.buf);const D='+reader+';'+inspect+
+        'postMessage({ok:true,D})}catch(error){postMessage({ok:false,m:String(error.message||error)})}}';
       url = URL.createObjectURL(new Blob([script], {type:'text/javascript'}));
       worker = new Worker(url);
       timer = setTimeout(() => finish(Error('DXF okuma zaman aşımı.')), 240000);
@@ -13403,15 +13406,19 @@ function parseWorker(buf, opt) {
     } catch (error) { finish(error); }
   });
 }
-async function readAny(file, opt) { if(opt?.aplGeometry && /\.dwg$/i.test(file.name)&&window.acadAplDwgBytes83){const raw=await window.acadAplDwgBytes83(file);return await readAny(new File([raw],file.name.replace(/\.dwg$/i,'.dxf')),{...opt,lite:0});} let buf = await readBuf(file); const nm = file.name;
-  if (/\.dxf$/i.test(nm) && buf.length > 3e6) { try { return await parseWorker(buf, opt); } catch (e) { buf = await readBuf(file); } }
+async function readAny(file, opt, decodedBytes=null, audit=null) { if(opt?.aplGeometry && /\.dwg$/i.test(file.name)&&window.acadAplDwgBytes83){const raw=await window.acadAplDwgBytes83(file);return await readAny(new File([raw],file.name.replace(/\.dwg$/i,'.dxf')),{...opt,lite:0});} let buf = decodedBytes || await readBuf(file); const nm = file.name;
+  const ncz = /\.ncz$/i.test(nm);
+  if ((ncz || /\.dxf$/i.test(nm)) && buf.length > 3e6) {
+    try { return await parseWorker(buf, opt, ncz, audit); }
+    catch (_) { if (!buf.byteLength) buf = await readBuf(file); }
+  }
   if (/\.dwg$/i.test(nm) || toText(buf.subarray(0, 4)) === "AC10") throw new Error("DWG okunamıyor. AutoCAD ya da Netcad'de Farklı Kaydet → DXF (R12 / 2000) olarak kaydedip onu yükle.");
   if (/\.ncz$/i.test(nm)) return A.fromK(K.parseNCZ(buf));
   if (/\.kmz$/i.test(nm)) { const z = await K.unzip(buf); const k = Object.keys(z).find(n => /\.kml$/i.test(n)); if (!k) throw new Error("KMZ içinde KML yok"); return A.fromKML(new TextDecoder().decode(z[k])); }
   { const head = toText(buf.subarray(0, 400)).trim(); if (/\.(geo)?json$/i.test(nm) || head.startsWith("{")) return A.fromGeo(toText(buf)); if (/\.kml$/i.test(nm) || /<kml/i.test(head)) return A.fromKML(toText(buf)); }
   if (/\.pdf$/i.test(nm) || toText(buf.subarray(0, 5)) === "%PDF-") { const t = await K.pdfText(buf); return { lines: [], polys: [], points: [], texts: t.split(/\n/).map(s => ({ lay: "PDF", s: A.cleanText(s), e: 0, y: 0 })), pdf: true }; }
   if (/\.xlsx?$/i.test(nm) || (buf[0] === 0x50 && buf[1] === 0x4b) || (buf[0] === 0xD0 && buf[1] === 0xCF)) { const sh = /\.xls$/i.test(nm) || buf[0] === 0xD0 ? K.xlsText(buf) : await K.xlsxText(buf); const t = sh.map(x => [x, K.parsePoints(x).pts.length]).sort((a, b) => b[1] - a[1])[0]?.[0] || ""; return ptsOnly(t); }
-  if (/\.dxf$/i.test(nm) || /^\s*0\s*\r?\n\s*SECTION/.test(toText(buf.subarray(0, 300)))) return A.parseCAD(buf, opt); const text = toText(buf);
+  if (/\.dxf$/i.test(nm) || /^\s*0\s*\r?\n\s*SECTION/.test(toText(buf.subarray(0, 300)))) { const D=A.parseCAD(buf,opt); if(audit)D.dwgSourceAudit=audit(buf); return D; } const text = toText(buf);
   if (/\.cks$/i.test(nm) || (/[\u00b3\u2502]/.test(text.slice(0, 4000)) && /Nokta\s*No/i.test(text.slice(0, 4000)))) { const D = fromCKS(text); if (D.points.length) return D; }
   return ptsOnly(text); }
 /* Netcad CKS (alan hesabı / koordinat özeti metin raporu): noktalar + parseller + alan kontrolü */
@@ -21956,6 +21963,7 @@ function acadDwgGeometryLedger(D, summaryOnly=false){
   const xyz=q=>[v(q[0]),v(q[1]),v(q[2]??0)].join(',');
   const layer=t=>String(t.lay??'0');
   const push=(kind,lay,poly,extra='')=>!summaryOnly&&items.push(kind+'|'+lay+'|'+extra+'|'+poly.map(xyz).join(';'));
+  if(!summaryOnly){
   for(const e of D.lines||[])push('line',layer(e),e.pts);
   for(const e of D.polys||[])push('pline',layer(e),e.pts,e.closed?'C':'O');
   for(const e of D.points||[])push('point',layer(e),[[e.e,e.y,e.z??0]]);
@@ -21963,10 +21971,10 @@ function acadDwgGeometryLedger(D, summaryOnly=false){
   for(const e of D.faces||[])push('face',layer(e),e.p);
   for(const e of D.circles||[])push('circle',layer(e),[[e.e??e.c?.[0],e.y??e.c?.[1],e.z??e.c?.[2]??0]],v(e.r));
   items.sort();
+  }
   const bb=[Infinity,Infinity,Infinity,-Infinity,-Infinity,-Infinity];let len=0;
   const addP=p=>{for(let k=0;k<3;k++){const n=Number(p[k]??0);if(Number.isFinite(n)){bb[k]=Math.min(bb[k],n);bb[k+3]=Math.max(bb[k+3],n);}}};
-  const allLines=[...(D.lines||[]).map(e=>e.pts),...(D.polys||[]).map(e=>e.pts)];
-  for(const pts of allLines){for(const p of pts)addP(p);for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i];len+=Math.hypot((b[0]||0)-(a[0]||0),(b[1]||0)-(a[1]||0),(b[2]||0)-(a[2]||0));}}
+  for(const group of [D.lines,D.polys])for(const entity of group||[]){const pts=entity.pts;for(const p of pts)addP(p);for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i];len+=Math.hypot((b[0]||0)-(a[0]||0),(b[1]||0)-(a[1]||0),(b[2]||0)-(a[2]||0));}}
   for(const p of D.points||[])addP([p.e,p.y,p.z]);
   for(const t of D.texts||[])addP([t.e,t.y,0]);
   for(const f of D.faces||[])for(const p of f.p)addP(p);
@@ -22127,7 +22135,7 @@ async function acadDwgEmbeddedConvert(file){
       worker.onmessage=e=>{
         const result=e.data;
         if(!result?.ok)finish(Object.assign(Error(result?.message||'DWG dönüşümü başarısız.'),{stage:result?.stage||'load'}));
-        else finish(null,new Uint8Array(result.output));
+        else finish(null,result.output);
       };
       worker.postMessage({input,code64,wasm64},[input]);
     }catch(error){finish(Object.assign(error,{stage:'load'}));}
@@ -22155,7 +22163,7 @@ async function acadDwgBrowserToDxf(file){
   const ver=String.fromCharCode(...head);
   if(!/^AC10(?:12|14|15|18|21|24|27|32)$/.test(ver))throw Error('Bu DWG sürümü tarayıcı dönüştürücüsünde doğrulanmadı ('+ver+'). Kaynak DWG değiştirilmedi.');
   const converted=await acadDwgEmbeddedConvert(file);
-  const raw=typeof converted==='string'?new TextEncoder().encode(converted):new Uint8Array(converted);
+  const raw=typeof converted==='string'?new TextEncoder().encode(converted):converted instanceof Uint8Array?converted:new Uint8Array(converted);
   if(raw.byteLength<200)throw Error('Tarayıcı dönüştürücüsü geçerli DXF üretemedi.');
   const sample=new TextDecoder('utf-8').decode(raw.subarray(0,Math.min(raw.length,300000)));
   if(!sample.includes('SECTION')||(!sample.includes('ENTITIES')&&!sample.includes('TABLES')))throw Error('Dönüştürülen DXF yapısı doğrulanamadı.');
@@ -22387,12 +22395,12 @@ async function loadFile(f, append, opt) {
     CDOC:{...CDOC},nid,DIRTY,FVER,cur,sel:[...sel],U:U.slice(),RD:RD.slice()};
   say("Okunuyor…"); ARA_HL = null; ARA_SON = []; try { const ab = $("araBox"); if (ab && !append) { ab.hidden = true; } } catch (e) {} try { if (/\.dwg$/i.test(f.name)) {
       const dxf=await acadDwgOpenConvert(f);
-      const auditDwg=acadDwgSourceAudit(dxf);
       const qname=f.name.replace(/\.dwg$/i,'_DWG_ACILAN.dxf');
       const converted=new File([dxf],qname,{type:'application/dxf'});
       // DWG kaynak çizimin yerini almadan önce DXF içeriğini incele.
       // Boş veya okunamayan DXF mevcut projeyi silemez.
-      const prelim=await window.APLT.readAny(converted);
+      const prelim=await window.APLT.readAny(converted,undefined,dxf,acadDwgSourceAudit);
+      const auditDwg=prelim.dwgSourceAudit;
       const featureCount=['points','lines','polys','circles','texts','faces'].reduce((sum,key)=>sum+(prelim?.[key]?.length||0),0);
       if(featureCount===0)throw Error('DWG içinden geçerli geometri okunamadı; boş veya desteklenmeyen DXF ile mevcut çalışma değiştirilmeyecek.');
       // Hatalı dönüşüm önceki CAD çalışmasını silmesin; içeriği değiştirmeden eski nesneleri sakla.
@@ -22522,10 +22530,14 @@ async function loadFile(f, append, opt) {
     if (!append) { DIRTY = zeroWork.removed>0;window.ACAD_NATIVE_COLOR_VIEW=true; } else DIRTY = true;
     const base = f.name.replace(/\.[^.]+$/, ""); let n = 0; const id0 = nid, ESKI = new Set(append ? ents.map(e => e.lay) : []), YC = ["#ff40ff", "#00e0ff", "#ffd000", "#ff8040"], yc = YC[(Object.keys(lays).filter(k => k.includes("~")).length) % YC.length];
     /* eklenen dosyada çizimde zaten olan tabaka adı varsa ayrı tabakaya (AD~dosya) ve ayrı renge: eski ile yeni karışmasın, fark görülsün */
+    const importLayers=new Map();
     const L = l => { let t = l == null || l === "" ? base : String(l);
+      if(importLayers.has(t))return importLayers.get(t);
+      const sourceName=t;
       const srcColor=D.layerColors?.[t]; const srcHex=Number.isInteger(srcColor)&&srcColor>0?K.aciHex(srcColor):null;
-      if (append && ESKI.has(t)) { t = t + "~" + base; return layer(t, srcHex || yc); }
-      return layer(t,srcHex || undefined); };
+      if (append && ESKI.has(t)) { t = t + "~" + base; t=layer(t, srcHex || yc); }
+      else t=layer(t,srcHex || undefined);
+      importLayers.set(sourceName,t);return t; };
     D.lines.forEach(l => { add({ t: "line", pts: l.pts.map(p => [p[0], p[1], p[2] || 0]), lay: L(l.lay), ...(l.lt ? { lt: l.lt } : {}) }); n++; });
     D.polys.forEach(p => { const P_ = p.pts, kp = !!p.closed && /\.ncz$/i.test(f.name) && P_.length >= 3 && (Math.abs(P_[0][0] - P_[P_.length - 1][0]) > 1e-9 || Math.abs(P_[0][1] - P_[P_.length - 1][1]) > 1e-9); add({ t: "pline", pts: P_.map(q => [q[0], q[1], q[2] || 0]), closed: !!p.closed, lay: L(p.lay), ...(p.lt ? { lt: p.lt } : {}), ...(kp ? { nczKapanisYok: 1 } : {}), ...(p.nativeName ? {n:p.nativeName,...(p.closed?{areaName:p.nativeName}:{})} : {}), ...(p.curveApprox || p.arc || p.ellipseApprox ? {sourceCurveApprox:true} : {}) }); n++; });
     (D.circles || []).forEach(c => {
