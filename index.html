@@ -1702,7 +1702,7 @@ html[data-cad-query-tone] body :is(#arzBox#arzBox,#cadInfo#cadInfo,#cadProp#cadP
       <div class="grp" data-g="hhz" data-cap="Hidro"><button data-c="HZ_DERE" data-n="Dere">Dere</button><button data-c="HZ_KURUDERE" data-n="Kuru dere">Kuru dere</button><button data-c="HZ_KANAL" data-n="Kanal">Kanal</button><button data-c="HZ_HAVUZ" data-n="Havuz">Havuz</button><button data-c="HZ_DEPO" data-n="Su deposu">Su deposu</button><button data-c="HZ_CESME" data-n="Çeşme">⛲ Çeşme</button><button data-c="HZ_KUYU" data-n="Kuyu / artezyen">⊙ Kuyu</button></div>
       <div class="grp" data-g="hhz" data-cap="Enerji · altyapı"><button data-c="HZ_ELEKTRIK" data-n="Elektrik hattı">Elektrik hattı</button><button data-c="HZ_TELEFON" data-n="Telefon hattı">Telefon hattı</button><button data-c="HZ_DIREK" data-n="Elektrik direği">⊙ Direk</button><button data-c="HZ_TELDIREK" data-n="Telefon direği">⊙ Telefon direği</button><button data-c="HZ_YGDIREK" data-n="Yüksek gerilim direği">⊠ YG direği</button><button data-c="HZ_AYDINLATMA" data-n="Aydınlatma direği">✺ Aydınlatma</button><button data-c="HZ_TRAFO" data-n="Trafo">⚡ Trafo</button><button data-c="HZ_ROGAR" data-n="Rögar">⊠ Rögar</button><button data-c="HZ_VANA" data-n="Vana">⋈ Vana</button><button data-c="HZ_YANGIN" data-n="Yangın musluğu">Ⓨ Yangın musluğu</button></div>
       <div class="grp" data-g="hhz" data-cap="Sembol · kot"><button data-c="HZ_AGAC" data-n="Ağaç">🌲 Ağaç</button><button data-c="HZ_ABIDE" data-n="Abide / anıt">⌂ Abide</button><button data-c="HZ_POLIGON" data-n="Poligon noktası">⊙ Poligon</button><button data-c="HZ_NIRENGI" data-n="Nirengi noktası">△ Nirengi</button><button data-c="HZ_KUTUP" data-n="Sembol kütüphanesi">📚 Kütüphane</button><button data-c="HZ_KOT" data-n="Kot noktası">⁺¹⁰²⁴ Kot yaz</button></div>
-      <div class="grp" data-g="gor" data-cap="Seçim ve görünüm"><button data-c="PENCERE">⬚ Pencere <kbd>W</kbd></button><button data-c="HEPSI">Tümünü seç</button><button data-c="TUMU">⛶ Tümünü göster <kbd>Z</kbd></button><button data-c="GERI">↶ Geri <kbd>U</kbd></button><button data-c="ILERI">↷ İleri</button></div>      <div class="grp" data-g="gor" data-cap="Performans"><button type="button" id="acadPerfOpen" title="CAD çizim performansını ölç (salt okunur)" title="Salt okunur proje yükü ve ekran çizim hızını ölç">⚡ Hız merkezi</button></div>
+      <div class="grp" data-g="gor" data-cap="Seçim ve görünüm"><button type="button" id="cadAreaHatchToggle" title="Alan içi tarama ve dolguyu göster veya gizle" aria-pressed="true">Alan taraması açık</button><button data-c="PENCERE">⬚ Pencere <kbd>W</kbd></button><button data-c="HEPSI">Tümünü seç</button><button data-c="TUMU">⛶ Tümünü göster <kbd>Z</kbd></button><button data-c="GERI">↶ Geri <kbd>U</kbd></button><button data-c="ILERI">↷ İleri</button></div>      <div class="grp" data-g="gor" data-cap="Performans"><button type="button" id="acadPerfOpen" title="CAD çizim performansını ölç (salt okunur)" title="Salt okunur proje yükü ve ekran çizim hızını ölç">⚡ Hız merkezi</button></div>
 <div class="grp" data-g="gor" data-cap="Nokta görünümü"><button data-c="NGSYM" class="tg" title="Nokta işaretlerini göster / gizle (yalnız görünüm; veri silinmez, kayıtta korunur)">○ Nokta aç/kapa</button><button data-c="NGAD" class="tg" title="Nokta adlarını (numaralarını) göster / gizle (yalnız görünüm)">№ Nokta adı aç/kapa</button><button data-c="NGKOT" class="tg" title="Noktanın kotunu göster / gizle (yalnız görünüm; yazılmış kot yazıları etkilenmez)">▲ Nokta kotu aç/kapa</button></div>
     </div>
 
@@ -18977,6 +18977,20 @@ function ebb(e) { let b = BBK.m.get(e); if (b !== undefined) return b; b = null;
    Geometric closing edges are shown without modifying source survey geometry.
    This paint layer is CAD-only; area arithmetic and cubage stay unchanged. */
 let ALAN_AKTIF = null; /* Alan Sorgula ile açık olan alan: ekranda belirgin */
+let showAreaHatch = true;
+try { showAreaHatch = localStorage.getItem("acad-area-hatch-visible") !== "0"; } catch (_) {}
+const hatchToggle = document.getElementById("cadAreaHatchToggle");
+function syncHatchToggle() {
+  hatchToggle.setAttribute("aria-pressed", String(showAreaHatch));
+  hatchToggle.textContent = showAreaHatch ? "Alan taraması açık" : "Alan taraması kapalı";
+}
+syncHatchToggle();
+hatchToggle.addEventListener("click", () => {
+  showAreaHatch = !showAreaHatch;
+  try { localStorage.setItem("acad-area-hatch-visible", showAreaHatch ? "1" : "0"); } catch (_) {}
+  syncHatchToggle();
+  draw();
+});
 const ALAN_VIS = (()=>{
  let hatchD=0,hatch=null;
  const number=n=>Number(n).toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:3});
@@ -18990,8 +19004,9 @@ const ALAN_VIS = (()=>{
  function ring(g,FX,FY,P){g.beginPath();for(let i=0;i<P.length;i++){const q=P[i];if(i)g.lineTo(FX(q[0]),FY(q[1]));else g.moveTo(FX(q[0]),FY(q[1]));}g.closePath();}
  function fill(g,FX,FY,D,P,o={}){if(!Array.isArray(P)||P.length<3)return;
    const lc=(!o.active&&!o.preview&&!o.reviewRequired&&o.color)?rgb(o.color):null;
-   g.save();ring(g,FX,FY,P);g.fillStyle=o.active==='second'?'rgba(255,154,60,.36)':o.active?'rgba(54,195,255,.34)':o.reviewRequired?'rgba(232,117,24,.22)':(o.preview?'rgba(248,188,32,.25)':lc?'rgba('+lc.join(',')+',.18)':'rgba(39,184,171,.19)');g.fill();
-   g.save();g.clip();const pat=g.createPattern(pattern(D,lc),'repeat');if(pat){g.fillStyle=pat;g.fill();}g.restore();
+   g.save();ring(g,FX,FY,P);
+   if(showAreaHatch){g.fillStyle=o.active==='second'?'rgba(255,154,60,.36)':o.active?'rgba(54,195,255,.34)':o.reviewRequired?'rgba(232,117,24,.22)':(o.preview?'rgba(248,188,32,.25)':lc?'rgba('+lc.join(',')+',.18)':'rgba(39,184,171,.19)');g.fill();
+   g.save();g.clip();const pat=g.createPattern(pattern(D,lc),'repeat');if(pat){g.fillStyle=pat;g.fill();}g.restore();}
    if(o.active){g.shadowColor=o.active==='second'?'rgba(255,154,60,.85)':'rgba(54,195,255,.85)';g.shadowBlur=9*D;g.strokeStyle=o.active==='second'?'#ff9a3c':'#36c3ff';g.lineWidth=3.2*D;g.stroke();g.shadowBlur=0;}
    else if(o.stroke!==false){g.strokeStyle=o.preview?'#f5ac23':lc?'rgb('+lc.join(',')+')':'#067f7d';g.lineWidth=(o.preview?2.5:1.6)*D;g.stroke();}g.restore();}
  // Avoid bounding-box centre labels landing outside long concave contours.
@@ -19025,9 +19040,10 @@ const ALAN_VIS = (()=>{
    if(!Number.isFinite(x+y)||x<-65*D||y<-35*D||x>g.canvas.width+65*D||y>g.canvas.height+35*D)return;
    const txt=(o.sourceChanged?'⚠ KAYNAK DEĞİŞTİ · ≈ ':(o.reviewRequired?'⚠ ≈ ':o.inferred?'≈ ':''))+number(n)+' m²';
    const name=String(o.name||'').trim().slice(0,60);
-   g.save();g.font=`700 ${Math.max(12,13*D)}px system-ui,Arial`;g.textAlign='center';g.textBaseline='middle';
+   D *= o.labelScale ?? 1;
+   g.save();g.font=`700 ${13*D}px system-ui,Arial`;g.textAlign='center';g.textBaseline='middle';
    const valueW=g.measureText(txt).width;
-   g.font=`600 ${Math.max(11,12*D)}px system-ui,Arial`;
+   g.font=`600 ${12*D}px system-ui,Arial`;
    let viewName=name;const maxTextWidth=Math.max(90*D,g.canvas.width-38*D);
    if(viewName&&g.measureText(viewName).width>maxTextWidth){
      while(viewName.length>2&&g.measureText(viewName+'…').width>maxTextWidth)viewName=viewName.slice(0,-1);
@@ -19037,8 +19053,8 @@ const ALAN_VIS = (()=>{
    const xx=Math.max(tw/2+8*D,Math.min(g.canvas.width-tw/2-8*D,x));const yy=Math.max(hh/2+4*D,Math.min(g.canvas.height-hh/2-4*D,y));
    g.fillStyle='rgba(10,37,48,.93)';g.strokeStyle=o.reviewRequired?'#ff9b3d':(o.preview?'#ffc64e':'#5fe3cb');g.lineWidth=1.5*D;
    g.beginPath();if(typeof g.roundRect==='function')g.roundRect(xx-tw/2-9*D,yy-hh/2,tw+18*D,hh,7*D);else g.rect(xx-tw/2-9*D,yy-hh/2,tw+18*D,hh);g.fill();g.stroke();g.fillStyle='#fff';
-   if(name){g.font=`600 ${Math.max(11,12*D)}px system-ui,Arial`;g.fillText(viewName,xx,yy-8.5*D);}
-   g.font=`700 ${Math.max(12,13*D)}px system-ui,Arial`;g.fillText(txt,xx,yy+(name?9:0)*D);g.restore();}
+   if(name){g.font=`600 ${12*D}px system-ui,Arial`;g.fillText(viewName,xx,yy-8.5*D);}
+   g.font=`700 ${13*D}px system-ui,Arial`;g.fillText(txt,xx,yy+(name?9:0)*D);g.restore();}
  function bridges(g,FX,FY,D,L){if(!L?.length)return;g.save();g.strokeStyle='#e47819';g.lineWidth=3.2*D;g.setLineDash([]);
    for(const v of L){if(!v.from||!v.to)continue;g.beginPath();g.moveTo(FX(v.from[0]),FY(v.from[1]));g.lineTo(FX(v.to[0]),FY(v.to[1]));g.stroke();}g.restore();}
  function paint(g,FX,FY,D,P,o={}){fill(g,FX,FY,D,P,o);if(o.bridges)bridges(g,FX,FY,D,o.bridges);label(g,FX,FY,D,P,o.area??Math.abs(areaOf(P)),o);}
@@ -19110,14 +19126,21 @@ function draw() { liveTick(); if(CAD_RESIZE_DIRTY){
   const ptStroke=(x,y,col,cross=false)=>{let path=ptPaths.get(col);if(!path){path=new Path2D();ptPaths.set(col,path);}
     if(cross){const r=2.4*D;path.moveTo(x-r,y);path.lineTo(x+r,y);path.moveTo(x,y-r);path.lineTo(x,y+r);}
     else{const r=3*D;path.moveTo(x+r,y);path.arc(x,y,r,0,6.2832);}};
+  // Projected size in CSS pixels keeps label density consistent across phone and desktop screens.
+  function areaLabelScale(b) {
+    if (!b) return 0;
+    const width = (b[2]-b[0])*V.s, height = (b[3]-b[1])*V.s;
+    if (width < 54 || height < 20) return 0;
+    return Math.min(1, 0.65 + Math.min((width-54)/150, (height-20)/58)*0.35);
+  }
   const acadAreaLabels=[],acadPlainAreaNames=[];
   for(const e of visibleEntities){if(e.t!=='pline'||!e.closed||e.pts?.length<3||!lays[e.lay]?.on)continue;const _alanK=!!(e.areaHatch||/^ALAN_CEVIR(?:$|_)/i.test(e.lay));if(!_alanK&&e.id!==ALAN_AKTIF&&!e.areaName)continue;
     const b=ebb(e);if(b&&(b[2]<vx0||b[0]>vx1||b[3]<vy0||b[1]>vy1))continue;
     // When editing the same polygon, the moving geometry gets the visible preview instead.
     if(AREA_EDIT_SESSION?.id===e.id&&cmd?.name==='Alan Düzelt'&&(cmd.preview?.parts?.length||cmd._liveOn))continue;
     const act_=AREA_EDIT_SESSION&&AREA_EDIT_SESSION.second===e.id?'second':(sel.has(e.id)||AREA_EDIT_SESSION?.id===e.id||ALAN_AKTIF===e.id?'first':null);
-    if(e.showFrontages||_alanK||e.areaName)drawFrontages74(cx,e.pts,v=>[X(v[0]),Y(v[1])],D);
-    ALAN_VIS.fill(cx,X,Y,D,e.pts,{active:act_,color:(()=>{try{return renk(lays[e.lay].c);}catch(x){return lays[e.lay]?.c;}})(),stroke:!!act_?true:false,reviewRequired:_alanK&&(alanKaynakGuncelMi(e)===false||e.areaQuality==='review-required'||(e.areaInferredBridges||[]).some(b=>b.metres>20))});if(_alanK)acadAreaLabels.push(e);else if(e.areaName&&acadPlainAreaNames.length<120&&b&&(b[2]-b[0])*V.s*D>=64&&(b[3]-b[1])*V.s*D>=28)acadPlainAreaNames.push(e);
+    if(e.showFrontages||_alanK||e.areaName)drawFrontages74(cx,e.pts,v=>[X(v[0]),Y(v[1])],D,true);
+    ALAN_VIS.fill(cx,X,Y,D,e.pts,{active:act_,color:(()=>{try{return renk(lays[e.lay].c);}catch(x){return lays[e.lay]?.c;}})(),stroke:!!act_?true:false,reviewRequired:_alanK&&(alanKaynakGuncelMi(e)===false||e.areaQuality==='review-required'||(e.areaInferredBridges||[]).some(b=>b.metres>20))});if(_alanK)acadAreaLabels.push(e);else if(e.areaName&&acadPlainAreaNames.length<120&&areaLabelScale(b)>0)acadPlainAreaNames.push(e);
   }
 
   for (const e of visibleEntities) { const L = lays[e.lay]; if (!L || !L.on) continue; { const b = ebb(e); if (b && (b[2] < vx0 || b[0] > vx1 || b[3] < vy0 || b[1] > vy1)) continue; if (b && e.t !== "point" && e.t !== "text" && !sel.has(e.id) && (b[2] - b[0] + b[3] - b[1]) * V.s * D < 0.6) continue; } const s = sel.has(e.id); if (!s && !e.fill && (e.t === "line" || e.t === "pline") && e.pts.length > 1) { const lt_ = ltOf(e); if (!lt_ || (!ltDash(lt_, 1) && !(window.LTX && LTX.has(lt_)))) { const col = renk(L.c); let bp = BPATH.get(col); if (!bp) { bp = new Path2D(); BPATH.set(col, bp); } const P = e.pts; let px = X(P[0][0]), py = Y(P[0][1]); bp.moveTo(px, py); for (let i = 1; i < P.length; i++) { const qx = X(P[i][0]), qy = Y(P[i][1]); if (i < P.length - 1 && Math.abs(qx - px) + Math.abs(qy - py) < 0.7) continue; bp.lineTo(qx, qy); px = qx; py = qy; } if (e.closed) bp.closePath(); continue; } } cx.strokeStyle = cx.fillStyle = s ? "#36c3ff" : renk(L.c); cx.lineWidth = (s ? 2 : 1.2) * D; let dsf = false; if (s) { cx.setLineDash([6 * D, 4 * D]); dsf = true; } else if (e.t === "line" || e.t === "pline" || e.t === "circle") { const dd = ltDash(ltOf(e), 1.6 * D); if (dd) { cx.setLineDash(dd); dsf = true; } }
@@ -19142,13 +19165,14 @@ function draw() { liveTick(); if(CAD_RESIZE_DIRTY){
   for(const e of acadAreaLabels){
     // V7.1.15.8: saved AREA is one visual polygon. Source and unmeasured connector metadata
     // remain available for query/audit; the orange helper is ONLY visible in preview/edit.
+    const scale=areaLabelScale(ebb(e)); if(!scale)continue;
     ALAN_VIS.label(cx,X,Y,D,e.pts,window.ACAD_AREA_EDIT?.area?.(e.pts)??Math.abs(areaOf(e.pts)),{
-      anchor:e.areaLabelAnchor,name:e.areaName||'',sourceChanged:alanKaynakGuncelMi(e)===false,
+      labelScale:scale,anchor:e.areaLabelAnchor,name:e.areaName||'',sourceChanged:alanKaynakGuncelMi(e)===false,
       reviewRequired:alanKaynakGuncelMi(e)===false||e.areaQuality==='review-required'||(e.areaInferredBridges||[]).some(b=>b.metres>20),
       inferred:!!e.areaInferredBridges?.length});} 
   // Kaynak NCZ/DXF alanı kendi adıyla CAD'de de görünür; tabaka ve kaynak çizim değişmez.
   cx.save();cx.textBaseline='middle';cx.textAlign='center';cx.font=`600 ${Math.round(12*D)}px system-ui,Arial`;
-  for(const e of acadPlainAreaNames){const b=ebb(e);if(!b)continue;const x=X((b[0]+b[2])/2),y=Y((b[1]+b[3])/2),label=String(e.areaName).slice(0,35);const width=Math.min(210*D,cx.measureText(label).width+14*D);if(x<-width||x>W+width||y<0||y>H)continue;cx.fillStyle='rgba(14,30,44,.87)';cx.fillRect(x-width/2,y-10*D,width,20*D);cx.fillStyle='#ecf3f8';cx.fillText(label,x,y,Math.max(20*D,width-9*D));}cx.restore();
+  for(const e of acadPlainAreaNames){const b=ebb(e);const scale=areaLabelScale(b);if(!scale)continue;const u=D*scale;cx.font=(12*u)+"px system-ui,Arial";const x=X((b[0]+b[2])/2),y=Y((b[1]+b[3])/2),label=String(e.areaName).slice(0,35);const width=Math.min(210*u,cx.measureText(label).width+14*u);if(x<-width||x>W+width||y<0||y>H)continue;cx.fillStyle='rgba(14,30,44,.87)';cx.fillRect(x-width/2,y-10*u,width,20*u);cx.fillStyle='#ecf3f8';cx.fillText(label,x,y,Math.max(20*u,width-9*u));}cx.restore();
   // tutamaçlar
   if (sel.size && sel.size < 300) { cx.fillStyle = "#36c3ff"; for (const e of ents) if (sel.has(e.id)) for (const p of vertsOf(e)) { const x = X(p[0]), y = Y(p[1]); if (vis(x, y)) cx.fillRect(x - 4 * D, y - 4 * D, 8 * D, 8 * D); } }
   tabanAl(); ustler(D, W, H); pvLiveInvalidate(); }
@@ -20447,11 +20471,14 @@ function acadAreaElevationView(P,areaId){
  <div class="acad-v106-scroll-hint" aria-hidden="true">Yatay kaydırarak Y / X / Z kaynaklarını incele ↔</div><div class="acad-area-elev-scroll" style="max-height:29dvh;max-width:100%;overflow:auto;overscroll-behavior:contain"><table class="tbl acad-area-elev-table" style="min-width:720px;width:max-content;table-layout:auto;white-space:nowrap;font-size:11px"><thead><tr><th>No</th><th>Y</th><th>X</th><th>Alan Z</th><th>Nokta Z</th><th>Arazi Z</th><th>Proje Z</th><th>Sorgu kotu / kaynağı</th></tr></thead><tbody data-kotlar="${esc_(String(areaId))}">${table}</tbody></table>${P.length>200?'<small>İlk 200 köşe burada; tüm köşeler Excel dosyasında.</small>':''}</div>`;
 }
 
-function drawFrontages74(ctx,points,project,unit){
+function drawFrontages74(ctx,points,project,unit,screenView=false){
  ctx.save();ctx.textAlign='center';ctx.textBaseline='bottom';ctx.font=(11*unit)+'px Arial';
  for(let i=0;i<points.length;i++){
   const a=points[i],b=points[(i+1)%points.length],p=project(a),q=project(b);
   const dx=q[0]-p[0],dy=q[1]-p[1];
+  const lengthPx=Math.hypot(dx,dy)/unit;
+  if(screenView && lengthPx<64)continue;
+  if(screenView)ctx.font=(Math.min(11,8+(lengthPx-64)/24)*unit)+'px Arial';
   const text=Math.hypot(b[0]-a[0],b[1]-a[1]).toFixed(2)+' m';
   if(Math.hypot(dx,dy)<ctx.measureText(text).width+8*unit)continue;
   ctx.save();ctx.translate((p[0]+q[0])/2,(p[1]+q[1])/2);
