@@ -20976,6 +20976,7 @@ window.ACAD_TRANSITION_CAD=Object.freeze({
   return {schema:'acad-cad-pages-v1',active:cadSheetIndex,sheets,at:Date.now()};
  },
  flush:()=>cadSheetsFlush(),
+ version:()=>FVER+':'+cadSheetIndex+':'+cadSheets.length,
  restore:payload=>{
   if(!payload||payload.schema!=='acad-cad-pages-v1'||!Array.isArray(payload.sheets)||!payload.sheets.length||payload.sheets.length>200)throw Error('Kurtarma dosyası CAD sayfası değil');
   const checked=payload.sheets.map(sh=>{
@@ -32091,28 +32092,32 @@ body.acad65-panel-adjusting #cadCv{image-rendering:auto}
  }
  const fromTab=t=>t==='cad'?'cad':t==='altyapi'?'infra':(['veri','plan','kesit','cikti','bk'].includes(t)?'core':null);
  async function storeKind(kind){const payload=await take(kind);if(payload!==null)await record(kind,payload);return true;}
+ /* V7.1.16.12 — Modül geçişi hiç beklemez. Modüller gizlenir, bellekte kalır; kontrol noktası geçişten SONRA,
+    tarayıcı boşta iken arka planda yazılır. CAD değişmediyse (FVER aynı) yeniden yazılmaz; yazım sürerken gelen
+    dokunuşlar artık reddedilmez (eski sürüm "kaydediliyor" iken her dokunuşu yutuyordu → telefonda donma hissi). */
+ const lastVer={},pend=new Map();let bgBusy=false;
+ const verOf=kind=>{try{if(kind==='cad'){const v=window.ACAD_TRANSITION_CAD?.version?.();return v==null?null:String(v);}}catch(e){}return null;};
+ const idle=fn=>('requestIdleCallback' in window)?requestIdleCallback(fn,{timeout:5000}):setTimeout(fn,700);
+ async function runBg(){
+  if(bgBusy||!pend.size)return;bgBusy=true;
+  try{for(const kind of [...pend.keys()]){pend.delete(kind);
+    const v=verOf(kind);if(v!==null&&lastVer[kind]===v)continue;
+    if(v===null&&lastVer[kind+':t']&&Date.now()-lastVer[kind+':t']<45000)continue;
+    writing=true;status(TYPES[kind]+' kontrol noktası arka planda kaydediliyor…');
+    try{await storeKind(kind);lastVer[kind]=v;lastVer[kind+':t']=Date.now();lastError='';sticky=false;
+     status(TYPES[kind]+' kontrol noktası kaydedildi · '+new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}));}
+    catch(e){lastError=(e?.message||String(e));sticky=true;
+     const kapali=e?.name==='SecurityError'||/IDBFactory|IndexedDB|localStorage|sandbox|denied|not allowed/i.test(lastError);
+     if(kapali){noStore=true;status('Bu ortamda tarayıcı kaydı kapalı: veriler yalnız bu oturumda durur. “Çalışma yedeği indir” ile sakla.',true);}
+     else status('Yerel kontrol noktası yazılamadı: '+lastError+'. Veri bellekte duruyor; “Çalışma yedeği indir” ile sakla.',true);}
+    finally{writing=false;}}}
+  finally{bgBusy=false;if(pend.size)setTimeout(()=>idle(runBg),400);}
+ }
  async function beforeSwitch(from,to){
   const kind=fromTab(from);
   if(!kind||from===to||noStore)return true;
-  if(writing)return false;
-  writing=true;
-  status(TYPES[kind]+' kontrol noktası kaydediliyor…');
-  try{
-   await storeKind(kind);
-   lastError='';sticky=false;
-   status(TYPES[kind]+' güvenli kontrol noktası doğrulandı · '+new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}));
-   return true;
-  }catch(e){
-   lastError=(e?.message||String(e));sticky=true;
-   /* Tarayıcı kaydı bu ortamda tamamen kapalıysa (uygulama içi dosya önizleme, gizli pencere vb.) geçiş engellenmez:
-      modül verisi bellekte kalır; kullanıcı yalnız uyarılır. Aksi halde onay sorulur; onay penceresi açılamıyorsa da geçilir. */
-   const kapali=e?.name==='SecurityError'||/IDBFactory|IndexedDB|localStorage|sandbox|denied|not allowed/i.test(lastError);
-   if(kapali){noStore=true;status('Bu ortamda tarayıcı kaydı kapalı: veriler yalnız bu oturumda durur. “Çalışma yedeği indir” ile sakla.',true);return true;}
-   status('Yerel güvenli kayıt başarısız: '+lastError+'. Önce “Çalışma yedeği indir” kullan.',true);
-   const t0=performance.now();let ok=false;
-   try{ok=!!confirm('Bu modülde güvenli kayıt doğrulanamadı: '+lastError+'\n\nVeri bu sekmede bellekte duruyor. Önce yedek indirmen önerilir. Yine de modül değiştirilsin mi?');}catch(_){return true;}
-   return ok||performance.now()-t0<40;
-  }finally{writing=false;}
+  pend.set(kind,1);setTimeout(()=>idle(runBg),600);
+  return true;
  }
  function download(filename,text){const url=URL.createObjectURL(new Blob([text],{type:'application/json;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download=filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),5000);}
  async function exportAll(){
