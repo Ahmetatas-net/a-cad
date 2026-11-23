@@ -1620,7 +1620,7 @@ html[data-cad-query-tone] body :is(#arzBox#arzBox,#cadInfo#cadInfo,#cadProp#cadP
     <div id="cadTools" class="cadbar">
       <div class="grp" data-g="ciz" data-cap="Çizim"><button data-c="CIZGI" data-n="Çizgi">╱ Çizgi <kbd>L</kbd></button><button data-c="CCIZGI" data-n="Çoklu çizgi">⌇ Çoklu <kbd>PL</kbd></button></div>
       <div class="grp" data-g="duz" data-cap="Sorgu"><button data-c="SORGU" data-n="Sorgula">🔍 Sorgula <kbd>SO</kbd></button><button data-c="UCSORGU" data-n="Üçgen sorgula">△ Üçgen sorgula <kbd>USOR</kbd></button><button data-c="TOPLUSORGU" data-n="Toplu sorgu">▤ Toplu sorgu / değiştir <kbd>TS</kbd></button><button data-c="KOORDINAT" data-n="Koordinat">⌖ XYZ sor <kbd>ID</kbd></button><button data-c="XYZYAZ" data-n="XYZ yaz">xyz XYZ yaz <kbd>XYZ</kbd></button><button data-c="MESAFE" data-n="Mesafe">↔ Mesafe <kbd>DI</kbd></button><button data-c="SIL" data-n="Sil" class="dangerb">✕ Sil <kbd>E</kbd></button></div>
-      <div class="grp" data-g="alan" data-cap="Alan İşlemleri · sıralı komutlar"><button type="button" id="acadAreaKitLauncher2" class="primary" title="Alan adı ve kot atama modülünü aç">▱ Toplu Ad / Kot Ata</button>
+      <div class="grp" data-g="alan" data-cap="Alan İşlemleri · sıralı komutlar"><button type="button" id="acadAreaKitLauncher2" title="Alan adı ve kot atama modülünü aç">▱ Toplu Ad / Kot Ata</button>
 <button data-c="ALAN" data-n="Alan Çevir" title="Köşelere dokunarak kapalı alan çiz ve adlandır">1 · Alan Çevir</button>
 <button data-c="ALANSORGU" data-n="Alan Sorgula" title="Alan adı, m², çevre, köşe koordinatları; Excel ve çizime özet">2 · Alan Sorgula</button>
 <button data-c="YOLALAN" data-n="Akıllı Alan Çevir" title="İki karşılıklı çizgiyi veya alan sınırını seç">3 · Akıllı Alan Çevir</button>
@@ -32614,11 +32614,11 @@ function check96(){setTimeout(()=>{const cs=getComputedStyle(m),r=m.getBoundingC
  if(m.hidden||cs.display==='none'||cs.visibility!=='visible'||r.width<10||r.height<10||(top&&top!==f&&!m.contains(top)))
   toast96('Alan Adı ve Kot Ata penceresi görünmedi (V7.1.16.16) · gizli='+m.hidden+' display='+cs.display+' boyut='+Math.round(r.width)+'x'+Math.round(r.height)+' üstte='+(top?top.tagName+'#'+(top.id||'')+'.'+String(top.className||'').slice(0,30):'-')+' — bu yazının ekran görüntüsünü gönder',true);},700);}
 function open(){try{toast96('▱ Alan Adı ve Kot Ata açılıyor… (V7.1.16.16)');open0();}catch(e){toast96('Alan Adı ve Kot Ata açılamadı: '+(e&&e.message||e),true);}check96();}
-function open0(){if(opened){m.hidden=false;return;}opened=true;m.hidden=false;
+function open0(){document.getElementById('acadAreaKitLauncher2')?.classList.add('on');if(opened){m.hidden=false;return;}opened=true;m.hidden=false;
  f.addEventListener('load',()=>setTimeout(push,10),{once:true});
  const raw=atob(emb),bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));f.srcdoc=new TextDecoder('utf-8').decode(bytes);
 }
-function close(){m.hidden=true;f.srcdoc='';opened=false;status('Kapatıldı. Kaynak çizimi korunuyor.');}
+function close(){document.getElementById('acadAreaKitLauncher2')?.classList.remove('on');m.hidden=true;f.srcdoc='';opened=false;status('Kapatıldı. Kaynak çizimi korunuyor.');}
 /* V7.1.16.15: düğme olayları belgeden yakalanır (şerit yeniden çizilse de bağ kopmaz); telefonda dokunuş tıklamaya dönüşmezse de açılır */
 const LSEL='#acadAreaKitLauncher,#acadAreaKitLauncher2';let lastOpen=0;const openOnce=()=>{const t=Date.now();if(t-lastOpen<600)return;lastOpen=t;open();};
 document.addEventListener('click',ev=>{if(ev.target?.closest?.(LSEL))openOnce();},true);
