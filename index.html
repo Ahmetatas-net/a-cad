@@ -756,6 +756,8 @@ body.cadmasa #v-cad.acad-complete.acad-wide-canvas #cadBox{grid-column:2!importa
 <style id="acad-file-ribbon-v711535">
 /* V7.1.15.35: tek satir dosya komutlari; hesap ve kayit olaylari mevcut elemanlardadir. */
 #cadNav button[data-m="dos"]{display:none!important}
+/* V7.1.16.13: sekmeye basınca yalnız o sekmenin komutları görünsün (gizli grup zorla açılmasın) */
+#v-cad #cadTools .grp[data-g][hidden]{display:none!important}
 #v-cad .acad-finalbar{align-items:flex-start;justify-content:flex-start;gap:0;padding:6px 9px;flex-wrap:nowrap}
 #v-cad .acad-finalbar>.acad-final-brand{display:none!important}
 #v-cad .acad-final-actions{width:100%;max-width:100%;min-width:0;display:flex;align-items:center;flex-wrap:nowrap;overflow-x:auto;overflow-y:visible;gap:6px;scrollbar-width:thin;scrollbar-color:#6b889d transparent;padding:2px 0 4px;overscroll-behavior-x:contain}
