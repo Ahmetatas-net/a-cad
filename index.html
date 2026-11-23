@@ -1148,7 +1148,46 @@ html[data-cad-query-tone] body :is(#arzBox#arzBox,#cadInfo#cadInfo,#cadProp#cadP
 html[data-cad-query-tone] body :is(#arzBox#arzBox,#cadInfo#cadInfo,#cadProp#cadProp) button.primary{background:var(--qp-action)!important;color:var(--qp-action-text)!important;}
 html[data-cad-query-tone] body :is(#arzBox#arzBox,#cadInfo#cadInfo,#cadProp#cadProp) :is(p.note[style*="border-left"],p.road-gap-warning){background:#fff1d6!important;color:#573800!important}
 html[data-cad-query-tone] body :is(#arzBox#arzBox,#cadInfo#cadInfo,#cadProp#cadProp) #cadQueryKotEdit input[data-cad-z-vertex]{background:var(--qp-bg)!important;color:var(--qp-text)!important;border-color:var(--qp-border)!important;}
-</style><style>#aplArial89{position:relative;cursor:pointer;display:inline-flex;align-items:center;padding:.25em .6em}#aplArial89[hidden]{display:none!important}#aplArial89 input{position:absolute;inset:0;width:100%;opacity:0;cursor:pointer}#aplArial89:focus-within{outline:2px solid currentColor}</style><style>@font-face{font-family:Kroki84;src:local("Arial"),local("ArialMT"),url("LiberationSans-Regular.ttf") format("truetype");font-style:normal;font-weight:400;font-display:swap}</style><style>.site85bar{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:5px 0}.site85bar strong{flex:1}.site85bar button,.site85bar select{color:#132f39;background:#edf3f5;border:1px solid #b4c2c8;border-radius:5px;padding:5px 9px;font:inherit}.site85bar [data-action=apply]{background:#15635d;color:white}.site85bar button:disabled{opacity:.45}#aplShape82::backdrop{background:#18232975}</style></head>
+</style><style>#aplArial89{position:relative;cursor:pointer;display:inline-flex;align-items:center;padding:.25em .6em}#aplArial89[hidden]{display:none!important}#aplArial89 input{position:absolute;inset:0;width:100%;opacity:0;cursor:pointer}#aplArial89:focus-within{outline:2px solid currentColor}</style><style>@font-face{font-family:Kroki84;src:local("Arial"),local("ArialMT"),url("LiberationSans-Regular.ttf") format("truetype");font-style:normal;font-weight:400;font-display:swap}</style><style>.site85bar{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:5px 0}.site85bar strong{flex:1}.site85bar button,.site85bar select{color:#132f39;background:#edf3f5;border:1px solid #b4c2c8;border-radius:5px;padding:5px 9px;font:inherit}.site85bar [data-action=apply]{background:#15635d;color:white}.site85bar button:disabled{opacity:.45}#aplShape82::backdrop{background:#18232975}</style><style id="cad-work-bars-style">
+#v-cad #cadBox #cadWorkBars {
+  position:absolute; z-index:30; bottom:28px; left:6px; right:6px;
+  display:flex; flex-direction:column; align-items:flex-start; gap:5px;
+  pointer-events:none;
+}
+#v-cad #cadBox #cadWorkBars > :is(#cadCtx,#acad100CanvasTools) {
+  position:static; transform:none; margin:0; box-sizing:border-box;
+  display:flex; align-items:center; flex-flow:row nowrap; gap:5px;
+  width:max-content; max-width:100%; min-width:0; padding:4px;
+  overflow-x:auto; overflow-y:hidden; touch-action:pan-x; overscroll-behavior-x:contain;
+  scrollbar-width:thin; scrollbar-color:#7293a5 #183346;
+  pointer-events:auto; background:#183346; color:#f5fafc;
+  border:1px solid #486475; border-radius:9px; box-shadow:0 2px 5px #10263225;
+}
+#v-cad #cadBox #cadWorkBars > [hidden] {display:none!important}
+#v-cad #cadBox #cadWorkBars > div > * {flex:0 0 auto; white-space:nowrap}
+#v-cad #cadBox #cadWorkBars button {
+  touch-action:pan-x; min-height:34px; padding:5px 9px; border-radius:6px;
+  background:#28495d; color:#f5fafc; border:1px solid #577586;
+}
+#v-cad #cadBox #cadWorkBars button:is(.primary,.on,:active) {background:#096582}
+#v-cad #cadBox #cadWorkBars button:focus-visible {outline:2px solid #81d9ef;outline-offset:-2px}
+
+#v-cad .cadstat #acad100CanvasTools {
+  position:static!important; inset:auto; transform:none; z-index:auto;
+  display:inline-flex; align-items:center; flex-flow:row nowrap; gap:4px;
+  box-sizing:border-box; width:max-content; max-width:100%; min-width:0;
+  overflow-x:auto; overflow-y:hidden; pointer-events:auto; touch-action:pan-x;
+  scrollbar-width:thin; overscroll-behavior-x:contain;
+}
+#v-cad .cadstat #acad100CanvasTools button {
+  flex:none; white-space:nowrap; min-height:30px; border-radius:6px;
+  background:#23485b; color:#fff; border:1px solid #547486;
+}
+@media (min-width:1100px) {
+  body.cadmasa #v-cad .cadstat #acad100CanvasTools button {min-height:22px}
+}
+</style>
+</head>
 <body>
 <script>/* ===== A-CAD kullanıcı girişi (telefon uygulaması sürümü) =====
    Hesaplar sunucudaki users.json dosyasındadır. Dosya yöneticinin özel anahtarıyla imzalıdır;
@@ -1672,7 +1711,7 @@ html[data-cad-query-tone] body :is(#arzBox#arzBox,#cadInfo#cadInfo,#cadProp#cadP
     <div id="cadBox" style="position:relative;border-radius:10px;overflow:hidden;background:#1c2127;height:min(64vh,620px);touch-action:none">
       <canvas id="cadCv" style="width:100%;height:100%;display:block" aria-label="Çizim alanı"></canvas>
       <div id="cadXY" style="position:absolute;right:8px;bottom:6px;font:12px monospace;color:#9fb0c0"></div>
-      <div id="cadCtx" class="cadctx" hidden></div>
+      <div id="cadWorkBars"><div id="cadCtx" class="cadctx" hidden></div></div>
       <div class="cadgps"><button type="button" id="cadGmap" title="Google Haritalar / Google Earth">🌍</button><button type="button" id="cadGps" title="Canlı konum">📍</button><button type="button" id="cadFol" hidden title="Konumu takip et">⦿</button><button type="button" id="cadGpt" hidden title="Bulunduğum yere nokta (10 sn ortalama)">＋📍</button></div>
       <div id="cadGpsI" hidden style="position:absolute;left:8px;top:8px;right:60px;background:rgba(17,22,27,.85);color:#e6eaef;font:12px/1.35 Arial;padding:6px 8px;border-radius:8px"></div>
     </div>
@@ -32523,7 +32562,7 @@ make('⤢ Tümünü göster','Her nesneyi kadraja al',all);
 const maxim=make('▣ Geniş alan','Tabaka / yan panelleri geçici gizle, çizimi genişlet',()=>{
  const yes=root.classList.toggle('acad-wide-canvas');maxim.textContent=yes?'◧ Paneller':'▣ Geniş alan';resize();});
 make('↺ Yerleşim','Sürüklenen panelleri varsayılan boyuta döndür',()=>{state={...defaults};save();apply();});
-box.append(ctl);
+root.querySelector('.cadstat').prepend(ctl);
 function grip(id,text,aria,key,calc){
  const g=document.createElement('div');g.className='acad100-grip';g.id=id;g.textContent=text;g.setAttribute('role','separator');g.setAttribute('tabindex','0');g.setAttribute('aria-label',aria);g.title=aria+' · Çift tıkla: sıfırla';
  let pointer=null;const set=(v,final)=>{state[key]=v;update();if(final){resize();save()}};
