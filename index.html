@@ -32609,7 +32609,12 @@ function modelFromCAD(){
  return {version:q.version,model:{source:(q.doc?.name||'A-CAD aktif çizim'),sha256:'',insunits:0,bounds:[xmin,ymin,xmax,ymax],polygons,background,texts,textLayers:[...new Set(texts.map(t=>t.layer))],openAreas:[],totalSourceEntities:es.length,ignored:0,expanded:0,warnings:[]}};
 }
 function push(){try{const q=modelFromCAD();f.contentWindow?.postMessage({type:'acad-area-kit:load',...q},'*');status(q.model.source+' · '+q.model.polygons.length+' alan · '+q.model.background.length+' çizgi · '+q.model.texts.length+' yazı');}catch(e){status(e.message,true);}}
-function open(){if(opened){m.hidden=false;return;}opened=true;m.hidden=false;
+function toast96(t,bad){let el=document.getElementById('acadKitToast');if(!el){el=document.createElement('div');el.id='acadKitToast';el.style.cssText='position:fixed;left:10px;right:10px;top:10px;z-index:2147483647;padding:10px 12px;border-radius:9px;font:600 13px system-ui;box-shadow:0 4px 18px rgba(0,0,0,.35);pointer-events:none';document.body.appendChild(el);}el.style.background=bad?'#7a1f12':'#12475f';el.style.color='#fff';el.textContent=t;el.hidden=false;clearTimeout(el._t);el._t=setTimeout(()=>{el.hidden=true;},bad?9000:1600);}
+function check96(){setTimeout(()=>{const cs=getComputedStyle(m),r=m.getBoundingClientRect(),top=document.elementFromPoint(innerWidth/2,innerHeight/2);
+ if(m.hidden||cs.display==='none'||cs.visibility!=='visible'||r.width<10||r.height<10||(top&&top!==f&&!m.contains(top)))
+  toast96('Alan Adı ve Kot Ata penceresi görünmedi (V7.1.16.16) · gizli='+m.hidden+' display='+cs.display+' boyut='+Math.round(r.width)+'x'+Math.round(r.height)+' üstte='+(top?top.tagName+'#'+(top.id||'')+'.'+String(top.className||'').slice(0,30):'-')+' — bu yazının ekran görüntüsünü gönder',true);},700);}
+function open(){try{toast96('▱ Alan Adı ve Kot Ata açılıyor… (V7.1.16.16)');open0();}catch(e){toast96('Alan Adı ve Kot Ata açılamadı: '+(e&&e.message||e),true);}check96();}
+function open0(){if(opened){m.hidden=false;return;}opened=true;m.hidden=false;
  f.addEventListener('load',()=>setTimeout(push,10),{once:true});
  const raw=atob(emb),bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));f.srcdoc=new TextDecoder('utf-8').decode(bytes);
 }
