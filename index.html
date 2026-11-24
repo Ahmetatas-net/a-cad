@@ -1200,7 +1200,28 @@ html[data-cad-query-tone] body :is(#arzBox#arzBox,#cadInfo#cadInfo,#cadProp#cadP
 #cadTools .cad-area-display[aria-pressed=true]{background:#d9f4ef!important;color:#104e48!important;border-color:#70b4a9!important}
 #cadTools .cad-area-display[aria-pressed=false]{background:#f2f5f7!important;color:#475866!important;border-color:#aebac2!important}
 #cadTools .cad-area-display:focus-visible{outline:2px solid #087c85;outline-offset:-2px}
-</style></head>
+</style><script>
+/* Screen canvases share a density budget. Coordinates remain in the renderer's own units. */
+window.ACAD_DISPLAY = {
+  defaultScale() {
+    if (devicePixelRatio <= 1) return 1;
+    return navigator.deviceMemory && navigator.deviceMemory <= 2 ? 1.5 : 2;
+  },
+  density(rect) {
+    const budget = matchMedia('(pointer: coarse)').matches ? 4000000 : 8000000;
+    return Math.min(devicePixelRatio || 1, this.defaultScale(),
+      Math.sqrt(budget / Math.max(1, rect.width * rect.height)),
+      8192 / Math.max(1, rect.width, rect.height));
+  },
+  size(canvas, rect, ratio) {
+    const width = Math.max(10, Math.round(rect.width * ratio));
+    const height = Math.max(10, Math.round(rect.height * ratio));
+    if (canvas.width !== width) canvas.width = width;
+    if (canvas.height !== height) canvas.height = height;
+  }
+};
+</script>
+</head>
 <body>
 <script>/* ===== A-CAD kullanıcı girişi (telefon uygulaması sürümü) =====
    Hesaplar sunucudaki users.json dosyasındadır. Dosya yöneticinin özel anahtarıyla imzalıdır;
@@ -3558,7 +3579,7 @@ function refreshList(){let p=pRoad(),o=design();let old=finite(RV.want)?RV.want:
 }
 function setIndex(i){const newIndex=Math.max(0,Math.min(Math.round(i),Math.max(0,RV.stations.length-1)));if(RV.index!==newIndex)resetCross();RV.index=newIndex;
  let s=current();el(&#x27;rvSlider&#x27;).value=RV.index;if(typeof draw===&#x27;function&#x27;&amp;&amp;!RV.planRaf)RV.planRaf=requestAnimationFrame(()=&gt;{RV.planRaf=0;try{draw()}catch(_){}});el(&#x27;rvKm&#x27;).value=RV.stations.length?labelKm(s):&#x27;—&#x27;;el(&#x27;rvKmCount&#x27;).textContent=RV.stations.length?`${RV.index+1} / ${RV.stations.length} kesit`:&#x27;Kesit yok&#x27;;render()}
-function canvasSetup(c){let r=c.getBoundingClientRect(),w=Math.max(250,Math.round(r.width||350)),h=Math.max(150,Math.round(r.height||220));let scale=Math.min(2,window.devicePixelRatio||1);const cw=Math.round(w*scale),ch=Math.round(h*scale);if(c.width!==cw)c.width=cw;if(c.height!==ch)c.height=ch;let x=c.getContext(&#x27;2d&#x27;);x.setTransform(scale,0,0,scale,0,0);x.fillStyle=&#x27;#131820&#x27;;x.fillRect(0,0,w,h);return {ctx:x,w,h}}
+function canvasSetup(c){let r=c.getBoundingClientRect(),w=Math.max(250,Math.round(r.width||350)),h=Math.max(150,Math.round(r.height||220));let scale=Math.min(2.5,window.devicePixelRatio||1,Math.sqrt(4000000/Math.max(1,w*h)));const cw=Math.round(w*scale),ch=Math.round(h*scale);if(c.width!==cw)c.width=cw;if(c.height!==ch)c.height=ch;let x=c.getContext(&#x27;2d&#x27;);x.setTransform(scale,0,0,scale,0,0);x.fillStyle=&#x27;#131820&#x27;;x.fillRect(0,0,w,h);return {ctx:x,w,h}}
 function line(ctx,pts,col,width=2){let pen=false;ctx.strokeStyle=col;ctx.lineWidth=width;ctx.beginPath();for(const p of pts){if(!p||!finite(p[0])||!finite(p[1])){pen=false;continue}if(!pen){ctx.moveTo(...p);pen=true}else ctx.lineTo(...p)}ctx.stroke()}
 let profileVersion=0,profileCache={version:-1,plot:null,vals:null};function invalidateProfile(){profileVersion++}
 const CV={zoom:1,panX:0,panZ:0,mode:&#x27;move&#x27;,marks:[],probe:null,frame:null,pointers:new Map(),gesture:null};
@@ -4519,7 +4540,7 @@ window.__DY=window.__DY||function(n){var v=Math.round(n*100)/100;return &#x27;1D
   [&#x27;rvKm&#x27;,&#x27;rvSlider&#x27;,&#x27;rvMode&#x27;,&#x27;dpLiveRange&#x27;,&#x27;dpLiveKm&#x27;,&#x27;roadSelect&#x27;].forEach(function(id){var e=$(id);if(e){e.addEventListener(&#x27;input&#x27;,function(){setTimeout(refreshAll,60);});e.addEventListener(&#x27;change&#x27;,function(){setTimeout(refreshAll,60);});}});
   [&#x27;rvPrev&#x27;,&#x27;rvNext&#x27;].forEach(function(id){var e=$(id);if(e)e.addEventListener(&#x27;click&#x27;,function(){setTimeout(refreshAll,60);});});
   var cnt=$(&#x27;rvKmCount&#x27;);if(cnt&amp;&amp;window.MutationObserver)new MutationObserver(refreshAll).observe(cnt,{childList:true,characterData:true,subtree:true});
-  setInterval(function(){if(!document.hidden)refreshAll();},1500);
+  setInterval(function(){if(!document.hidden &amp;&amp; (!window.frameElement || window.frameElement.getClientRects().length))refreshAll();},1500);
   document.addEventListener(&#x27;keydown&#x27;,function(e){if(e.target&amp;&amp;/INPUT|SELECT|TEXTAREA/.test(e.target.tagName))return;
     if(e.key!==&#x27;ArrowLeft&#x27;&amp;&amp;e.key!==&#x27;ArrowRight&#x27;)return;var page=$(&#x27;rvCrossPage&#x27;),prof=$(&#x27;rvProfilePage&#x27;);
     if((page&amp;&amp;!page.hidden)||(prof&amp;&amp;!prof.hidden)){e.preventDefault();(e.key===&#x27;ArrowLeft&#x27;?rvPrev:rvNext)();setTimeout(refreshAll,60);}});
@@ -8972,7 +8993,7 @@ gl_Position=M*vec4(p,1.0);gl_PointSize=ps;}`;
     gl.disableVertexAttribArray(P.a.k); if (P.a.c >= 0) gl.disableVertexAttribArray(P.a.c); gl.useProgram(ST.prg); }
   function reset() { if (!ST.cam) return; ST.cam = { yaw: -0.6, pitch: 0.62, dist: ST.R * 2.6, tx: 0, ty: 0, tz: ST.cam.tz }; draw(); }
   function draw() { if (ST.req) return; ST.req = requestAnimationFrame(draw0); }
-  function draw0() { ST.req = 0; const gl = ST.gl, cv = ST.cv; if (!gl) return; const dpr = Math.min(2, window.devicePixelRatio || 1), w = Math.round(cv.clientWidth * dpr), h = Math.round(cv.clientHeight * dpr); if (w && h && (cv.width !== w || cv.height !== h)) { cv.width = w; cv.height = h; }
+  function draw0() { ST.req = 0; const gl = ST.gl, cv = ST.cv; if (!gl || !cv.clientWidth || !cv.clientHeight) return; const dpr = Math.min(2, window.devicePixelRatio || 1), w = Math.round(cv.clientWidth * dpr), h = Math.round(cv.clientHeight * dpr); if (w && h && (cv.width !== w || cv.height !== h)) { cv.width = w; cv.height = h; }
     gl.viewport(0, 0, cv.width, cv.height); gl.clearColor(0.97, 0.975, 0.985, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); if (!ST.cam || (!ST.bufs.length && !ST.bulutV)) return;
     gl.enable(gl.DEPTH_TEST); gl.useProgram(ST.prg); const c = ST.cam, cp = Math.cos(c.pitch), tg = [c.tx, c.ty, c.tz], e = [tg[0] + c.dist * cp * Math.sin(c.yaw), tg[1] - c.dist * cp * Math.cos(c.yaw), tg[2] + c.dist * Math.sin(c.pitch)];
     const M = m4.mul(m4.persp(0.8, cv.width / cv.height, c.dist * 0.01, c.dist * 20), m4.look(e, tg, [0, 0, 1])); ST.M = M; gl.uniformMatrix4fv(ST.loc.M, false, M);
@@ -9301,7 +9322,7 @@ let newArm = false; $("newP").addEventListener("click", e => { if (!newArm) { ne
 /* ================= PLAN ================= */
 const cv = $("planCv"), ctx = cv.getContext("2d"); const VIEW = { cx: 0, cy: 0, s: 0 }; let DPR = 1;
 let MODE = null, DRAFT = [], SNAP = null;
-function resize() { DPR = window.devicePixelRatio || 1; const r = cv.getBoundingClientRect(); cv.width = Math.max(10, r.width * DPR); cv.height = Math.max(10, r.height * DPR); }
+function resize() { const r = cv.getBoundingClientRect(); DPR = ACAD_DISPLAY.density(r); ACAD_DISPLAY.size(cv, r, DPR); }
 function bounds() { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; const add = (x, y) => { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; };
   (ST.S.pts || []).forEach(p => add(p.e, p.y)); if (ST.R.mode === "model") (ST.R.pts || []).forEach(p => add(p.e, p.y)); ST.alanlar.forEach(a => a.pts.forEach(p => add(p[0], p[1]))); (ST.eksen || []).forEach(p => add(p[0], p[1]));
   if (!isFinite(x0)) for (const k of (ST.katmanlar || [])) { if (!k.show) continue; k.points.forEach(q => add(q[0], q[1])); if (k.tin) k.tin.pts.forEach(q => add(q.e, q.y)); k.lines.forEach(l => l.forEach(q => add(q[0], q[1]))); k.polys.forEach(pp => pp.p.forEach(q => add(q[0], q[1]))); }
@@ -18568,7 +18589,7 @@ let OFD = 0; let cmd = null, last = null, ortho = false, grad = true, hover = nu
 const SN = { end: true, mid: true, int: true, cen: true, nod: true, per: true, nea: false };
 let RUNKEY = null, CXL = false; const XFK = new Set(["TASI", "KOPYALA", "DONDUR", "OLCEKLE", "AYNA"]);
 const cv = $("cadCv"); let cx = cv.getContext("2d"); /* cx: üst katman çizilirken geçici olarak üst tuvalin bağlamına döner */
-let CAD_RENDER_SCALE = (() => { try { const v=Number(localStorage.getItem('acad-render-scale')); return [1,1.25,1.5,2].includes(v)?v:((!matchMedia('(pointer:coarse)').matches && (navigator.deviceMemory||4)>=4)?2:1.25); } catch(e){return 1.25;} })();
+let CAD_RENDER_SCALE = (() => { try { const v=Number(localStorage.getItem('acad-render-scale')); return [1,1.25,1.5,2].includes(v)?v:window.ACAD_DISPLAY.defaultScale(); } catch(e){return 1.25;} })();
 window.ACAD_RENDER_QUALITY = {
  get:()=>CAD_RENDER_SCALE,
  set:v=>{ const n=Number(v); if(![1,1.25,1.5,2].includes(n))return false; CAD_RENDER_SCALE=n;
@@ -28053,7 +28074,7 @@ window.ACAD_RASTER=Object.freeze({importFile:cadRasterImport,at:cadRasterAt,simi
 /* ===== ortak 3B görüntüleyici (tuval üzerinde, kütüphanesiz) ===== */
 window.MK3 = (c3, o = {}) => { const x3 = c3.getContext("2d"); const C = { yaw: -0.7, pit: 0.95, z: 1, ex: o.ex ? +o.ex.value || 1 : 1 }; let SC = null;
 function fit3() { if (!SC) return; let R = 1; const all = SC.tris.flatMap(t => t.p); const cx = all.reduce((s, p) => s + p[0], 0) / all.length, cy = all.reduce((s, p) => s + p[1], 0) / all.length; SC.c = [cx, cy]; for (const p of all) R = Math.max(R, Math.hypot(p[0] - cx, p[1] - cy)); SC.R = R; C.z = 1; draw3(); }
-function draw3() { const r = c3.getBoundingClientRect(), D = window.devicePixelRatio || 1; c3.width = Math.max(10, r.width * D); c3.height = Math.max(10, r.height * D); x3.fillStyle = "#1c2127"; x3.fillRect(0, 0, c3.width, c3.height); if (!SC) { x3.fillStyle = "#9fb0c0"; x3.font = `${14 * D}px Arial`; x3.textAlign = "center"; x3.fillText((o.bos || "Satır seç: kazı burada 3B görünür"), c3.width / 2, c3.height / 2); return; }
+function draw3() { const r = c3.getBoundingClientRect(); if (!r.width || !r.height) return; const D = ACAD_DISPLAY.density(r); ACAD_DISPLAY.size(c3, r, D); x3.fillStyle = "#1c2127"; x3.fillRect(0, 0, c3.width, c3.height); if (!SC) { x3.fillStyle = "#9fb0c0"; x3.font = `${14 * D}px Arial`; x3.textAlign = "center"; x3.fillText((o.bos || "Satır seç: kazı burada 3B görünür"), c3.width / 2, c3.height / 2); return; }
   const s = Math.min(c3.width, c3.height) / (2.3 * SC.R) * C.z, cy_ = Math.cos(C.yaw), sy_ = Math.sin(C.yaw), cp = Math.cos(C.pit), sp = Math.sin(C.pit), ex = C.ex, zr = SC.ref;
   const P = q => { const x = q[0] - SC.c[0], y = q[1] - SC.c[1], z = (q[2] - zr) * ex; const xr = x * cy_ - y * sy_, yr = x * sy_ + y * cy_; const y2 = yr * cp - z * sp, d = yr * sp + z * cp; return [c3.width / 2 + xr * s, c3.height / 2 + y2 * s * 1, d]; };
   const L = (() => { const v = [0.4, -0.6, 0.7], n = Math.hypot(...v); return v.map(a => a / n); })();
@@ -28152,7 +28173,7 @@ function show() { if (!RES) return; setTimeout(sahneT, 0); const R = RES.rows, s
   $("bkTab").querySelectorAll("tbody tr").forEach(tr_ => tr_.addEventListener("click", () => { SELB = +tr_.dataset.i; focus(R[SELB]); })); drawB(); }
 // plan
 const cv = $("bkCv"), cx = cv.getContext("2d"); const V = { cx: 0, cy: 0, s: 0 }; let dpr = 1, SELB = -1;
-function rs() { dpr = window.devicePixelRatio || 1; const r = cv.getBoundingClientRect(); cv.width = Math.max(10, r.width * dpr); cv.height = Math.max(10, r.height * dpr); }
+function rs() { const r = cv.getBoundingClientRect(); dpr = ACAD_DISPLAY.density(r); ACAD_DISPLAY.size(cv, r, dpr); }
 const X = x => (x - V.cx) * V.s * dpr + cv.width / 2, Y = y => (V.cy - y) * V.s * dpr + cv.height / 2, WX = x => (x * dpr - cv.width / 2) / (V.s * dpr) + V.cx, WY = y => V.cy - (y * dpr - cv.height / 2) / (V.s * dpr);
 function fit(P) { rs(); const pts = P || (RES ? RES.rows.flatMap(r => r.f) : []); if (!pts.length) return; const [x0, y0, x1, y1] = A.bbox(pts); V.cx = (x0 + x1) / 2; V.cy = (y0 + y1) / 2; V.s = Math.min(cv.width / dpr / ((x1 - x0) || 1), cv.height / dpr / ((y1 - y0) || 1)) * 0.9; drawB(); }
 function focus(r) { fit(r.f.map(p => [p[0], p[1]]).concat([[r.f[0][0] - 30, r.f[0][1] - 30], [r.f[0][0] + 30, r.f[0][1] + 30]])); $("bkSel").innerHTML = `<b>Bina ${esc(r.no || "—")}</b> · alan ${tr(r.A)} m² · arazi ort. ${isFinite(r.za) ? tr(r.za) : "—"} · temel alt ${isFinite(r.zt) ? tr(r.zt) : "—"} · kazı <b>${tr(r.kz)} m³</b> · dolgu ${tr(r.dl)} m³${r.notes.length ? " · " + esc(r.notes.join(", ")) : ""}`; }
@@ -30206,7 +30227,7 @@ D.style.display="none";ciz();})();
  const $=id=>document.getElementById(id);
  const remember=(key,v)=>{try{localStorage.setItem(key,v)}catch(_){}};
  const recall=(key,defaultValue)=>{try{return localStorage.getItem(key)||defaultValue}catch(_){return defaultValue}};
- let scale=Number(recall('acad-module-render-scale','1.25'));
+ let scale=Number(recall('acad-module-render-scale',String(window.ACAD_DISPLAY.defaultScale())));
  if(![1,1.25,1.5,2].includes(scale))scale=1.25;
  window.ACAD_MODULE_SCALE={get:()=>scale,set:n=>{n=Number(n);if(![1,1.25,1.5,2].includes(n))return false;scale=n;remember('acad-module-render-scale',String(n));refresh();return true}};
  const definitions={
