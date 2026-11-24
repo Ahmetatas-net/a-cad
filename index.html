@@ -5426,7 +5426,7 @@ K.parseNCZ = buf => {
     let pos=first;
     while(pos+5<=n&&d[pos]>=0x10&&d[pos]<=0x3f){
       const len=dv.getUint32(pos+1,true);
-      if(len<1||pos+5+len>n)break;
+      if((!len&&d[pos]!==0x1f)||pos+5+len>n)break;
       drawingCount++;pos+=5+len;
     }
     if(drawingCount&&pos===n){start=first;best=drawingCount;}
@@ -5434,25 +5434,45 @@ K.parseNCZ = buf => {
   if(start<0) for (let p = 0; p < n - 8; p++) if (d[p] === 0x15 && [1, 2, 3, 5, 7, 12, 14].includes(d[p + 6]) && (d[p + 5] === 0 || d[p + 5] === d[p + 6])) { const c = walk(p); if (c > best) { best = c; start = p; } }
   const out = { points: [], faces: [], lines: [], polys: [], texts: {}, textList: [], layers: lays, hidden: hid, layerColors: layCol };
   out.nczDiagnostics = { layerTableSource, layerTableFound: lays.length > 0, recordChainFound: start >= 0, recordCount: Math.max(0, best), skippedInvalidRecords: 0, skippedDegenerateFaces: 0, trailerRecords: 0, unmodeledRecords: 0, unmodeledKinds: {}, warning: lays.length ? "" : "NCZ tabaka adları doğrulanamadı; sayısal tabaka kimlikleri kullanılıyor." };
+  // LEX.ST2 version 100 carries the explicit RGB per layer. The classic
+  // palette index remains available for older projects and indexed export.
+  if(layerTableSource==="header-section-06"&&drawingSection>120){
+    for(let off=120;off+5<=drawingSection;){
+      const len=dv.getUint32(off+1,true),payload=off+5,end=payload+len;
+      if(end>drawingSection)break;
+      if(d[off]===0x1c&&len===19+256*lays.length&&d[payload]===7&&
+          dec.decode(d.subarray(payload+1,payload+8))==="LEX.ST2"&&
+          dv.getUint32(payload+11,true)===100&&dv.getUint32(payload+15,true)===lays.length){
+        out.layerRGB=Object.create(null);
+        lays.forEach((name,i)=>{
+          const pos=payload+19+256*i+54;
+          if(d[pos]===1&&d[pos+4]===0)out.layerRGB[name]="#"+[d[pos+1],d[pos+2],d[pos+3]].map(c=>c.toString(16).padStart(2,"0")).join("");
+        });
+        break;
+      }
+      off=end;
+    }
+  }
   if (start < 0) return out;
   // Tabaka indeksi doğrulanamıyorsa kimliği koru; yanlış tabaka adı tahmin etme.
   const usedLayerIds = new Set(), unresolvedLayerIds = new Set();
   const LY = i => { usedLayerIds.add(i); if (lays[i] === undefined) { unresolvedLayerIds.add(i); return String(i); } return lays[i]; };
   /* hat tipi tablosu (bölüm 0x08): nesnenin 27. baytı bu tablodaki sıra */
-  let LTN = []; try { if (d[0] === 1) { const o8 = dv.getUint32(1 + 4 * 4, true); if (o8 > 120 && o8 + 5 < n && d[o8] === 8) { const L8 = dv.getUint32(o8 + 1, true), b8 = o8 + 5; for (let o = b8 + 82; o + 219 <= b8 + L8; o += 219) LTN.push(dec.decode(d.subarray(o + 1, o + 1 + d[o]))); } } } catch (e) { LTN = []; }
+  let LTN = []; try { if (d[0] === 1) { const o8 = dv.getUint32(1 + 4 * 4, true); if (o8 > 120 && o8 + 5 < n && d[o8] === 8) { const L8 = dv.getUint32(o8 + 1, true), b8 = o8 + 5; for (let o = b8 + 82; o + 137 <= b8 + L8; o += 219) LTN.push(dec.decode(d.subarray(o + 1, o + 1 + d[o]))); } } } catch (e) { LTN = []; }
   const LTo = r => { const i = d[r + 27]; return i > 0 && LTN[i] ? LTN[i] : null; };
   const D8 = o => dv.getFloat64(o, true), F4 = o => dv.getFloat32(o, true);
   for (let p = start, k = 0; p + 5 <= n && k < best; k++) {
     const L = dv.getUint32(p + 1, true), r = p + 5; const mk = d[p]; p += 5 + L;
     /* V7098: NCZ içindeki A-CAD'in modelleyemediği ikili kayıtları sessizce atma.
        Bunların yeri/türü raporlanır; bilinmeyen ikili içerik körlemesine yeniden yazılmaz. */
+    if(mk===0x1f&&L===0){out.nczDiagnostics.trailerRecords++;continue;}
     const t = d[r + 1];
     // The standard final 0x0E/81-byte NCZ trailer is a control record,
     // not an omitted CAD object; keep it separate in diagnostics.
     if (k === best - 1 && p === n && mk === 0x15 && L === 0x51 && t === 0x0e && d[r] === 0x0e) {
       out.nczDiagnostics.trailerRecords++; continue;
     }
-    if ((mk !== 0x15 && mk !== 0x16) || L < 0x51 || p > n || ![1,2,3,5,7,12].includes(t)) {
+    if ((mk !== 0x15 && mk !== 0x16) || L < 0x51 || p > n || ![1,2,3,4,5,7,9,12].includes(t)) {
       const key = '0x' + mk.toString(16).padStart(2,'0') + '/tip' + (L > 1 ? t : '?');
       out.nczDiagnostics.unmodeledRecords++;
       out.nczDiagnostics.unmodeledKinds[key] = (out.nczDiagnostics.unmodeledKinds[key] || 0) + 1;
@@ -5462,9 +5482,41 @@ K.parseNCZ = buf => {
     const lay = LY(d[r + 2]); const N = D8(r + 3), E = D8(r + 11), Z = F4(r + 0x13);
     if (!Number.isFinite(N) || !Number.isFinite(E) || !Number.isFinite(Z)) { out.nczDiagnostics.skippedInvalidRecords++; continue; }
     if (t === 5) { out.texts[lay] = (out.texts[lay] || 0) + 1;
-      for (let k = 1; k < 120 && L - 1 - k >= 0x51; k++) if (d[r + L - 1 - k] === k) { const t = { lay, s: dec.decode(d.subarray(r + L - k, r + L)).trim(), e: E, y: N };
-        if (L - 1 - k >= 0x5c) { const h = F4(r + L - k - 12), ro = F4(r + L - k - 8); if (h > 0 && h < 1e4) t.h = h; if (isFinite(ro) && Math.abs(ro) < 100) t.rot = ((ro * 180 / Math.PI) % 360 + 360) % 360; }
-        const zz = F4(r + 0x13); if (isFinite(zz) && Math.abs(zz) > 1e-6 && Math.abs(zz) < 1e5) t.z = zz; out.textList.push(t); break; } }
+      // Native TEXT stores height, rotation, font/style, then a Pascal string.
+      let end=q+92,found=end<r+L&&end+1+d[end]===r+L;
+      if(!found)for(let len=1;len<=255&&r+L-1-len>=q+81;len++){
+        const pos=r+L-1-len;if(d[pos]===len){end=pos;found=true;break;}
+      }
+      if(!found){out.nczDiagnostics.skippedInvalidRecords++;continue;}
+      const text={lay,s:dec.decode(d.subarray(end+1,r+L)),e:E,y:N,z:Z};
+      if(end>=q+92){const h=F4(end-11),rot=F4(end-7);
+        if(h>0&&h<1e4)text.h=h;
+        if(Number.isFinite(rot)&&Math.abs(rot)<100)text.rot=(rot*180/Math.PI%360+360)%360;}
+      out.textList.push(text);
+    }
+    else if(t===4||t===9){
+      const pts=[],bounds=[D8(r+45),D8(r+53),D8(r+61),D8(r+69)];let approx=false;
+      if(t===9&&L>=135+sh&&(L-126-sh)%9===0){
+        pts.push([E,N,Z]);
+        for(let i=q+126;i+8<r+L;i+=9)pts.push([E+F4(i+4),N+F4(i),Z]);
+      }
+      if(t===4&&L===115+sh){
+        const radius=D8(q+81),a=D8(q+99),b=D8(q+107),tau=2*Math.PI;
+        const span=((b-a)%tau+tau)%tau;
+        if(radius>0&&Number.isFinite(radius)&&Number.isFinite(span)&&span>0){
+          const step=2*Math.acos(Math.max(-1,1-.001/radius));
+          const count=Math.max(2,Math.ceil(span/Math.min(step,.15)));
+          if(count<=16384)for(let i=0;i<=count;i++){
+            const angle=a+span*i/count;pts.push([E+radius*Math.cos(angle),N+radius*Math.sin(angle),Z]);}
+        }
+        approx=true;
+      }
+      const box=[Infinity,Infinity,-Infinity,-Infinity];
+      for(const [x,y] of pts){box[0]=Math.min(box[0],y);box[1]=Math.min(box[1],x);box[2]=Math.max(box[2],y);box[3]=Math.max(box[3],x);}
+      if(pts.length>=2&&box.every((a,i)=>Math.abs(a-bounds[i])<.025))
+        out.polys.push({lay,pts,closed:false,lt:LTo(r),curveApprox:approx});
+      else {out.nczDiagnostics.unmodeledRecords++;const key="NCZ-tip"+t;out.nczDiagnostics.unmodeledKinds[key]=(out.nczDiagnostics.unmodeledKinds[key]||0)+1;}
+    }
     else if (t === 1 && L >= 0x52 + sh) { const ln = d[q + 0x51]; if (ln > L - 0x52 - sh || ln > 240) { out.nczDiagnostics.skippedInvalidRecords++; continue; } out.points.push({ lay, n: dec.decode(d.subarray(q + 0x52, q + 0x52 + ln)), e: E, y: N, z: Z }); }
     else if (t === 12 && L >= 0x79 + sh) { const pts = [[E, N, Z], [D8(q + 0x59), D8(q + 0x51), F4(q + 0x61)], [D8(q + 0x6d), D8(q + 0x65), F4(q + 0x75)]]; if (pts.every(v => v.every(Number.isFinite))) { const ux=pts[1][0]-pts[0][0], uy=pts[1][1]-pts[0][1], vx=pts[2][0]-pts[0][0], vy=pts[2][1]-pts[0][1]; if (Math.abs(ux*vy-uy*vx)>1e-12) out.faces.push({ lay, p: pts }); else out.nczDiagnostics.skippedDegenerateFaces++; } else out.nczDiagnostics.skippedInvalidRecords++; }
     else if (t === 3 && L >= 0x59 + sh) { const rr = D8(q + 0x51); if (Number.isFinite(rr) && rr > 0 && rr < 1e5) { const pts = []; for (let i = 0; i <= 24; i++) pts.push([E + rr * Math.cos(i / 12 * Math.PI), N + rr * Math.sin(i / 12 * Math.PI), Z]); (out.circles = out.circles || []).push({ lay, e: E, y: N, r: rr, pts }); } }
@@ -6945,7 +6997,7 @@ if(opt.aplGeometry&&(t==='SPLINE'||t==='ELLIPSE'||t==='HATCH')){
   out.hidden = layoff; out.layers = Object.keys(laycol); out.layerColors = laycol; return out;
 };
 /* NCZ / DXF (K) çıktısını aynı biçime getir */
-A.fromK = D => ({ hidden: D.hidden || [], layers: D.layers || [], layerColors: D.layerColors || {}, circles: (D.circles || []).map(c => ({ lay: String(c.lay), e:c.e, y:c.y, z:c.z??c.pts?.[0]?.[2]??0, r:c.r, pts: c.pts })), lines: D.lines.map(l => ({ lay: String(l.lay), pts: l.pts, ...(l.lt ? {lt:l.lt}: {}) })), polys: D.polys.map(p => ({ lay: String(p.lay), closed: p.closed, pts: p.pts, nativeName:p.nativeName||"", ...(p.lt ? {lt:p.lt}: {}), ...(p.curveApprox ? {curveApprox:true}: {}) })),
+A.fromK = D => ({ layerRGB:D.layerRGB||{}, hidden: D.hidden || [], layers: D.layers || [], layerColors: D.layerColors || {}, circles: (D.circles || []).map(c => ({ lay: String(c.lay), e:c.e, y:c.y, z:c.z??c.pts?.[0]?.[2]??0, r:c.r, pts: c.pts })), lines: D.lines.map(l => ({ lay: String(l.lay), pts: l.pts, ...(l.lt ? {lt:l.lt}: {}) })), polys: D.polys.map(p => ({ lay: String(p.lay), closed: p.closed, pts: p.pts, nativeName:p.nativeName||"", ...(p.lt ? {lt:p.lt}: {}), ...(p.curveApprox ? {curveApprox:true}: {}) })),
   texts: (D.textList || []).map(t => ({ lay: String(t.lay), s: String(t.s), e: t.e, y: t.y, z: t.z??0, h: t.h || 0, rot: t.rot || 0, ...(t.pno ? { pno: true } : {}) })), points: D.points.map(p => ({ lay: String(p.lay), n: p.n, e: p.e, y: p.y, z: p.z })),
   /* V7098: CAD yukleyici ucgenleri yeniden NCZ ayrisitirmadan kullanir. */
   faces: D.faces || [], nczDiagnostics: D.nczDiagnostics || null });
@@ -10873,7 +10925,7 @@ const R={
 let LTN=null;const LTI=(w,n)=>{if(!n||!LTN)return;const i=LTN.indexOf(n);if(i>0){w.b[27]=w.b[28]=i;}};
 let TD=null;async function build(M){const T=await tpl();TD=T;return buildS(M,T);}
 function buildS(M,T){ /* M={layers:[{n,c}], items:[[kind, layerName, ...args]]} */
- const S=secs(T);{const D8=S.find(s=>s.t===8).D,dec=new TextDecoder("windows-1254");LTN=[];for(let o=82;o+219<=D8.length;o+=219)LTN.push(dec.decode(D8.subarray(o+1,o+1+D8[o])));}const _x=0,L=[["0",7]],LI={"0":0};
+ const S=secs(T);{const D8=S.find(s=>s.t===8).D,dec=new TextDecoder("windows-1254");LTN=[];for(let o=82;o+137<=D8.length;o+=219)LTN.push(dec.decode(D8.subarray(o+1,o+1+D8[o])));}const _x=0,L=[["0",7]],LI={"0":0};
  const li=n=>{n=String(n||"0");if(LI[n]===undefined){if(L.length>=250)return 0;LI[n]=L.length;L.push([n,7]);}return LI[n];};
  const hiddenLayers = new Set();
  for(const y of M.layers||[]){li(y.n);L[LI[String(y.n)]][1]=y.c==null?7:y.c;if(y.hidden)hiddenLayers.add(String(y.n));}
@@ -10888,7 +10940,7 @@ function buildS(M,T){ /* M={layers:[{n,c}], items:[[kind, layerName, ...args]]} 
  let bb=[1/0,1/0,-1/0,-1/0];for(const D of recs){const v=new DataView(D.buffer,D.byteOffset);for(let i=0;i<4;i++){const x=v.getFloat64(45+8*i,true);bb[i]=i<2?Math.min(bb[i],x):Math.max(bb[i],x);}}
  if(!recs.length)bb=[0,0,0,0];bb.forEach((x,i)=>dv.setFloat64(49+8*i,x,true));dv.setUint32(81,recs.length,true);
  return out;}
-let LTN0=null;tpl().then(T=>{TD=T;const S=secs(T),D8=S.find(s=>s.t===8).D,dec=new TextDecoder("windows-1254");LTN0=[];for(let o=82;o+219<=D8.length;o+=219)LTN0.push(dec.decode(D8.subarray(o+1,o+1+D8[o])));}).catch(()=>{});
+let LTN0=null;tpl().then(T=>{TD=T;const S=secs(T),D8=S.find(s=>s.t===8).D,dec=new TextDecoder("windows-1254");LTN0=[];for(let o=82;o+137<=D8.length;o+=219)LTN0.push(dec.decode(D8.subarray(o+1,o+1+D8[o])));}).catch(()=>{});
 window.NCZW={build,buildSync:M=>TD?buildS(M,TD):null,ready:()=>!!TD,ltVar:n=>!!(LTN0&&LTN0.indexOf(n)>0)};
 })();
 
@@ -12698,6 +12750,7 @@ if (typeof window !== "undefined") window.HHK = HHK;
   // Uygulamanin kadastro/DSI tematik cizgi kalinliklari kullanilabilir; renk kaynagi degismez.
   const hhHidden=lay=>!!(D?.hiddenSet?.has?.(lay));
   const HHSTYLE=lay=>{const basic=STY(lay),aci=D?.layerColors?.[lay];
+    if(D?.nativeColors&&D.layerRGB?.[lay])return {...basic,c:D.layerRGB[lay],f:null};
     if(!D?.nativeColors || !Number.isInteger(aci) || aci<1 || aci>255)return basic;
     return {...basic,c:K.aciHex(aci),f:null};};
 
@@ -12727,7 +12780,7 @@ if (typeof window !== "undefined") window.HHK = HHK;
         sourcePointCount:R.points.length,sourceLineCount:(R.polys?.length||0)+(R.lines?.length||0),sourceTextCount:(R.textList||[]).length,
         pl: [...R.polys, ...R.lines.map(l => ({ lay: l.lay, closed: false, pts: l.pts, ...(l.lt?{lt:l.lt}:{}) }))].filter(l => l.pts.length && l.pts.every(q => okXY(q[0], q[1]))), tx: (R.textList || []).filter(t => okXY(t.e, t.y)),
         faces: (R.faces||[]).filter(f=>f.p?.length>=3&&f.p.every(q=>okXY(q[0],q[1]))), layers: R.layers || [], hidden: R.hidden || [],hiddenSet:new Set(R.hidden||[]),
-        layerColors: R.layerColors || {},nativeColors:/\.(zip|ncz)$/i.test(nm) && !!Object.keys(R.layerColors||{}).length,
+        layerColors: R.layerColors || {},layerRGB:R.layerRGB||{},nativeColors:/\.(zip|ncz)$/i.test(nm) && !!Object.keys(R.layerColors||{}).length,
         nczDiagnostics:R.nczDiagnostics||null };
       D.zeroRemoved=R.points.length-D.pts.length+R.polys.length+R.lines.length-D.pl.length+(R.textList||[]).length-D.tx.length+(R.faces||[]).length-D.faces.length;
       M = null; EG = null; PF = []; QC = null; info(); fit(); draw();
@@ -19427,11 +19480,12 @@ function draw() { liveTick(); if(CAD_RESIZE_DIRTY){
     return Math.min(1, 0.65 + Math.min((width-54)/150, (height-20)/58)*0.35);
   }
   const acadAreaLabels=[],acadPlainAreaNames=[];
+  const nativeArea=e=>e.nczSourceBoundary&&window.ACAD_NATIVE_COLOR_VIEW!==false&&!e.areaHatch&&!e.showFrontages;
   // Batch solid road coverage, then draw the survey boundary lines above it.
   if(showAreaHatch()){
     const roadPath=new Path2D(), parcelsPath=new Path2D(), parksPath=new Path2D();
     for(const item of visibleEntities){
-      if(!lays[item.lay]?.on)continue;
+      if(!lays[item.lay]?.on||nativeArea(item))continue;
       const park=item.closed&&/(?:^|[_ -])PARK(?:$|[_ -])/.test(roadLayerName(item.lay));
       const target=item.roadArea?roadPath:item.t==="pline"&&roadParcel(item)?parcelsPath:park?parksPath:null;
       if(!target)continue;
@@ -19443,7 +19497,7 @@ function draw() { liveTick(); if(CAD_RESIZE_DIRTY){
     cx.save();cx.fillStyle='rgba(48,153,228,.63)';cx.fill(roadPath);cx.fillStyle='rgba(225,170,67,.26)';cx.fill(parcelsPath);cx.fillStyle="rgba(61,161,115,.34)";cx.fill(parksPath);cx.restore();
   }
 
-  for(const e of visibleEntities){if(e.roadArea||e.roadBorder||e.t!=='pline'||!e.closed||e.pts?.length<3||!lays[e.lay]?.on)continue;const parcel=roadParcel(e);const _alanK=!!(e.areaHatch||/^ALAN_CEVIR(?:$|_)/i.test(e.lay));if(!_alanK&&e.id!==ALAN_AKTIF&&!e.areaName)continue;
+  for(const e of visibleEntities){if(e.roadArea||e.roadBorder||e.t!=='pline'||!e.closed||e.pts?.length<3||!lays[e.lay]?.on)continue;const parcel=roadParcel(e);const _alanK=!!(e.areaHatch||/^ALAN_CEVIR(?:$|_)/i.test(e.lay));if(!_alanK&&e.id!==ALAN_AKTIF&&(nativeArea(e)||!e.areaName))continue;
     const b=ebb(e);if(b&&(b[2]<vx0||b[0]>vx1||b[3]<vy0||b[1]>vy1))continue;
     // When editing the same polygon, the moving geometry gets the visible preview instead.
     if(AREA_EDIT_SESSION?.id===e.id&&cmd?.name==='Alan Düzelt'&&(cmd.preview?.parts?.length||cmd._liveOn))continue;
@@ -19875,11 +19929,50 @@ function frontageRoadFaces(banks, parcels, labels) {
   }
   return faces.map((pts,i)=>({id:'frontage-'+i,pts,ring:true}));
 }
+// Surveyed estate roads can lie entirely within a cadastral parcel.
+// Only explicit road geometry (closed polygon or a complete cycle of
+// same-layer endpoints) establishes a road there. Keep physical islands.
+function surveyedRoadLoops(roads){
+  const G=window.ACAD_ROAD_AREA,groups=new Map(),rings=[],used=new Set();
+  const key=p=>Math.round(p[0]*10000)+','+Math.round(p[1]*10000);
+  function accept(pts,ids){
+    const ring=G.clean(pts);
+    if(ring.length<3||G.validate(ring))return;
+    rings.push({id:ids[0],pts:ring,ring:true});ids.forEach(id=>used.add(id));
+  }
+  for(const r of roads){
+    if(!r.namedRoad)continue;
+    if(r.ring){accept(r.pts,[r.id]);continue;}
+    if(!groups.has(r.layerName))groups.set(r.layerName,[]);
+    groups.get(r.layerName).push(r);
+  }
+  for(const group of groups.values()){
+    const adj=new Map(),seen=new Set();
+    for(const r of group)for(const pt of [r.pts[0],r.pts.at(-1)]){
+      const k=key(pt);if(!adj.has(k))adj.set(k,[]);adj.get(k).push(r);
+    }
+    for(const start of group){
+      if(seen.has(start))continue;
+      let cur=start,pt=start.pts[0];const origin=key(pt),chain=[],ids=[];
+      while(!seen.has(cur)){
+        seen.add(cur);ids.push(cur.id);
+        const coords=key(cur.pts[0])===key(pt)?cur.pts:cur.pts.slice().reverse();
+        if(dist(coords[0],pt)>.0001)break;
+        for(let i=chain.length?1:0;i<coords.length;i++)chain.push(coords[i]);
+        pt=coords.at(-1);
+        if(key(pt)===origin&&dist(pt,chain[0])<=.0001){chain.pop();accept(chain,ids);break;}
+        const next=adj.get(key(pt));if(next.length!==2)break;
+        cur=next[0]===cur?next[1]:next[0];
+      }
+    }
+  }
+  return {rings,used};
+}
 function roadNetworkInput(customLayers=new Set(), boundaryLayers=new Set(), closedRoads=new Set(), pick=null) {
   const G=window.ACAD_ROAD_AREA, roads=[], blocks=[], parcels=[], islands=[];
   for(const e of ents) {
     if(e.roadArea||e.roadBorder||!["line","pline"].includes(e.t)||e.pts?.length<2)continue;
-    if(lays[e.lay]?.on&&((customLayers.size||boundaryLayers.size||closedRoads.size)?(customLayers.has(e.lay)&&!e.closed||closedRoads.has(e.id)):roadSource(e))){const pts=G.clean(e.pts);if(pts.length>=2)roads.push({id:e.id,pts,ring:e.closed&&pts.length>=3});}
+    if(lays[e.lay]?.on&&((customLayers.size||boundaryLayers.size||closedRoads.size)?(customLayers.has(e.lay)&&!e.closed||closedRoads.has(e.id)):roadSource(e))){const pts=G.clean(e.pts);if(pts.length>=2)roads.push({id:e.id,pts,ring:e.closed&&pts.length>=3,namedRoad:roadSource(e),layerName:e.lay});}
     if(closedRoads.has(e.id))continue;
     if(boundaryLayers.has(e.lay)&&e.closed)blocks.push(e);
     else if(roadBlock(e))blocks.push(e);
@@ -19896,6 +19989,12 @@ function roadNetworkInput(customLayers=new Set(), boundaryLayers=new Set(), clos
     const ring=G.clean(item.pts);
     if(ring.length>=3)exclusions.push(ring);
   }
+  const loops=roads.length&&boundaries.length?surveyedRoadLoops(roads):{rings:[],used:new Set()};
+  const exactObstacles=loops.rings.length?islands.map(e=>G.clean(e.pts)).filter(r=>r.length>=3):[];
+  if(pick&&loops.rings.some(r=>G.inside(r.pts,pick)))
+    return {roads:loops.rings,measuredOnly:true,exclusions:exactObstacles,cadastral:false,hint:null};
+  const attachLoops=input=>!pick&&loops.rings.length?{...input,sourceLoops:loops.rings,
+      sourceLoopIds:[...loops.used],loopObstacles:exactObstacles}:input;
   const large=ents.length>=16000, wholeCadastre=cadastral&&boundaries.length>12;
   if(!closedRoads.size&&!boundaryLayers.size&&(large?pick&&!wholeCadastre:parcels.length||!roads.length||customLayers.size)){
     const labels=(large?[]:ents).filter(e=>e.t==="text"&&lays[e.lay]?.on&&/^(?:(?:TOPRAK|ASFALT|STABILIZE|IMAR) )?YOL$/.test(roadLayerName(e.s).trim())).map(e=>e.pts[0]);
@@ -19914,7 +20013,7 @@ function roadNetworkInput(customLayers=new Set(), boundaryLayers=new Set(), clos
       const missing=seeds.filter(p=>!exclusions.some(r=>G.inside(r,p))&&!faces.some(f=>G.inside(f.pts,p)));
       if(missing.length&&missing.length<=200)faces.push(...measuredRoadStrip(banks,missing));
       if(faces.length||!roads.length&&parcels.length&&labels.length)
-        return {roads:faces,exclusions,cadastral:false,frontage:true,hint:null};
+        return attachLoops({roads:faces,exclusions,cadastral:false,frontage:true,hint:null});
     }
   }
   if(cadastral&&!customLayers.size)for(const e of boundaries){
@@ -19953,7 +20052,7 @@ function roadNetworkInput(customLayers=new Set(), boundaryLayers=new Set(), clos
       }
     }
   }
-  return {roads,exclusions,cadastral,hint};
+  return attachLoops({roads,exclusions,cadastral,hint});
 }
 function roadNetworkWork(input, owner, progress) {
   const engine=$("acadRoadNetWorker").textContent;
@@ -20033,10 +20132,10 @@ function roadNetworkCommand() {
     const cached=sameSource&&(roadNetworkCache.pointKey===pointKey||roadNetworkCache.input.cadastral&&ents.length>=16000)?roadNetworkCache:null;
     const input=cached?.input||roadNetworkInput(customLayers,boundaryLayers,closedRoads,p);
     if(p&&input.exclusions.some(r=>window.ACAD_ROAD_AREA.inside(r,p)))return say("Ada, parsel veya yapı içinde seçim. Yolun içine dokun.",true);
-    if(input.frontage&&!input.roads.length)return say("Bu konumda iki yol kenarı doğrulanamadı. Karşı kenarı kontrol et.",true);
+    if(input.frontage&&!input.roads.length&&!input.sourceLoops?.length)return say("Bu konumda iki yol kenarı doğrulanamadı. Karşı kenarı kontrol et.",true);
     if(!refresh&&input.frontage&&ents.some(e=>e.roadArea&&e.roadKey&&e.lay===ROAD_NETWORK_LAYER&&e.roadNetworkVersion!==4))
       return say("Eski yol dolgusu çizimde. Ölçülü kenarlardan yeniden oluşturmak için Yenile’ye dokun.",true);
-    if(!input.roads.length){picking="road";prompt_("Yol kenarını seç");return say("Yol sınırına dokun. Kadastro çizgileri için Ada/parsel tabakasını seç.",true);}
+    if(!input.roads.length&&!input.sourceLoops?.length){picking="road";prompt_("Yol kenarını seç");return say("Yol sınırına dokun. Kadastro çizgileri için Ada/parsel tabakasını seç.",true);}
 
     active={};
     say(input.cadastral?"Ada kenarları taranıyor…":"Bağlı yol kenarları taranıyor…");
@@ -22444,11 +22543,14 @@ function renderLays() { const el = $("cadLays"); const cnt = {}, tip = {}; ents.
   const row = (n, L, ic) => `<div class="kat${n === cur ? " gecerli" : ""}" data-ad="${esc_(n.toLocaleLowerCase("tr-TR"))}" style="grid-template-columns:auto auto 1fr auto${ic ? ";margin-left:14px;border-left:2px solid #444;padding-left:6px" : ""}"><input type="checkbox" ${L.on ? "checked" : ""} data-lo="${esc_(n)}" title="Aç / kapat"><input type="color" value="${L.c}" data-lc="${esc_(n)}" title="Renk" style="width:22px;height:20px;padding:0;border:none"><span class="nm" data-lk="${esc_(n)}" title="Tıkla: bu tabakada çiz (geçerli yap)" style="cursor:pointer">${n === cur ? "● " : ""}${esc_(n)}${L.lt ? ` <span class="note">┅ ${esc_(L.lt)}</span>` : ""} <span class="note">(${cnt[n] || 0})</span></span><button type="button" class="katay" data-lt="${esc_(n)}" title="Tabaka işlemleri: ad, yazı boyu, çizgi tipi, seç, taşı, sil…" style="padding:1px 7px;font-size:.8rem">⚙</button></div>`;
   const fl = FLAY(), G = new Map(); for (const n of Object.keys(lays)) { const g = layGrp(n, tip[n], fl); if (!G.has(g)) G.set(g, []); G.get(g).push(n); }
   let h = ""; const q_ = LAYARA.toLocaleLowerCase("tr-TR").trim(); if (q_) { for (const n of Object.keys(lays).filter(n => n.toLocaleLowerCase("tr-TR").includes(q_)).sort((a, b) => a.localeCompare(b, "tr"))) h += row(n, lays[n], false); if (!h) h = `<div class="note" style="padding:6px">Eşleşen tabaka yok</div>`; }
+  else if(CDOC.fmt==="ncz"&&window.ACAD_NATIVE_COLOR_VIEW!==false&&!CDOC.nczCombined&&!Object.values(lays).some(l=>l.grp)){
+    for(const n of Object.keys(lays).sort((a,b)=>(lays[a].nczOrder??Infinity)-(lays[b].nczOrder??Infinity)))h+=row(n,lays[n],false);
+  }
   else for (const [g, L] of [...G].sort((a, b) => a[0].localeCompare(b[0], "tr"))) { if (L.length === 1 && !lays[L[0]].grp) { h += row(L[0], lays[L[0]], false); continue; }
     const acik = GOPEN.has(g), hepsi = L.every(n => lays[n].on), biri = L.some(n => lays[n].on), top = L.reduce((s, n) => s + (cnt[n] || 0), 0);
     h += `<div class="kat" style="grid-template-columns:auto auto 1fr auto;background:rgba(255,255,255,.04);border-radius:6px"><button type="button" data-gx="${esc_(g)}" style="padding:2px 8px;font-size:.9rem;min-width:30px">${acik ? "▾" : "▸"}</button><input type="checkbox" ${hepsi ? "checked" : ""} data-go="${esc_(g)}" ${!hepsi && biri ? 'data-yari="1"' : ""}><span class="nm" data-gx="${esc_(g)}" style="cursor:pointer"><b>${esc_(g)}</b> <span class="note">(${L.length} tabaka · ${top})</span></span><button type="button" data-gt="${esc_(g)}" title="Gruptaki tüm tabakalara toplu işlem" style="padding:4px 8px;font-size:.85rem">⚙</button></div>`;
     if (acik) for (const n of L.sort((a, b) => a.localeCompare(b, "tr"))) h += row(n, lays[n], true); }
-  const sourceHead=CDOC.fmt==='ncz'?`<div class="cad-native-source" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:6px 7px;margin-bottom:5px;border:1px solid #425465;border-radius:7px;background:#182632;color:#dce7f0;font-size:12px"><span>NCZ · ${Object.keys(lays).length} tabaka</span><button type="button" id="cadNativeColors" style="font-size:12px;padding:5px 8px">${window.ACAD_NATIVE_COLOR_VIEW!==false?'✓ Orijinal renkler':'◯ Yumuşak renkler'}</button><span>${Number(CDOC.nczUnmodeledRecords||0)?Number(CDOC.nczUnmodeledRecords).toLocaleString('tr-TR')+' özel kayıt: özgün dosya korunmalı':'Kaynak tabakalar korunuyor'}</span></div>`:'';
+  const sourceHead=CDOC.fmt==='ncz'?`<div class="cad-native-source" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:6px 7px;margin-bottom:5px;border:1px solid #425465;border-radius:7px;background:#182632;color:#dce7f0;font-size:12px"><span>NCZ · ${Object.keys(lays).length} tabaka</span><button type="button" id="cadNativeColors" title="Kaynak tabaka renkleri ve sırası ile A-CAD alan taramaları arasında geçiş" style="font-size:12px;padding:5px 8px">${window.ACAD_NATIVE_COLOR_VIEW!==false?'✓ Netcad görünümü':'◯ A‑CAD görünümü'}</button><span>${Number(CDOC.nczUnmodeledRecords||0)?Number(CDOC.nczUnmodeledRecords).toLocaleString('tr-TR')+' özel kayıt · '+(CDOC.nczUnmodeledKinds?.['0x15/tip6']?Number(CDOC.nczUnmodeledKinds['0x15/tip6']).toLocaleString('tr-TR')+' kütüphane sembolü · ':'')+'özgün dosya korunmalı':'Kaynak tabakalar korunuyor'}</span></div>`:'';
   el.innerHTML = sourceHead+`<input id="cadLayAra" placeholder="🔍 tabaka ara…" value="${esc_(LAYARA)}" style="width:100%;box-sizing:border-box;margin:0 0 4px;padding:4px 8px;font-size:.8rem">` + h; el.querySelectorAll("[data-yari]").forEach(i => i.indeterminate = true);
   { const b=document.getElementById('cadNativeColors');if(b)b.addEventListener('click',()=>{window.ACAD_NATIVE_COLOR_VIEW=!(window.ACAD_NATIVE_COLOR_VIEW!==false);RK.clear();draw();renderLays();}); }
   { const ara = $("cadLayAra"); ara.addEventListener("input", () => { LAYARA = ara.value; const k = ara.selectionStart; renderLays(); const n = $("cadLayAra"); n.focus(); try { n.setSelectionRange(k, k); } catch (e) { } }); ara.addEventListener("keydown", ev => ev.stopPropagation()); }
@@ -23184,15 +23286,29 @@ async function loadFile(f, append, opt) {
         if ((yerel || ara > Math.max(2000, 20 * boy)) && ((opt && opt.mimari) || confirm("DİKKAT: Eklenen çizimin koordinatları mevcut projeden çok uzakta veya farklı sistemde.\\n\\nTAMAM: Görsel karşılaştırma için çizimi taşı (gerçek koordinatlar değişir).\\nİPTAL: Orijinal koordinatları koru (önerilen)."))) { /* mimari proje koordinatsızdır: sormadan projenin yanına konur, oturtma şekilden yapılır */ const dx = ax[2] + Math.max(10, (ax[2] - ax[0]) * 0.15) - bx[0], dy = ax[1] - bx[1]; KAY = [dx, dy]; const m = p => { p[0] += dx; p[1] += dy; };
           D.lines.forEach(l => l.pts.forEach(m)); D.polys.forEach(l => l.pts.forEach(m)); (D.circles || []).forEach(l => l.pts.forEach(m)); D.points.forEach(p => { p.e += dx; p.y += dy; }); D.texts.forEach(t => { if (t.e) { t.e += dx; t.y += dy; } }); } } } if (!append) { snap0(); ents = []; lays = { "0": { c: "#ffffff", on: true } }; sel.clear(); }
     if (!append) FACES = [];
+    const base = f.name.replace(/\.[^.]+$/, ""); let n = 0; const id0 = nid, ESKI = new Set(append ? Object.keys(lays) : []), YC = ["#ff40ff", "#00e0ff", "#ffd000", "#ff8040"], yc = YC[(Object.keys(lays).filter(k => k.includes("~")).length) % YC.length];
+    /* eklenen dosyada çizimde zaten olan tabaka adı varsa ayrı tabakaya (AD~dosya) ve ayrı renge: eski ile yeni karışmasın, fark görülsün */
+    const importLayers=new Map();
+    const L = l => { let t = l == null || l === "" ? base : String(l);
+      if(importLayers.has(t))return importLayers.get(t);
+      const sourceName=t;
+      const srcColor=D.layerColors?.[t]; const srcHex=Number.isInteger(srcColor)&&srcColor>0?K.aciHex(srcColor):null;
+      if (append && ESKI.has(t)) {
+        const stem=t+"~"+base;let suffix=2;t=stem;
+        while(lays[t])t=stem+"~"+suffix++;
+        t=layer(t,D.layerRGB?.[sourceName]||srcHex||yc);
+      }
+      else t=layer(t,srcHex || undefined);
+      importLayers.set(sourceName,t);return t; };
     /* V7097: Gerçek NCZ projelerindeki boş tabakalar da proje yapısının parçasıdır. */
     if (Array.isArray(D.layers)) for (const importedLayer of D.layers) {
       const l = String(importedLayer ?? '').trim();
-      if (l) layer(l);
+      if (l) L(l);
     }
     let nf = 0; try { let FF = []; if (D.faces) FF = D.faces; else if (/\.ncz$/i.test(f.name)) FF = K.parseNCZ(new Uint8Array(await f.arrayBuffer())).faces || []; else if (/\.dxf$/i.test(f.name)) { const tx = await f.text(); if (tx.includes("3DFACE")) FF = K.parseDXF(tx).faces || []; }
-      for (const fc of FF) { const l = fc.lay == null || fc.lay === "" ? f.name.replace(/\.[^.]+$/, "") : String(fc.lay); layer(l);
+      for (const fc of FF) { const l = fc.lay == null || fc.lay === "" ? f.name.replace(/\.[^.]+$/, "") : String(fc.lay);
         /* Kaynak diziler sahiplenilir, ayni 3B nokta alt dizileri iki kez kopyalanmaz. */
-        FACES.push({ lay: l, p: KAY ? fc.p.map(q => [q[0] + KAY[0], q[1] + KAY[1], q[2]]) : fc.p }); nf++; } } catch (er) { console.error(er); throw new Error('Üçgen/TIN yüklenemedi: '+(er.message||er)); }
+        FACES.push({ lay: L(l), p: KAY ? fc.p.map(q => [q[0] + KAY[0], q[1] + KAY[1], q[2]]) : fc.p }); nf++; } } catch (er) { console.error(er); throw new Error('Üçgen/TIN yüklenemedi: '+(er.message||er)); }
     if (!append || !CDOC.name) {
       const isNCZ = /\.ncz$/i.test(f.name), isSourceCAD = /\.(ncz|dxf)$/i.test(f.name);
       const dia = D.nczDiagnostics || {};
@@ -23209,18 +23325,8 @@ async function loadFile(f, append, opt) {
       CDOC.nczUnmodeledRecords = Number(CDOC.nczUnmodeledRecords||0) + Number(D.nczDiagnostics?.unmodeledRecords||0);
     }
     if (!append) { DIRTY = zeroWork.removed>0;window.ACAD_NATIVE_COLOR_VIEW=true; } else DIRTY = true;
-    const base = f.name.replace(/\.[^.]+$/, ""); let n = 0; const id0 = nid, ESKI = new Set(append ? ents.map(e => e.lay) : []), YC = ["#ff40ff", "#00e0ff", "#ffd000", "#ff8040"], yc = YC[(Object.keys(lays).filter(k => k.includes("~")).length) % YC.length];
-    /* eklenen dosyada çizimde zaten olan tabaka adı varsa ayrı tabakaya (AD~dosya) ve ayrı renge: eski ile yeni karışmasın, fark görülsün */
-    const importLayers=new Map();
-    const L = l => { let t = l == null || l === "" ? base : String(l);
-      if(importLayers.has(t))return importLayers.get(t);
-      const sourceName=t;
-      const srcColor=D.layerColors?.[t]; const srcHex=Number.isInteger(srcColor)&&srcColor>0?K.aciHex(srcColor):null;
-      if (append && ESKI.has(t)) { t = t + "~" + base; t=layer(t, srcHex || yc); }
-      else t=layer(t,srcHex || undefined);
-      importLayers.set(sourceName,t);return t; };
     D.lines.forEach(l => { add({ t: "line", pts: l.pts.map(p => [p[0], p[1], p[2] || 0]), lay: L(l.lay), ...(l.lt ? { lt: l.lt } : {}) }); n++; });
-    D.polys.forEach(p => { const P_ = p.pts, kp = !!p.closed && /\.ncz$/i.test(f.name) && P_.length >= 3 && (Math.abs(P_[0][0] - P_[P_.length - 1][0]) > 1e-9 || Math.abs(P_[0][1] - P_[P_.length - 1][1]) > 1e-9); add({ t: "pline", pts: P_.map(q => [q[0], q[1], q[2] || 0]), closed: !!p.closed, lay: L(p.lay), ...(p.lt ? { lt: p.lt } : {}), ...(kp ? { nczKapanisYok: 1 } : {}), ...(p.nativeName ? {n:p.nativeName,...(p.closed?{areaName:p.nativeName}:{})} : {}), ...(p.curveApprox || p.arc || p.ellipseApprox ? {sourceCurveApprox:true} : {}) }); n++; });
+    D.polys.forEach(p => { const P_ = p.pts, nczBoundary=!!p.closed&&/\.ncz$/i.test(f.name), kp = nczBoundary && P_.length >= 3 && (Math.abs(P_[0][0] - P_[P_.length - 1][0]) > 1e-9 || Math.abs(P_[0][1] - P_[P_.length - 1][1]) > 1e-9); add({ t: "pline", pts: P_.map(q => [q[0], q[1], q[2] || 0]), closed: !!p.closed, lay: L(p.lay), ...(p.lt ? { lt: p.lt } : {}), ...(nczBoundary?{nczSourceBoundary:true}:{}), ...(kp ? { nczKapanisYok: 1 } : {}), ...(p.nativeName ? {n:p.nativeName,...(p.closed?{areaName:p.nativeName}:{})} : {}), ...(p.curveApprox || p.arc || p.ellipseApprox ? {sourceCurveApprox:true} : {}) }); n++; });
     (D.circles || []).forEach(c => {
       if(Number.isFinite(c.e)&&Number.isFinite(c.y)&&Number.isFinite(c.r)&&c.r>0)
         add({t:'circle',c:[c.e,c.y,c.z??0],r:c.r,lay:L(c.lay)});
@@ -23251,7 +23357,12 @@ async function loadFile(f, append, opt) {
     D.points.forEach(p => { const e_ = add({ t: "point", n: p.n || matchedPointNames.get(p) || "", pts: [[p.e, p.y, p.z==null||p.z===''||!Number.isFinite(Number(p.z))?null:Number(p.z)]], lay: L(p.lay) }); if (p.kod) e_.kod = p.kod; n++; });
     D.texts.filter(t => !usedNameLabels.has(t) && Number.isFinite(Number(t.e)) && Number.isFinite(Number(t.y)) && t.s).forEach(t => { const o = { t: "text", s: t.s, h: t.h || 1, pts: [[t.e, t.y, Number.isFinite(Number(t.z)) ? Number(t.z) : 0]], lay: L(t.lay) }; if (t.rot) o.rot = t.rot; if (t.al && t.al !== "l") o.al = t.al; add(o); n++; });
     const zeroRemoved=zeroWork.removed-zeroWork.faces,zeroFaces=zeroWork.faces,zeroInvalid=zeroWork.removed;
-    const off = (D.hidden || []).filter(l => !!lays[l]); off.forEach(l => lays[l].on = false); if (D.layerColors && K.aciHex) for (const [l, c] of Object.entries(D.layerColors)) if (lays[l] && c >= 0 && c < 256) { lays[l].aci = c; if (c > 0) lays[l].c = c === 7 ? "#ffffff" : K.aciHex(c); } /* NCZ tabaka renkleri korunur */ let FARK = ""; if (append && !KAY) try { FARK = farkAnaliz(id0); } catch (er) { console.error(er); } IDX = null; renderLays(); zoomAll(); if(!opt?.preparsedData)persist();
+    const off=(D.hidden||[]).map(l=>importLayers.get(l)).filter(l=>lays[l]);off.forEach(l=>lays[l].on=false);
+    for(const [name,c] of Object.entries(D.layerColors||{})){
+      const lay=lays[importLayers.get(name)];if(!lay||!Number.isInteger(c)||c<0||c>255)continue;
+      lay.aci=c;if(D.layerRGB?.[name])lay.c=D.layerRGB[name];else if(c>0)lay.c=K.aciHex(c);
+    }
+    if(/\.ncz$/i.test(f.name))D.layers.forEach((name,i)=>{const lay=lays[importLayers.get(name)];if(lay)lay.nczOrder=i;}); /* NCZ tabaka renkleri korunur */ let FARK = ""; if (append && !KAY) try { FARK = farkAnaliz(id0); } catch (er) { console.error(er); } IDX = null; renderLays(); zoomAll(); if(!opt?.preparsedData)persist();
     /* Mobilde dosya seçicinin kapanması ve CAD panelinin boyutlanması sonrasında tekrar sığdır. */
     const fitW=cv.width,fitH=cv.height;
     if (!append) requestAnimationFrame(() => requestAnimationFrame(() => {
@@ -45490,6 +45601,13 @@ THIS SOFTWARE.
 
 
 function buildRoadNetwork(input, phase=()=>{}) {
+  if(input.sourceLoops?.length){
+    const exact=buildRoadNetwork({roads:input.sourceLoops,measuredOnly:true,exclusions:input.loopObstacles,cadastral:false},phase);
+    const used=new Set(input.sourceLoopIds);
+    const rest=buildRoadNetwork({...input,sourceLoops:null,roads:input.roads.filter(r=>!used.has(r.id)),
+      exclusions:input.exclusions.concat(input.sourceLoops.map(r=>r.pts))},phase);
+    return {networks:exact.networks.concat(rest.networks),unused:rest.unused};
+  }
   const { roads, exclusions, cadastral, hint } = input;
   if (!roads.length) return { networks: [], unused: 0 };
   const origin = roads[0].pts[0], cellSize = 32, maxWidth = 38;
@@ -45766,7 +45884,7 @@ function buildRoadNetwork(input, phase=()=>{}) {
   const joined=open.length ? offset(offset(open,radius),-radius) : [];
   const initial=paths(clip([...open,...joined,...known],[],C.ClipType.ctUnion));
   phase("Kavşaklar ve kesintiler çözümleniyor…");
-  const links=input.frontage?[]:cadastral?bankLinks(initial):surveyedLinks(initial);
+  const links=input.frontage||input.measuredOnly?[]:cadastral?bankLinks(initial):surveyedLinks(initial);
   const openJoined=paths(clip([...open,...joined,...links],[],C.ClipType.ctUnion));
   phase("Yol dışındaki alanlar ayrılıyor…");
   const protectedPaths=exclusions.length?paths(clip(exclusions.map(r=>path(r.map(local))),[],C.ClipType.ctUnion)):[];
