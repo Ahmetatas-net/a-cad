@@ -24944,7 +24944,7 @@ CMDS.GORUNUM3B = () => {
       if(!ready())return say('3B görüntüleyici yüklenemedi.',true);
     }
   }
-  const T=window.THREE, groups=new Map(), bounds=new T.Box3(),v=new T.Vector3();
+  const T=window.THREE, groups=new Map(), labels=[], bounds=new T.Box3(),v=new T.Vector3();
   function put(layer,type,pts){
     if(!pts.every(p=>p && Number.isFinite(p[0]) && Number.isFinite(p[1]) && Number.isFinite(p[2]??0)))return;
     const key=type+'|'+layer;
@@ -24956,6 +24956,10 @@ CMDS.GORUNUM3B = () => {
   for(const e of ents){
     if(!lays[e.lay]?.on)continue;
     const p=e.pts||[];
+    if(e.t==='text' && e.s && p[0] && (/(B[Iİ]NA|BLOK|BUILDING)/i.test(e.lay)||/^(?:B|BL|BLOK)[ -]?\d+(?:[-/][A-Z]?\d+)*$/i.test(String(e.s).trim())))labels.push({p:p[0],s:e.s});
+    if(e.closed && e.areaName && p.length && /B[Iİ]NA|BLOK/i.test(e.lay)){
+      const center=p.reduce((acc,q)=>[acc[0]+q[0]/p.length,acc[1]+q[1]/p.length,acc[2]+(q[2]||0)/p.length],[0,0,0]);labels.push({p:center,s:e.areaName});
+    }
     if(e.t==='point' || e.t==='text'){if(p.length)put(e.lay,'point',[p[0]]);}
     else if(e.t==='line'||e.t==='pline'){
       for(let i=1;i<p.length;i++)put(e.lay,'line',[p[i-1],p[i]]);
@@ -24990,7 +24994,23 @@ CMDS.GORUNUM3B = () => {
   }
   groups.clear();scene.add(new T.AmbientLight(0xffffff,.62));const light=new T.DirectionalLight(0xffffff,.88);light.position.set(-1,-2,3);scene.add(light);
   const marker=new T.Points(new T.BufferGeometry().setAttribute('position',new T.Float32BufferAttribute([0,0,0],3)),new T.PointsMaterial({color:0xffce42,size:10,sizeAttenuation:false,depthTest:false}));marker.visible=false;marker.renderOrder=2;scene.add(marker);
-  const render=()=>renderer.render(scene,cam);
+  const overlay=document.createElement('canvas');overlay.style.cssText='position:absolute;inset:0;width:100%;height:100%;pointer-events:none';stage.appendChild(overlay);
+  const pen=overlay.getContext('2d');
+  function render(){
+    renderer.render(scene,cam);
+    const width=stage.clientWidth,height=stage.clientHeight,ratio=renderer.getPixelRatio();
+    if(overlay.width!==Math.round(width*ratio)||overlay.height!==Math.round(height*ratio)){overlay.width=Math.round(width*ratio);overlay.height=Math.round(height*ratio);}
+    pen.setTransform(ratio,0,0,ratio,0,0);pen.clearRect(0,0,width,height);
+    pen.font='600 12px system-ui';pen.textAlign='center';pen.lineWidth=3;pen.strokeStyle='#162632';pen.fillStyle='#fff19d';
+    const used=new Set();
+    for(const {p,s} of labels){
+      v.set(p[0]-origin.x,p[1]-origin.y,(p[2]??0)-origin.z).project(cam);
+      if(Math.abs(v.x)>1||Math.abs(v.y)>1||Math.abs(v.z)>1)continue;
+      const x=(v.x+1)*width/2,y=(1-v.y)*height/2,key=Math.floor(x/40)+'/'+Math.floor(y/15);
+      if(used.has(key))continue;
+      used.add(key);pen.strokeText(s,x,y);pen.fillText(s,x,y);
+    }
+  }
   function size(){cam.aspect=Math.max(1,stage.clientWidth)/Math.max(1,stage.clientHeight);renderer.setSize(stage.clientWidth,stage.clientHeight,false);cam.updateProjectionMatrix();render();}
   function fit(){orbit.target.set(0,0,0);const fov=Math.atan(Math.tan(cam.fov*Math.PI/360)*Math.min(1,cam.aspect));cam.position.set(1,-1,.85).normalize().multiplyScalar(1.08*radius/Math.sin(fov));orbit.update();render();}
   orbit.addEventListener('change',render);const ro=new ResizeObserver(size);ro.observe(stage);size();fit();
@@ -35063,6 +35083,15 @@ function mount(host) {
       const layer=sample?'BINA_ALAN':roles.binaLayer;
       for(const [x,y,X,Y] of D.lines[layer]||[])add('line','BINA_PLAN',5,[x,y,0],[X,Y,0]);
       for(const p of D.polys[layer]||[])if(p.P.length>=2)add('poly3','BINA_PLAN',5,p.P.map(([x,y])=>[x,y,0]),!!p.closed);
+      const labelLayers=new Map([[sample?'BINA_NO':roles.noLayer,'BINA_NO'],[sample?'REZERV_BİNANO':roles.rezLayer,'REZERV_BINA_NO']]);
+      for(const t of D.texts){
+        const target=labelLayers.get(t.lay);
+        if(!target || !t.s || !Number.isFinite(t.x0) || !Number.isFinite(t.y0))continue;
+        const h=t.h>0?t.h:1,rotation=(t.r||0)*180/Math.PI;
+        layers.set(target,2);
+        if(dxf){dxf.lay(target,2);dxf.text(target,t.x0,t.y0,h,t.s,rotation,'l');}
+        else records.push(['text',target,[t.x0,t.y0,0],t.s,h,rotation,'l']);
+      }
       if(!dxf && layers.size>=250)throw Error('NCZ tabaka sınırı aşıldı. DXF biçimini kullanın.');
       const bytes=dxf?new TextEncoder().encode(dxf._b()):await window.NCZW.build({layers:Array.from(layers,([n,c])=>({n,c})),items:records});
       if(!dxf && new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength).getUint32(81,true)!==records.length)throw Error('NCZ nesne sayısı doğrulanamadı.');
