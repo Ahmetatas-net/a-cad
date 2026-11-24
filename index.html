@@ -24955,7 +24955,12 @@ CMDS.GORUNUM3B = () => {
   for(const f of FACES)if(fVis(f))put(f.lay,'face',f.p.slice(0,3));
   for(const e of ents){
     if(!lays[e.lay]?.on)continue;
-    const p=e.pts||[];
+    let p=e.pts||[];
+    // The foundation plan is 2D. Place its overlay on the visible model only in this view.
+    if(CDOC.foundationModel && ['BINA_PLAN','BINA_NO','REZERV_BINA_NO'].includes(e.lay)){
+      p=p.map(q=>{const hits=cadTriangleAt(q);return hits.length?[q[0],q[1],hits.at(-1).z]:null;});
+      if(p.every(q=>!q))continue;
+    }
     if(e.t==='text' && e.s && p[0] && (/(B[Iİ]NA|BLOK|BUILDING)/i.test(e.lay)||/^(?:B|BL|BLOK)[ -]?\d+(?:[-/][A-Z]?\d+)*$/i.test(String(e.s).trim())))labels.push({p:p[0],s:e.s});
     if(e.closed && e.areaName && p.length && /B[Iİ]NA|BLOK/i.test(e.lay)){
       const center=p.reduce((acc,q)=>[acc[0]+q[0]/p.length,acc[1]+q[1]/p.length,acc[2]+(q[2]||0)/p.length],[0,0,0]);labels.push({p:center,s:e.areaName});
@@ -26534,6 +26539,28 @@ ALIAS.PD='PROJEDENETIM';
 window.CADX = { faces(l, P, T) { KUBNOSYNC = true; try { layer(l); FACES = FACES.filter(f => f.lay !== l); for (let i = 0; i + 2 < T.length; i += 3) { const a = P[T[i]], b = P[T[i + 1]], d = P[T[i + 2]]; FACES.push({ lay: l, p: [[a.e, a.y, a.z], [b.e, b.y, b.z], [d.e, d.y, d.z]] }); } FC = null; IDX = null; KUBSIG.set(l, kubSig(l)); persist(); try { if (!$("v-cad").hidden) draw(); } catch (e) {} } finally { KUBNOSYNC = false; } },
   bagla(l) { KUBSIG.set(l, kubSig(l)); }, egriYenile() { if (FACES.length || !ents.some(e => /^EGRI_(SIYAH|KIRMIZI)/.test(e.lay))) return; try { genEgri(EGSTEP, true, true); } catch (e) { console.error(e); } }, data: () => ({ ents, lays, faces: typeof FACES !== "undefined" ? FACES : [], doc: CDOC, version: FVER }), addEnts(list, lyc) { if (!list.length) return 0; snap0(); for (const e of list) { layer(e.lay, (lyc || {})[e.lay]); add(e); } IDX = null; persist(); renderLays && renderLays(); draw(); return list.length; } };
 
+CADX.openFoundationModel=async function(name,colors,records){
+  const palette={1:'#e06c55',2:'#f1ce69',3:'#62bd84',4:'#65b8dc',5:'#539fec',7:'#aebac5'};
+  const entities=[],faces=[];
+  for(const [kind,lay,a,b,c,h,r] of records){
+    if(kind==='face')faces.push({lay,p:[a,b,c]});
+    else{
+      const e=kind==='text'?{t:'text',pts:[a],s:b,h:c,rot:h,al:r}
+        :kind==='line'?{t:'line',pts:[a,b]}:{t:'pline',pts:a,closed:b};
+      entities.push({...e,id:entities.length+1,lay});
+    }
+  }
+  if(!faces.length)throw Error('CAD’e aktarılacak üçgen bulunamadı.');
+  await showTab('cad');
+  if($('v-cad').hidden)throw Error('CAD ekranına geçiş tamamlanmadı.');
+  cadSheetNew();
+  for(const [lay,color] of colors)layer(lay,palette[color]);
+  const sheet=cadSheets[cadSheetIndex];sheet.name=name;sheet.manualName=true;
+  ents=entities;FACES=faces;nid=entities.length+1;
+  CDOC={name,fmt:'',foundationModel:true};IDX=null;FC=null;FVER++;UVER++;
+  renderLays();cadTabsRender();docInfo();zoomAll();persist();
+  CMDS.GORUNUM3B();
+};
 /* V7.1.16.07 -- Alan Adı / Kot Ata bridge: working CAD drawing only. */
 CADX.alanAdKotTopluUygula=function(changes,expectedVersion){
   if(!Array.isArray(changes)||!changes.length||changes.length>12000)throw Error('Toplu alan sayısı geçersiz.');
@@ -33534,7 +33561,7 @@ function mount(host) {
     <label class="kd-file">Plan ekle<input type="file" accept=".dxf" multiple data-k="append"></label>
     <button data-k="ornek">🧪 261/1 örneği</button>
     <button class="kd-pri" data-k="hesap" disabled>▶ Hesapla</button>
-    <span>Plan ve model indir</span> <button data-k="modeldxf" disabled>DXF</button> <button data-k="modelncz" disabled>NCZ</button>
+    <span>Plan ve model indir</span> <button data-k="modeldxf" disabled>DXF</button> <button data-k="modelncz" disabled>NCZ</button> <button class="kd-pri" type="button" data-k="modelcad" disabled>CAD’de aç</button>
     <button data-k="xls" disabled>📊 Excel</button>
     <button data-k="json" disabled>İmalat JSON</button>
     <button data-k="kop" disabled>📋 Kopyala</button>
@@ -33595,7 +33622,7 @@ function mount(host) {
   function lockResults() {
     invalidInput=true;KR=[];DR.clear();ST=null;clearPlanPlayer();
     if(V3){V3.dispose();V3=null;fresh();}
-    for(const key of ['xls','pak','json','kop','hesap','modeldxf','modelncz'])$(key).disabled=true;
+    for(const key of ['xls','pak','json','kop','hesap','modeldxf','modelncz','modelcad'])$(key).disabled=true;
     $('sonuc').replaceChildren();$('bolge').replaceChildren();$('labs').replaceChildren();$('planKey').hidden=true;
   }
   function blank() {
@@ -33699,7 +33726,7 @@ function mount(host) {
     if (V3) { V3.dispose(); V3 = null; fresh(); }
     D = data; B = buildings;PV={k:1,x:0,y:0};
     DR = new Map(); ICI = new Map(); K = new Map(); ST = null;
-    for (const key of ['xls', 'kop', 'pak', 'json','modeldxf','modelncz']) $(key).disabled = true;
+    for (const key of ['xls', 'kop', 'pak', 'json','modeldxf','modelncz','modelcad']) $(key).disabled = true;
     $('roles').hidden=sample;const prefs=sample?{}:(ls.get(prefsKey())||{});
     if(!sample){roleControls();ICI=new Map(prefs.interior||[]);K=new Map(prefs.dimensions||[]);}
     const ground = sample ? tinL.find(l => /ARAZ|ZEM|SİYAH|SIYAH/i.test(l)) || tinL[0] : (prefs.ground??roles.ground);
@@ -33821,7 +33848,7 @@ function mount(host) {
   });
   $('hesap').addEventListener('click', () => {
     $('hesap').disabled = true; st('Hesaplanıyor…');
-    const revision=importRevision;setTimeout(() => { if(revision!==importRevision)return;try { run(); const miss = KR.reduce((sum, r) => sum + r.miss, 0); const warn = !sample && miss >= 0.01; st(warn ? `Hesap tamam. Üçgen kapsamı dışında kalan toplam örnek alanı ${fmt(miss)} m².` : 'Hesap tamam.', warn); } catch (x) { KR=[];DR.clear();ST=null;$('sonuc').replaceChildren();for(const k of ['xls','pak','kop','json','modeldxf','modelncz'])$(k).disabled=true;draw();st(x.message,1); } $('hesap').disabled = false; }, 20);
+    const revision=importRevision;setTimeout(() => { if(revision!==importRevision)return;try { run(); const miss = KR.reduce((sum, r) => sum + r.miss, 0); const warn = !sample && miss >= 0.01; st(warn ? `Hesap tamam. Üçgen kapsamı dışında kalan toplam örnek alanı ${fmt(miss)} m².` : 'Hesap tamam.', warn); } catch (x) { KR=[];DR.clear();ST=null;$('sonuc').replaceChildren();for(const k of ['xls','pak','kop','json','modeldxf','modelncz','modelcad'])$(k).disabled=true;draw();st(x.message,1); } $('hesap').disabled = false; }, 20);
   });
   const opt = () => { const f=KC.readLevel($('sf').value); return {strict:!sample, subasman:u=>Number.isFinite(u?.plinth)?u.plinth:Number.isFinite(u?.kot)&&Number.isFinite(f)?u.kot+f:NaN, rezerv: $('rez').value, step: +$('adim').value }; };
   function run() {
@@ -33891,7 +33918,7 @@ function mount(host) {
   function finishResults() {
     const hm = items.map(i => i.hak).filter(Boolean).sort().pop();
     $('bolge').innerHTML = '<option value="hepsi" selected>Tüm imalat</option>' + (hm ? `<option value="son">Hakediş ${htmlText(hm)} imalatı + dolgu</option>` : '') + items.map(i => `<option>${htmlText(i.ad)}</option>`).join('');
-    ['xls', 'kop', 'pak', 'json','modeldxf','modelncz'].forEach(k => $(k).disabled = false); ST = null; render(); draw();
+    ['xls', 'kop', 'pak', 'json','modeldxf','modelncz','modelcad'].forEach(k => $(k).disabled = false); ST = null; render(); draw();
     if (sample && !sampleOutputKey) sampleOutputKey = JSON.stringify(job());
   }
   const sum = s => String(s).split(/[+\s;]+/).map(num).filter(v => !isNaN(v));
@@ -35047,6 +35074,13 @@ function mount(host) {
       for(const v of S.V)for(const u of S.U)xy.push(world(u,v,0));
       function triangle(ids) {
         const points=(z)=>ids.map(k=>[xy[k][0],xy[k][1],z[k]]);
+        if(format==='cad'){
+          let last=M.length-1;
+          while(last>0 && ids.every(k=>Zs[last][k]===Zs[last-1][k]))last--;
+          const cut=M[last].t==='kazi';
+          add('face',last?(cut?'KAZI_':'DOLGU_')+last:'SIYAH_ARAZI',last?(cut?1:3):7,...points(Zs[Zs.length-1]));
+          return;
+        }
         add('face','SIYAH_ARAZI',7,...points(Zs[0]));
         for(let j=1;j<M.length;j++){
           const before=Zs[j-1],after=Zs[j];
@@ -35063,7 +35097,7 @@ function mount(host) {
           triangle([a,b,c]);triangle([b,d,c]);
         }
       }
-      if(!layers.has('SIYAH_ARAZI'))throw Error('Simülasyon kapsamında geçerli arazi üçgeni bulunamadı.');
+      if(!layers.size)throw Error('Simülasyon kapsamında geçerli arazi üçgeni bulunamadı.');
       // The reference project renders interior fills as separate solids above the terrain mesh.
       for(const [j,m] of M.entries()){
         if(!sample || !m.combined || m.t!=='dolgu')continue;
@@ -35075,7 +35109,7 @@ function mount(host) {
           if(!(h>0))continue;
           const at=(p,z)=>world((box[0]+box[2])/2+p[0],(box[1]+box[3])/2+p[1],z);
           for(const tri of part.triangles){
-            add('face','IC_DOLGU_'+j+'_ONCE',8,...tri.map(p=>at(p,top0-h)));
+            if(format!=='cad')add('face','IC_DOLGU_'+j+'_ONCE',8,...tri.map(p=>at(p,top0-h)));
             add('face','IC_DOLGU_'+j,4,...tri.map(p=>at(p,top0)));
           }
         }
@@ -35092,6 +35126,10 @@ function mount(host) {
         if(dxf){dxf.lay(target,2);dxf.text(target,t.x0,t.y0,h,t.s,rotation,'l');}
         else records.push(['text',target,[t.x0,t.y0,0],t.s,h,rotation,'l']);
       }
+      if(format==='cad'){
+        await window.CADX.openFoundationModel(($('parsel').value||'Temel')+' · Kazı ve dolgu',layers,records);
+        return;
+      }
       if(!dxf && layers.size>=250)throw Error('NCZ tabaka sınırı aşıldı. DXF biçimini kullanın.');
       const bytes=dxf?new TextEncoder().encode(dxf._b()):await window.NCZW.build({layers:Array.from(layers,([n,c])=>({n,c})),items:records});
       if(!dxf && new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength).getUint32(81,true)!==records.length)throw Error('NCZ nesne sayısı doğrulanamadı.');
@@ -35101,7 +35139,7 @@ function mount(host) {
     } catch(error){st(error.message,1);} finally{modelBusy=false;}
   }
   let modelBusy=false;
-  for(const format of ['dxf','ncz'])$('model'+format).onclick=()=>downloadPlanModel(format);
+  for(const format of ['dxf','ncz','cad'])$('model'+format).onclick=()=>downloadPlanModel(format);
   async function parcelArtifact(mode) {
     const exchange=exportProject({includeGeometry:mode==='pak'}),project=exchange.project;
     if(!project.parcel || !project.reportDate)throw Error('Çıktı için ada/parseli ve rapor tarihini girin.');
