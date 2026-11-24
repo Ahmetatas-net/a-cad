@@ -13684,7 +13684,7 @@ function textNames(pts, nm) { if (!FD || !FD.texts) return; const T = FD.texts.f
 function setParsel(pts, ad, src, no, strictCad, verifiedNames) { const a = S(); if (no) { if (no.ada) a.antet.ada = no.ada; a.antet.parselNo = no.no; fillAntet(); } pts = A.clean(pts.map(p => [p[0], p[1]]), 0.002, true); const nm0 = strictCad ? pts.map((p,i) => verifiedNames && verifiedNames[i] ? String(verifiedNames[i]) : "") : pts.map(p => nameOf(p)); if (!strictCad) { tableNames(pts, nm0); textNames(pts, nm0); }
   const raw = pts.map(p => [p[0], p[1]]); if (!strictCad) { const NP = named(); pts = pts.map((p, i) => { let b = null, bd = 0.03; for (const q of NP) { const d = Math.hypot(q.e - p[0], q.y - p[1]); if (d < bd) { bd = d; b = q; } } return b ? [b.e, b.y] : p; }); } /* köşe, adlı ölçü noktasının kendi koordinatına oturur */ let k = 0; const names = nm0.map(n => n || ("K" + (++k)));
   const autoNames = nm0.map(n => !n); /* kadastro koordinatı 2 hane: köşeler cm'ye yuvarlanır, alanlar yuvarlanmış koordinattan hesaplanır (kontrol mühendisi çizelgeden aynı alanı bulur); kaynak değer raw'da kalır */ pts = pts.map(p => K.cm(p));
-  a.parsel = { pts, names, autoNames, ad, src, raw }; a.kom = []; a.res = null; a.ifz.parts = null; a.ifz.cuts = []; a.ifz.yeni = []; a.ifz.yol = []; a.ifz.roadSpan=null;a.ifz.roadMarks=null; a.ifz.yolSource = "none"; PLACED = null; save(); renderAll(); fitA(); if (MOD === "ifz") { const note=$("iYolNot"); if(note)note.textContent="Parsel seçildi. Yol kenarını aşağıdan işaretle veya Yol ara komutunu kullan."; } if (MOD === "akr") setTimeout(() => { try { akRender(); akPrev(); } catch (e) {} }, 0); }
+  a.parsel = { pts, names, autoNames, ad, src, raw }; a.kom = []; a.res = null; a.ifz.parts = null; a.ifz.cuts = []; a.ifz.yeni = []; a.ifz.yol = []; a.ifz.roadSpan=null;a.ifz.roadMarks=null; a.ifz.yolSource = "none"; PLACED = null; const usedRoad=!!FD?.ifzNetwork?.length&&useIfzRoadNetwork(); save(); renderAll(); fitA(); if (MOD === "ifz"&&!usedRoad) { const note=$("iYolNot"); if(note)note.textContent="Parsel seçildi. Yol kenarını aşağıdan işaretle veya Yol ara komutunu kullan."; } if (MOD === "akr") setTimeout(() => { try { akRender(); akPrev(); } catch (e) {} }, 0); }
 function renderPar() { const a = S(), c = parcelCands(); const sel = $("aPar"); const cur = a.parsel;
   sel.innerHTML = `<option value="">${c.length ? "Parsel seç…" : "Önce dosya yükle ya da koordinat yapıştır"}</option>` + c.map(o => `<option value="${o.v}" ${cur && Math.abs(o.a - A.area(cur.pts)) < 0.01 && Math.hypot(o.pts[0][0] - cur.pts[0][0], o.pts[0][1] - cur.pts[0][1]) < 50 ? "selected" : ""}>${esc(o.ad)} — ${tra(o.a)} m²</option>`).join("");
   $("aParInfo").innerHTML = cur ? `<span class="pill ok">${esc(cur.ad || "Parsel")}</span> Alan <b>${tra(A.area(cur.pts))} m²</b> · ${cur.pts.length} köşe · çevre ${tru(K.perim(cur.pts))} m` : "Parsel seçilmedi.";
@@ -14448,7 +14448,7 @@ function unite(p, q) { // ortak zincir kenarlı iki çokgeni birleştir
 function readIfz() { const f = S().ifz; Object.assign(f, { y: $("iY").value, part: +($("iPart") ? $("iPart").value : 0) || 0, ei: +$("iEi").value || 0, pi: +$("iPi").value || 0, al: $("iAl").value, n: Math.max(2, Math.round(K.num($("iN").value) || 2)), p1y: $("iP1y").value, p1x: $("iP1x").value, p2y: $("iP2y").value, p2x: $("iP2x").value, on: $("iOn").value, minA: $("iMinA").value.trim()?K.num($("iMinA").value):0, minC: $("iMinC").value.trim()?K.num($("iMinC").value):0, seri: $("iSeri").value, yon: $("iYon").value, w: $("iW").value, sira: +$("iSira").value || 1, minEn: K.num($("iMinEn").value), minDer: K.num($("iMinDer").value) }); save(); }
 /* yol cephesi: parçanın, yol olarak işaretli ana parsel kenarları üzerindeki uzunluğu */
 function cephe(P) { const a=S(),par=a.parsel;if(!par)return 0;
-  const span=(a.ifz.yolSource==='manual'&&a.ifz.roadSpan?.length)?a.ifz.roadSpan:null;
+  const span=(a.ifz.roadSpan?.length)?a.ifz.roadSpan:null;
   const roads=span||((a.ifz.yol||[]).map(i=>[par.pts[i],par.pts[(i+1)%par.pts.length]]).filter(r=>r[0]&&r[1]));
   let total=0;for(let i=0;i<P.length;i++){const p=P[i],q=P[(i+1)%P.length];
     const vx=q[0]-p[0],vy=q[1]-p[1],ll=Math.hypot(vx,vy);if(ll<1e-8)continue;
@@ -14464,11 +14464,17 @@ function cephe(P) { const a=S(),par=a.parsel;if(!par)return 0;
   }return total;
 }
 function kural(P) { const f = S().ifz, out = []; const ar = A.area(P), ce = cephe(P); if (isFinite(f.minC) && f.minC > 0 && !(f.yol || []).length) out.push("asgari yol cephesi girildi ama yol kenarı işaretlenmedi"); if (isFinite(f.minA) && f.minA > 0 && ar < f.minA - 0.005) out.push(`alan ${tra(ar)} m² < ${tra(f.minA)} m²`);
+  if(f.yolSource==="network"&&ce<=.005)out.push("yol ağıyla ortak cephe yok");
   if ((f.yol || []).length && isFinite(f.minC) && f.minC > 0 && ce < f.minC - 0.005) out.push(`yol cephesi ${trc(ce)} m < ${trc(f.minC)} m`); return out; }
 function renderYol() { const a = S(), par = a.parsel, el = $("iYol"); if (!par) { el.innerHTML = `<span class="note">Önce parseli seç.</span>`; return; } const set = new Set(a.ifz.yol || []);
-  const count=$("iRoadCount"); if(count)count.textContent=set.size?`· ${set.size} kenar (${a.ifz.yolSource==="manual"?"elle seçili":"otomatik öneri"})`:"· kenar seçilmedi";
+  const count=$("iRoadCount"); if(count)count.textContent=set.size?`· ${set.size} kenar (${a.ifz.yolSource==="network"?"CAD yol ağı":a.ifz.yolSource==="manual"?"elle seçili":"otomatik öneri"})`:"· kenar seçilmedi";
   el.innerHTML = par.pts.map((p, i) => { const q = par.pts[(i + 1) % par.pts.length], L = Math.hypot(q[0] - p[0], q[1] - p[1]); return `<label style="flex-direction:row;align-items:center;gap:6px;color:var(--ink);font-weight:500;padding:2px 0"><input type="checkbox" data-yk="${i}" ${set.has(i) ? "checked" : ""}> Kenar ${i + 1}: ${esc(par.names[i])} – ${esc(par.names[(i + 1) % par.pts.length])} (${tru(L)} m)</label>`; }).join("");
-  el.querySelectorAll("[data-yk]").forEach(x => x.addEventListener("change", () => { const f = S().ifz, i = +x.dataset.yk; f.yol = (f.yol || []).filter(k => k !== i); if (x.checked) f.yol.push(i); f.yol.sort((a,b)=>a-b); f.roadSpan=null;f.roadMarks=null; f.yolSource="manual";
+  el.querySelectorAll("[data-yk]").forEach(x => x.addEventListener("change", () => { const f = S().ifz, i = +x.dataset.yk; f.yol = (f.yol || []).filter(k => k !== i); if (x.checked) f.yol.push(i); f.yol.sort((a,b)=>a-b); if(f.roadSpan?.length){
+      const u=par.pts[i],v=par.pts[(i+1)%par.pts.length];
+      f.roadSpan=f.roadSpan.filter(([a,b])=>A.segDist(a,u,v)>.001||A.segDist(b,u,v)>.001);
+      if(x.checked)f.roadSpan.push([u,v]);
+      if(!f.roadSpan.length)f.roadSpan=null;
+    }f.roadMarks=null; f.yolSource="manual";
     const note=$("iYolNot"); if(note)note.textContent=f.yol.length?`${f.yol.length} yol kenarı elle seçildi. Cephe uzunlukları bölmede kontrol edilecek.`:"Yol kenarı seçilmedi. Şart varsa bölme için kenar belirt.";
     save(); renderIfz(); drawA(); })); }
 $("iYolClr").addEventListener("click", () => { S().ifz.yol = []; S().ifz.roadSpan=null;S().ifz.roadMarks=null; S().ifz.yolSource="none"; const note=$("iYolNot");if(note)note.textContent="Yol seçimi temizlendi. Yol kenarını elle seç veya Yol ara komutunu çalıştır."; save(); renderIfz(); drawA(); });
@@ -14508,6 +14514,57 @@ function roadCandidatesFor(par){if(!FD)return {F:[],G:[]};let hit=IFZ_ROAD_CACHE
 const IFZ_ROAD_PICK={active:false,one:null,two:null,opposite:false};
 const inRegion=(b,W)=>!(b[2]<W[0]||b[0]>W[2]||b[3]<W[1]||b[1]>W[3]);
 const cross=(a,b)=>a[0]*b[1]-a[1]*b[0];
+// Project measured road boundary segments onto the parcel side. Test line
+// separation only over the shared interval (ends of long curves can diverge).
+function ifzNetContacts(P, rings) {
+ const tol=.012, orientation=Math.sign(A.sArea(P)), hits=[];
+ const bb=A.bbox(P);
+ const candidates=[];
+ for(const {pts,bb:rbox,side} of rings){
+  if(!inRegion(rbox,[bb[0]-tol,bb[1]-tol,bb[2]+tol,bb[3]+tol]))continue;
+  for(let i=0;i<pts.length;i++){
+   const a=pts[i],b=pts[(i+1)%pts.length];
+   if(Math.max(a[0],b[0])<bb[0]-tol||Math.min(a[0],b[0])>bb[2]+tol||
+      Math.max(a[1],b[1])<bb[1]-tol||Math.min(a[1],b[1])>bb[3]+tol)continue;
+   candidates.push({a,b,side});
+  }
+ }
+ for(let i=0;i<P.length;i++){
+  const p=P[i],q=P[(i+1)%P.length],dx=q[0]-p[0],dy=q[1]-p[1],len=Math.hypot(dx,dy);
+  if(len<.02)continue;
+  const ux=dx/len,uy=dy/len,ranges=[];
+  for(const {a,b,side} of candidates){
+   const sx=b[0]-a[0],sy=b[1]-a[1],v=sx*ux+sy*uy;
+   if(Math.abs(v)<.001||Math.abs(v)<Math.hypot(sx,sy)*.999||Math.sign(v)*side===orientation)continue;
+   const t=(a[0]-p[0])*ux+(a[1]-p[1])*uy;
+   const lo=Math.max(0,Math.min(t,t+v)),hi=Math.min(len,Math.max(t,t+v));
+   if(hi<=lo)continue;
+   const h=(a[1]-p[1])*ux-(a[0]-p[0])*uy, slope=(sy*ux-sx*uy)/v;
+   if(Math.max(Math.abs(h+(lo-t)*slope),Math.abs(h+(hi-t)*slope))<=tol)ranges.push([lo,hi]);
+  }
+  const merged=[];
+  for(const r of ranges.sort((a,b)=>a[0]-b[0])){
+   const last=merged[merged.length-1];
+   if(last&&r[0]<=last[1]+.0005)last[1]=Math.max(last[1],r[1]);else merged.push(r);
+  }
+  const point=t=>[p[0]+ux*t,p[1]+uy*t];
+  for(const [lo,hi] of merged)if(hi-lo>.025)hits.push({i,length:hi-lo,seg:[point(lo),point(hi)]});
+ }
+ return hits;
+}
+function useIfzRoadNetwork(){
+ if(!FD?.ifzNetwork?.length||!S().parsel)return false;
+ const f=S().ifz,found=ifzNetContacts(S().parsel.pts,FD.ifzNetwork);
+ const lengths=new Map();for(const r of found)lengths.set(r.i,(lengths.get(r.i)||0)+r.length);
+ f.yol=[...lengths.keys()];f.roadMarks=null;f.roadSpan=found.length?found.map(h=>h.seg):null;
+ f.yolSource='network';
+ if(found.length&&!f.parts?.length)f.ei=[...lengths].sort((a,b)=>b[1]-a[1])[0][0];
+ const total=found.reduce((s,x)=>s+x.length,0);
+ $('iYolNot').textContent=found.length?'YOL_AGI · '+f.yol.length+' kenarda '+trc(total)+' m temas. Turuncu çizgi hesapta kullanılan cephedir.':'YOL_AGI ile ortak cephe bulunamadı. Ağın kapsamını kontrol et veya cepheyi elle işaretle.';
+ $('iRoadSuggestions').replaceChildren();
+ return true;
+}
+
 function ifzRoadSuggestions(){
  const a=S(),P=a.parsel?.pts;if(!FD||!P?.length)return [];
  const B=A.bbox(P),extent=Math.max(B[2]-B[0],B[3]-B[1]),R=Math.max(35,Math.min(85,extent*0.8));
@@ -14610,6 +14667,7 @@ $('iYolAuto').addEventListener('click',()=>{
  const source=String(par.ad||'');if(/^tabaka\s+(?:PAFTA|CERCEVE|ÇERÇEVE|KAGIT|KAĞIT)(?:\s|$)/i.test(source)){
   $('iYolNot').textContent='Bu çizim PAFTA çerçevesi olabilir. Gerçek parseli seçip yeniden dene.';return;
  }
+ if(useIfzRoadNetwork()){save();renderIfz();drawA();return;}
  const proposed=ifzRoadSuggestions();ifzShowRoadSuggestions(proposed);$('iRoadDetails').open=true;
  const strong=proposed.filter(x=>x.verified);if(strong.length && strong.length===proposed.length){
   ifzApplyRoadIndices(strong.map(x=>x.i),'auto');$('iYolNot').textContent=strong.length+' kenar güçlü yol geometrisi / yazısıyla önerildi (turuncu). Bölmeden önce görsel olarak kontrol et.';
@@ -14642,7 +14700,13 @@ function applySplit(res) { const a = S(), f = a.ifz; const P = parts(); const i 
   const bad = np.map((p, k) => [k, kural(p)]).filter(x => x[1].length); if (bad.length) return msg("iMsg", `İfraz yapılmadı — şart sağlanmıyor: ${bad.map(([k, e]) => `${k + 1}. parça ${e.join(", ")}`).join(" · ")}${f.y==="esit"&&bad.some(([k,err])=>err.some(x=>x.includes("yol cephesi")))?" · Her parçaya yol cephesi için ‘Kenara Dik Eşit’ yöntemini dene.":""}`, true);
   const list = f.parts && f.parts.length ? f.parts.slice() : []; const used = new Set(list.map(p => p.ad)); const nextL = () => LET.split("").find(l => !used.has(l)) || "P" + (list.length + 1);
   const repl = np.map((pts, k) => { const ad = k === 0 && base.ad ? base.ad : nextL(); used.add(ad); return { ad, pts }; }); if (list.length) list.splice(i, 1, ...repl); else list.push(...repl);
-  cmOpt(list, a.parsel.pts); f.parts = list; if (!f.cuts) f.cuts = []; if (res.line) f.cuts.push(res.line); if (res.lines && res.lines.length) f.cuts.push(...res.lines); if (!res.line && !(res.lines && res.lines.length)) { try { f.cuts.push(...kesimCikar(base.pts, np)); } catch (e) {} } nameNew(); f.lastQ = QB ? { before: QB, after: JSON.stringify(f.parts) } : null; QB = null; save(); renderIfz(); drawA(); prevA(); try { $("aplBox").scrollIntoView({ block: "start", behavior: "smooth" }); } catch (e) {} msg("iMsg", `✓ Bölündü · toplam alan farkı ${tra(alanFarki)} m² — ${np.length} parça: ${repl.map(p => `${p.ad} ${tra(A.area(p.pts))} m²${(f.yol || []).length ? ` (cephe ${trc(cephe(p.pts))} m)` : ""}`).join(" · ")}${(f.yol || []).length ? "" : " · Çizimde yol bulunamadı, yol cephesi şartı uygulanmadı."}`); }
+  const staged=f.yolSource==="network"?list.map(p=>({...p,pts:p.pts.map(q=>q.slice())})):list;
+  cmOpt(staged, a.parsel.pts);
+  if(f.yolSource==="network"){
+    const failed=staged.map((p,k)=>({k,issues:kural(p.pts)})).filter(p=>p.issues.length);
+    if(failed.length)return msg("iMsg","İfraz yapılmadı · "+failed.map(p=>(p.k+1)+". parça "+p.issues.join(", ")).join(" · "),true);
+  }
+  f.parts = staged; if (!f.cuts) f.cuts = []; if (res.line) f.cuts.push(res.line); if (res.lines && res.lines.length) f.cuts.push(...res.lines); if (!res.line && !(res.lines && res.lines.length)) { try { f.cuts.push(...kesimCikar(base.pts, np)); } catch (e) {} } nameNew(); f.lastQ = QB ? { before: QB, after: JSON.stringify(f.parts) } : null; QB = null; save(); renderIfz(); drawA(); prevA(); try { $("aplBox").scrollIntoView({ block: "start", behavior: "smooth" }); } catch (e) {} msg("iMsg", `✓ Bölündü · toplam alan farkı ${tra(alanFarki)} m² — ${np.length} parça: ${repl.map(p => `${p.ad} ${tra(A.area(p.pts))} m²${(f.yol || []).length ? ` (cephe ${trc(cephe(p.pts))} m)` : ""}`).join(" · ")}${(f.yol || []).length ? "" : " · Çizimde yol bulunamadı, yol cephesi şartı uygulanmadı."}`); }
 $("iGo").addEventListener("click", () => { readIfz(); const a = S(), f = a.ifz; if (!a.parsel) return msg("iMsg", "Önce parseli seç.", true); if (!(f.yol || []).length && f.minC > 0) { const d=$("iRoadDetails");if(d)d.open=true;
     return msg("iMsg", "Asgari yol cephesi şartı var. Önce Yol cephesini seç / düzelt bölümünde gerçek yol kenarını işaretle ya da Yol ara önerisini kontrol et. Bölme yapılmadı.",true);
   } /* Otomatik yol arama ağır projede böl düğmesini kilitlemesin; işlem yalnız kullanıcının isteğiyle çalışır. */ if (["esit", "esitDik", "alanCephe", "seri", "cephe", "ada", "paralel"].includes(f.y)) QB = JSON.stringify({ parts: f.parts, cuts: f.cuts, yeni: f.yeni, part: f.part }); else QB = null;
@@ -14651,7 +14715,12 @@ $("iGo").addEventListener("click", () => { readIfz(); const a = S(), f = a.ifz; 
     if (f.y === "paralel") { const r = A.ifrazParalel(poly, f.ei, h); if (Math.abs(A.area(r.parts[0]) - h) > 0.05) return msg("iMsg", "Bu kenardan paralel bölmeyle istenen alan ayrılamıyor (parsel bu kenarın gerisine de uzanıyor). Başka kenar seç ya da çizerek böl.", true); applySplit({ parts: r.parts, line: A.cutPts(poly, r.line) }); }
     else { const r = A.ifrazNokta(poly, poly[f.pi], h); if (!r) return msg("iMsg", "Bu köşeden geçen bir doğruyla bu alan ayrılamıyor.", true); const cp = A.cutPts(poly, r.line); applySplit({ parts: r.parts, line: cp.length >= 2 ? [cp[0], cp[cp.length - 1]] : r.line }); } }
   else if (f.y === "adaListe") { const L = A.alanListe(f.seri); if (L.length < 2) return msg("iMsg", "Parsel alanlarını yaz (örn. 3x288.15 + 2x432.22).", true); const t0 = performance.now();
-    const yol = (a.ifz.yol || []).length && f.part === 0 && !(f.parts && f.parts.length) ? a.ifz.yol : []; const R = A.adaAra(poly, L, yol, f.minEn, f.minDer, f.minC); ADAO = { R, poly };
+    const yol = (a.ifz.yol || []).length && f.part === 0 && !(f.parts && f.parts.length) ? a.ifz.yol : []; const R = A.adaAra(poly, L, yol, f.minEn, f.minDer, f.minC); if(f.yolSource==="network")for(const o of R.out){
+      o.M.forEach((m,i)=>{m.ce=cephe(o.parts[i]);});
+      o.cepsiz=o.M.filter(m=>m.ce<=.005).length;
+      o.ok=o.ok&&!o.cepsiz&&o.parts.every(p=>!kural(p).length);
+    }
+    ADAO = { R, poly };
     const sumT = L.reduce((x, y) => x + y, 0); const el = $("iAlt"); const fk = Math.abs(sumT - tot) > 0.01 ? `<p class="note" style="color:#a15c00">Liste toplamı ${tra(sumT)} m², parsel ${tra(tot)} m² (fark ${tra(sumT - tot)} m²): alanlar orantılı ayarlandı.</p>` : `<p class="note">Liste toplamı parselle aynı: ${tra(tot)} m².</p>`;
     if (!R.out.length) { el.innerHTML = fk; return msg("iMsg", "Bu parselde temiz bir yerleşim bulunamadı (dilimler kopuk düşüyor). Parseli önce çizerek iki düzgün parçaya ayır.", true); }
     el.innerHTML = fk + R.out.map((o, k) => `<div style="border:1px solid ${o.ok ? "#2e7a49" : "var(--line)"};border-radius:8px;padding:8px;margin-bottom:8px"><div class="row" style="justify-content:space-between"><b>${k + 1}. öneri</b><span class="pill ${o.ok ? "ok" : "bad"}">${o.ok ? "✓ bütün parseller şartı sağlıyor" : o.cepsiz ? `✗ ${o.cepsiz} parsel yola cephe almıyor` : "✗ cephe / en / derinlik şartı sağlanmıyor"}</span></div>
@@ -14680,7 +14749,7 @@ function yolZincir(poly, ei) { const a = S(), Y = new Set((a.ifz.yol || []).filt
 function cepheUz(P_, poly, ei) { const E = A.edge(poly, ei), nx = -E.u[1], ny = E.u[0], c = nx * E.a[0] + ny * E.a[1], a0 = E.u[0] * E.a[0] + E.u[1] * E.a[1]; let L = 0; for (let i = 0; i < P_.length; i++) { const p = P_[i], q = P_[(i + 1) % P_.length]; if (Math.abs(nx * p[0] + ny * p[1] - c) > 0.01 || Math.abs(nx * q[0] + ny * q[1] - c) > 0.01) continue; const t1 = E.u[0] * p[0] + E.u[1] * p[1] - a0, t2 = E.u[0] * q[0] + E.u[1] * q[1] - a0; const lo = Math.max(0, Math.min(t1, t2)), hi = Math.min(E.L, Math.max(t1, t2)); if (hi > lo) L += hi - lo; } return L; }
 if ($("iKac")) $("iKac").addEventListener("click", () => { readIfz(); const a = S(), f = a.ifz; if (!a.parsel) return msg("iMsg", "Önce parseli seç.", true); const poly = (f.parts && f.parts.length && f.parts[f.part]) ? f.parts[f.part].pts : a.parsel.pts, tot = A.area(poly), E = A.edge(poly, f.ei);
   const minA = +f.minA || 0, minC = +f.minC || 0; if (!(minA > 0) && !(minC > 0)) return msg("iMsg", "Önce şartları yaz: en küçük parsel alanı ve/veya en küçük yol cephesi.", true);
-  const y = f.y === "alanCephe" ? "alanCephe" : "esitDik", t0 = performance.now(); const yolL = (f.yol || []).length ? (f.yol || []).reduce((t, i) => t + A.edge(a.parsel.pts, i).L, 0) : E.L; let nMax = Math.min(60, Math.floor(minA > 0 ? tot / minA : 60), Math.floor(minC > 0 ? yolL / minC : 60)); let bul = null;
+  const y = f.y === "alanCephe" ? "alanCephe" : "esitDik", t0 = performance.now(); const yolL = f.roadSpan?.length?cephe(a.parsel.pts):(f.yol || []).length ? (f.yol || []).reduce((t, i) => t + A.edge(a.parsel.pts, i).L, 0) : E.L; let nMax = Math.min(60, Math.floor(minA > 0 ? tot / minA : 60), Math.floor(minC > 0 ? yolL / minC : 60)); let bul = null;
   for (let n = nMax; n >= 2 && !bul; n--) { let r = null; try { r = y === "alanCephe" ? A.ifrazAlanCephe(poly, yolZincir(poly, f.ei), n) : A.ifrazEsitDik(poly, f.ei, n); } catch (e) {} if (!r || !r.parts || r.parts.length !== n || (r.kopuk && r.kopuk.length)) continue; const sum = r.parts.reduce((x, q) => x + A.area(q), 0); if (Math.abs(sum - tot) > 0.01) continue;
     const ok = r.parts.every(q => !kural(q).length && ((f.yol || []).length || !(minC > 0) || cepheUz(q, poly, f.ei) >= minC - 1e-6)); if (ok) bul = { n, r }; }
   const dt = Math.round(performance.now() - t0); if (!bul) return msg("iMsg", `Bu kenardan şartı sağlayan bölme yok (en küçük alan ${tra(minA)} m², cephe ${trc(minC)} m; parsel ${tra(tot)} m², yol cephesi ${trc(yolL)} m) — başka yol kenarı ya da yöntem dene · ${dt} ms`, true);
@@ -14719,6 +14788,15 @@ const path = (P, close) => { cx.beginPath(); P.forEach((p, i) => i ? cx.lineTo(X
 function drawA() { if (!cv.width || !V.s) return; const D = dpr; cx.clearRect(0, 0, cv.width, cv.height); const a = S();
   if (FD) { const LC = FD._lc || (FD._lc = (() => { const m = {}, pal = ["#4a5868", "#1f77b4", "#2ca02c", "#9467bd", "#8c564b", "#e377c2", "#17becf", "#bcbd22", "#7f7f7f", "#ff7f0e"]; let k = 0; for (const o of [...FD.lines, ...FD.polys, ...(FD.circles || [])]) if (!(o.lay in m)) m[o.lay] = pal[k++ % pal.length]; return m; })());
     for (const o of fileCands()) if (!o.cerceve && o.v[0] !== "a") { path(o.pts, true); cx.fillStyle = "rgba(120,140,160,.10)"; cx.fill(); }
+    if (MOD === "ifz"&&FD.ifzNetwork?.length){
+      const groups=new Map(), view=[WX(0),WY(cv.height/D),WX(cv.width/D),WY(0)];
+      for(const r of FD.ifzNetwork){
+        if(!inRegion(r.bb,view))continue;
+        if(!groups.has(r.key))groups.set(r.key,new Path2D());
+        const poly=groups.get(r.key);r.pts.forEach((p,i)=>i?poly.lineTo(X(p[0]),Y(p[1])):poly.moveTo(X(p[0]),Y(p[1])));poly.closePath();
+      }
+      cx.fillStyle="rgba(48,153,228,.42)";for(const group of groups.values())cx.fill(group,"evenodd");
+    }
     if (MOD === "ifz") { const YF = (FD._yf && FD._yf.F) || []; for (const f of YF) { path(f, true); cx.fillStyle = "rgba(30,60,255,.08)"; cx.fill(); } }
     cx.lineWidth = 1.1 * D; for (const l of FD.lines) { cx.strokeStyle = LC[l.lay]; path(l.pts); cx.stroke(); } for (const p of FD.polys) { cx.strokeStyle = LC[p.lay]; path(p.pts, p.closed); cx.stroke(); }
     for (const c of FD.circles || []) { cx.strokeStyle = LC[c.lay]; path(c.pts, true); cx.stroke(); }
@@ -14742,7 +14820,7 @@ function drawA() { if (!cv.width || !V.s) return; const D = dpr; cx.clearRect(0,
       }
       cx.fillStyle = "#d00000"; cx.font = `700 ${13 * D}px Arial`; cx.textAlign = "center"; cx.fillText(`${tra(A.area(a.parsel.pts))} m²`, X(c[0]), Y(c[1])); }
     if (MOD === "ifz") { cx.strokeStyle = "rgba(230,120,0,.9)"; cx.lineWidth = 6 * D; cx.lineCap = "round";
-      const fr=(a.ifz.yolSource==='manual'&&a.ifz.roadSpan?.length)?a.ifz.roadSpan:(a.ifz.yol||[]).map(i=>[a.parsel.pts[i],a.parsel.pts[(i+1)%a.parsel.pts.length]]);
+      const fr=(a.ifz.roadSpan?.length)?a.ifz.roadSpan:(a.ifz.yol||[]).map(i=>[a.parsel.pts[i],a.parsel.pts[(i+1)%a.parsel.pts.length]]);
       for(const seg of fr){if(!seg?.[0]||!seg?.[1])continue;cx.beginPath();cx.moveTo(X(seg[0][0]),Y(seg[0][1]));cx.lineTo(X(seg[1][0]),Y(seg[1][1]));cx.stroke();}
       if(a.ifz.roadMarks?.length){for(const p of a.ifz.roadMarks){cx.beginPath();cx.arc(X(p[0]),Y(p[1]),5.2*D,0,Math.PI*2);cx.fillStyle='#ffe25c';cx.fill();cx.strokeStyle='#b45309';cx.stroke();}}
       if(IFZ_ROAD_PICK.active&&IFZ_ROAD_PICK.one){const p=IFZ_ROAD_PICK.one.p;cx.beginPath();cx.arc(X(p[0]),Y(p[1]),6*D,0,Math.PI*2);cx.fillStyle='#ffe25c';cx.fill();}
@@ -19621,12 +19699,14 @@ function roadSource(e) {
   return l!==ROAD_NETWORK_LAYER && /(?:^|[_ -])(?:YOL|ROAD|ASFALT|CADDE|SOKAK)(?:$|[_ -])/.test(l) &&
     !/(?:^|[_ -])(?:EKSEN|ORTA|AXIS|CENTER|CNTR|TARAMA|YAZI|AD|ADI|NO|KOT|KALDIRIM|PROFIL|KESIT|BORDUR|REFUJ|GENISLIK)(?:$|[_ -])/.test(l);
 }
-function roadNetworkInput() {
+function roadNetworkInput(customLayers=new Set(), boundaryLayers=new Set(), closedRoads=new Set()) {
   const G=window.ACAD_ROAD_AREA, roads=[], blocks=[], parcels=[], islands=[];
   for(const e of ents) {
     if(e.roadArea||e.roadBorder||!["line","pline"].includes(e.t)||e.pts?.length<2)continue;
-    if(lays[e.lay]?.on&&roadSource(e)){const pts=G.clean(e.pts);if(pts.length>=2)roads.push({id:e.id,pts,ring:e.closed&&pts.length>=3});}
-    if(roadBlock(e))blocks.push(e);
+    if(lays[e.lay]?.on&&((customLayers.size||boundaryLayers.size||closedRoads.size)?(customLayers.has(e.lay)&&!e.closed||closedRoads.has(e.id)):roadSource(e))){const pts=G.clean(e.pts);if(pts.length>=2)roads.push({id:e.id,pts,ring:e.closed&&pts.length>=3});}
+    if(closedRoads.has(e.id))continue;
+    if(boundaryLayers.has(e.lay)&&e.closed)blocks.push(e);
+    else if(roadBlock(e))blocks.push(e);
     else if(roadParcel(e))parcels.push(e);
     else if(roadIsland(e))islands.push(e);
   }
@@ -19640,14 +19720,29 @@ function roadNetworkInput() {
     const ring=G.clean(item.pts);
     if(ring.length>=3)exclusions.push(ring);
   }
-  if(cadastral)for(const e of (blocks.some(e=>lays[e.lay]?.on)?blocks:parcels)){
-    if(!lays[e.lay]?.on)continue;
+  if(cadastral&&!customLayers.size)for(const e of boundaries){
     const pts=G.clean(e.pts);if(pts.length>=3)roads.push({id:e.id,pts,border:true});
+  }
+  if(cadastral&&!roads.length&&!customLayers.size){
+    const blocks=[],lots=[];
+    for(const e of ents){
+      if(!lays[e.lay]?.on||e.closed||!["line","pline"].includes(e.t)||!e.pts?.length)continue;
+      if(boundaryLayers.has(e.lay)){blocks.push(e.pts);continue;}
+      const l=roadLayerName(e.lay);
+      if(/(?:^|[_ -])ADA(?:$|[_ -])/.test(l))blocks.push(e.pts);
+      else if(/(?:^|[_ -])(?:PARSEL|KADASTRO)(?:$|[_ -])/.test(l))lots.push(e.pts);
+    }
+    const raw=blocks.length?blocks:lots;
+    if(raw.length)for(const ring of A.faces(raw,.005)){
+      const pts=G.clean(ring);
+      if(pts.length<3)continue;
+      roads.push({id:"face-"+roads.length,pts,border:true});exclusions.push(pts);
+    }
   }
   let hint=null;
   // Reuse the existing measured-bank verifier for local, fragmented survey
   // runs. The whole-network search still works independently of the click.
-  if (!cadastral && roads.length<=100 && roads.some(e=>!e.ring)) {
+  if (!cadastral && roads.length<=100 && roads.reduce((n,r)=>n+r.pts.length,0)<=1000 && roads.some(e=>!e.ring)) {
     const ids=new Set(roads.map(r=>r.id)), matches=ents.filter(e=>ids.has(e.id)), samples=[];
     for(const road of roads)if(!road.ring)for(let i=1;i<road.pts.length;i++){
       const a=road.pts[i-1],b=road.pts[i],dx=b[0]-a[0],dy=b[1]-a[1],len=Math.hypot(dx,dy);
@@ -19663,7 +19758,7 @@ function roadNetworkInput() {
   }
   return {roads,exclusions,cadastral,hint};
 }
-function roadNetworkWork(input, owner) {
+function roadNetworkWork(input, owner, progress) {
   const engine=$("acadRoadNetWorker").textContent;
   const url=URL.createObjectURL(new Blob([engine],{type:"text/javascript"}));
   return new Promise((resolve,reject)=>{
@@ -19671,7 +19766,7 @@ function roadNetworkWork(input, owner) {
       const worker=new Worker(url);
       const stop=()=>{clearInterval(check);worker.terminate();};
       const check=setInterval(()=>{if(cmd!==owner){stop();reject(Error("İşlem iptal edildi"));}},250);
-      worker.onmessage=({data})=>{stop();if(data.error)reject(Error(data.error));else resolve(data);};
+      worker.onmessage=({data})=>{if(data.phase){progress(data.phase);return;}stop();if(data.error)reject(Error(data.error));else resolve(data);};
       worker.onerror=()=>{stop();reject(Error("Yol geometrisi hesaplanamadı."));};
       worker.postMessage(input);
     }catch(e){reject(e);}finally{URL.revokeObjectURL(url);}
@@ -19724,6 +19819,8 @@ function roadNetworkStore(networks, input, unused, combine, refresh=false) {
     }
     IDX=null;persist();renderLays();
   }
+  if(lays[ROAD_NETWORK_LAYER])lays[ROAD_NETWORK_LAYER].on=true;
+  if(!showAreaHatch())$("cadAreaHatchToggle").click();
   const title=input.cadastral?"Kadastro yol adayı":"Yol ağı";
   const area=networks.reduce((sum,row)=>sum+row.area,0);
   const inferred=networks.some(n=>n.inferred);
@@ -19735,7 +19832,8 @@ function roadNetworkStore(networks, input, unused, combine, refresh=false) {
 }
 let roadNetworkCache=null;
 function roadNetworkCommand() {
-  let active=null;
+  let active=null,picking=false;
+  const customLayers=new Set(),boundaryLayers=new Set(),closedRoads=new Set();
   const title="Yol ağı";
   const message="Yolun içine dokun · Tümü: ayrı yolları ekle · Yenile: üretilmiş yol ağlarını tekrar hesapla";
   const run=async (p,refresh=false)=>{
@@ -19743,17 +19841,17 @@ function roadNetworkCommand() {
     if(!refresh&&ents.some(e=>e.roadArea&&e.roadKey&&e.lay===ROAD_NETWORK_LAYER&&!e.roadNetworkVersion))
       return say("Önceki yol ağı çizimde var. Güncel açık kaynaklardan tekrar hesaplamak için Yenile’ye dokun.",true);
     const owner=cmd, revision=FVER, current=ents;
-    const visible=Object.keys(lays).filter(k=>k!==ROAD_NETWORK_LAYER&&lays[k].on).join("\0");
+    const visible=Object.keys(lays).filter(k=>k!==ROAD_NETWORK_LAYER&&lays[k].on).join("\0")+"|"+JSON.stringify([[...customLayers],[...boundaryLayers],[...closedRoads]]);
     const cached=roadNetworkCache?.revision===revision&&roadNetworkCache.ents===current&&roadNetworkCache.visible===visible?roadNetworkCache:null;
-    const input=cached?.input||roadNetworkInput();
-    if(!input.roads.length)return say("Açık yol kenarı veya kapalı ada/parsel sınırı bulunamadı.",true);
+    const input=cached?.input||roadNetworkInput(customLayers,boundaryLayers,closedRoads);
+    if(!input.roads.length){picking="road";prompt_("Yol kenarını seç");return say("Yol sınırına dokun. Kadastro çizgileri için Ada/parsel tabakasını seç.",true);}
     if(p&&input.exclusions.some(r=>window.ACAD_ROAD_AREA.inside(r,p)))return say("Ada, parsel veya yapı içinde seçim. Yolun içine dokun.",true);
     active={};
     say(input.cadastral?"Ada kenarları taranıyor…":"Bağlı yol kenarları taranıyor…");
     await new Promise(requestAnimationFrame);
     if (cmd!==owner||revision!==FVER||current!==ents){active=null;return;}
     try {
-      const result=cached?.result||await roadNetworkWork(input,owner);
+      const result=cached?.result||await roadNetworkWork(input,owner,message=>{if(cmd===owner){prompt_(message);say(message);}});
       const {networks,unused}=result;
       if(cmd!==owner||revision!==FVER||current!==ents)return;
       const n=p?roadNetworkAt(networks,p):null;
@@ -19766,9 +19864,20 @@ function roadNetworkCommand() {
     }catch(e){if(cmd===owner)say(e.message,true);}
     finally{active=null;}
   };
-  cmd={name:title,raw:true,rcExit:true,ask:{ph:"Tümü",chips:["Tümü","Yenile"],w:90},
-    pt(p){last=null;void run(p);},ent(e,p){if(p)this.pt(p);},
-    val(text){if(/^yenile$/i.test(String(text).trim())){void run(null,true);return true;}if(/^t(ü|u)m(ü|u)?$/i.test(String(text).trim())){void run(null);return true;}return false;}
+  cmd={name:title,raw:true,rcExit:true,onlyPoint:()=>!picking,ask:{ph:"Tümü",chips:["Tümü","Yenile","Kenar tabakası","Ada/parsel tabakası"],w:90},
+    pt(p){last=null;if(picking){say("Yol kenarının çizgisine dokun.",true);return;}void run(p);},
+    ent(e,p){
+      if(!picking){if(p)this.pt(p);return;}
+      if(e.roadArea||e.roadBorder||!["line","pline"].includes(e.t))return say("Bir sınır çizgisi veya çoklu çizgi seç.",true);
+      const cadastralPick=picking==="cadastre";
+      if(cadastralPick)boundaryLayers.add(e.lay);
+      else if(e.closed)closedRoads.add(e.id);
+      else customLayers.add(e.lay);
+      roadNetworkCache=null;picking=false;
+      if(cadastralPick||e.closed){prompt_("Yolun içine dokun");say(cadastralPick?e.lay+" ada/parsel sınırı seçildi. Yolun içine dokun.":"Kapalı yol sınırı seçildi. Yolun içine dokun.");return;}
+      prompt_("Yolun içine dokun");say(e.lay+" seçildi. Karşı kenar farklı tabakadaysa Kenar tabakası ile onu da ekle.");
+    },
+    val(text){if(String(text).trim()==="Ada/parsel tabakası"){picking="cadastre";prompt_("Ada veya parsel sınırını seç");return true;}if(/^kenar tabakası$/i.test(String(text).trim())){picking="road";prompt_("Yol kenarındaki çizgiyi seç");return true;}if(/^yenile$/i.test(String(text).trim())){void run(null,true);return true;}if(/^t(ü|u)m(ü|u)?$/i.test(String(text).trim())){void run(null);return true;}return false;}
   };
   prompt_(message);
 };
@@ -22100,7 +22209,7 @@ const up = e => { const was = ptr.has(e.pointerId); ptr.delete(e.pointerId); if 
   if (mv) { IDX = null; persist(); return; } const sx = e.offsetX, sy = e.offsetY;
   if (grip) { const p = pickPt(sx, sy); snap0(); const g = grip; grip = null; if (g.e.t === "circle") g.e.c = p; else g.e.pts[g.i] = [p[0], p[1], g.e.pts[g.i][2] || 0]; IDX = null; persist(); say("Köşe taşındı"); idle(); return; }
   if (window.BGI && BGI.reg) { const odd = BGI.reg.step % 2 === 1; const p = odd ? pickPt(sx, sy) : [WX(sx), WY(sy)]; BGI.tap([p[0], p[1]]); draw(); return; }
-  if (cmd && cmd.ent && !cmd.e) { const en = pickEnt(sx, sy); if (en) { cmd.ent(en, [WX(sx), WY(sy)]); if(!(cmd && /^(Sorgula|Noktayı sorgula)$/.test(cmd.name)))draw(); /* komut ent() içinde bitmiş olabilir (cmd=null) */ return; } if (!cmd.pt) return; }
+  if (cmd && cmd.ent && !cmd.e && (!cmd.onlyPoint||!cmd.onlyPoint())) { const en = pickEnt(sx, sy); if (en) { cmd.ent(en, [WX(sx), WY(sy)]); if(!(cmd && /^(Sorgula|Noktayı sorgula)$/.test(cmd.name)))draw(); /* komut ent() içinde bitmiş olabilir (cmd=null) */ return; } if (!cmd.pt) return; }
   if (cmd && cmd.pt) { const p = cmd.raw ? [WX(sx),WY(sy)] : pickPt(sx, sy); const n0 = window.__cadN || 0; cmd.pt(p); if(!(cmd && /^(Sorgula|Noktayı sorgula)$/.test(cmd.name))) { /* komut zaten çizdiyse ikinci tam çizim yok; yakalama işareti yalnız üst katmandan silinir */ if ((window.__cadN || 0) === n0) draw(); if (snapMk) { clearTimeout(window.__snT); window.__snT = setTimeout(() => { if (!snapMk) return; snapMk = null; ustHizli(); }, 700); } } return; }
   // seçim: tutamaç mı?
   if (sel.size && !e.altKey) { for (const en of near([WX(sx),WY(sy)],12/V.s)) if (sel.has(en.id)) { const V_ = vertsOf(en); for (let i = 0; i < V_.length; i++) if (Math.hypot(X(V_[i][0]) / dpr - sx, Y(V_[i][1]) / dpr - sy) < 10) { grip = { e: en, i }; last = V_[i]; rub = true; prompt_("Tutamaç: köşenin yeni yerini göster (Esc iptal)"); draw(); return; } } }
@@ -26549,7 +26658,7 @@ function ifzLocalCadContext(P){
   return maxx>=box[0]&&minx<=box[2]&&maxy>=box[1]&&miny<=box[3];};
  const selected=selEnts().find(e=>e.t==='pline'&&e.closed),layerName=selected?.lay||'',candidates=[];
  let parcelN=0,roadN=0;
- for(const e of ents){if(!lays[e.lay]||lays[e.lay].on===false||!near(e))continue;
+ for(const e of ents){if(e.roadArea||e.roadBorder||!lays[e.lay]||lays[e.lay].on===false||!near(e))continue;
   if(typeof e.lay==='string'&&e.lay.startsWith('MIM_KOORDINATSIZ:'))continue;
   let priority=2;
   if(e===selected)priority=0;
@@ -26597,7 +26706,17 @@ function flowTo(m, selectedParcelOnly=false) { if (!ents.length) return say("Ön
     if(e.t!=='point'||!e.pts?.[0])return false;
     const q=e.pts[0];return P.some(p=>Math.abs(p[0]-q[0])<=.025&&Math.abs(p[1]-q[1])<=.025&&Math.hypot(p[0]-q[0],p[1]-q[1])<=.025);
   }):ents;
-  const d=toFD(passedEntities);if(localIfz)d.ifrazContext=localIfz.info;
+  const d=toFD(m==='ifz'?passedEntities.filter(e=>!e.roadArea&&!e.roadBorder):passedEntities);
+  if(localIfz)d.ifrazContext=localIfz.info;
+  if(m==='ifz'){
+    const rings=[];
+    for(const e of ents){
+      if(!e.closed||!lays[e.lay]?.on||!(e.roadBorder||(e.roadArea&&!e.roadInterior)))continue;
+      const pts=e.pts.map(q=>[q[0],q[1]]);
+      if(pts.length>=3)rings.push({pts,bb:A.bbox(pts),side:e.roadBorder?1:Math.sign(A.sArea(pts)),key:e.roadKey||e.id});
+    }
+    d.ifzNetwork=rings;
+  }
   window.APLT.fromCad(d, projName(), P, noOf(P), strictYapi, verifiedYapi); if (typeof showTab === "function") showTab(m);
   setTimeout(() => window.APLT.fitA(!!localIfz), 60);
   say(P ? `${sel.size ? "Seçili parsel" : "Çizimdeki kapalı alan"} ${m === "ifz" ? "ifraza" : "yapı aplikasyonuna"} gönderildi (${fmt(Math.abs(areaOf(P)))} m²)` : `Çizim gönderildi — ${m === "ifz" ? "İfraz" : "Yapı APL"} sekmesinde parselin içine dokun`); }
@@ -32415,7 +32534,7 @@ function validated(p){
  const inp=p.ifz;if(!inp||typeof inp!=='object')throw Error('İfraz seçenekleri eksik.');
  const result={};for(const k of F_KEYS)result[k]=inp[k];
  if(typeof result.y!=='string')result.y='ciz';
- result.yolSource=['manual','auto','none'].includes(inp.yolSource)?inp.yolSource:'none';
+ result.yolSource=['manual','auto','network','none'].includes(inp.yolSource)?inp.yolSource:'none';
  if(!Array.isArray(inp.yol))throw Error('Yol kenarları listesi geçersiz.');
  const unique=new Set();
  for(const k of inp.yol){if(!Number.isInteger(k)||k<0||k>=n)throw Error('Yol kenarı ana parselde yok: '+k);unique.add(k);}
@@ -32425,7 +32544,7 @@ function validated(p){
   const t=((q[0]-u[0])*dy+(q[1]-u[1])*dx)/len2;
   const ortho=Math.abs((q[0]-u[0])*dx-(q[1]-u[1])*dy)/Math.sqrt(len2);
   return t>=-1e-7&&t<=1+1e-7&&ortho<=.005;};
- if(inp.roadSpan!=null){if(!Array.isArray(inp.roadSpan)||inp.roadSpan.length>n||!inp.roadSpan.length)throw Error('İşaretlenmiş yol cephesi geçersiz.');
+ if(inp.roadSpan!=null){if(!Array.isArray(inp.roadSpan)||inp.roadSpan.length>(inp.yolSource==="network"||inp.yolSource==="manual"?Math.max(n,50000):n)||!inp.roadSpan.length)throw Error('İşaretlenmiş yol cephesi geçersiz.');
   result.roadSpan=inp.roadSpan.map(seg=>{if(!Array.isArray(seg)||seg.length!==2)throw Error('İşaretlenmiş cephe parçası geçersiz.');const p0=xy(seg[0],'Yol başlangıcı'),p1=xy(seg[1],'Yol bitişi');
    if(Math.hypot(p0[0]-p1[0],p0[1]-p1[1])<=.0001)throw Error('Yol cephesi sıfır uzunluklu.');
    if(!P.some((u,i)=>onEdge(p0,u,P[(i+1)%n])&&onEdge(p1,u,P[(i+1)%n])))throw Error('İşaretlenmiş cephe parsel sınırında değil.');
@@ -45177,7 +45296,7 @@ THIS SOFTWARE.
 !function(t,i){"object"==typeof exports&&"undefined"!=typeof module?module.exports=i():"function"==typeof define&&define.amd?define(i):(t="undefined"!=typeof globalThis?globalThis:t||self).Delaunator=i()}(this,(function(){"use strict";const t=11102230246251565e-32,i=134217729,s=(3+8*t)*t;function e(t,i,s,e,n){let h,r,l,o,a=i[0],f=e[0],c=0,u=0;f>a==f>-a?(h=a,a=i[++c]):(h=f,f=e[++u]);let _=0;if(c<t&&u<s)for(f>a==f>-a?(r=a+h,l=h-(r-a),a=i[++c]):(r=f+h,l=h-(r-f),f=e[++u]),h=r,0!==l&&(n[_++]=l);c<t&&u<s;)f>a==f>-a?(r=h+a,o=r-h,l=h-(r-o)+(a-o),a=i[++c]):(r=h+f,o=r-h,l=h-(r-o)+(f-o),f=e[++u]),h=r,0!==l&&(n[_++]=l);for(;c<t;)r=h+a,o=r-h,l=h-(r-o)+(a-o),a=i[++c],h=r,0!==l&&(n[_++]=l);for(;u<s;)r=h+f,o=r-h,l=h-(r-o)+(f-o),f=e[++u],h=r,0!==l&&(n[_++]=l);return 0===h&&0!==_||(n[_++]=h),_}function n(t){return new Float64Array(t)}const h=22204460492503146e-32,r=11093356479670487e-47,l=n(4),o=n(8),a=n(12),f=n(16),c=n(4);function u(t,n,u,_,d,g){const y=(n-g)*(u-d),w=(t-d)*(_-g),b=y-w,A=Math.abs(y+w);return Math.abs(b)>=33306690738754716e-32*A?b:-function(t,n,u,_,d,g,y){let w,b,A,k,M,p,x,S,T,z,U,m,K,L,v,F,P,E;const H=t-d,I=u-d,N=n-g,j=_-g;L=H*j,p=i*H,x=p-(p-H),S=H-x,p=i*j,T=p-(p-j),z=j-T,v=S*z-(L-x*T-S*T-x*z),F=N*I,p=i*N,x=p-(p-N),S=N-x,p=i*I,T=p-(p-I),z=I-T,P=S*z-(F-x*T-S*T-x*z),U=v-P,M=v-U,l[0]=v-(U+M)+(M-P),m=L+U,M=m-L,K=L-(m-M)+(U-M),U=K-F,M=K-U,l[1]=K-(U+M)+(M-F),E=m+U,M=E-m,l[2]=m-(E-M)+(U-M),l[3]=E;let q=function(t,i){let s=i[0];for(let e=1;e<t;e++)s+=i[e];return s}(4,l),D=h*y;if(q>=D||-q>=D)return q;if(M=t-H,w=t-(H+M)+(M-d),M=u-I,A=u-(I+M)+(M-d),M=n-N,b=n-(N+M)+(M-g),M=_-j,k=_-(j+M)+(M-g),0===w&&0===b&&0===A&&0===k)return q;if(D=r*y+s*Math.abs(q),q+=H*k+j*w-(N*A+I*b),q>=D||-q>=D)return q;L=w*j,p=i*w,x=p-(p-w),S=w-x,p=i*j,T=p-(p-j),z=j-T,v=S*z-(L-x*T-S*T-x*z),F=b*I,p=i*b,x=p-(p-b),S=b-x,p=i*I,T=p-(p-I),z=I-T,P=S*z-(F-x*T-S*T-x*z),U=v-P,M=v-U,c[0]=v-(U+M)+(M-P),m=L+U,M=m-L,K=L-(m-M)+(U-M),U=K-F,M=K-U,c[1]=K-(U+M)+(M-F),E=m+U,M=E-m,c[2]=m-(E-M)+(U-M),c[3]=E;const B=e(4,l,4,c,o);L=H*k,p=i*H,x=p-(p-H),S=H-x,p=i*k,T=p-(p-k),z=k-T,v=S*z-(L-x*T-S*T-x*z),F=N*A,p=i*N,x=p-(p-N),S=N-x,p=i*A,T=p-(p-A),z=A-T,P=S*z-(F-x*T-S*T-x*z),U=v-P,M=v-U,c[0]=v-(U+M)+(M-P),m=L+U,M=m-L,K=L-(m-M)+(U-M),U=K-F,M=K-U,c[1]=K-(U+M)+(M-F),E=m+U,M=E-m,c[2]=m-(E-M)+(U-M),c[3]=E;const C=e(B,o,4,c,a);L=w*k,p=i*w,x=p-(p-w),S=w-x,p=i*k,T=p-(p-k),z=k-T,v=S*z-(L-x*T-S*T-x*z),F=b*A,p=i*b,x=p-(p-b),S=b-x,p=i*A,T=p-(p-A),z=A-T,P=S*z-(F-x*T-S*T-x*z),U=v-P,M=v-U,c[0]=v-(U+M)+(M-P),m=L+U,M=m-L,K=L-(m-M)+(U-M),U=K-F,M=K-U,c[1]=K-(U+M)+(M-F),E=m+U,M=E-m,c[2]=m-(E-M)+(U-M),c[3]=E;const G=e(C,a,4,c,f);return f[G-1]}(t,n,u,_,d,g,A)}const _=Math.pow(2,-52),d=new Uint32Array(512);class g{static from(t,i=M,s=p){const e=t.length,n=new Float64Array(2*e);for(let h=0;h<e;h++){const e=t[h];n[2*h]=i(e),n[2*h+1]=s(e)}return new g(n)}constructor(t){const i=t.length>>1;if(i>0&&"number"!=typeof t[0])throw new Error("Expected coords to contain numbers.");this.coords=t;const s=Math.max(2*i-5,0);this._triangles=new Uint32Array(3*s),this._halfedges=new Int32Array(3*s),this._hashSize=Math.ceil(Math.sqrt(i)),this._hullPrev=new Uint32Array(i),this._hullNext=new Uint32Array(i),this._hullTri=new Uint32Array(i),this._hullHash=new Int32Array(this._hashSize),this._ids=new Uint32Array(i),this._dists=new Float64Array(i),this.update()}update(){const{coords:t,_hullPrev:i,_hullNext:s,_hullTri:e,_hullHash:n}=this,h=t.length>>1;let r=1/0,l=1/0,o=-1/0,a=-1/0;for(let i=0;i<h;i++){const s=t[2*i],e=t[2*i+1];s<r&&(r=s),e<l&&(l=e),s>o&&(o=s),e>a&&(a=e),this._ids[i]=i}const f=(r+o)/2,c=(l+a)/2;let d,g,w;for(let i=0,s=1/0;i<h;i++){const e=y(f,c,t[2*i],t[2*i+1]);e<s&&(d=i,s=e)}const k=t[2*d],M=t[2*d+1];for(let i=0,s=1/0;i<h;i++){if(i===d)continue;const e=y(k,M,t[2*i],t[2*i+1]);e<s&&e>0&&(g=i,s=e)}let p=t[2*g],x=t[2*g+1],S=1/0;for(let i=0;i<h;i++){if(i===d||i===g)continue;const s=b(k,M,p,x,t[2*i],t[2*i+1]);s<S&&(w=i,S=s)}let T=t[2*w],z=t[2*w+1];if(S===1/0){for(let i=0;i<h;i++)this._dists[i]=t[2*i]-t[0]||t[2*i+1]-t[1];A(this._ids,this._dists,0,h-1);const i=new Uint32Array(h);let s=0;for(let t=0,e=-1/0;t<h;t++){const n=this._ids[t],h=this._dists[n];h>e&&(i[s++]=n,e=h)}return this.hull=i.subarray(0,s),this.triangles=new Uint32Array(0),void(this.halfedges=new Uint32Array(0))}if(u(k,M,p,x,T,z)<0){const t=g,i=p,s=x;g=w,p=T,x=z,w=t,T=i,z=s}const U=function(t,i,s,e,n,h){const r=s-t,l=e-i,o=n-t,a=h-i,f=r*r+l*l,c=o*o+a*a,u=.5/(r*a-l*o);return{x:t+(a*f-l*c)*u,y:i+(r*c-o*f)*u}}(k,M,p,x,T,z);this._cx=U.x,this._cy=U.y;for(let i=0;i<h;i++)this._dists[i]=y(t[2*i],t[2*i+1],U.x,U.y);A(this._ids,this._dists,0,h-1),this._hullStart=d;let m=3;s[d]=i[w]=g,s[g]=i[d]=w,s[w]=i[g]=d,e[d]=0,e[g]=1,e[w]=2,n.fill(-1),n[this._hashKey(k,M)]=d,n[this._hashKey(p,x)]=g,n[this._hashKey(T,z)]=w,this.trianglesLen=0,this._addTriangle(d,g,w,-1,-1,-1);for(let h,r,l=0;l<this._ids.length;l++){const o=this._ids[l],a=t[2*o],f=t[2*o+1];if(l>0&&Math.abs(a-h)<=_&&Math.abs(f-r)<=_)continue;if(h=a,r=f,o===d||o===g||o===w)continue;let c=0;for(let t=0,i=this._hashKey(a,f);t<this._hashSize&&(c=n[(i+t)%this._hashSize],-1===c||c===s[c]);t++);c=i[c];let y,b=c;for(;y=s[b],u(a,f,t[2*b],t[2*b+1],t[2*y],t[2*y+1])>=0;)if(b=y,b===c){b=-1;break}if(-1===b)continue;let A=this._addTriangle(b,o,s[b],-1,-1,e[b]);e[o]=this._legalize(A+2),e[b]=A,m++;let k=s[b];for(;y=s[k],u(a,f,t[2*k],t[2*k+1],t[2*y],t[2*y+1])<0;)A=this._addTriangle(k,o,y,e[o],-1,e[k]),e[o]=this._legalize(A+2),s[k]=k,m--,k=y;if(b===c)for(;y=i[b],u(a,f,t[2*y],t[2*y+1],t[2*b],t[2*b+1])<0;)A=this._addTriangle(y,o,b,-1,e[b],e[y]),this._legalize(A+2),e[y]=A,s[b]=b,m--,b=y;this._hullStart=i[o]=b,s[b]=i[k]=o,s[o]=k,n[this._hashKey(a,f)]=o,n[this._hashKey(t[2*b],t[2*b+1])]=b}this.hull=new Uint32Array(m);for(let t=0,i=this._hullStart;t<m;t++)this.hull[t]=i,i=s[i];this.triangles=this._triangles.subarray(0,this.trianglesLen),this.halfedges=this._halfedges.subarray(0,this.trianglesLen)}_hashKey(t,i){return Math.floor(function(t,i){const s=t/(Math.abs(t)+Math.abs(i));return(i>0?3-s:1+s)/4}(t-this._cx,i-this._cy)*this._hashSize)%this._hashSize}_legalize(t){const{_triangles:i,_halfedges:s,coords:e}=this;let n=0,h=0;for(;;){const r=s[t],l=t-t%3;if(h=l+(t+2)%3,-1===r){if(0===n)break;t=d[--n];continue}const o=r-r%3,a=l+(t+1)%3,f=o+(r+2)%3,c=i[h],u=i[t],_=i[a],g=i[f];if(w(e[2*c],e[2*c+1],e[2*u],e[2*u+1],e[2*_],e[2*_+1],e[2*g],e[2*g+1])){i[t]=g,i[r]=c;const e=s[f];if(-1===e){let i=this._hullStart;do{if(this._hullTri[i]===f){this._hullTri[i]=t;break}i=this._hullPrev[i]}while(i!==this._hullStart)}this._link(t,e),this._link(r,s[h]),this._link(h,f);const l=o+(r+1)%3;n<d.length&&(d[n++]=l)}else{if(0===n)break;t=d[--n]}}return h}_link(t,i){this._halfedges[t]=i,-1!==i&&(this._halfedges[i]=t)}_addTriangle(t,i,s,e,n,h){const r=this.trianglesLen;return this._triangles[r]=t,this._triangles[r+1]=i,this._triangles[r+2]=s,this._link(r,e),this._link(r+1,n),this._link(r+2,h),this.trianglesLen+=3,r}}function y(t,i,s,e){const n=t-s,h=i-e;return n*n+h*h}function w(t,i,s,e,n,h,r,l){const o=t-r,a=i-l,f=s-r,c=e-l,u=n-r,_=h-l,d=f*f+c*c,g=u*u+_*_;return o*(c*g-d*_)-a*(f*g-d*u)+(o*o+a*a)*(f*_-c*u)<0}function b(t,i,s,e,n,h){const r=s-t,l=e-i,o=n-t,a=h-i,f=r*r+l*l,c=o*o+a*a,u=.5/(r*a-l*o),_=(a*f-l*c)*u,d=(r*c-o*f)*u;return _*_+d*d}function A(t,i,s,e){if(e-s<=20)for(let n=s+1;n<=e;n++){const e=t[n],h=i[e];let r=n-1;for(;r>=s&&i[t[r]]>h;)t[r+1]=t[r--];t[r+1]=e}else{let n=s+1,h=e;k(t,s+e>>1,n),i[t[s]]>i[t[e]]&&k(t,s,e),i[t[n]]>i[t[e]]&&k(t,n,e),i[t[s]]>i[t[n]]&&k(t,s,n);const r=t[n],l=i[r];for(;;){do{n++}while(i[t[n]]<l);do{h--}while(i[t[h]]>l);if(h<n)break;k(t,n,h)}t[s+1]=t[h],t[h]=r,e-n+1>=h-s?(A(t,i,n,e),A(t,i,s,h-1)):(A(t,i,s,h-1),A(t,i,n,e))}}function k(t,i,s){const e=t[i];t[i]=t[s],t[s]=e}function M(t){return t[0]}function p(t){return t[1]}return g}));
 
 
-function buildRoadNetwork(input) {
+function buildRoadNetwork(input, phase=()=>{}) {
   const { roads, exclusions, cadastral, hint } = input;
   if (!roads.length) return { networks: [], unused: 0 };
   const origin = roads[0].pts[0], cellSize = 32, maxWidth = 38;
@@ -45220,6 +45339,7 @@ function buildRoadNetwork(input) {
       }
     }
   });
+  phase("Karşılıklı yol kenarları eşleştiriliyor…");
   // Match each segment only where the opposite bank actually overlaps it.
   // The same edge can serve different branches along disjoint station ranges.
   const strips=[];
@@ -45436,6 +45556,7 @@ function buildRoadNetwork(input) {
     }
     return links;
   }
+  phase("Yol şeritleri birleştiriliyor…");
   const open=paths(clip(inferred.map(x=>path(x[0])),[],C.ClipType.ctUnion));
   const known=closed.map(x=>path(x[0]));
   // Close small discrepancies between survey runs and reconstructed junctions.
@@ -45443,8 +45564,10 @@ function buildRoadNetwork(input) {
   const radius=cadastral?3:3.25;
   const joined=open.length ? offset(offset(open,radius),-radius) : [];
   const initial=paths(clip([...open,...joined,...known],[],C.ClipType.ctUnion));
+  phase("Kavşaklar ve kesintiler çözümleniyor…");
   const links=cadastral?bankLinks(initial):surveyedLinks(initial);
   const openJoined=paths(clip([...open,...joined,...links],[],C.ClipType.ctUnion));
+  phase("Yol dışındaki alanlar ayrılıyor…");
   const protectedPaths=exclusions.length?paths(clip(exclusions.map(r=>path(r.map(local))),[],C.ClipType.ctUnion)):[];
   const estimated=openJoined.length && protectedPaths.length
     ? paths(clip(openJoined,protectedPaths,C.ClipType.ctDifference))
@@ -45476,7 +45599,33 @@ function buildRoadNetwork(input) {
     for(const c of node.Childs())visit(c);
   }
   for(const n of tree.Childs())visit(n);
+  phase("Bağlı yol alanları hazırlanıyor…");
   const closedOnly=closed.length && !estimated.length;
+  // Fallback for complex CAD rings with nearly touching holes. Cut through a
+  // hole using integer polygon overlay, then keep each resulting simple face.
+  function partitionRoad(poly,depth=0){
+    if(poly.length===1)return [poly[0]];
+    if(depth>45)throw Error('Yol içindeki boşluklar ayrıştırılamadı.');
+    const region=poly.map((r,i)=>i?path(r).reverse():path(r)),bb=C.Clipper.GetBounds(region);
+    const holes=region.slice(1).map(h=>C.Clipper.GetBounds([h])).sort((a,b)=>(a.left+a.right)-(b.left+b.right));
+    const h=holes[Math.floor(holes.length/2)],cut=Math.round((h.left+h.right)/2);
+    if(cut<=bb.left||cut>=bb.right)throw Error('Yol sınırında geçersiz iç halka.');
+    const pieces=[];
+    for(const [l,r] of [[bb.left-1,cut],[cut,bb.right+1]]){
+      const rect=[{X:l,Y:bb.top-1},{X:r,Y:bb.top-1},{X:r,Y:bb.bottom+1},{X:l,Y:bb.bottom+1}];
+      const t=clip(region,[rect],C.ClipType.ctIntersection);
+      const collect=n=>{
+        if(!n.IsHole()){
+          const sub=[n.Contour(),...n.Childs().filter(c=>c.IsHole()).map(c=>c.Contour())]
+            .map(ring=>ring.map(p=>[p.X/scale,p.Y/scale]));
+          for(const face of partitionRoad(sub,depth+1))pieces.push(face);
+        }
+        for(const ch of n.Childs())collect(ch);
+      };
+      for(const child of t.Childs())collect(child);
+    }
+    return pieces;
+  }
   const networks=[];
   for (const poly of merged) {
     const square=netArea(poly);
@@ -45495,8 +45644,13 @@ function buildRoadNetwork(input) {
         if(area(tri)>1e-8)flat.push(tri.map(world));
       }
       const actual=flat.reduce((s,r)=>s+area(r.map(local)),0);
-      if(Math.abs(actual-square)>Math.max(.002,square*1e-7))throw Error('Refüj ve boşluklar ayrılırken yol alanı doğrulanamadı.');
-      parts=flat;
+      const tolerance=Math.max(.002,square*1e-7);
+      if(Math.abs(actual-square)<=tolerance)parts=flat;
+      else{
+        const faces=partitionRoad(poly),sum=faces.reduce((total,r)=>total+area(r),0);
+        if(Math.abs(sum-square)>tolerance)throw Error('Yol alanı ve iç boşlukların toplamı uyuşmadı.');
+        parts=faces.map(r=>r.map(world));
+      }
     }
     networks.push({rings,parts,area:square,inferred:!closedOnly});
   }
@@ -45504,7 +45658,7 @@ function buildRoadNetwork(input) {
 }
 
 self.onmessage=event=>{
-  try{self.postMessage(buildRoadNetwork(event.data));}
+  try{self.postMessage(buildRoadNetwork(event.data,phase=>self.postMessage({phase})));}
   catch(e){self.postMessage({error:e.message});}
 };
 </script>
