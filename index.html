@@ -1172,6 +1172,7 @@ html[data-cad-query-tone] body :is(#arzBox#arzBox,#cadInfo#cadInfo,#cadProp#cadP
   pointer-events:auto; background:#183346; color:#f5fafc;
   border:1px solid #486475; border-radius:9px; box-shadow:0 2px 5px #10263225;
 }
+#cadRoadStatus {box-sizing:border-box;max-width:100%;padding:6px 10px;border-radius:8px;background:#123245;color:#f3fafc;border-left:3px solid #61c3f0;font-size:13px;line-height:1.35}
 #v-cad #cadBox #cadWorkBars > [hidden] {display:none!important}
 #v-cad #cadBox #cadWorkBars > div > * {flex:0 0 auto; white-space:nowrap}
 #v-cad #cadBox #cadWorkBars button {
@@ -1746,7 +1747,7 @@ window.ACAD_DISPLAY = {
     <div id="cadBox" style="position:relative;border-radius:10px;overflow:hidden;background:#1c2127;height:min(64vh,620px);touch-action:none">
       <canvas id="cadCv" style="width:100%;height:100%;display:block" aria-label="Çizim alanı"></canvas>
       <div id="cadXY" style="position:absolute;right:8px;bottom:6px;font:12px monospace;color:#9fb0c0"></div>
-      <div id="cadWorkBars"><div id="cadCtx" class="cadctx" hidden></div></div>
+      <div id="cadWorkBars"><output id="cadRoadStatus" role="status" hidden></output><div id="cadCtx" class="cadctx" hidden></div></div>
       <div class="cadgps"><button type="button" id="cadGmap" title="Google Haritalar / Google Earth">🌍</button><button type="button" id="cadGps" title="Canlı konum">📍</button><button type="button" id="cadFol" hidden title="Konumu takip et">⦿</button><button type="button" id="cadGpt" hidden title="Bulunduğum yere nokta (10 sn ortalama)">＋📍</button></div>
       <div id="cadGpsI" hidden style="position:absolute;left:8px;top:8px;right:60px;background:rgba(17,22,27,.85);color:#e6eaef;font:12px/1.35 Arial;padding:6px 8px;border-radius:8px"></div>
     </div>
@@ -19587,10 +19588,14 @@ function pickEnt(sx,sy,cycle=false,commit=false){
 }
 
 /* ---------- komut satırı ---------- */
-const say = (t, bad) => { const el = $("cadMsg"); el.style.whiteSpace = "pre-line"; el.textContent = t; el.style.color = bad ? "#ff8a80" : ""; };
+const say = (t, bad) => { const el = $("cadMsg"); el.style.whiteSpace = "pre-line"; el.textContent = t; el.style.color = bad ? "#ff8a80" : "";
+  if(cmd?.roadNetwork){const status=$("cadRoadStatus");status.textContent=t;status.hidden=false;} };
 const prompt_ = t => { $("cadPr").textContent = t; try { ctxBar(); } catch (e) {} };
 let LASTPT = "mouse"; /* son dokunuş türü: parmakla seçerken tolerans büyür */
-function ctxBar() { const el = $("cadCtx"); if (!el) return; setTimeout(() => typeof renderPad === "function" && renderPad(), 0); const pick = cmd && !cmd.ask && (cmd.pick || cmd.done && /Çoklu|Alan|Aplikasyon|Profil|Eğri çiz/.test(cmd.name));
+function ctxBar() {
+  const roadStatus=$("cadRoadStatus");
+  if(roadStatus)roadStatus.hidden=!cmd?.roadNetwork||!roadStatus.textContent;
+  const el = $("cadCtx"); if (!el) return; setTimeout(() => typeof renderPad === "function" && renderPad(), 0); const pick = cmd && !cmd.ask && (cmd.pick || cmd.done && /Çoklu|Alan|Aplikasyon|Profil|Eğri çiz/.test(cmd.name));
   if (pick) { el.hidden = false; el.innerHTML = `<button type="button" class="primary" data-x="ok">✓ Tamam</button><button type="button" data-x="esc">Esc</button>`; }
   else if (cmd && cmd.ask) { const a = cmd.ask; el.hidden = false; el.innerHTML = `<span style="color:#ffd800;font-weight:700;white-space:nowrap">${esc_(cmd.hint || cmd.name)}</span><input id="cxV" ${a.num ? 'inputmode="decimal"' : ""} placeholder="${esc_(a.ph || "değer")}" style="width:${a.w || 90}px;padding:6px;font-size:15px">${(a.chips || []).map(v => `<button type="button" data-v="${v}">${String(v).replace(".", ",")}</button>`).join("")}<button type="button" class="primary" data-v="">✓</button><button type="button" data-x="esc">Esc</button>`;
     const go = v => { $("cadIn").value = v; enter(); }; el.querySelectorAll("[data-v]").forEach(b => b.onclick = () => go(b.dataset.v || $("cxV").value)); $("cxV").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); go($("cxV").value); } if (e.key === "Escape") esc(); });
@@ -19812,7 +19817,7 @@ function roadNetworkStore(networks, input, unused, combine, refresh=false) {
     for (const n of prepared) {
       const partitioned=n.rings.length>1;
       for (const ring of n.parts) add({t:"pline",closed:true,pts:ring.map(q=>[q[0],q[1],null]),lay,
-        roadArea:true,roadNetworkVersion:2,roadInterior:partitioned,roadGroup:first||n.key,roadKey:n.key,
+        roadArea:true,roadNetworkVersion:3,roadInterior:partitioned,roadGroup:first||n.key,roadKey:n.key,
         areaQuality:n.inferred?"review-required":"closed-source-geometry"});
       if (partitioned) for (const ring of n.rings) add({t:"pline",closed:true,pts:ring.map(q=>[q[0],q[1],null]),
         lay,roadBorder:true,roadGroup:first||n.key,roadKey:n.key});
@@ -19842,7 +19847,7 @@ function roadNetworkCommand() {
       return say("Önceki yol ağı çizimde var. Güncel açık kaynaklardan tekrar hesaplamak için Yenile’ye dokun.",true);
     const owner=cmd, revision=FVER, current=ents;
     const visible=Object.keys(lays).filter(k=>k!==ROAD_NETWORK_LAYER&&lays[k].on).join("\0")+"|"+JSON.stringify([[...customLayers],[...boundaryLayers],[...closedRoads]]);
-    const cached=roadNetworkCache?.revision===revision&&roadNetworkCache.ents===current&&roadNetworkCache.visible===visible?roadNetworkCache:null;
+    const cached=!refresh&&roadNetworkCache?.revision===revision&&roadNetworkCache.ents===current&&roadNetworkCache.visible===visible?roadNetworkCache:null;
     const input=cached?.input||roadNetworkInput(customLayers,boundaryLayers,closedRoads);
     if(!input.roads.length){picking="road";prompt_("Yol kenarını seç");return say("Yol sınırına dokun. Kadastro çizgileri için Ada/parsel tabakasını seç.",true);}
     if(p&&input.exclusions.some(r=>window.ACAD_ROAD_AREA.inside(r,p)))return say("Ada, parsel veya yapı içinde seçim. Yolun içine dokun.",true);
@@ -19851,7 +19856,7 @@ function roadNetworkCommand() {
     await new Promise(requestAnimationFrame);
     if (cmd!==owner||revision!==FVER||current!==ents){active=null;return;}
     try {
-      const result=cached?.result||await roadNetworkWork(input,owner,message=>{if(cmd===owner){prompt_(message);say(message);}});
+      const result=cached?.result||await roadNetworkWork(input,owner,message=>{if(cmd===owner){say(message);}});
       const {networks,unused}=result;
       if(cmd!==owner||revision!==FVER||current!==ents)return;
       const n=p?roadNetworkAt(networks,p):null;
@@ -19864,7 +19869,8 @@ function roadNetworkCommand() {
     }catch(e){if(cmd===owner)say(e.message,true);}
     finally{active=null;}
   };
-  cmd={name:title,raw:true,rcExit:true,onlyPoint:()=>!picking,ask:{ph:"Tümü",chips:["Tümü","Yenile","Kenar tabakası","Ada/parsel tabakası"],w:90},
+  $("cadRoadStatus").textContent="Yolun içine dokun";
+  cmd={name:title,roadNetwork:true,raw:true,rcExit:true,onlyPoint:()=>!picking,ask:{ph:"Tümü",chips:["Tümü","Yenile","Kenar tabakası","Ada/parsel tabakası"],w:90},
     pt(p){last=null;if(picking){say("Yol kenarının çizgisine dokun.",true);return;}void run(p);},
     ent(e,p){
       if(!picking){if(p)this.pt(p);return;}
@@ -19877,7 +19883,7 @@ function roadNetworkCommand() {
       if(cadastralPick||e.closed){prompt_("Yolun içine dokun");say(cadastralPick?e.lay+" ada/parsel sınırı seçildi. Yolun içine dokun.":"Kapalı yol sınırı seçildi. Yolun içine dokun.");return;}
       prompt_("Yolun içine dokun");say(e.lay+" seçildi. Karşı kenar farklı tabakadaysa Kenar tabakası ile onu da ekle.");
     },
-    val(text){if(String(text).trim()==="Ada/parsel tabakası"){picking="cadastre";prompt_("Ada veya parsel sınırını seç");return true;}if(/^kenar tabakası$/i.test(String(text).trim())){picking="road";prompt_("Yol kenarındaki çizgiyi seç");return true;}if(/^yenile$/i.test(String(text).trim())){void run(null,true);return true;}if(/^t(ü|u)m(ü|u)?$/i.test(String(text).trim())){void run(null);return true;}return false;}
+    val(text){if(active)return true;if(String(text).trim()==="Ada/parsel tabakası"){picking="cadastre";prompt_("Ada veya parsel sınırını seç");return true;}if(/^kenar tabakası$/i.test(String(text).trim())){picking="road";prompt_("Yol kenarındaki çizgiyi seç");return true;}if(/^yenile$/i.test(String(text).trim())){void run(null,true);return true;}if(/^t(ü|u)m(ü|u)?$/i.test(String(text).trim())){void run(null);return true;}return false;}
   };
   prompt_(message);
 };
@@ -45348,7 +45354,10 @@ function buildRoadNetwork(input, phase=()=>{}) {
     bins(a.bb,maxWidth,key=>{for(const j of grid.get(key)||[]) if(j!==i)candidates.add(j);});
     const pairs=[];
     for (const j of candidates) {
-      const b=segments[j], align=dot(a.u,b.u);
+      const b=segments[j];
+      if(b.bb[2]<a.bb[0]-maxWidth||b.bb[0]>a.bb[2]+maxWidth||
+         b.bb[3]<a.bb[1]-maxWidth||b.bb[1]>a.bb[3]+maxWidth)continue;
+      const align=dot(a.u,b.u);
       if (Math.abs(align)<.78 || (a.id===b.id && Math.abs(a.i-b.i)<=1)) continue;
       const b0=dot(delta(b.a,a.a),a.u), b1=dot(delta(b.b,a.a),a.u);
       const lo=Math.max(0,Math.min(b0,b1)),hi=Math.min(a.len,Math.max(b0,b1));
@@ -45367,9 +45376,14 @@ function buildRoadNetwork(input, phase=()=>{}) {
     const ordered=pairs.sort((a,b)=>a.score-b.score);
     for(let k=1;k<cuts.length;k++){
       const lo=cuts[k-1], hi=cuts[k];if(hi-lo<.04)continue;
-      const mid=(lo+hi)/2, options=ordered.filter(p=>p.lo<=mid&&p.hi>=mid), b=options[0];
+      const mid=(lo+hi)/2;
+      let b=null,opposite=null;
+      for(const candidate of ordered){
+        if(candidate.lo>mid||candidate.hi<mid)continue;
+        if(!b)b=candidate;
+        else if(candidate.side!==b.side){opposite=candidate;break;}
+      }
       if(!b)continue;
-      const opposite=options.find(q=>q.side!==b.side);
       if(opposite&&opposite.score-b.score<Math.max(.45,b.width*.15))continue;
       const ring=[lerp(a.a,a.b,lo/a.len),lerp(a.a,a.b,hi/a.len),
         lerp(b.from,b.to,(hi-b.lo)/(b.hi-b.lo)),lerp(b.from,b.to,(lo-b.lo)/(b.hi-b.lo))];
@@ -45626,6 +45640,31 @@ function buildRoadNetwork(input, phase=()=>{}) {
     }
     return pieces;
   }
+  function packRoadTriangles(points, triangles) {
+    const count=points.length;
+    const key=(a,b)=>a*count+b;
+    const edgeOwner=new Map(), taken=new Uint8Array(triangles.length/3), result=[];
+    for(let i=0;i<triangles.length;i+=3){
+      const [a,b,c]=[triangles[i],triangles[i+1],triangles[i+2]];
+      if(area([points[a],points[b],points[c]])<=1e-8){taken[i/3]=1;continue;}
+      edgeOwner.set(key(a,b),i+2);edgeOwner.set(key(b,c),i);edgeOwner.set(key(c,a),i+1);
+    }
+    for(let t=0;t<taken.length;t++){
+      if(taken[t])continue;
+      taken[t]=1;
+      const ring=triangles.slice(t*3,t*3+3);
+      const pointKey=i=>points[i][0]+","+points[i][1];
+      const vertices=new Set(ring.map(pointKey));
+      for(let i=0;i<ring.length&&ring.length<64;){
+        const a=ring[i],b=ring[(i+1)%ring.length],j=edgeOwner.get(key(b,a));
+        if(j===undefined||taken[Math.floor(j/3)]||vertices.has(pointKey(triangles[j]))){i++;continue;}
+        const c=triangles[j];
+        vertices.add(pointKey(c));taken[Math.floor(j/3)]=1;ring.splice(i+1,0,c);
+      }
+      result.push(ring.map(i=>points[i]));
+    }
+    return result;
+  }
   const networks=[];
   for (const poly of merged) {
     const square=netArea(poly);
@@ -45638,14 +45677,10 @@ function buildRoadNetwork(input, phase=()=>{}) {
       // Keep each stored CAD object simple and preserve islands without counting them.
       const points=[], starts=[];
       [outer,...holes].forEach((r,i)=>{if(i)starts.push(points.length);points.push(...r);});
-      const ix=earcut(points.flat(),starts), flat=[];
-      for(let i=0;i<ix.length;i+=3){
-        const tri=[points[ix[i]],points[ix[i+1]],points[ix[i+2]]];
-        if(area(tri)>1e-8)flat.push(tri.map(world));
-      }
-      const actual=flat.reduce((s,r)=>s+area(r.map(local)),0);
+      const tiles=packRoadTriangles(points,earcut(points.flat(),starts));
+      const actual=tiles.reduce((sum,ring)=>sum+area(ring),0);
       const tolerance=Math.max(.002,square*1e-7);
-      if(Math.abs(actual-square)<=tolerance)parts=flat;
+      if(Math.abs(actual-square)<=tolerance)parts=tiles.map(r=>r.map(world));
       else{
         const faces=partitionRoad(poly),sum=faces.reduce((total,r)=>total+area(r),0);
         if(Math.abs(sum-square)>tolerance)throw Error('Yol alanı ve iç boşlukların toplamı uyuşmadı.');
