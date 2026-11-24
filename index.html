@@ -24968,7 +24968,7 @@ CMDS.GORUNUM3B = () => {
       p=p.map(q=>{const hits=cadTriangleAt(q);const top=(finalView && hits.filter(h=>h.lay!=='SIYAH_ARAZI').at(-1))||hits.at(-1);return top?[q[0],q[1],top.z]:null;});
       if(p.every(q=>!q))continue;
     }
-    if(e.t==='text' && e.s && p[0] && (/(B[Iİ]NA|BLOK|BUILDING)/i.test(e.lay)||/^(?:B|BL|BLOK)[ -]?\d+(?:[-/][A-Z]?\d+)*$/i.test(String(e.s).trim())))labels.push({p:p[0],s:e.s});
+    if(e.t==='text' && e.s && p[0] && (/(B[Iİ]NA|BLOK|BUILDING)/i.test(e.lay)||/^(?:B|BL|BLOK)[ -]?\d+(?:[-/][A-Z]?\d+)*$/i.test(String(e.s).trim())))labels.push({p:p[0],s:e.s,level:e.lay==='BINA_TEMEL_KOTU'||e.lay==='BINA_SUBASMAN'});
     if(e.closed && e.areaName && p.length && /B[Iİ]NA|BLOK/i.test(e.lay)){
       const center=p.reduce((acc,q)=>[acc[0]+q[0]/p.length,acc[1]+q[1]/p.length,acc[2]+(q[2]||0)/p.length],[0,0,0]);labels.push({p:center,s:e.areaName});
     }
@@ -25015,12 +25015,13 @@ CMDS.GORUNUM3B = () => {
     pen.setTransform(ratio,0,0,ratio,0,0);pen.clearRect(0,0,width,height);
     pen.font='600 12px system-ui';pen.textAlign='center';pen.lineWidth=3;pen.strokeStyle='#162632';pen.fillStyle='#fff19d';
     const used=new Set();
-    for(const {p,s} of labels){
+    for(const {p,s,level} of labels){
       v.set(p[0]-origin.x,p[1]-origin.y,(p[2]??0)-origin.z).project(cam);
       if(Math.abs(v.x)>1||Math.abs(v.y)>1||Math.abs(v.z)>1)continue;
       const x=(v.x+1)*width/2,y=(1-v.y)*height/2,key=Math.floor(x/40)+'/'+Math.floor(y/15);
-      if(used.has(key))continue;
-      used.add(key);pen.strokeText(s,x,y);pen.fillText(s,x,y);
+      if(used.has(key)&&!level)continue;
+      const row=level&&used.has(key)?y+15:y;
+      used.add(key);pen.strokeText(s,x,row);pen.fillText(s,x,row);
     }
   }
   function size(){cam.aspect=Math.max(1,stage.clientWidth)/Math.max(1,stage.clientHeight);renderer.setSize(stage.clientWidth,stage.clientHeight,false);cam.updateProjectionMatrix();render();}
@@ -35130,14 +35131,23 @@ function mount(host) {
       const layer=sample?'BINA_ALAN':roles.binaLayer;
       for(const [x,y,X,Y] of D.lines[layer]||[])add('line','BINA_PLAN',5,[x,y,0],[X,Y,0]);
       for(const p of D.polys[layer]||[])if(p.P.length>=2)add('poly3','BINA_PLAN',5,p.P.map(([x,y])=>[x,y,0]),!!p.closed);
-      const labelLayers=new Map([[sample?'BINA_NO':roles.noLayer,'BINA_NO'],[sample?'REZERV_BİNANO':roles.rezLayer,'REZERV_BINA_NO']]);
+      const labelLayers=new Map([
+        [sample?'BINA_NO':roles.noLayer,{name:'BINA_NO'}],
+        [sample?'REZERV_BİNANO':roles.rezLayer,{name:'REZERV_BINA_NO'}],
+        [sample?'BINA_TEMELALTKOTU':roles.kotLayer,{name:'BINA_TEMEL_KOTU',caption:'Temel alt'}],
+        [roles.plinth,{name:'BINA_SUBASMAN',caption:'Subasman'}]
+      ].filter(([source])=>source));
       for(const t of D.texts){
         const target=labelLayers.get(t.lay);
         if(!target || !t.s || !Number.isFinite(t.x0) || !Number.isFinite(t.y0))continue;
         const h=t.h>0?t.h:1,rotation=(t.r||0)*180/Math.PI;
-        layers.set(target,2);
-        if(dxf){dxf.lay(target,2);dxf.text(target,t.x0,t.y0,h,t.s,rotation,'l');}
-        else records.push(['text',target,[t.x0,t.y0,0],t.s,h,rotation,'l']);
+        const z=target.caption?KC.readLevel(t.s):0;
+        if(!Number.isFinite(z))continue;
+        const text=target.caption?target.caption+' '+t.s+' m':t.s;
+        const color=target.caption?4:2;
+        layers.set(target.name,color);
+        if(dxf){dxf.lay(target.name,color);dxf.text(target.name,t.x0,t.y0,h,text,rotation,'l',0,z);}
+        else records.push(['text',target.name,[t.x0,t.y0,z],text,h,rotation,'l']);
       }
       if(format==='cad'){
         await window.CADX.openFoundationModel(($('parsel').value||'Temel')+' · Kazı ve dolgu',layers,records,context);
