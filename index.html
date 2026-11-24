@@ -8136,7 +8136,31 @@ A.kroki = (D, P) => { const g = A.pg(297, 210); const { L, T, R } = g; R(10, 12,
   const ay0 = 12, ay1 = 47; L([[10, ay1], [cx, ay1]], 0.35); L([[85, ay0], [85, ay1]], 0.35);
   [["İLİ", P.il], ["İLÇESİ", P.ilce], ["MAH./KÖY", P.mahalle], ["PAFTA NO", P.pafta], ["ADA/PARSEL NO", `${P.ada || ""} / ${P.parselNo || ""}`]].forEach(([a, b], i) => { const y = ay1 - (ay1 - ay0) / 5 * (i + 0.5); T(12, y, a, 2); T(42, y, ": " + (b || ""), 2); if (i) L([[10, ay1 - (ay1 - ay0) / 5 * i], [85, ay1 - (ay1 - ay0) / 5 * i]], 0.15); });
   A.imzaTablo(g, 85, ay0, cx, ay1, [{ h: ["DÜZENLEYEN"], ad: P.duzenleyen, tarih: P.tarih }, { h: P.kgm ? ["UYGUNDUR", "KARAYOLLARI GEN. MÜD.", "KONTROL EDEN"] : ["UYGUNDUR", "BELEDİYE/ÖZEL İDARE", "KONTROL EDEN"] }, { h: ["ONAYLAYAN"] }, { h: ["KADASTRO MÜDÜRLÜĞÜ", "KONTROL EDEN"] }], P);
-  A.krokiPlan(g, D, [14, 50, cx - 4, P.sira ? 180 : 196], null); if ((D.imar || []).length) { g.G.push({ t: "l", p: [[cx - 62, 52.5], [cx - 46, 52.5]], w: 0.3, color: "#0000ff" }); T(cx - 44, 51.9, "İmar Ada Kenarı", 1.8); } return g.G; };
+  A.krokiPlan(g, D.ifraz ? {...D,nearSketch:true} : D, [14, 50, cx - 4, P.sira ? 180 : 196], null); if ((D.imar || []).length) { g.G.push({ t: "l", p: [[cx - 62, 52.5], [cx - 46, 52.5]], w: 0.3, color: "#0000ff" }); T(cx - 44, 51.9, "İmar Ada Kenarı", 1.8); } return g.G; };
+/* Output-space crop shared by the two ifraz sketches. Keep the open ends
+   of surveyed boundaries: there is no artificial line along the crop. */
+A.ifzSketchContext = (D,F) => {
+  const ring=D.parent.pts,[x0,y0,x1,y1]=A.bbox(ring);
+  const margin=d=>Math.min(35/F.s,Math.max(4/F.s,d));
+  const mx=margin((x1-x0)*.18),my=margin((y1-y0)*.18);
+  const frame=[x0-mx,y0-my,x1+mx,y1+my],lines=[],seen=new Set();
+  const inside=p=>A.inPoly(ring,p[0],p[1]);
+  function add(a,b){
+    const cut=A.clipSeg(a,b,frame);
+    if(!cut||Math.hypot(cut[1][0]-cut[0][0],cut[1][1]-cut[0][1])*F.s<.18)return;
+    const k=cut.map(v=>v.map(x=>x.toFixed(3)).join(',')).sort().join('|');
+    if(!seen.has(k)){seen.add(k);lines.push(cut);}
+  }
+  for(const r of D.komsuP||[])for(let i=0;i<r.length;i++)add(r[i],r[(i+1)%r.length]);
+  for(const k of D.komsu||[])add(k.s,k.e);
+  for(const [a,b,layer] of D.cadCiz||[]){
+    if((inside(a)&&inside(b))||/PARSEL|KADASTRO|ADA.*KENAR|YOL|CADDE|SOKAK|KALDIRIM|SINIR/i.test(layer||''))add(a,b);
+  }
+  const inFrame=([x,y])=> x>=frame[0]&&x<=frame[2]&&y>=frame[1]&&y<=frame[3];
+  const nearby=t=>inFrame(t.p)&&ring.some((a,i)=>A.segDist(t.p,a,ring[(i+1)%ring.length])<=Math.max(mx,my));
+  return {...D,komsu:[],komsuP:[],cadCiz:lines,cadYazi:(D.cadYazi||[]).filter(t=>inside(t.p)),
+    yolYazi:(D.yolYazi||[]).filter(nearby),komsuAd:(D.komsuAd||[]).filter(nearby)};
+};
 A.krokiPlan = (g, D, box, list) => { const i0 = g.G.length; const all = [...D.parent.pts, ...D.parts.flatMap(p => p.pts)]; const bw = box[2] - box[0], bh = box[3] - box[1], ib = [box[0] + bw * 0.1, box[1] + bh * 0.1, box[2] - bw * 0.1, box[3] - bh * 0.1]; /* çevrede komşu numarası ve yol yazısı için pay */ const F = A.fitPlan(all, ib, list);
   if(D.gridFrame&&F.olc){
     const original=F.M,inv=F.inv,step=F.olc/10,bb=A.bbox(all.map(original));
@@ -8153,6 +8177,7 @@ A.krokiPlan = (g, D, box, list) => { const i0 = g.G.length; const all = [...D.pa
     }
     if(best){F.M=p=>{const q=original(p);return [q[0]+best.dx,q[1]+best.dy];};F.inv=q=>inv([q[0]-best.dx,q[1]-best.dy]);}
   }
+  if(D.nearSketch) D=A.ifzSketchContext(D,F);
   const M=F.M; const { L, T } = g;
   const seen = new Set(); const ek = (a, b) => [a, b].map(p => p[0].toFixed(3) + "," + p[1].toFixed(3)).sort().join("|");
   const polys = D.parts.length ? D.parts : [D.parent];
@@ -8197,12 +8222,18 @@ A.krokiPlan = (g, D, box, list) => { const i0 = g.G.length; const all = [...D.pa
       if(placed)continue;}
       hid++; continue; } boxes.push(bx); T(x, y, nn, 1.9, { al }); }
   if (hid && !D.noHidNote) T(box[0] + 1, box[1] + 1, `Sık noktalardan ${hid} tanesinin numarası koordinat özetinde.`, 1.5);
-  for (const pr of polys) { const c = M(A.label(pr.pts)); if (D.parts.length) { T(c[0], c[1] + 1.2, pr.ad, 3.4, { al: "c", bold: true }); T(c[0], c[1] - 2.4, `${K.fa(A.area(pr.pts))} m²`, 1.7, { al: "c" }); } }
+  for (const pr of polys) { const c = M(A.label(pr.pts)); if (D.parts.length) { const group=D.nearSketch?{grp:"part"+g.G.length,inP:pr.pts.map(M),pr:2}:{}; T(c[0], c[1] + (D.nearSketch?2.2:1.2), pr.ad, 3.4, { al: "c", bold: true,...group }); T(c[0], c[1] - (D.nearSketch?3.0:2.4), `${K.fa(A.area(pr.pts))} m²`, D.nearSketch?2.15:1.7, { al: "c",...group }); } }
   if (D.ada) { const c = M(A.label(D.parent.pts)); let q = [c[0], c[1]]; if (D.parts.length) { /* ada numarası: bölme hatlarından, parça yazılarından ve sınırdan en uzak boş yer */ const PM = D.parent.pts.map(M), cs = polys.map(pr => M(A.label(pr.pts))), cuts = (D.cuts || []).map(l => l.map(M)); const bb_ = A.bbox(PM); let best = null, bs = -1;
       const sd_ = (p, a, b) => A.segDist(p, a, b); for (let i = 1; i < 18; i++) for (let j = 1; j < 18; j++) { const p = [bb_[0] + (bb_[2] - bb_[0]) * i / 18, bb_[1] + (bb_[3] - bb_[1]) * j / 18]; if (!A.inPoly(PM, p[0], p[1])) continue;
         let d = Infinity; for (const l of cuts) for (let k = 0; k + 1 < l.length; k++) d = Math.min(d, sd_(p, l[k], l[k + 1]) / 6); for (const z of cs) d = Math.min(d, Math.hypot(p[0] - z[0], p[1] - z[1]) / 8); for (let k = 0; k < PM.length; k++) d = Math.min(d, sd_(p, PM[k], PM[(k + 1) % PM.length]) / 7); if (d > bs) { bs = d; best = p; } } if (best) q = best; }
-    T(q[0], q[1] + 1.6, D.ada, 4.4, { al: "c", bold: true }); const pn = String(D.parselNo || ""); if (pn) { T(q[0], q[1] - 2.6, pn, 2.6, { al: "c", color: D.parts.length ? "#c00000" : "#000" }); if (D.parts.length) { const w = Math.max(1.6, pn.length * 1.6); g.G.push({ t: "l", p: [[q[0] - w / 2 - 0.4, q[1] - 2.6], [q[0] + w / 2 + 0.4, q[1] - 2.6]], w: 0.2, color: "#c00000" }); } /* ifrazda eski parsel no üstü çizili */ } }
-  try { A.declutter(g.G, i0, g.G.length, box, { pad: 0.2 }); } catch (e) { console.error(e); }
+    const group=D.nearSketch?{grp:"parentId",inP:D.parent.pts.map(M),pr:3}:{}; T(q[0], q[1] + 1.6, D.ada, 4.4, { al: "c", bold: true,...group }); const pn = String(D.parselNo || ""); if (pn) { T(q[0], q[1] - 2.6, pn, 2.6, { al: "c", color: D.parts.length ? "#c00000" : "#000",...group }); if (D.parts.length && !D.nearSketch) { const w = Math.max(1.6, pn.length * 1.6); g.G.push({ t: "l", p: [[q[0] - w / 2 - 0.4, q[1] - 2.6], [q[0] + w / 2 + 0.4, q[1] - 2.6]], w: 0.2, color: "#c00000" }); } /* ifrazda eski parsel no üstü çizili */ } }
+  try { A.declutter(g.G, i0, g.G.length, box, { pad: D.nearSketch ? .95 : .2 }); } catch (e) { console.error(e); }
+  if(D.nearSketch){
+    const labels=g.G.slice(i0).filter(o=>o.t==="x");
+    for(const o of labels)o.sabit=true;
+    const old=labels.find(o=>o.grp==="parentId" && o.color==="#c00000");
+    if(old){const r=A.tw(old.s,old.size)/2+.35;L([[old.x-r,old.y],[old.x+r,old.y]],.2,old.color);}
+  }
   return F; };
 A.label = P => { const c = A.centroid(P); if (A.inPoly(P, c[0], c[1])) return c; // içerideki en geniş yatay kesitin ortası
   const [x0, y0, x1, y1] = A.bbox(P); let best = c, bw = -1; for (let k = 1; k < 20; k++) { const y = y0 + (y1 - y0) * k / 20, xs = [];
@@ -8227,13 +8258,25 @@ A.durumGridVisible=(x,y)=>x>=14&&x<=283&&y>=14&&y<=192&&!(x<72&&y>154)&&!(x>150&
 A.durum = (D, P) => { const g = A.pg(297, 210); const { L, T, R } = g; R(10, 10, 287, 196, 0.45); T(148, 186, "DURUM HARİTASI", 3.4, { al: "c" }); T(287, 199.5, "EK-15", 2.8, { al: "r" });
   const tb = [["İLİ", P.il], ["İLÇESİ", P.ilce], ["KÖY / MAH.", P.mahalle], ["PAFTA NO", P.pafta], ["ADA/PARSEL", `${P.ada || ""} / ${P.parselNo || ""}`]]; R(10, 196 - 40, 70, 196, 0.3); L([[32, 156], [32, 196]], 0.2);
   tb.forEach(([a, b], i) => { const y = 196 - 8 * (i + 0.5); T(12, y, a, 1.7); T(34, y, b || "", 1.7); if (i) L([[10, 196 - 8 * i], [70, 196 - 8 * i]], 0.15); });
-  const F = A.krokiPlan(g, Object.assign({}, D, { points: [], noLen: true,gridFrame:D.ifraz }), [74, 46, 270, 182], [500,1000,2000,2500,5000,10000,...(D.ifraz?[25000,50000,100000,250000,500000,1000000,2500000,5000000]:[])].filter(k=>!D.ifraz||k>=(D.durumOlcek||500)));
+  const F = A.krokiPlan(g, Object.assign({}, D, { points: [], noLen: true,nearSketch:D.ifraz,gridFrame:D.ifraz }), [74, 46, 270, 182], [500,1000,2000,2500,5000,10000,...(D.ifraz?[25000,50000,100000,250000,500000,1000000,2500000,5000000]:[])].filter(k=>!D.ifraz||k>=(D.durumOlcek||500)));
   if ((D.imar || []).length) { g.G.push({ t: "l", p: [[14, 13], [32, 13]], w: 0.3, color: "#0000ff" }); T(34, 12.4, "İmar Ada Kenarı", 1.8); }
   A.north(g.G, 281, 120); T(281, 102, `1 / ${F.olc}`, 2, { al: "c" }); L([[275, 104.5], [287, 104.5]], 0.2);
   // kareler (koordinat haçları)
   const step = D.ifraz ? F.olc/10 : F.olc <= 1000 ? 100 : F.olc <= 2500 ? 200 : 500; const lo = F.inv([12, 12]), hi = F.inv([285, 194]);
   for (let x = Math.ceil(lo[0] / step) * step; x <= hi[0]; x += step) for (let y = Math.ceil(lo[1] / step) * step; y <= hi[1]; y += step) { const m = F.M([x, y]); if (!A.durumGridVisible(m[0],m[1])) continue;
     L([[m[0] - 2, m[1]], [m[0] + 2, m[1]]], 0.2); L([[m[0], m[1] - 2], [m[0], m[1] + 2]], 0.2); const flipX=D.ifraz&&m[0]<25,flipY=D.ifraz&&m[1]<26;
+    if(D.ifraz){
+      const label=(value,vertical)=>{
+        const h=1.6,w=A.tw(String(value),h),gap=w/2+3,positions=[];
+        for(const shift of [1.7,3.5,5.2])for(const side of (vertical?(flipY?[1,-1]:[-1,1]):(flipX?[1,-1]:[-1,1])))for(const cross of [1,-1]){
+          const off=vertical?[shift*cross,side*gap]:[side*gap,shift*cross];
+          positions.push([m[0]+off[0],m[1]+off[1]]);
+        }
+        T(...positions[0],String(value),h,{al:"c",rot:vertical?90:0,cand:positions,sabit:true});
+        A.declutter(g.G,g.G.length-1,g.G.length,[10,10,287,196],{pad:.9});
+      };
+      label(y,false);label(x,true);continue;
+    }
     T(m[0]+(flipX?2.5:-2.5),m[1]+.9,String(y),1.6,{al:flipX?'l':'r'});
     T(m[0]+.9,m[1]+(flipY?2.5:-2.5),String(x),1.6,{rot:flipY?90:-90}); }
   A.imzaTablo(g, 150, 10, 287, 44, [{ h: ["DÜZENLEYEN"], ad: P.duzenleyen, tarih: P.tarih }, { h: ["UYGUNDUR", "BELEDİYE / ÖZEL İDARE", "KONTROL EDEN"] }, { h: ["ONAYLAYAN"] }, { h: ["KONTROL EDİLMİŞTİR.", "KADASTRO MÜDÜRLÜĞÜ"] }], P);
@@ -15655,7 +15698,7 @@ function ifzData() {const a=S(),d=ifzDataFor(a.parsel,a.ifz,a.antet);d.ifraz=tru
         // Keep them in the original CAD, but do not copy the small rings into EK-5 drawing.
         if(o.closed && o.pts?.length>=6){const ob=A.bbox(o.pts),w=ob[2]-ob[0],h=ob[3]-ob[1];if(w>0.02&&h>0.02&&w<1.7&&h<1.7&&Math.min(w,h)/Math.max(w,h)>0.72)continue;}
         const P_ = o.closed ? [...o.pts, o.pts[0]] : o.pts;
-        for (let i = 0; i + 1 < P_.length; i++) { const c_ = A.clipSeg(P_[i], P_[i + 1], KW); if (!c_) continue; const m = [(c_[0][0] + c_[1][0]) / 2, (c_[0][1] + c_[1][1]) / 2]; if (onPB(m) && onPB(c_[0]) && onPB(c_[1])) continue; cadCiz.push([[c_[0][0], c_[0][1]], [c_[1][0], c_[1][1]]]); n_++; } }
+        for (let i = 0; i + 1 < P_.length; i++) { const c_ = A.clipSeg(P_[i], P_[i + 1], KW); if (!c_) continue; const m = [(c_[0][0] + c_[1][0]) / 2, (c_[0][1] + c_[1][1]) / 2]; if (onPB(m) && onPB(c_[0]) && onPB(c_[1])) continue; cadCiz.push([[c_[0][0], c_[0][1]], [c_[1][0], c_[1][1]], ly]); n_++; } }
       const YW = /KARG[İI]R|BETONARME|AH[ŞS]AP|B[İI]NA|\bEV\b|AMBAR|AH[İI]R|TUVALET|SAMANLIK|SUNDURMA|ODUNLUK|D[ÜU]KKAN|DEPO|GARAJ|SERA|HAVUZ|KATLI|BARAKA|K[ÜU]MES|[ÇC]E[ŞS]ME|C[ÂA]M[İI]|MESC[İI]T|OKUL|BAHÇE|BAH[ÇC]E|YIKINTI|TAŞ DUVAR|İSTİNAT|ISTINAT/i;
       for (const t of FD.texts) { if (!isFinite(t.e) || H.has(t.lay) || /MAL[İI]K|SAH[İI]P|TC|KİMLİK|KIMLIK/i.test(t.lay || "")) continue; if (!(t.e > KW[0] && t.e < KW[2] && t.y > KW[1] && t.y < KW[3])) continue; const s_ = String(t.s || "").trim(); if (!s_ || s_.length > 40) continue;
         if (YW.test(s_) && !/\d{3,}/.test(s_) && !/\bNO\b|\/|:|=|ADI\b|SAYI|TOPLAM|ADED|ALANI\b|TABLO|L[İI]STE/i.test(s_)) { /* tablo başlığı ("BİNA / BLOK NO") yapı cinsi değildir */ cadYazi.push({ p: [t.e, t.y], s: s_, rot: +t.rot || 0 }); continue; } /* yapı cinsi (örnek: Kargir 2 katlı ev, Betonarme Bina) */
