@@ -1705,7 +1705,7 @@ window.ACAD_DISPLAY = {
 <button data-c="ALANKES" data-n="Alan Kes" title="İlk alandan ikinci alanı çıkar">7 · Alan Kes</button>
 <button data-c="ALANESIT" data-n="Eşit Böl" title="Alanı eşit m² parçalara ayır">8 · Eşit Böl</button>
 <button data-c="ALANHEDEF" data-n="Hedef m²" title="Seçilen köşeyi kaydırarak hedef m² oluştur">9 · Hedef m²</button>
-<button data-c="ALANCEPHEYAZ" data-n="Alan Cephe Yaz" title="Kapalı alanın bütün cephelerini, nokta adlarını çiz ve kroki PDF oluştur">10 · Alan Cephe Yaz</button> <a id="acadAreaKitLauncher2" href="#acadAreaKitModal" title="Alan adı ve kot atama">11 · Toplu Ad / Kot Ata</a>
+<button data-c="ALANCEPHEYAZ" data-n="Alan Cephe Yaz" title="Kapalı alanın bütün cephelerini, nokta adlarını çiz ve kroki PDF oluştur">10 · Alan Cephe Yaz</button> <button type="button" id="acadAreaKitLauncher2" title="Alan adı ve kot atama" aria-haspopup="dialog" aria-controls="acadAreaKitModal" onclick="location.hash=this.getAttribute('aria-controls')">11 · Toplu Ad / Kot Ata</button>
 <button data-c="YOLAGI" data-n="Yol ağı" title="Yolun içine dokunup bağlı alanı tek işlemde oluştur">12 · Yol ağı <kbd>YOLAGI</kbd></button>
 <button data-c="ALANCEPHEPDF" data-n="Alan Kroki PDF" title="Seçilen alanın cephe, Y/X koordinat ve nokta adlarıyla A3 kroki PDF'sini hazırla">13 · Kroki PDF Yap</button>
 <button data-c="ALANDENET" data-n="Alan Veri Denetimi" title="Geometri ve kaynak doğruluk kontrolü">14 · Alan Veri Denetimi</button>
@@ -33496,7 +33496,7 @@ setTimeout(requestHeight,350);setTimeout(requestHeight,1200);
 </script>
 <style id="acad-area-kit-integration-css">
 #acadAreaKitModal[hidden]:not(:target){display:none!important}
-#acadAreaKitLauncher2,#acadAreaKitLauncher{display:inline-flex;align-items:center;white-space:nowrap;padding:6px 10px;border-radius:7px;background:#125d7a;color:#fff!important;text-decoration:none;font-weight:700;flex:none}
+#acadAreaKitLauncher{display:inline-flex;align-items:center;white-space:nowrap;padding:6px 10px;border-radius:7px;background:#125d7a;color:#fff!important;text-decoration:none;font-weight:700;flex:none}
 #acadAreaKitModal{position:fixed;inset:0;z-index:2147483600;background:rgba(11,23,33,.88);display:flex;flex-direction:column;padding:clamp(3px,.6vw,9px);gap:5px;box-sizing:border-box}
 #acadAreaKitModal .kitBar{min-height:42px;display:flex;align-items:center;gap:10px;padding:6px 10px;border:1px solid #36515f;border-radius:9px;background:#162a37;color:#f0f6f8;font:600 13px system-ui,sans-serif}
 #acadAreaKitModal .kitBar strong{font-size:14px}#acadAreaKitModal .kitBar .kitStatus{flex:1;font-size:12px;color:#b7d3dd;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
