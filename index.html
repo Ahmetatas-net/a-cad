@@ -2293,7 +2293,16 @@ body.map-expanded{overflow:hidden;touch-action:none}
 #roadQaPanel .rqItem button{min-height:30px;font-size:11px;padding:4px 7px;white-space:nowrap}
 @media(max-width:620px){#roadQaPanel{padding:8px}#roadQaPanel .rqActions button{flex:1 1 120px}#roadQaPanel .rqItem{font-size:11px}}
 &lt;/style&gt;
-&lt;/head&gt;&lt;body&gt;
+&lt;style&gt;
+#rvRoadCanvas{display:block;width:100%;height:clamp(270px,55vh,510px);touch-action:none;cursor:grab;border-radius:12px}
+#rvRoadCanvas:active{cursor:grabbing}
+#planRoad3D,#roadViewSuite .rvTab[aria-selected=&quot;true&quot;]{background:#166679;border-color:#54a7b1;color:white}
+#liveReadout{background:#101f2c;border:1px solid #4b8392;border-radius:11px;max-height:100%;container-type:inline-size;overflow:auto;padding-bottom:20px}
+#liveReadout b,#liveReadout .liveLayer b{font-size:clamp(10px,6cqw,20px)}
+#readoutResize{position:absolute;bottom:0;right:0;width:26px;height:22px;min-height:0;padding:0;border:0;background:#234451;color:#c0e0e2;cursor:nwse-resize;touch-action:none}
+#liveReadout.readoutCollapsed{height:auto!important;padding-bottom:5px;container-type:normal}
+#liveReadout.readoutCollapsed #readoutResize{display:none}
+&lt;/style&gt;&lt;/head&gt;&lt;body&gt;
 &lt;div class=&quot;top&quot;&gt;&lt;div&gt;&lt;div class=&quot;eyebrow&quot;&gt;A-CAD • Yol Projesi V6&lt;/div&gt;&lt;h1&gt;Yol 3B yüzey modülü&lt;/h1&gt;&lt;p&gt;İki parmak zoom · Canlı kırmızı kot · Yol Ekle · DXF&lt;/p&gt;&lt;/div&gt;&lt;span class=&quot;badge&quot;&gt;Çevrimdışı · Otomatik aktarım kontrollü&lt;/span&gt;&lt;/div&gt;
 &lt;div class=&quot;box&quot;&gt;&lt;div class=&quot;quick-nav&quot; aria-label=&quot;Mobil hızlı erişim&quot;&gt;&lt;button id=&quot;goMap&quot; type=&quot;button&quot;&gt;Harita&lt;/button&gt;&lt;button id=&quot;goLayers&quot; type=&quot;button&quot;&gt;Kotlar&lt;/button&gt;&lt;button id=&quot;goAdd&quot; type=&quot;button&quot;&gt;+ Yol Ekle&lt;/button&gt;&lt;/div&gt;&lt;div class=&quot;row&quot; id=&quot;topControls&quot;&gt;&lt;label for=&quot;roadSelect&quot;&gt;Yol&lt;/label&gt;&lt;select id=&quot;roadSelect&quot;&gt;&lt;/select&gt;&lt;button id=&quot;addRoad&quot; class=&quot;btn primary&quot;&gt;+ Yol Ekle&lt;/button&gt;&lt;button id=&quot;exportDXF&quot; class=&quot;btn&quot;&gt;Tüm 3B DXF (Bilgisayar)&lt;/button&gt;&lt;button id=&quot;exportLayerDXF&quot; class=&quot;btn&quot;&gt;Seçili Tabaka DXF (Telefon)&lt;/button&gt;&lt;button id=&quot;fit&quot; class=&quot;btn&quot;&gt;Görünüme Sığdır&lt;/button&gt;&lt;/div&gt;&lt;div id=&quot;uploader&quot; class=&quot;upload&quot;&gt;&lt;div class=&quot;row&quot; style=&quot;align-items:end&quot;&gt;&lt;label&gt;Plan ve enkesit DXF (aynı dosyada olabilir)&lt;input id=&quot;dxfInput&quot; type=&quot;file&quot; multiple accept=&quot;.dxf&quot;&gt;&lt;/label&gt;&lt;label&gt;Yol numarası &lt;input id=&quot;roadNumber&quot; type=&quot;number&quot; min=&quot;1&quot; max=&quot;999&quot; placeholder=&quot;Ör. 9&quot; style=&quot;width:120px&quot;&gt;&lt;/label&gt;&lt;button id=&quot;readBtn&quot; class=&quot;btn primary&quot;&gt;Yolu Çöz ve Ekle&lt;/button&gt;&lt;/div&gt;&lt;div class=&quot;help&quot;&gt;Yalnızca &lt;b&gt;ASCII DXF&lt;/b&gt;. C-ROAD-SECT-* kesit katmanları, PB/BP–PS/EP yol yazıları ve C-ROAD-CNTR-* plan ekseni algılanır. Büyük DXF dosyalarında Android telefonun belleği yetersiz kalabilir; önce hazır YOL 09 üzerinde dene.&lt;/div&gt;&lt;div id=&quot;parseProgress&quot; class=&quot;bar&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&lt;p id=&quot;status&quot; class=&quot;status&quot;&gt;15 yolun ön işlemi hazır; YOL 09 seçili. Haritada tıklayarak kot sorgula.&lt;/p&gt;&lt;/div&gt;
 
@@ -2418,7 +2427,7 @@ X Y (en az 3 köşe)&quot;&gt;&lt;/textarea&gt;&lt;/label&gt;
  &lt;div class=&quot;planRow&quot;&gt;&lt;button class=&quot;btn primary&quot; type=&quot;button&quot; id=&quot;planCreate&quot;&gt;✓ Yol Oluştur&lt;/button&gt;&lt;/div&gt;
  &lt;div role=&quot;status&quot; aria-live=&quot;polite&quot; id=&quot;planStatus&quot;&gt;Siyah arazi enkesit TIN&#x27;i seçili yolda gösterilir. SOME veya serbest güzergâh seçip haritaya dokun.&lt;/div&gt;
 &lt;/section&gt;
-&lt;div class=&quot;row&quot; style=&quot;justify-content:space-between;margin-bottom:8px&quot;&gt;&lt;h2&gt;Gerçek koordinatlı yol planı / tabaka koridoru&lt;/h2&gt;&lt;div class=&quot;row&quot;&gt;&lt;button class=&quot;btn&quot; id=&quot;zoomIn&quot;&gt;+&lt;/button&gt;&lt;button class=&quot;btn&quot; id=&quot;zoomOut&quot;&gt;−&lt;/button&gt;&lt;button class=&quot;btn&quot; id=&quot;mapFullscreen&quot; type=&quot;button&quot;&gt;⛶ Tam ekran&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;canvasbox&quot;&gt;&lt;canvas id=&quot;map&quot;&gt;&lt;/canvas&gt;
+&lt;div class=&quot;row&quot; style=&quot;justify-content:space-between;margin-bottom:8px&quot;&gt;&lt;h2&gt;Gerçek koordinatlı yol planı / tabaka koridoru&lt;/h2&gt;&lt;div class=&quot;row&quot;&gt;&lt;button class=&quot;btn&quot; type=&quot;button&quot; id=&quot;planRoad3D&quot;&gt;3B Yol&lt;/button&gt;&lt;button class=&quot;btn&quot; type=&quot;button&quot; id=&quot;readoutRestore&quot; title=&quot;Sorgu panelini ilk konumuna ve boyutuna getir&quot;&gt;Paneli getir&lt;/button&gt;&lt;button class=&quot;btn&quot; id=&quot;zoomIn&quot;&gt;+&lt;/button&gt;&lt;button class=&quot;btn&quot; id=&quot;zoomOut&quot;&gt;−&lt;/button&gt;&lt;button class=&quot;btn&quot; id=&quot;mapFullscreen&quot; type=&quot;button&quot;&gt;⛶ Tam ekran&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;canvasbox&quot;&gt;&lt;canvas id=&quot;map&quot;&gt;&lt;/canvas&gt;
 &lt;div id=&quot;liveReadout&quot; aria-label=&quot;Seçilen noktanın XYZ, KM ve yüzey bilgileri&quot; aria-live=&quot;off&quot;&gt;
   &lt;div class=&quot;liveTitle&quot; id=&quot;readoutDragHandle&quot; tabindex=&quot;0&quot; role=&quot;button&quot; aria-label=&quot;Sorgu panelini fareyle ya da dokunarak taşı. Ok tuşlarıyla da hareket ettirebilirsin.&quot;&gt;&lt;span class=&quot;readoutDragIcon&quot; aria-hidden=&quot;true&quot;&gt;⠿&lt;/span&gt;&lt;span class=&quot;readoutTitleText&quot;&gt;NOKTA SORGUSU&lt;/span&gt;&lt;button id=&quot;readoutCollapse&quot; class=&quot;readoutCollapse&quot; type=&quot;button&quot; title=&quot;Paneli küçült / genişlet&quot; aria-label=&quot;Sorgu panelini küçült veya genişlet&quot; aria-expanded=&quot;true&quot;&gt;−&lt;/button&gt;&lt;/div&gt;
   &lt;div class=&quot;liveGrid&quot;&gt;
@@ -2428,7 +2437,7 @@ X Y (en az 3 köşe)&quot;&gt;&lt;/textarea&gt;&lt;/label&gt;
     &lt;div&gt;&lt;small&gt;Y (m)&lt;/small&gt;&lt;b id=&quot;liveY&quot;&gt;—&lt;/b&gt;&lt;/div&gt;
   &lt;/div&gt;
   &lt;div class=&quot;liveLayer&quot;&gt;&lt;span id=&quot;liveLayerName&quot;&gt;Aktif yüzey: —&lt;/span&gt;&lt;b id=&quot;liveZ&quot;&gt;Z: —&lt;/b&gt;&lt;/div&gt;
-  &lt;div class=&quot;liveCaution&quot; id=&quot;liveWarning&quot;&gt;Haritada bir nokta seç. GPS konumu değildir.&lt;/div&gt;
+  &lt;button type=&quot;button&quot; id=&quot;readoutResize&quot; aria-label=&quot;Panel boyutu: sürükle veya ok tuşlarını kullan&quot; title=&quot;Boyutlandır&quot;&gt;◢&lt;/button&gt;&lt;div class=&quot;liveCaution&quot; id=&quot;liveWarning&quot;&gt;Haritada bir nokta seç. GPS konumu değildir.&lt;/div&gt;
 &lt;/div&gt;
 &lt;div class=&quot;canvaslabel&quot; id=&quot;mapLegend&quot;&gt;Kesitli bölüm: mavi · Yol ekseni: kesik çizgi&lt;/div&gt;&lt;/div&gt;&lt;div id=&quot;mapQueryBar&quot;&gt;&lt;span class=&quot;mapQueryNote&quot;&gt;Dokun: noktanın KM / XYZ bilgisini gör · Sürükle: haritayı kaydır · İki parmak: yakınlaştır&lt;/span&gt;&lt;/div&gt;
 &lt;section id=&quot;roadViewSuite&quot; aria-label=&quot;Plan profil enkesit ve nokta tablosu&quot;&gt;
@@ -2450,6 +2459,7 @@ X Y (en az 3 köşe)&quot;&gt;&lt;/textarea&gt;&lt;/label&gt;
   &lt;button class=&quot;rvTab&quot; data-rv=&quot;plan&quot; role=&quot;tab&quot; aria-selected=&quot;false&quot;&gt;Plan&lt;/button&gt;
   &lt;button class=&quot;rvTab&quot; data-rv=&quot;profile&quot; role=&quot;tab&quot; aria-selected=&quot;false&quot;&gt;Yalnız Profil&lt;/button&gt;
   &lt;button class=&quot;rvTab&quot; data-rv=&quot;cross&quot; role=&quot;tab&quot; aria-selected=&quot;true&quot;&gt;Kesit + Profil&lt;/button&gt;
+  &lt;button class=&quot;rvTab&quot; data-rv=&quot;surface&quot; role=&quot;tab&quot; aria-selected=&quot;false&quot;&gt;3B Yol&lt;/button&gt;
   &lt;button class=&quot;rvTab&quot; data-rv=&quot;points&quot; role=&quot;tab&quot; aria-selected=&quot;false&quot;&gt;Nokta Tablosu&lt;/button&gt;
  &lt;/div&gt;
  &lt;div class=&quot;rvViewer&quot; id=&quot;rvViewer&quot;&gt;
@@ -2465,7 +2475,11 @@ X Y (en az 3 köşe)&quot;&gt;&lt;/textarea&gt;&lt;/label&gt;
    &lt;button type=&quot;button&quot; data-rv-quick=&quot;0&quot;&gt;Hafriyat&lt;/button&gt;&lt;button type=&quot;button&quot; data-rv-quick=&quot;1&quot;&gt;Alt temel&lt;/button&gt;&lt;button type=&quot;button&quot; data-rv-quick=&quot;2&quot;&gt;Plentmiks&lt;/button&gt;&lt;button type=&quot;button&quot; data-rv-quick=&quot;3&quot;&gt;Bitümlü&lt;/button&gt;&lt;button type=&quot;button&quot; data-rv-quick=&quot;4&quot;&gt;Binder&lt;/button&gt;&lt;button type=&quot;button&quot; data-rv-quick=&quot;5&quot;&gt;Asfalt&lt;/button&gt;
   &lt;/div&gt;
   &lt;details class=&quot;rvLayerExtra&quot;&gt;&lt;summary&gt;Karşılaştırma çizgilerini göster / gizle&lt;/summary&gt;&lt;div class=&quot;rvLayerChooser&quot; id=&quot;rvLayers&quot; aria-label=&quot;Görüntülenecek yüzeyler&quot;&gt;&lt;/div&gt;&lt;/details&gt;
-  &lt;div id=&quot;rvProfilePage&quot;&gt;&lt;div class=&quot;rvSectionCaption&quot;&gt;BOYPROFİL &lt;span&gt;Siyah / kırmızı ve seçili yüzey&lt;/span&gt;&lt;/div&gt;&lt;canvas id=&quot;rvProfile&quot; class=&quot;rvCanvas rvProfile&quot; aria-label=&quot;Yol boyprofili&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;
+  &lt;section id=&quot;rvSurface&quot; hidden&gt;
+ &lt;div class=&quot;rvSectionCaption&quot;&gt;3B YOL YÜZEYİ &lt;span&gt;Sürükle ve döndür · İki parmakla yakınlaştır&lt;/span&gt;&lt;/div&gt;
+ &lt;canvas id=&quot;rvRoadCanvas&quot; aria-label=&quot;Yolun üç boyutlu yüzeyi&quot;&gt;&lt;/canvas&gt;
+ &lt;div class=&quot;rvCrossTools&quot;&gt;&lt;button type=&quot;button&quot; id=&quot;rvRoadScope&quot;&gt;Tüm yol&lt;/button&gt;&lt;button type=&quot;button&quot; id=&quot;rvRoadMinus&quot; aria-label=&quot;3B uzaklaştır&quot;&gt;−&lt;/button&gt;&lt;button type=&quot;button&quot; id=&quot;rvRoadPlus&quot; aria-label=&quot;3B yakınlaştır&quot;&gt;+&lt;/button&gt;&lt;/div&gt;
+ &lt;/section&gt;&lt;div id=&quot;rvProfilePage&quot;&gt;&lt;div class=&quot;rvSectionCaption&quot;&gt;BOYPROFİL &lt;span&gt;Siyah / kırmızı ve seçili yüzey&lt;/span&gt;&lt;/div&gt;&lt;canvas id=&quot;rvProfile&quot; class=&quot;rvCanvas rvProfile&quot; aria-label=&quot;Yol boyprofili&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;
   &lt;div id=&quot;rvCrossPage&quot;&gt;&lt;div class=&quot;rvSectionCaption&quot;&gt;ENKESİT &lt;span&gt;KM ileri / geri ile birlikte güncellenir&lt;/span&gt;&lt;/div&gt;
     &lt;div class=&quot;rvCrossTools&quot;&gt;&lt;button type=&quot;button&quot; id=&quot;rvZoomIn&quot; title=&quot;Yakınlaştır&quot;&gt;＋&lt;/button&gt;&lt;button type=&quot;button&quot; id=&quot;rvZoomOut&quot; title=&quot;Uzaklaştır&quot;&gt;－&lt;/button&gt;&lt;button type=&quot;button&quot; id=&quot;rvFit&quot;&gt;Tümünü göster&lt;/button&gt;&lt;button type=&quot;button&quot; id=&quot;rvMeasure&quot; aria-pressed=&quot;false&quot;&gt;Ölç&lt;/button&gt;&lt;span&gt;CAD ENKESİT&lt;/span&gt;&lt;/div&gt;
     &lt;canvas id=&quot;rvCross&quot; class=&quot;rvCanvas&quot; aria-label=&quot;Seçilen kilometre enkesit: dokunarak sorgula veya ölç&quot;&gt;&lt;/canvas&gt;&lt;div class=&quot;rvCadLegend&quot; aria-label=&quot;Kesit çizgi açıklamaları&quot;&gt;▰ Kaynak CAD kırıkları &amp;nbsp; · &amp;nbsp; Şev / kenar çizgileri &amp;nbsp; · &amp;nbsp; Refüj varsa kaplamasız &amp;nbsp; · &amp;nbsp; Kotlar kaynak DXF’den&lt;/div&gt;&lt;div class=&quot;rvMeasureInfo&quot; id=&quot;rvMeasureInfo&quot; role=&quot;status&quot;&gt;Dokun: kot sorgula · Sürükle: kaydır · İki parmak: zoom&lt;/div&gt;
@@ -3480,6 +3494,7 @@ dpExample();
    e.preventDefault();e.stopImmediatePropagation();exportCurrent(type===&#x27;dxf_layer&#x27;);
  },true);
  // Validate the in-memory surface stack before field export.
+ window.roadDesignSurface=designMeshes;
  window.__roadSelfCheck=function(){
    let o=dpState.result,checks=[];if(!o)return {ok:false,reason:&#x27;Önce Yol Oluştur&#x27;};
    let grids=designMeshes(o);checks.push({key:&#x27;surface_count&#x27;,value:grids.length,ok:grids.length===6});
@@ -3558,6 +3573,15 @@ function crossSummary(){
  t.textContent=&#x27;Dokun: kot sorgula · Sürükle: kaydır · İki parmak: zoom&#x27;;
 }
 function drawCircle(ctx,x,y,r,color){ctx.strokeStyle=color;ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(x,y,r,0,2*Math.PI);ctx.stroke();ctx.beginPath();ctx.moveTo(x-r-4,y);ctx.lineTo(x+r+4,y);ctx.moveTo(x,y-r-4);ctx.lineTo(x,y+r+4);ctx.stroke()}
+const materialPaint=[];
+function sectionMaterial(ctx,k){
+ if(materialPaint[k])return materialPaint[k];
+ const tile=document.createElement(&#x27;canvas&#x27;);tile.width=tile.height=24;const g=tile.getContext(&#x27;2d&#x27;);
+ g.fillStyle=[&#x27;#907654&#x27;,&#x27;#b59f76&#x27;,&#x27;#635f5c&#x27;,&#x27;#494d52&#x27;,&#x27;#31383f&#x27;][k];g.fillRect(0,0,24,24);
+ const grain=[2.1,1.6,1.15,.8,.55][k];
+ for(let i=0;i&lt;32;i++){g.fillStyle=i%3?&#x27;rgba(252,235,211,.25)&#x27;:&#x27;rgba(13,17,18,.30)&#x27;;g.beginPath();g.ellipse((i*17+3)%24,(i*i*11+i*5+2)%24,grain,grain*.65,i,0,Math.PI*2);g.fill()}
+ return materialPaint[k]=ctx.createPattern(tile,&#x27;repeat&#x27;);
+}
 function plotCross(){
  const c=el(&#x27;rvCross&#x27;);if(!c||el(&#x27;rvCrossPage&#x27;).hidden)return;
  const {ctx,w,h}=canvasSetup(c),s=current(),xs=offsets(s);
@@ -3634,7 +3658,7 @@ function plotCross(){
      }
      if(lower.length&gt;1&amp;&amp;upper.length&gt;1){
        ctx.beginPath();ctx.moveTo(...lower[0]);for(const p of lower.slice(1))ctx.lineTo(...p);
-       for(const p of upper.reverse())ctx.lineTo(...p);ctx.closePath();ctx.fillStyle=[&#x27;#a08c66&#x27;,&#x27;#bba980&#x27;,&#x27;#62666b&#x27;,&#x27;#4b4f54&#x27;,&#x27;#34373b&#x27;][k-3];ctx.globalAlpha=.92;ctx.fill();ctx.globalAlpha=1;ctx.strokeStyle=&#x27;rgba(0,0,0,.35)&#x27;;ctx.lineWidth=.6;ctx.stroke();
+       for(const p of upper.reverse())ctx.lineTo(...p);ctx.closePath();ctx.fillStyle=sectionMaterial(ctx,k-3);ctx.globalAlpha=.92;ctx.fill();ctx.globalAlpha=1;ctx.strokeStyle=&#x27;rgba(0,0,0,.35)&#x27;;ctx.lineWidth=.6;ctx.stroke();
      }
    }
  }
@@ -3717,10 +3741,84 @@ function listPoints(){let s=current(),off=offsets(s),selectedLayer=RV.selected.f
  message(`${labelKm(s)} · ${RV.lastRows.length} enkesit noktası · seçili tabaka: ${names[selectedLayer]}. Noktalar eğri ve kırıklardan örneklenmiştir.`)
 }
 function message(m){el(&#x27;rvStatus&#x27;).textContent=m}
+// Project an XYZ surface only when the 3B tab is visible.
+const roadScene={key:null,faces:[],yaw:-.55,pitch:.72,zoom:1,frame:0,local:true};
+function buildRoadScene(){
+ const model=design(),road=pRoad(),rows=model?model.sec:road.sections;
+ const faces=[],bounds=[Infinity,Infinity,Infinity,-Infinity,-Infinity,-Infinity];
+ const put=(a,b,c,color)=&gt;{
+   for(const v of [a,b,c])for(let j=0;j&lt;3;j++){bounds[j]=Math.min(bounds[j],v[j]);bounds[j+3]=Math.max(bounds[j+3],v[j])}
+   // Diffuse daylight on the actual face normal makes crossfall and slopes legible.
+   const ux=b[0]-a[0],uy=b[1]-a[1],uz=b[2]-a[2],vx=c[0]-a[0],vy=c[1]-a[1],vz=c[2]-a[2];
+   const nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz=ux*vy-uy*vx,n=Math.hypot(nx,ny,nz);
+   if(!n)return;
+   const light=.62+.42*Math.max(0,(.42*nx-.43*ny+.8*nz)*Math.sign(nz)/n);
+   const rgb=[1,3,5].map(i=&gt;Math.min(255,Math.round(parseInt(color.slice(i,i+2),16)*light)));
+   faces.push({pts:[a,b,c],color:&#x27;rgb(&#x27;+rgb.join(&#x27;,&#x27;)+&#x27;)&#x27;});
+ };
+ if(model){
+   if(!el(&#x27;dpDxf&#x27;).disabled)for(const tri of roadDesignSurface(model)[5].tri)put(...tri.p,&#x27;#7196a4&#x27;);
+ }else for(let i=1;i&lt;rows.length;i++){
+   const a=rows[i-1],b=rows[i];if(b.s-a.s&gt;30||b.s&lt;=a.s||!a.top?.length||!b.top?.length)continue;
+   const breaks=[...new Set([...a.top,...b.top].map(pt=&gt;pt[0]).concat(a.intervals.flat(),b.intervals.flat()))].sort((u,v)=&gt;u-v);
+   let prev=null;
+   for(const x of breaks){
+     const za=interp(a.top,x),zb=interp(b.top,x),pa=XY(road,a.s,x),pb=XY(road,b.s,x);
+     if(!finite(za)||!finite(zb)||!pa||!pb){prev=null;continue}
+     const pair=[[...pa,za],[...pb,zb]];
+     if(prev){const mid=(prev.x+x)/2,paved=[a,b].every(r=&gt;r.intervals.some(iv=&gt;mid&gt;=iv[0]&amp;&amp;mid&lt;=iv[1]));
+       const color=paved?&#x27;#7895a1&#x27;:&#x27;#b39b76&#x27;;put(prev.p[0],prev.p[1],pair[0],color);put(pair[0],prev.p[1],pair[1],color)}
+     prev={x,p:pair};
+   }
+ }
+ Object.assign(roadScene,{faces,bounds,key:model&amp;&amp;!el(&#x27;dpDxf&#x27;).disabled?roadDesignSurface(model):model||road,stale:el(&#x27;dpDxf&#x27;).disabled});
+}
+function requestRoadFrame(){if(!roadScene.frame)roadScene.frame=requestAnimationFrame(()=&gt;{roadScene.frame=0;if(RV.tab===&#x27;surface&#x27;)drawRoadScene()})}
+function drawRoadScene(){
+ const r=roadScene,cv=el(&#x27;rvRoadCanvas&#x27;),{ctx,w,h}=canvasSetup(cv);
+ const model=design(),key=model&amp;&amp;!el(&#x27;dpDxf&#x27;).disabled?roadDesignSurface(model):model||pRoad();
+ if(r.key!==key||r.stale!==el(&#x27;dpDxf&#x27;).disabled)buildRoadScene();
+ if(!r.faces.length){message(&#x27;Görüntülenecek geçerli yol yüzeyi yok. Tasarım değiştiyse Yol Oluştur ile güncelle.&#x27;);return}
+ const b=r.bounds,s=current(),pt=XYAt(s,0);
+ let h0=zAt(s,0,1);
+ if(!finite(h0)&amp;&amp;!design()){const row=pRoad().sections.find(q=&gt;q.s&gt;=s&amp;&amp;q.top?.length);h0=row?.top[0][1]}
+ const focus=r.local&amp;&amp;pt&amp;&amp;finite(h0);
+ const cx=focus?pt[0]:(b[0]+b[3])/2,cy=focus?pt[1]:(b[1]+b[4])/2,cz=focus?h0:(b[2]+b[5])/2;
+ const radius=focus?46:Math.max(12,Math.hypot(b[3]-b[0],b[4]-b[1],b[5]-b[2])*.55);
+ const scale=Math.min(w,h)*.46/radius*r.zoom;
+ const co=Math.cos(r.yaw),si=Math.sin(r.yaw),cp=Math.cos(r.pitch),sp=Math.sin(r.pitch);
+ function project(p){let x=p[0]-cx,y=p[1]-cy,z=p[2]-cz,d=x*si+y*co;return [w/2+(x*co-y*si)*scale,h/2-(d*sp+z*cp)*scale,d*cp-z*sp]}
+ const list=[];
+ for(const face of r.faces){const pp=face.pts.map(project);
+   if(pp.every(a=&gt;a[0]&lt;0)||pp.every(a=&gt;a[0]&gt;w)||pp.every(a=&gt;a[1]&lt;0)||pp.every(a=&gt;a[1]&gt;h))continue;
+   list.push({pp,color:face.color,depth:pp[0][2]+pp[1][2]+pp[2][2]});
+ }
+ list.sort((a,b)=&gt;b.depth-a.depth);
+ const sky=ctx.createLinearGradient(0,0,0,h);sky.addColorStop(0,&#x27;#122432&#x27;);sky.addColorStop(1,&#x27;#263e47&#x27;);ctx.fillStyle=sky;ctx.fillRect(0,0,w,h);
+ for(const {pp,color} of list){ctx.beginPath();ctx.moveTo(pp[0][0],pp[0][1]);ctx.lineTo(pp[1][0],pp[1][1]);ctx.lineTo(pp[2][0],pp[2][1]);ctx.closePath();ctx.fillStyle=color;ctx.fill();ctx.strokeStyle=color;ctx.lineWidth=.6;ctx.stroke()}
+ if(pt&amp;&amp;finite(h0)){const [x,y]=project([...pt,h0]);ctx.fillStyle=&#x27;#ffbd68&#x27;;ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill();ctx.font=&#x27;600 12px system-ui&#x27;;ctx.fillText(labelKm(s),x+8,y-7)}
+ message((design()?&#x27;Tasarım yüzeyi&#x27;:&#x27;Proje yüzeyi&#x27;)+&#x27; · &#x27;+pRoad().id+&#x27; · Düşey ölçek 1:1&#x27;);
+}
+const orbitCanvas=el(&#x27;rvRoadCanvas&#x27;),pointers=new Map();
+orbitCanvas.onpointerdown=e=&gt;{orbitCanvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,[e.clientX,e.clientY])};
+orbitCanvas.onpointermove=e=&gt;{
+ const old=pointers.get(e.pointerId);if(!old)return;
+ const other=[...pointers].find(([k])=&gt;k!==e.pointerId)?.[1];
+ if(other){const d=Math.hypot(old[0]-other[0],old[1]-other[1]);if(d&gt;2)zoomRoad(Math.hypot(e.clientX-other[0],e.clientY-other[1])/d)}
+ else{roadScene.yaw+=(e.clientX-old[0])*.009;roadScene.pitch=Math.max(.08,Math.min(1.53,roadScene.pitch+(e.clientY-old[1])*.009))}
+ pointers.set(e.pointerId,[e.clientX,e.clientY]);requestRoadFrame();
+};
+orbitCanvas.onpointerup=orbitCanvas.onpointercancel=orbitCanvas.onlostpointercapture=e=&gt;pointers.delete(e.pointerId);
+function zoomRoad(f){roadScene.zoom=Math.max(.2,Math.min(24,roadScene.zoom*f));requestRoadFrame()}
+orbitCanvas.onwheel=e=&gt;{e.preventDefault();zoomRoad(e.deltaY&lt;0?1.14:1/1.14)};
+el(&#x27;rvRoadPlus&#x27;).onclick=()=&gt;zoomRoad(1.4);el(&#x27;rvRoadMinus&#x27;).onclick=()=&gt;zoomRoad(1/1.4);
+el(&#x27;rvRoadScope&#x27;).onclick=()=&gt;{roadScene.local=!roadScene.local;roadScene.zoom=1;el(&#x27;rvRoadScope&#x27;).textContent=roadScene.local?&#x27;Tüm yol&#x27;:&#x27;Seçili KM&#x27;;requestRoadFrame()};
+el(&#x27;planRoad3D&#x27;).onclick=()=&gt;{if(el(&#x27;mapZone&#x27;).classList.contains(&#x27;map-expanded&#x27;))toggleMapFull(false);switchTab(&#x27;surface&#x27;)};
+
 function render(){let viewer=el(&#x27;rvViewer&#x27;);if(viewer.hidden)return;
- if(RV.tab===&#x27;cross&#x27;||RV.tab===&#x27;profile&#x27;)plotProfile();if(RV.tab===&#x27;cross&#x27;)plotCross();if(RV.tab===&#x27;points&#x27;)listPoints()}
+ if(RV.tab===&#x27;cross&#x27;||RV.tab===&#x27;profile&#x27;)plotProfile();if(RV.tab===&#x27;cross&#x27;)plotCross();if(RV.tab===&#x27;points&#x27;)listPoints();if(RV.tab===&#x27;surface&#x27;)requestRoadFrame()}
 function switchTab(t){RV.tab=t;for(let b of document.querySelectorAll(&#x27;#roadViewSuite .rvTab&#x27;))b.setAttribute(&#x27;aria-selected&#x27;,String(b.dataset.rv===t));
- const viewer=el(&#x27;rvViewer&#x27;);viewer.hidden=t===&#x27;plan&#x27;;el(&#x27;rvProfilePage&#x27;).hidden=t!==&#x27;profile&#x27;&amp;&amp;t!==&#x27;cross&#x27;;el(&#x27;rvCrossPage&#x27;).hidden=t!==&#x27;cross&#x27;;el(&#x27;rvPointsPage&#x27;).hidden=t!==&#x27;points&#x27;;
+ const viewer=el(&#x27;rvViewer&#x27;);viewer.hidden=t===&#x27;plan&#x27;;el(&#x27;rvSurface&#x27;).hidden=t!==&#x27;surface&#x27;;el(&#x27;rvProfilePage&#x27;).hidden=t!==&#x27;profile&#x27;&amp;&amp;t!==&#x27;cross&#x27;;el(&#x27;rvCrossPage&#x27;).hidden=t!==&#x27;cross&#x27;;el(&#x27;rvPointsPage&#x27;).hidden=t!==&#x27;points&#x27;;
  if(t===&#x27;plan&#x27;){el(&#x27;mapZone&#x27;).scrollIntoView({behavior:&#x27;smooth&#x27;,block:&#x27;start&#x27;});return}
  requestAnimationFrame(()=&gt;{if(!RV.stations.length)refreshList();render();viewer.scrollIntoView({behavior:&#x27;smooth&#x27;,block:&#x27;start&#x27;})})
 }
@@ -3840,12 +3938,10 @@ const holder=panel&amp;&amp;panel.closest(&#x27;.canvasbox&#x27;);
 const collapse=document.getElementById(&#x27;readoutCollapse&#x27;);
 if(!panel||!handle||!holder||!collapse)return;
 let drag=null, hasPosition=false;
-// Limit movement to the visible plan canvas, so the control cannot get lost.
+// The panel may be parked entirely outside the map and restored from its toolbar.
 function setPosition(left,top){
-  const maxX=Math.max(3, holder.clientWidth-panel.offsetWidth-3);
-  const maxY=Math.max(3, holder.clientHeight-panel.offsetHeight-3);
-  const x=Math.max(3, Math.min(maxX, left));
-  const y=Math.max(3, Math.min(maxY, top));
+  const x=Math.max(-panel.offsetWidth,Math.min(holder.clientWidth,left));
+  const y=Math.max(-panel.offsetHeight,Math.min(holder.clientHeight,top));
   panel.style.right=&#x27;auto&#x27;;
   panel.style.bottom=&#x27;auto&#x27;;
   panel.style.left=Math.round(x)+&#x27;px&#x27;;
@@ -3891,6 +3987,23 @@ collapse.addEventListener(&#x27;click&#x27;,function(e){
   collapse.title=expanded?&#x27;Paneli küçült&#x27;:&#x27;Paneli genişlet&#x27;;
   if(hasPosition){let p=currentPosition();setPosition(p.x,p.y)}
 });
+const sizeGrip=document.getElementById(&#x27;readoutResize&#x27;);let sizing=null;
+function sizeTo(width,height){
+ panel.style.width=Math.max(130,Math.min(holder.clientWidth,width))+&#x27;px&#x27;;
+ panel.style.height=Math.max(82,Math.min(holder.clientHeight,height))+&#x27;px&#x27;;
+}
+sizeGrip.onpointerdown=e=&gt;{
+ if(e.button!==0)return;e.preventDefault();const p=currentPosition();
+ setPosition(p.x,p.y);sizing=[e.clientX,e.clientY,panel.offsetWidth,panel.offsetHeight];sizeGrip.setPointerCapture(e.pointerId);
+};
+sizeGrip.onpointermove=e=&gt;{if(sizing)sizeTo(sizing[2]+e.clientX-sizing[0],sizing[3]+e.clientY-sizing[1])};
+sizeGrip.onpointerup=sizeGrip.onpointercancel=sizeGrip.onlostpointercapture=()=&gt;{sizing=null};
+sizeGrip.onkeydown=e=&gt;{const delta={ArrowLeft:[-12,0],ArrowRight:[12,0],ArrowUp:[0,-12],ArrowDown:[0,12]}[e.key];if(delta){e.preventDefault();sizeTo(panel.offsetWidth+delta[0],panel.offsetHeight+delta[1])}};
+document.getElementById(&#x27;readoutRestore&#x27;).onclick=()=&gt;{
+ if(panel.classList.contains(&#x27;readoutCollapsed&#x27;))collapse.click();
+ for(const k of [&#x27;width&#x27;,&#x27;height&#x27;,&#x27;left&#x27;,&#x27;top&#x27;,&#x27;right&#x27;,&#x27;bottom&#x27;])panel.style.removeProperty(k);
+ hasPosition=false;
+};
 function limitOnResize(){if(hasPosition){const p=currentPosition();setPosition(p.x,p.y)}}
 window.addEventListener(&#x27;resize&#x27;,limitOnResize,{passive:true});
 // A-CAD&#x27;s map fullscreen action can resize its parent independently of the window.
@@ -30312,7 +30425,7 @@ const refresh=ensureResize();
  if(!root.hidden)ensureRoad();
  const frameEl=id=>{try{return frame.contentDocument?.getElementById(id)||null}catch(_){return null}};
  function invokeRoad(id){const el=frameEl(id);if(!el||el.disabled)return false;el.click();return true}
- const roadActions=[['📂 Plan / Enkesit','dxfInput'],['⤢ Yolu sığdır','fit'],['▤ Yol tasarımı','dpPanel'],['💾 Projeyi kaydet','prSave'],['▱ 3B DXF','exportDXF']];
+ const roadActions=[['📂 Plan / Enkesit','dxfInput'],['⤢ Yolu sığdır','fit'],['▤ Yol tasarımı','dpPanel'],['💾 Projeyi kaydet','prSave'],['3B Yol','planRoad3D'],['▱ 3B DXF','exportDXF']];
  const roadButtons=[];
  for(const [name,id] of roadActions)roadButtons.push(addAction(actions,name,()=>{const el=frameEl(id);if(!el)return;
   if(el.tagName==='DETAILS'){el.open=true;el.scrollIntoView({block:'start',behavior:'auto'})}else invokeRoad(id)}, {primary:id==='dxfInput'}));
