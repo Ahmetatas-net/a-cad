@@ -1721,7 +1721,7 @@ window.ACAD_DISPLAY = {
       <div class="grp" data-g="olc" data-cap="Ölçme"><button data-c="SORGU" data-n="Sorgula">🔍 Sorgula <kbd>SO</kbd></button><button data-c="MESAFE" data-n="Mesafe">↔ Mesafe <kbd>DI</kbd></button><button data-c="ALAN" data-n="Alan">▱ Alan <kbd>AA</kbd></button><button data-c="KOORDINAT" data-n="Koordinat">⌖ Koordinat <kbd>ID</kbd></button><button data-c="KOORDYAZ" data-n="Koordinat yazdır">📋 Koordinat yazdır <kbd>KY</kbd></button></div>
       <div class="grp" data-g="ucg" data-cap="3B"><button data-c="GORUNUM3B" data-n="3B görünüm">◈ 3B görünüm</button><button data-c="CIZ3B" data-n="3B çizim">✎ 3B çizim (yüzey üstünde) <kbd>C3B</kbd></button><button data-c="KOTDRAPE" data-n="Çizgi kotu üçgenden">⛰ Çizgi kotu <kbd>KD</kbd></button><button data-c="YUZEYOTUR" data-n="Yüzeye oturt">⤓ Çizgileri yüzeye oturt <kbd>YO</kbd></button></div>
       <div class="grp" data-g="ucg" data-cap="Oluştur"><button data-c="UCGENLE" data-n="Üçgenle">◬ Üçgenle <kbd>TIN</kbd></button><button data-c="LASAC" data-n="Nokta bulutu (LAS)">☁ Nokta bulutu (LAS) <kbd>LAS</kbd></button><button data-c="CIZUCGEN" data-n="Çizgiden üçgen (çizgi, çoklu doğru, alan)">◭ Çizgiden üçgen <kbd>CU</kbd></button><button data-c="UCTOPLA" data-n="Üçgen topla">⊕ Çizgiden yüzeye (3 köşeli) <kbd>UCTOPLA</kbd></button></div>
-      <div class="grp" data-g="ucg" data-cap="Düzenle"><button data-c="UCEK" data-n="Üçgen ekle">＋ Üçgen ekle <kbd>UCEK</kbd></button><button data-c="UCSIL" data-n="Üçgen sil">✕ Üçgen sil <kbd>UCSIL</kbd></button><button data-c="UCDON" data-n="Üçgen döndür">⟲ Kenar döndür <kbd>UCDON</kbd></button><button data-c="UCOTO" title="Yinelenen/bozuk üçgenleri siler, dışa taşan ince üçgenleri ayıklar, kenarları arazinin sırt-vadi yapısına göre çevirir; kotlu çizgi kenarlarına dokunmaz">✨ Otomatik düzelt <kbd>UOD</kbd></button><button data-c="UCTEMIZ" data-n="Uzun kenar temizle">✂ Uzun kenar temizle <kbd>UTEM</kbd></button><button data-c="UCOTELE" data-n="Yüzey kot ötele">⇕ Kot ötele <kbd>UOT</kbd></button></div>
+      <div class="grp" data-g="ucg" data-cap="Düzenle"><button data-c="UCEK" data-n="Üçgen ekle">＋ Üçgen ekle <kbd>UCEK</kbd></button><button data-c="UCSIL" data-n="Üçgen sil">✕ Üçgen sil <kbd>UCSIL</kbd></button><button data-c="UCDON" data-n="Üçgen döndür">⟲ Kenar döndür <kbd>UCDON</kbd></button><button data-c="UCOTO" title="Yinelenen ve geçersiz üçgenleri ayıklar, komşu eğimleri karşılaştırarak ortak kenarları iyileştirir">Otomatik model düzelt <kbd>UOD</kbd></button><button data-c="UCTEMIZ" data-n="Uzun kenar temizle">✂ Uzun kenar temizle <kbd>UTEM</kbd></button><button data-c="UCOTELE" data-n="Yüzey kot ötele">⇕ Kot ötele <kbd>UOT</kbd></button><button data-c="UCXY" data-n="Yüzeyi yatay ötele">↔ Yatay ötele <kbd>UCXY</kbd></button></div>
       <div class="grp" data-g="ucg" data-cap="Sınır ve kes"><button data-c="UCSINIR" data-n="Üçgen sınırı">⬡ Sınır bul <kbd>USIN</kbd></button><button data-c="UCKES" data-n="Üçgen kes">✂ Alanla kes <kbd>UKES</kbd></button></div>
       <div class="grp" data-g="ucg" data-cap="Birleştir / doldur"><button data-c="UCBIRLES" data-n="Üçgen birleştir">⧉ Üçgen birleştir <kbd>UBIR</kbd></button><button data-c="UCDOLDUR" data-n="Üçgen doldur">▨ Üçgen doldur <kbd>UDOL</kbd></button></div>
       <div class="grp" data-g="ucg" data-cap="Kot kontrol"><button data-c="UCEGRI" data-n="Hızlı eğri">〰 Hızlı eğri <kbd>HE</kbd></button><button data-c="UCHATA" data-n="Hatalı kot bul">⚠ Hatalı kot bul <kbd>UHATA</kbd></button><button data-c="UCKOTDUZ" data-n="Köşe kotu düzelt">⇕ Köşe kotu düzelt <kbd>UKOT</kbd></button></div>
@@ -9279,7 +9279,7 @@ document.querySelectorAll("input[name=kmode]").forEach(r => r.addEventListener("
 $("kSabit").addEventListener("change", e => { ST.R.flat = K.num(e.target.value); buildModels(); save(); info(); recalcIfReady(); });
 $("maxE").addEventListener("change", e => { ST.set.maxE = K.num(e.target.value); save(); });
 function teAc(k) { const Sx = k === "S" ? ST.S : ST.R; if (!Sx || !Sx.pts || Sx.pts.length < 3 || !Sx.tri) { buildModels(); } if (!Sx || !Sx.tri || !Sx.tri.length) return alert((k === "S" ? "Siyah" : "Kırmızı") + " yüzeyde üçgen yok. Önce nokta yükle.");
-  TINED.ac({ ad: k === "S" ? "siyah (ilk hâl)" : "kırmızı (son hâl)", pts: Sx.pts, tri: Sx.tri, maxE: k === "S" ? +ST.set.maxE || 0 : +ST.set.maxEK || 0, kaydet(tri) { Sx.tri = Array.from(tri); Sx.triElle = true; Sx.triV = 2; yuzeyDegisti(); } }); }
+  TINED.ac({ ad: k === "S" ? "siyah (ilk hâl)" : "kırmızı (son hâl)", pts: Sx.pts, tri: Sx.tri, maxE: k === "S" ? +ST.set.maxE || 0 : +ST.set.maxEK || 0, kaydet(tri, pts) { psnap(); Sx.pts = pts; Sx.tri = Array.from(tri); Sx.triElle = true; Sx.triV = 2; yuzeyDegisti(); } }); }
 $("teS").addEventListener("click", () => teAc("S")); $("teR").addEventListener("click", () => teAc("R"));
 $("reTin").addEventListener("click", () => { ST.S.triElle = false; if (/\.(dxf|ncz)/i.test(ST.S.src || "") && !confirmTin("sInfo")) return; ST.S.tri = null; buildModels(); SECS = []; save(); info(); recalcIfReady(); });
 $("swap").addEventListener("click", () => { if (ST.R.mode !== "model" || !ST.R.pts) { $("kInfo").insertAdjacentHTML("beforeend", ' <span class="pill bad">Yer değiştirmek için kırmızı kot da dosyadan yüklenmiş olmalı.</span>'); return; }
@@ -10718,14 +10718,19 @@ window.KUBRAP = { ctx, dxfRapor, perTri, xlsx, pageOne, pageTwo, kesit, fullOf }
   css.textContent = `#teBox{position:fixed;inset:0;z-index:9999;background:#fff;display:flex;flex-direction:column}#teBox[hidden]{display:none}
 #teBar{display:flex;flex-wrap:wrap;gap:4px;padding:6px;border-bottom:1px solid #ccc;align-items:center;background:#f6f7f9}
 #teBar button{padding:7px 10px;border:1px solid #bbb;border-radius:7px;background:#fff;font-size:14px}#teBar button.on{background:#1f6feb;color:#fff;border-color:#1f6feb}
-#teBar .sp{flex:1}#teInf{padding:4px 8px;font-size:13px;color:#333;background:#fffbe6;border-bottom:1px solid #eee}#teCv{flex:1;touch-action:none;width:100%;display:block}`;
+#teBar .sp{flex:1}#teInf{padding:4px 8px;font-size:13px;color:#333;background:#fffbe6;border-bottom:1px solid #eee}#teBar label{display:flex;align-items:center;gap:4px;color:#27374c;font-size:13px;padding:3px}
+#teKotForm{padding:6px;background:#edf2f7;color:#27374c}#teKotForm input{width:108px;margin:0 6px}#teKotForm button{margin-right:4px}
+#teCv{flex:1;min-height:0;touch-action:none;width:100%;display:block}`;
   document.head.appendChild(css);
   const box = document.createElement("div"); box.id = "teBox"; box.hidden = true;
-  box.innerHTML = `<div id="teBar"><b id="teT" style="margin-right:6px">Üçgenler</b><button data-tem="cevir" class="on">↔ Kenar çevir</button><button data-tem="sil">✖ Üçgen sil</button><button data-tem="ekle">＋ Üçgen ekle</button>
-    <button id="teUndo">↶ Geri al</button><button id="teOto" title="Arazi gerçeğine uygun otomatik üçgenleme">✨ Otomatik düzelt</button><button id="teNext">⚠ Sonraki şüpheli</button><button id="teFit">⤢</button><span class="sp"></span><button id="teSave" style="background:#1a7f37;color:#fff;border-color:#1a7f37">✓ Kaydet</button><button id="teClose">Kapat</button></div>
-    <div id="teInf"></div><canvas id="teCv"></canvas>`;
+  box.innerHTML = `<div id="teBar"><b id="teT" style="margin-right:6px">Üçgenler</b><button data-tem="cevir" class="on">↔ Kenar çevir</button><button data-tem="sil">✖ Üçgen sil</button><button data-tem="ekle">＋ Üçgen ekle</button><button data-tem="kot">Köşe kotu</button>
+    <label><input id="teContours" type="checkbox"> Eş yükselti</label>
+    <button id="teUndo">↶ Geri al</button><button id="teOto" title="Mevcut sınır, boşluklar ve ölçü kotlarını koruyarak ortak kenarları iyileştirir">Otomatik model düzelt</button><button id="teNext">⚠ Sonraki şüpheli</button><button id="teFit">⤢</button><span class="sp"></span><button id="teSave" style="background:#1a7f37;color:#fff;border-color:#1a7f37">✓ Kaydet</button><button id="teClose">Kapat</button></div>
+    <div id="teInf"></div>
+    <form id="teKotForm" hidden><label for="teKot">Yeni kot (m)</label><input id="teKot" inputmode="decimal" required><button type="submit">Kotu uygula</button><button id="teKotCancel" type="button">İptal</button></form>
+    <canvas id="teCv"></canvas>`;
   document.body.appendChild(box);
-  let S = null, P = null, T = [], hist = [], mode = "cevir", V = { s: 1, x: 0, y: 0 }, sel = [], hl = -1, supIx = 0, onSave = null;
+  let P = null, T = [], hist = [], corner = -1, preview = null, mode = "cevir", V = { s: 1, x: 0, y: 0 }, sel = [], hl = -1, supIx = 0, onSave = null;
   const cv = () => $("teCv"), X = i => P[i].e, Y = i => P[i].y, Z = i => +P[i].z || 0;
   const orient = (a, b, c) => (X(b) - X(a)) * (Y(c) - Y(a)) - (Y(b) - Y(a)) * (X(c) - X(a));
   const nrm = t => { const a = T[t], b = T[t + 1], c = T[t + 2]; const ux = X(b) - X(a), uy = Y(b) - Y(a), uz = Z(b) - Z(a), vx = X(c) - X(a), vy = Y(c) - Y(a), vz = Z(c) - Z(a); let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx; if (nz < 0) { nx = -nx; ny = -ny; nz = -nz; } const l = Math.hypot(nx, ny, nz) || 1; return [nx / l, ny / l, nz / l]; };
@@ -10743,26 +10748,47 @@ window.KUBRAP = { ctx, dxfRapor, perTri, xlsx, pageOne, pageTwo, kesit, fullOf }
       if (c == null || d == null || orient(c, d, a) * orient(c, d, b) >= 0) continue; const now = kr(nv(a, b, c), nv(a, b, d)), yeni = kr(nv(c, d, a), nv(c, d, b)); if (now - yeni > 0.05) { set.add(t1); set.add(t2); } }
     SUP = [...set]; };
   const tri0 = () => T.length / 3;
-  const bilgi = msg => { $("teInf").innerHTML = `${P.length} nokta · ${tri0()} üçgen · <b style="color:${SUP.length ? "#c00" : "#1a7f37"}">${SUP.length} şüpheli</b> · ${{ cevir: "Ortak kenara dokun: köşegen değişir", sil: "Silinecek üçgene dokun", ekle: `Sırayla 3 noktaya dokun (${sel.length}/3)` }[mode]}${msg ? " · " + msg : ""}`; };
-  const yenile = msg => { kur(); supheli(); ciz(); bilgi(msg); };
+  const bilgi = msg => { $("teInf").innerHTML = `${P.length} nokta · ${tri0()} üçgen · <b style="color:${SUP.length ? "#c00" : "#1a7f37"}">${SUP.length} şüpheli</b> · ${{ cevir: "Ortak kenara dokun: köşegen değişir", sil: "Silinecek üçgene dokun", ekle: `Sırayla 3 noktaya dokun (${sel.length}/3)`, kot: "Düzeltilecek köşeye dokun" }[mode]}${msg ? " · " + msg : ""}`; };
+  const yenile = msg => { preview = null; kur(); supheli(); ciz(); bilgi(msg); };
   const W2S = (x, y) => [(x - V.x) * V.s, (V.y - y) * V.s], S2W = (u, v) => [u / V.s + V.x, V.y - v / V.s];
   const fit = () => { const c = cv(), r = c.getBoundingClientRect(); let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const p of P) { x0 = Math.min(x0, p.e); x1 = Math.max(x1, p.e); y0 = Math.min(y0, p.y); y1 = Math.max(y1, p.y); }
     V.s = Math.min(r.width / Math.max(1e-6, x1 - x0), r.height / Math.max(1e-6, y1 - y0)) * 0.9; V.x = (x0 + x1) / 2 - r.width / 2 / V.s; V.y = (y0 + y1) / 2 + r.height / 2 / V.s; };
-  function ciz() { const c = cv(), r = c.getBoundingClientRect(), dpr = window.devicePixelRatio || 1; c.width = r.width * dpr; c.height = r.height * dpr; const g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, r.width, r.height);
+  function ciz() { const c = cv(), r = c.getBoundingClientRect(), dpr = ACAD_DISPLAY.density(r); ACAD_DISPLAY.size(c, r, dpr); const g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, r.width, r.height);
     const sup = new Set(SUP);
     for (let t = 0; t < T.length; t += 3) { const N = nrm(t), eg = Math.acos(Math.min(1, N[2])) * 180 / Math.PI, k = Math.min(1, eg / 40); g.fillStyle = `rgb(${Math.round(236 + (240 - 236) * k)},${Math.round(238 - 110 * k)},${Math.round(240 - 200 * k)})`;
       g.beginPath(); for (let i = 0; i < 3; i++) { const [u, v] = W2S(X(T[t + i]), Y(T[t + i])); i ? g.lineTo(u, v) : g.moveTo(u, v); } g.closePath(); g.fill(); g.strokeStyle = "#555"; g.lineWidth = 0.7; g.stroke(); }
     g.strokeStyle = "#d00"; g.lineWidth = 2.5; for (const t of sup) { g.beginPath(); for (let i = 0; i < 3; i++) { const [u, v] = W2S(X(T[t + i]), Y(T[t + i])); i ? g.lineTo(u, v) : g.moveTo(u, v); } g.closePath(); g.stroke(); }
     if (hl >= 0) { g.strokeStyle = "#1f6feb"; g.lineWidth = 3.5; g.beginPath(); for (let i = 0; i < 3; i++) { const [u, v] = W2S(X(T[hl + i]), Y(T[hl + i])); i ? g.lineTo(u, v) : g.moveTo(u, v); } g.closePath(); g.stroke(); }
+    if ($("teContours").checked && T.length) {
+      if (!preview) {
+        const model = { pts: P, tri: T };
+        try { preview = egriCalc(model, egriStep(model, +$("lyEi").value || 0)).lines; }
+        catch (e) { preview = []; bilgi(e.message); }
+      }
+      g.strokeStyle = "#216ba3"; g.lineWidth = 1.3;
+      for (const line of preview) {
+        g.beginPath();
+        line.p.forEach(([x,y],i) => i ? g.lineTo(...W2S(x,y)) : g.moveTo(...W2S(x,y)));
+        g.stroke();
+      }
+    }
     const lab = V.s * 6 > 28; g.font = "11px Arial"; g.textBaseline = "bottom";
     P.forEach((p, i) => { const [u, v] = W2S(p.e, p.y); if (u < -20 || v < -20 || u > r.width + 20 || v > r.height + 20) return; g.fillStyle = sel.includes(i) ? "#1f6feb" : "#000"; g.beginPath(); g.arc(u, v, sel.includes(i) ? 5 : 2.2, 0, 7); g.fill(); if (lab) g.fillText(Z(i).toFixed(2), u + 3, v - 2); }); }
   /* dokunma işlemleri */
   const yakinNokta = (u, v) => { let b = -1, bd = 26; P.forEach((p, i) => { const [a, c] = W2S(p.e, p.y), d = Math.hypot(a - u, c - v); if (d < bd) { bd = d; b = i; } }); return b; };
   const icinde = (t, x, y) => { const a = T[t], b = T[t + 1], c = T[t + 2], o = orient(a, b, c), s = (p, q) => ((X(q) - X(p)) * (y - Y(p)) - (Y(q) - Y(p)) * (x - X(p))) * o; return s(a, b) >= 0 && s(b, c) >= 0 && s(c, a) >= 0; };
   const ucgenBul = (x, y) => { for (let t = 0; t < T.length; t += 3) if (icinde(t, x, y)) return t; return -1; };
-  const kaydetGecmis = () => { hist.push(T.slice()); if (hist.length > 60) hist.shift(); };
+  const kaydetGecmis = () => { hist.push({ tri: T.slice(), pts: P }); if (hist.length > 60) hist.shift(); };
   const kesisir = (a, b, c, d) => { if (a === c || a === d || b === c || b === d) return false; const o1 = orient(a, b, c), o2 = orient(a, b, d), o3 = orient(c, d, a), o4 = orient(c, d, b); return o1 * o2 < 0 && o3 * o4 < 0; };
   function dokun(u, v) { const [x, y] = S2W(u, v);
+    if (mode === "kot") {
+      corner = yakinNokta(u, v);
+      if (corner < 0) return bilgi("Bir üçgen köşesine yakın dokun");
+      $("teKotForm").hidden = false;
+      $("teKot").value = Z(corner).toFixed(3);
+      $("teKot").focus();
+      return;
+    }
     if (mode === "cevir") { let best = null, bd = 24; for (const [key, ts] of E) { if (ts.length !== 2) continue; const [a, b] = key.split(",").map(Number); const [ax, ay] = W2S(X(a), Y(a)), [bx, by] = W2S(X(b), Y(b)), dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy; let s = L2 ? ((u - ax) * dx + (v - ay) * dy) / L2 : 0; if (s < 0.1 || s > 0.9) continue; const d = Math.hypot(u - ax - s * dx, v - ay - s * dy); if (d < bd) { bd = d; best = [a, b, ts]; } }
       if (!best) return bilgi("kenar bulunamadı (kenarın ortasına yakın dokun)"); const [a, b, [t1, t2]] = best; const c = [T[t1], T[t1 + 1], T[t1 + 2]].find(q => q !== a && q !== b), d = [T[t2], T[t2 + 1], T[t2 + 2]].find(q => q !== a && q !== b);
       if (orient(c, d, a) * orient(c, d, b) >= 0) return bilgi("<span style='color:#c00'>bu kenar çevrilemez (dörtgen içbükey)</span>"); kaydetGecmis(); T[t1] = a; T[t1 + 1] = d; T[t1 + 2] = c; T[t2] = d; T[t2 + 1] = b; T[t2 + 2] = c; hl = -1; return yenile("kenar çevrildi"); }
@@ -10781,15 +10807,41 @@ window.KUBRAP = { ctx, dxfRapor, perTri, xlsx, pageOne, pageTwo, kesit, fullOf }
   box.addEventListener("pointerup", up); box.addEventListener("pointercancel", e => { ptr.delete(e.pointerId); pinch = null; down = null; });
   box.addEventListener("wheel", e => { if (e.target !== cv()) return; e.preventDefault(); const c = S2W(e.offsetX, e.offsetY), k = Math.exp(-e.deltaY * 0.0015); V.s *= k; V.x = c[0] - e.offsetX / V.s; V.y = c[1] + e.offsetY / V.s; ciz(); }, { passive: false });
   window.addEventListener("resize", () => { if (!box.hidden) ciz(); });
-  box.querySelectorAll("[data-tem]").forEach(b => b.addEventListener("click", () => { if (!P) return; mode = b.dataset.tem; sel = []; box.querySelectorAll("[data-tem]").forEach(x => x.classList.toggle("on", x === b)); ciz(); bilgi(); }));
-  $("teUndo").addEventListener("click", () => { if (!hist.length) return bilgi("geri alınacak yok"); T = hist.pop(); hl = -1; yenile("geri alındı"); });
-  $("teOto").addEventListener("click", () => { kaydetGecmis(); T = Array.from(K.tinIyi(P, S.maxE || 0)); hl = -1; const s = K.tinIyi.son || {}; yenile(`otomatik üçgenlendi (${s.flips || 0} kenar düzeltildi, ${s.ayik || 0} dış üçgen ayıklandı)`); });
+  box.querySelectorAll("[data-tem]").forEach(b => b.addEventListener("click", () => { if (!P) return; mode = b.dataset.tem; sel = []; $("teKotForm").hidden = true; box.querySelectorAll("[data-tem]").forEach(x => x.classList.toggle("on", x === b)); ciz(); bilgi(); }));
+  $("teUndo").addEventListener("click", () => { if (!hist.length) return bilgi("geri alınacak yok"); const previous = hist.pop(); T = previous.tri; P = previous.pts; hl = -1; $("teKotForm").hidden = true; yenile("geri alındı"); });
+  $("teContours").onchange = ciz;
+  $("teKotCancel").onclick = () => { $("teKotForm").hidden = true; };
+  $("teKotForm").onsubmit = e => {
+    e.preventDefault();
+    const text = $("teKot").value.trim().replace(",", "."), z = Number(text);
+    if (corner < 0 || !text || !Number.isFinite(z)) return bilgi("Geçerli bir sayı yaz");
+    const source = P[corner], old = Z(corner);
+    if (z === old) { $("teKotForm").hidden = true; return bilgi("Kot zaten bu değerde"); }
+    kaydetGecmis();
+    P = P.map(p => p.e === source.e && p.y === source.y && p.z === source.z ? { ...p, z } : p);
+    $("teKotForm").hidden = true;
+    yenile(`Köşe ve ölçü kotu ${old.toFixed(3)} → ${z.toFixed(3)} m`);
+  };
+  $("teOto").addEventListener("click", () => {
+    const points = P.map(p => [p.e, p.y, p.z]);
+    const ids = new Map(points.map((p,i) => [p,i]));
+    const faces = [];
+    for (let i = 0; i+2 < T.length; i += 3) faces.push({ p: [points[T[i]],points[T[i+1]],points[T[i+2]]] });
+    const result = window.CADX?.repairTerrain?.(faces);
+    if (!result) return bilgi("Model düzenleme araçları hazırlanıyor");
+    const report = `${result.flips} kenar iyileşti · ${result.duplicates + result.invalid} yinelenen/geçersiz üçgen`;
+    if (!(result.flips || result.duplicates || result.invalid)) return bilgi("Model kontrol edildi · " + report);
+    kaydetGecmis();
+    T = result.mesh.flatMap(f => f.p.map(p => ids.get(p)));
+    hl = -1;
+    yenile(report + " ayıklandı");
+  });
   $("teNext").addEventListener("click", () => { if (!SUP.length) return bilgi("şüpheli üçgen yok"); hl = SUP[supIx++ % SUP.length]; const cx = (X(T[hl]) + X(T[hl + 1]) + X(T[hl + 2])) / 3, cy = (Y(T[hl]) + Y(T[hl + 1]) + Y(T[hl + 2])) / 3, r = cv().getBoundingClientRect(); const ext = Math.max(...[0, 1, 2].map(i => Math.hypot(X(T[hl + i]) - cx, Y(T[hl + i]) - cy))); V.s = Math.min(r.width, r.height) / Math.max(4, ext * 6); V.x = cx - r.width / 2 / V.s; V.y = cy + r.height / 2 / V.s; ciz(); bilgi(`şüpheli ${(supIx - 1) % SUP.length + 1}/${SUP.length}: düzeltmek için kenarını çevir ya da sil`); });
   $("teFit").addEventListener("click", () => { fit(); ciz(); });
   $("teClose").addEventListener("click", () => { if (hist.length && !confirm("Değişiklikler kaydedilmedi. Kapatılsın mı?")) return; box.hidden = true; });
-  $("teSave").addEventListener("click", () => { if (onSave) onSave(Int32Array.from(T)); box.hidden = true; });
+  $("teSave").addEventListener("click", () => { if (onSave && hist.length) onSave(Int32Array.from(T), P); box.hidden = true; });
   /* aç: o = { ad, pts, tri, maxE, kaydet(tri) } */
-  window.TINED = { ac(o) { S = o; P = o.pts; T = Array.from(o.tri); hist = []; sel = []; hl = -1; supIx = 0; onSave = o.kaydet; $("teT").textContent = "Üçgenler · " + o.ad; box.hidden = false; requestAnimationFrame(() => { fit(); yenile(); }); } };
+  window.TINED = { ac(o) { P = o.pts; T = Array.from(o.tri); hist = []; corner = -1; $("teKotForm").hidden = true; $("teContours").checked = $("lyE").checked; sel = []; hl = -1; supIx = 0; onSave = o.kaydet; $("teT").textContent = "Üçgenler · " + o.ad; box.hidden = false; requestAnimationFrame(() => { fit(); yenile(); }); } };
 })();
 
 </script><script data-src="ncz.js">
@@ -18665,42 +18717,43 @@ const egSig = () => {
   }
   return n + ":" + h.toString(16);
 };
+// Persisted contour styles remain associated with the layers that produced them.
+function egriEsitle(forceTerrain = false) {
+  clearTimeout(egT);
+  const stamp = egSig();
+  if (!forceTerrain && stamp === EGSIG) return true;
+  const groups = Object.entries(lays).filter(([, l]) => Number.isFinite(l.tinContourStep));
+  if (!groups.length && !ents.some(generatedContour)) { EGSIG = stamp; return true; }
+  const hasTerrain = groups.some(([, l]) => /^(Siyah|Kırmızı) \(/.test(l.tinContourSource)) ||
+    (!groups.length && !FACES.length && ents.some(e => generatedContour(e) && /^EGRI_(SIYAH|KIRMIZI)/.test(e.lay)));
+  if (forceTerrain && (FACES.length || !hasTerrain)) return true;
+  try {
+    let sources = egriSrc(!hasTerrain, true);
+    if (groups.length) {
+      // Only update previously requested surfaces. Reuse their names and visibility,
+      // including when one of several surfaces is hidden or temporarily has no faces.
+      const prefixes = new Map(groups.map(([name, l]) => [l.tinContourSource, name.replace(/_(ANA|ARA|KOT)$/, '')]));
+      sources = sources.filter(x => prefixes.has(x.ad)).map(x => ({ ...x, pre: prefixes.get(x.ad) }));
+    }
+    EG_SYNC_BUSY = true;
+    try { genEgri(groups[0]?.[1].tinContourStep ?? EGSTEP, true, true, sources); }
+    finally { EG_SYNC_BUSY = false; }
+    return true;
+  } catch (e) {
+    console.error("TIN eğri yenileme", e);
+    say("Eğriler yenilenemedi: " + e.message, true);
+    return false;
+  }
+}
 const egriOto = () => {
   if (EG_SYNC_BUSY) return;
-  const probe=egFaceProbe();
-  if(!EG_FORCE && EG_LAST_FACE_REF===FACES && EG_LAST_FACE_PROBE===probe)return;
-  EG_LAST_FACE_REF=FACES;EG_LAST_FACE_PROBE=probe;EG_FORCE=false;
+  const probe = egFaceProbe();
+  if (!EG_FORCE && EG_LAST_FACE_REF === FACES && EG_LAST_FACE_PROBE === probe) return;
+  EG_LAST_FACE_REF = FACES; EG_LAST_FACE_PROBE = probe; EG_FORCE = false;
   clearTimeout(egT);
-  egT = setTimeout(() => {
-    const sg = egSig();
-    if (sg === EGSIG) return;
-    if (!ents.some(e => /^EGRI/.test(e.lay))) { EGSIG = sg; return; }
-    try {
-      const kaynak = egriSrc(true);
-      if (!kaynak.length) throw new Error("Güncel TIN bulunamadı; eski eğriler kullanılamaz");
-      EG_SYNC_BUSY=true; let sonuc; try{sonuc=genEgri(EGSTEP, true, true);}finally{EG_SYNC_BUSY=false;}
-      // Başarısız üretimde imzayı ilerletme: sonraki değişiklikte yeniden denensin.
-      if (!sonuc) { say("TIN değişti; eş yükselti eğrileri yeniden oluşturulamadı", true); return; }
-      EGSIG = egSig();
-      if (!$("v-cad").hidden) draw();
-    } catch (e) { console.error("TIN eğri eşitleme hatası", e); say("TIN değişti fakat eğriler yenilenemedi: " + e.message, true); }
-  }, 450);
+  egT = setTimeout(egriEsitle, 250);
 };
-/* PDF öncesi senkron bariyeri: bekleyen 450 ms yenilemeyi atlayıp güncel TIN eğrilerini hazırla. */
-function egriPdfEsitle() {
-  clearTimeout(egT);
-  const sg = egSig();
-  if (sg === EGSIG) return true;
-  if (!ents.some(e => /^EGRI/.test(e.lay))) { EGSIG = sg; return true; }
-  try {
-    const kaynak = egriSrc(true);
-      if (!kaynak.length) throw new Error("Güncel TIN bulunamadı; eski eğriler kullanılamaz");
-      EG_SYNC_BUSY=true;let sonuc;try{sonuc=genEgri(EGSTEP, true, true);}finally{EG_SYNC_BUSY=false;}
-    if (!sonuc) throw new Error("Eğriler TIN üzerinden oluşturulamadı");
-    EGSIG = egSig();
-    return true;
-  } catch (e) { console.error("PDF öncesi TIN-eğri eşitleme", e); say("PDF durduruldu: " + e.message, true); return false; }
-}
+function egriPdfEsitle() { return egriEsitle(); }
 let FVER = 0;
 const persist = () => { FVER++; kubHook(); egriOto();
   // Halihazır bağlantısı yalnızca değişiklik bildirir; büyük model burada kopyalanmaz.
@@ -18759,7 +18812,7 @@ function drape(e, zorla) { const md = zorla || KDRP; if (!md || (!zorla && !cmd)
   for (let i = 0; i < n; i++) { const a = P[i]; Q.push([a[0], a[1], z(a[0], a[1])]); if (md === 2 && (i < m)) { const b = P[(i + 1) % n]; let ts = []; try { ts = K.edgeHits(M, [a[0], a[1]], [b[0], b[1]]); } catch (er) {} ts = [...new Set(ts.map(t => Math.round(t * 1e9) / 1e9))].filter(t => t > 1e-6 && t < 1 - 1e-6).sort((u, v) => u - v); for (const t of ts) { const x = a[0] + (b[0] - a[0]) * t, y = a[1] + (b[1] - a[1]) * t; Q.push([x, y, z(x, y)]); } } }
   if (Q.every(q => q[2] == null)) return; /* yüzey dışındaki köşe: en yakın kotlu komşudan */ for (let i = 0; i < Q.length; i++) if (Q[i][2] == null) { let j = 1; while (j < Q.length && Q[(i + j) % Q.length][2] == null && Q[(i - j + Q.length) % Q.length][2] == null) j++; const a = Q[(i + j) % Q.length][2], b = Q[(i - j + Q.length) % Q.length][2]; Q[i][2] = a != null ? a : b; }
   e.pts = Q.map(q => [q[0], q[1], +(+q[2]).toFixed(4)]); }
-const add = (e) => { if(!window.__ACAD_IMPORT_GEOMETRY_LOCK)try { drape(e); } catch (er) { console.warn(er); } e.id = nid++; e.lay = layer(e.lay || (e.t === "point" && typeof hzSymK === "function" && hzSymK(cur) ? "NOKTA" : cur)); ents.push(e); IDX = null; return e; };
+const add = (e) => { if(!e.tinContour && !window.__ACAD_IMPORT_GEOMETRY_LOCK)try { drape(e); } catch (er) { console.warn(er); } e.id = nid++; e.lay = layer(e.lay || (e.t === "point" && typeof hzSymK === "function" && hzSymK(cur) ? "NOKTA" : cur)); ents.push(e); IDX = null; return e; };
 
 /* ---------- geometri ---------- */
 const segsOf = e => { const out = []; if (e.t === "line" || e.t === "pline") { const P = e.pts; for (let i = 0; i + 1 < P.length; i++) out.push([P[i], P[i + 1]]); if (e.closed && P.length > 2) out.push([P[P.length - 1], P[0]]); }
@@ -18976,7 +19029,7 @@ let FC = null, FCT = null, lastWheel = 0; const busy = () => ptr.size > 0 || Dat
 let HE = { on: true, adim: 0, k: "", L: null, st: 0 }; try { const h = JSON.parse(localStorage.getItem("acad_he") || "null"); if (h) { HE.on = h.on !== false; HE.adim = +h.adim || 0; } } catch (e) {}
 const heKay = () => { try { localStorage.setItem("acad_he", JSON.stringify({ on: HE.on, adim: HE.adim })); } catch (e) {} };
 const heNice = r => { const c = [0.05, 0.1, 0.2, 0.25, 0.5, 1, 2, 2.5, 5, 10, 20, 25, 50, 100]; for (const s of c) if (r / s <= 30) return s; return 200; };
-function heHesap() { if(FACES.length>60000&&HE.adim===0&&CDOC.fmt==='ncz')return null; const vis = Object.entries(lays).filter(([k, l]) => l.on && !/^EGRI/.test(k)).map(([k]) => k).join(","); let cs = 0; for (let i = 0; i < FACES.length; i++) { const p = FACES[i].p; cs += (+p[0][2] || 0) * ((i % 7) + 1) + (+p[1][2] || 0) * 0.37 + p[2][0] * 1e-6; } const key = FACES.length + "|" + cs + "|" + vis + "|" + HE.adim; if (HE.k === key) return HE.L;
+function heHesap() { if(FACES.length>60000&&HE.adim===0&&CDOC.fmt==='ncz')return null; const vis = Object.keys(lays).filter(k => lays[k].on && !/^EGRI/.test(k)).join(","); const key = FVER + "|" + vis + "|" + HE.adim; if (HE.k === key) return HE.L;
   let zn = Infinity, zx = -Infinity; const F = []; for (const f of FACES) { if (!fVis(f)) continue; F.push(f); for (const q of f.p) { const z = +q[2] || 0; if (z < zn) zn = z; if (z > zx) zx = z; } }
   if (!F.length || !(zx > zn)) { HE.k = key; HE.L = null; return null; } const st = HE.adim > 0 ? HE.adim : heNice(zx - zn); if ((zx - zn) / st > 400) { HE.k = key; HE.L = null; return null; }
   const mn = [], mj = []; for (const f of F) { const [a, b, c] = f.p, za = +a[2] || 0, zb = +b[2] || 0, zc = +c[2] || 0, lo = Math.min(za, zb, zc), hi = Math.max(za, zb, zc); if (hi - lo < 1e-9) continue;
@@ -20163,7 +20216,7 @@ const CMDS = {
     prev(g, X_, Y_, D) { if (!this.pts.length) return; g.save(); g.strokeStyle = "#b58cff"; g.lineWidth = 2.5 * D; g.beginPath(); this.pts.forEach((q, i) => i ? g.lineTo(X_(q[0]), Y_(q[1])) : g.moveTo(X_(q[0]), Y_(q[1]))); g.stroke(); g.restore(); },
     done() { if (this.pts.length >= 2) { pfShow(this.pts, false); ANN = [{ t: "hl", e: { t: "pline", pts: this.pts.map(q => [q[0], q[1], 0]) } }]; } idle(); } }; prompt_("Profil: hat boyunca dokun (anlık profil aşağıda açılır) · ✓ / sağ tuş bitir"); },
   UCSIL: () => { cmd = { name: "Üçgen sil", rcExit: true, pt(p) { { const r = fSil(p[0], p[1]); if (r) { say(r + " · eğriler, Plan ve hesap güncellenir · Geri al: U"); draw(); return; } } if (noModel()) return say("Burada üçgen yok", true); say(ARZ.ucDel(p[0], p[1]) + " · Arazi geri al ile geri getir"); draw(); } }; if (!CARZ.tin) { CARZ.tin = true; arzSave(); } prompt_("Üçgen sil: üçgenin içine tıkla · sağ tuş bitir"); },
-  UCDON: () => { cmd = { name: "Üçgen döndür", rcExit: true, pt(p) { { const r = fDon(p[0], p[1]); if (r) { say(r); draw(); return; } } if (noModel()) return say("Burada üçgen yok", true); say(ARZ.ucFlip(p[0], p[1])); draw(); } }; if (!CARZ.tin) { CARZ.tin = true; arzSave(); } prompt_("Üçgen döndür: iki üçgenin ortak kenarına tıkla · sağ tuş bitir"); },
+  UCDON: () => { cmd = { name: "Üçgen döndür", rcExit: true, raw: true, pt(p) { { const r = fDon(p[0], p[1]); if (r) { say(r); draw(); return; } } if (noModel()) return say("Burada üçgen yok", true); say(ARZ.ucFlip(p[0], p[1])); draw(); } }; if (!CARZ.tin) { CARZ.tin = true; arzSave(); } prompt_("Üçgen döndür: iki üçgenin ortak kenarına tıkla · sağ tuş bitir"); },
   UCEK: () => { const S_ = { v: [], w: null, f: [] }; cmd = { name: "Üçgen ekle", rcExit: true, pt(p) { if (FACES.some(fVis)) { const n = fNokta(p[0], p[1], 14 / V.s); if (!n || (S_.fl && n.lay !== S_.fl)) return say("Üçgen köşesine tıkla" + (S_.fl ? " (aynı tabaka)" : ""), true); if (S_.f.some(q => vEq(q, n.q))) return; S_.fl = n.lay; S_.f.push(n.q); last = [n.q[0], n.q[1]]; rub = true; if (S_.f.length < 3) { prompt_(`Üçgen ekle: ${S_.f.length}/3 köşe`); return; } say(fEkle(S_.f.slice(), S_.fl)); S_.f = []; S_.fl = null; rub = null; last = null; prompt_("Üçgen ekle: sıradaki üçgenin 1. köşesi · sağ tuş bitir"); draw(); return; } if (noModel()) return say("Arazi modeli yok", true); const n = ARZ.nearPt(p[0], p[1], 14 / V.s); if (!n || (S_.w && n.w !== S_.w)) return say("Model noktasına tıkla" + (S_.w ? " (aynı model)" : ""), true); if (S_.v.includes(n.i)) return; S_.w = n.w; S_.v.push(n.i); last = [n.p.e, n.p.y]; rub = true;
       if (S_.v.length < 3) { prompt_(`Üçgen ekle: ${S_.v.length}/3 köşe`); return; } say(ARZ.ucAdd(S_.v.slice(), S_.w)); S_.v = []; S_.w = null; rub = null; last = null; prompt_("Üçgen ekle: sıradaki üçgenin 1. köşesi · sağ tuş bitir"); draw(); } }; if (!CARZ.tin) { CARZ.tin = true; arzSave(); } prompt_("Üçgen ekle: model noktalarına sırayla tıkla (3 köşe)"); },
   HEPSI: () => { ents.forEach(e => lays[e.lay] && lays[e.lay].on && sel.add(e.id)); idle(); },
@@ -22391,6 +22444,7 @@ function acadDwgCompare(a,b){
   return {ok:!warnings.length,warnings};
 }
 async function acadDwgSave(fileBase, saveMode='save'){
+  if (!egriEsitle()) return false;
   if(!ents.length&&!FACES.length)return say('DWG için çizim boş.',true);
   const base=(fileBase||CDOC.name||'A-CAD_PROJE').replace(/\.[^.]+$/,'').replace(/[^A-Za-z0-9_-]/g,'_').slice(0,120)||'A-CAD_PROJE';
   const risk=Number(CDOC.nczUnmodeledRecords||0);
@@ -22898,6 +22952,7 @@ async function acadV96ExactSave(){
 }
 document.getElementById('cadV96ExactSource')?.addEventListener('click',acadV96ExactSave);
 async function saveDxf(nm, onlyBuild) {
+  if (!egriEsitle()) return false;
   // Byte-exact re-export for an unmodified, single-source DXF. No R12 transcoding,
   // name changes, or loss of unsupported entities. A modified CAD creates a new model export.
   const exactSource=acadV93OriginalSource();
@@ -23001,6 +23056,7 @@ function nczM_() { const ci = c => { const m = { "#ff4040": 1, "#ffd800": 2, "#4
   return M; }
 function nczBytes() { return window.NCZW.build(nczM_()); }
 async function saveNcz(nm) {
+  if (!egriEsitle()) return false;
   const source=acadV93OriginalSource(),risk=Number(CDOC.nczUnmodeledRecords||0),curveRisk=Number(CDOC.importApproxCurveCount||0)+ents.filter(e=>e.sourceCurveApprox).length;
   // No modifications: byte-for-byte original. Even NCZ private records survive.
   if(source && /\.ncz$/i.test(source.name) && CDOC.fmt==='ncz' && CDOC.nczLoadedVersion===FVER && DIRTY!==true){
@@ -24407,12 +24463,32 @@ const fIc = (f, x, y) => { const [a, b, c] = f.p, o = (p, q) => (q[0] - p[0]) * 
 const faceAt = (x, y) => { for (let i = FACES.length - 1; i >= 0; i--) if (fVis(FACES[i]) && fIc(FACES[i], x, y)) return i; return -1; };
 const vEq = (p, q) => Math.abs(p[0] - q[0]) < 1e-6 && Math.abs(p[1] - q[1]) < 1e-6;
 function fSil(x, y) { const i = faceAt(x, y); if (i < 0) return null; snap0(); FACES.splice(i, 1); EG_FORCE=true; FC = null; IDX = null; persist(); return "Üçgen silindi"; }
-function fDon(x, y) { const i = faceAt(x, y); if (i < 0) return null; const f = FACES[i]; let best = null;
-  for (let k = 0; k < 3; k++) { const a = f.p[k], b = f.p[(k + 1) % 3], c = f.p[(k + 2) % 3]; const j = FACES.findIndex((g, jj) => jj !== i && g.lay === f.lay && g.p.some(q => vEq(q, a)) && g.p.some(q => vEq(q, b))); if (j < 0) continue;
-    const d = FACES[j].p.find(q => !vEq(q, a) && !vEq(q, b)); const dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy; let t = L2 ? ((x - a[0]) * dx + (y - a[1]) * dy) / L2 : 0; t = Math.max(0, Math.min(1, t)); const dd = Math.hypot(x - a[0] - t * dx, y - a[1] - t * dy); if (!best || dd < best.dd) best = { dd, j, a, b, c, d }; }
-  if (!best) return "Bu üçgenin döndürülecek komşusu yok (kenar sınırda)"; const { j, a, b, c, d } = best, or = (p, q, r) => (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]);
-  if (or(c, d, a) * or(c, d, b) >= 0) return "Bu kenar döndürülemez: iki üçgen içbükey dörtgen oluşturuyor"; snap0(); const l = f.lay; FACES[i] = { lay: l, p: [a, d, c] }; FACES[j] = { lay: l, p: [d, b, c] }; EG_FORCE=true; FC = null; IDX = null; persist(); return "Üçgen kenarı döndürüldü"; }
-function fNokta(x, y, tol) { let b = null, bd = tol; for (const f of FACES) { if (!fVis(f)) continue; for (const q of f.p) { const d = Math.hypot(q[0] - x, q[1] - y); if (d < bd) { bd = d; b = { q, lay: f.lay }; } } } return b; }
+function fDon(x, y) {
+  const hits = cadTriangleAt([x, y]), tol = 10 / V.s;
+  if (hits.length > 1) return "Birden fazla yüzey var. Döndürülecek yüzey dışında kalanları kapat";
+  const hit = hits[0];
+  if (!hit) return null;
+  const f = hit.face, i = FACES.indexOf(f);
+  const edge = f.p.map((a, k) => {
+    const b = f.p[(k + 1) % 3], c = f.p[(k + 2) % 3];
+    return { a, b, c, dist: segD([x, y], a, b)[0] };
+  }).sort((a, b) => a.dist - b.dist)[0];
+  if (edge.dist > tol) return "Üçgenin ortak kenarına yakın dokun";
+  const { a, b, c } = edge;
+  if (tinProtectedEdges().has(tinEdgeKey(a, b))) return "Kotlu kırık hat kenarı korunuyor";
+  const neighbors = FACES.filter(g => g !== f && g.lay === f.lay && g.p.some(q => vEq(q, a)) && g.p.some(q => vEq(q, b)));
+  if (neighbors.length !== 1) return neighbors.length ? "Bu kenarı ikiden fazla üçgen paylaşıyor" : "Sınır kenarı döndürülemez";
+  const g = neighbors[0], d = g.p.find(q => !vEq(q, a) && !vEq(q, b));
+  const sameHeight = q => g.p.some(r => vEq(q, r) && Math.abs(q[2] - r[2]) < 1e-6);
+  if (!d || !sameHeight(a) || !sameHeight(b)) return "Ortak kenarın kotları uyuşmuyor";
+  if (!tinDiagonal(a, b, c, d)) return "İçbükey veya bozuk dörtgende kenar döndürülemez";
+  snap0();
+  FACES[i] = { ...f, p: tinCCW(a, d, c) };
+  FACES[FACES.indexOf(g)] = { ...g, p: tinCCW(d, b, c) };
+  tinYen("Üçgen kenarı döndürüldü · Geri al: U");
+  return "Üçgen kenarı döndürüldü · Geri al: U";
+}
+function fNokta(x, y, tol, lay) { let b = null, bd = tol; for (const f of FACES) { if (!fVis(f) || (lay && f.lay !== lay)) continue; for (const q of f.p) { const d = Math.hypot(q[0] - x, q[1] - y); if (d < bd) { bd = d; b = { q, lay: f.lay }; } } } return b; }
 function fEkle(v, lay) { const [a, b, c] = v, or = (p, q, r) => (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]); if (Math.abs(or(a, b, c)) < 1e-6) return "Üç nokta aynı doğruda"; const mx = (a[0] + b[0] + c[0]) / 3, my = (a[1] + b[1] + c[1]) / 3; if (FACES.some(f => f.lay === lay && fIc(f, mx, my))) return "Burada zaten üçgen var";
   snap0(); FACES.push({ lay, p: [a.slice(), b.slice(), c.slice()] }); EG_FORCE=true; FC = null; IDX = null; persist(); return "Üçgen eklendi"; }
 /* ======== Üçgen araçları: sınır bul, alanla kes / delik aç, birleştir, uzun kenar temizle, bilgi, kot ötele, patlat / topla ========
@@ -24448,7 +24524,7 @@ function tConform(F) { if (!F.length) return F; const O = [F[0].p[0][0], F[0].p[
     if (!ek) { R.push(f); continue; } nb++; const s3 = (P[0][0] - P[1][0]) * 0, c = [(P[0][0] + P[1][0] + P[2][0]) / 3, (P[0][1] + P[1][1] + P[2][1]) / 3, (P[0][2] + P[1][2] + P[2][2]) / 3];
     for (let i = 0; i < poly.length; i++) { const a = poly[i], b = poly[(i + 1) % poly.length]; if (Math.abs(tCr(c, a, b)) > 1e-9) R.push({ lay: f.lay, p: [[c[0] + O[0], c[1] + O[1], c[2]], [a[0] + O[0], a[1] + O[1], a[2]], [b[0] + O[0], b[1] + O[1], b[2]]] }); } }
   R.bolunen = nb; return R; }
-function tinYen(msg) { FC = null; IDX = null; SFC.clear && SFC.clear(); persist(); renderLays(); draw(); say(msg); }
+function tinYen(msg) { EG_FORCE = true; FC = null; IDX = null; SFC.clear && SFC.clear(); persist(); renderLays(); draw(); say(msg); }
 /* alanla kes: alanı dışbükey parçalara böl, her üçgenin içte / dışta kalan parçalarını ayır */
 function alanKes(poly, mod) { const O = fOrg(), A = pCcw(poly.map(q => [q[0] - O[0], q[1] - O[1], 0])); const tr = earClip(A).map(t => t.map(i => A[i])).map(pCcw).filter(t => Math.abs(pAr(t)) > 1e-9); if (!tr.length) return say("Alan üçgenlere bölünemedi (kendini kesen kapalı çizgi olabilir)", true);
   const PC = tr.map(t => ({ t, bb: tBB(t) })), BB = tBB(A); const out = mod === "kopya" || mod === "tasi" ? yeniLay("UCGEN_KESILMIS") : null; let ni = 0, nd = 0; const yeni = [], kalan = [];
@@ -24482,6 +24558,42 @@ function tinBilgi(lay) { const F = FACES.filter(f => f.lay === lay); let a2 = 0,
   const S = tinSinir(lay); outShow(`◬ Yüzey bilgisi: ${lay}`, ["Bilgi", "Değer"], [["Üçgen sayısı", fmtN_(F.length)], ["Yatay (2B) alan", fmt(a2) + " m²"], ["Eğik (3B) yüzey alanı", fmt(a3) + " m²"], ["En düşük kot", zn.toFixed(3)], ["En yüksek kot", zx.toFixed(3)], ["Kot farkı", (zx - zn).toFixed(3) + " m"], ["Ortalama eğim", (a2 ? eg / a2 : 0).toFixed(1) + " %"], ["En dik üçgen", ex.toFixed(1) + " %"], ["En uzun kenar", fmt(ek) + " m"], ["Sınır", `${S.length} kapalı çizgi (${S.length > 1 ? "1 dış sınır + " + (S.length - 1) + " delik/ada" : "tek parça"}) · çevre ${fmt(S.length ? S[0].reduce((s, q, i) => s + Math.hypot(q[0] - S[0][(i + 1) % S[0].length][0], q[1] - S[0][(i + 1) % S[0].length][1]), 0) : 0)} m`]]); }
 const tLayAt = p => { const i = faceAt(p[0], p[1]); return i < 0 ? null : FACES[i].lay; };
 const tTekLay = (p, ad) => { const l = tLayAt(p) || (tLays().length === 1 ? tLays()[0] : null); if (!l) say(`${ad}: bir üçgen yüzeyin içine dokun`, true); return l; };
+function tinNumber(input) {
+  const value = String(input ?? "").trim().replace(",", ".");
+  return /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(value) ? Number(value) : NaN;
+}
+function tinOffset(horizontal) {
+  const name = horizontal ? "Yüzeyi yatay ötele" : "Yüzey kot ötele";
+  let offset = null;
+  cmd = {
+    name, rcExit: true, raw: true,
+    ask: { ph: horizontal ? "ΔY ΔX (örn. 2,5 -1)" : "Kot farkı (örn. -0,30)", w: 155 },
+    val(text) {
+      const parts = String(text).trim().split(/\s+/).map(tinNumber);
+      if (parts.length !== (horizontal ? 2 : 1) || !parts.every(Number.isFinite) || parts.every(v => v === 0)) {
+        say(horizontal ? "ΔY ve ΔX değerlerini boşlukla ayır (örn. 2,5 -1)" : "Sıfırdan farklı kot farkını yaz (örn. -0,30)", true);
+        return true;
+      }
+      offset = horizontal ? [...parts, 0] : [0, 0, parts[0]];
+      prompt_(name + ": taşınacak yüzeyin içine dokun");
+      return true;
+    },
+    ent(e, p) { if (p) this.pt(p); },
+    pt(p) {
+      if (!offset) return say("Önce öteleme değerini yaz", true);
+      const hits = cadTriangleAt(p);
+      if (hits.length !== 1) return say(hits.length ? "Birden fazla yüzey var. Taşınacak tabaka dışında kalanları kapat." : "Açık üçgen yüzeyin içine dokun", true);
+      const lay = hits[0].lay;
+      const next = FACES.map(f => f.lay !== lay ? f : { ...f, p: f.p.map(q => [q[0]+offset[0], q[1]+offset[1], q[2]+offset[2], ...q.slice(3)]) });
+      if (next.some(f => f.lay === lay && f.p.some(q => !q.slice(0,3).every(Number.isFinite)))) return say("Öteleme geçerli koordinat üretmedi", true);
+      snap0();
+      FACES = next;
+      idle();
+      tinYen(`"${lay}" ötelendi · ΔY ${offset[0]} m · ΔX ${offset[1]} m · ΔZ ${offset[2]} m · Geri al: U`);
+    }
+  };
+  prompt_(horizontal ? name + ": ΔY ve ΔX değerlerini boşlukla ayırarak yaz" : name + ": kot farkını yaz");
+}
 const tKapali = e => { if (!e || !((e.t === "pline" && e.closed && e.pts.length >= 3) || e.t === "circle")) return null; let P = e.t === "circle" ? Array.from({ length: 144 }, (_, i) => [(e.c || e.pts[0])[0] + e.r * Math.cos(i * Math.PI / 72), (e.c || e.pts[0])[1] + e.r * Math.sin(i * Math.PI / 72), 0]) : e.pts.filter((q, i, A) => Math.hypot(q[0] - A[(i + 1) % A.length][0], q[1] - A[(i + 1) % A.length][1]) > 1e-6);
   /* aynı doğrudaki ara köşeleri at (kulak kesme bunlarda takılabilir) */ P = P.filter((q, i, A) => { const a_ = A[(i - 1 + A.length) % A.length], b_ = A[(i + 1) % A.length]; return Math.abs(tCr(a_, q, b_)) > 1e-9 * Math.max(1, Math.hypot(b_[0] - a_[0], b_[1] - a_[1])); }); return P.length >= 3 ? P : null; };
 Object.assign(CMDS, {
@@ -24501,8 +24613,8 @@ Object.assign(CMDS, {
     ciz(); prompt_("Üçgen birleştir: sırayı ayarla → Birleştir"); },
   UCTEMIZ: () => { cmd = { name: "Uzun kenar temizle", rcExit: true, ask: { ph: "en uzun kenar m", num: true, w: 110, chips: [20, 50, 100] }, val(t) { const v = +String(t).replace(",", "."); if (!(v > 0)) return false; const R = FACES.filter(f => !(fVis(f) && [0, 1, 2].some(i => Math.hypot(f.p[i][0] - f.p[(i + 1) % 3][0], f.p[i][1] - f.p[(i + 1) % 3][1]) > v))); const n = FACES.length - R.length; if (!n) { say(`${v} m'den uzun kenarlı üçgen yok`); return true; } snap0(); FACES = R; tinYen(`${n} uzun kenarlı üçgen silindi (kenar > ${v} m) · Geri al: U`); idle(); return true; } }; prompt_("Uzun kenar temizle: kenar sınırını yaz (dışa taşan uzun, ince üçgenler silinir)"); },
   UCBILGI: () => { cmd = { name: "Yüzey bilgisi", rcExit: true, pt(p) { const l = tTekLay(p, "Bilgi"); if (l) tinBilgi(l); } }; prompt_("Yüzey bilgisi: yüzeyin içine dokun"); },
-  UCOTELE: () => { let dz = null; cmd = { name: "Yüzey kot ötele", rcExit: true, ask: { ph: "kot farkı m (örn. -0.30)", w: 150 }, val(t) { const v = +String(t).replace(",", "."); if (!isFinite(v)) return false; dz = v; prompt_(`Kot ötele ${v >= 0 ? "+" : ""}${v} m: yüzeyin içine dokun`); return true; },
-      pt(p) { if (dz == null) return say("Önce kot farkını yaz", true); const l = tTekLay(p, "Kot ötele"); if (!l) return; snap0(); FACES = FACES.map(f => f.lay === l ? { lay: l, p: f.p.map(q => [q[0], q[1], (+q[2] || 0) + dz]) } : f); tinYen(`"${l}" yüzeyi ${dz >= 0 ? "+" : ""}${dz} m ötelendi · Geri al: U`); } }; prompt_("Yüzey kot ötele: kot farkını yaz (örn. -0.30 sıyırma)"); },
+  UCOTELE: () => tinOffset(false),
+  UCXY: () => tinOffset(true),
   UCPATLAT: () => { cmd = { name: "Üçgen patlat", rcExit: true, pt(p) { const l = tTekLay(p, "Patlat"); if (!l) return; const F = FACES.filter(f => f.lay === l); snap0(); const L = l + "_CIZGI"; layer(L); for (const f of F) add({ t: "pline", closed: true, pts: f.p.map(q => q.slice()), lay: L }); persist(); renderLays(); draw(); say(`${F.length} üçgen kotlu 3 köşeli kapalı çizgiye çevrildi → "${L}" (yüzey yerinde kaldı) · Geri al: U`); } }; prompt_("Üçgen patlat: yüzeyin içine dokun"); },
   UCTOPLA: () => { const go = () => { const E = selEnts().filter(e => e.t === "pline" && e.closed && e.pts.length === 3 && e.pts.every(q => Math.abs(q[2] || 0) > 1e-6)); if (!E.length) return say("Seçimde kotlu 3 köşeli kapalı çizgi yok", true); snap0(); const L = yeniLay("UCGEN_TOPLA"); layer(L); for (const e of E) FACES.push({ lay: L, p: e.pts.map(q => q.slice()) }); tinYen(`${E.length} kotlu üçgen çizgisi yüzeye çevrildi → "${L}" · Geri al: U`); };
     if (sel.size) return go(); say("Üçgen topla: önce kotlu 3 köşeli kapalı çizgileri pencereyle seç, sonra yeniden çalıştır", true); },
@@ -24849,70 +24961,111 @@ function tinDoldur(maxK) { const L = tLays(); if (!L.length) return say("Açık 
 CMDS.UCDOLDUR = () => { if (!FACES.some(fVis)) return say("Açık tabakalarda üçgen yüzey yok", true); cmd = { name: "Üçgen doldur", ask: { ph: "en uzun kenar m", num: true, w: 110, chips: ["sınırsız", 10, 20, 50] }, val(t) { const v = /sın/i.test(t) || t === "" ? 0 : +String(t).replace(",", "."); if (!(v >= 0)) return false; tinDoldur(v); idle(); return true; } };
   prompt_(`Üçgen doldur: açık ${tLays().length} yüzeyin arasındaki boşluk doldurulacak — en uzun kenarı seç (dolmasını istemediğin yüzeyleri kapat)`); };
 Object.assign(ALIAS, { UDOL: "UCDOLDUR" });
-/* ======== Otomatik üçgen düzelt: aynı/bozuk üçgenleri sil, dışa taşan ince kenar üçgenlerini ayıkla, kenarları arazinin gerçek yapısına (sırt/vadi) göre çevir ======== */
-function ucOto(opt = {}) { const KC = new WeakMap(), kq = q => { let k = KC.get(q); if (k === undefined) { k = vKey(q); KC.set(q, k); } return k; };
-  const sonuc = { dup: 0, bozuk: 0, ince: 0, cevir: 0, lay: 0, kisit: 0, kirik: 0, secim: [] };
-  const ek = (a, b) => { const x = kq(a), y = kq(b); return x < y ? x + "|" + y : y + "|" + x; };
-  /* kotlu çizgiler (şev üstü/altı, sırt, vadi, yol kenarı…): kırık hat — üçgen kenarı olmak zorunda, çevrilmez */
-  const KIS = new Set(), KSEG = []; for (const e of ents) { if (!(e.t === "line" || e.t === "pline") || !e.pts || e.pts.length < 2 || !(lays[e.lay] && lays[e.lay].on)) continue; if (!e.pts.every(q => isFinite(q[2]) && +q[2] !== 0)) continue; const Q = e.closed ? [...e.pts, e.pts[0]] : e.pts; for (let i = 0; i + 1 < Q.length; i++) { if (kq(Q[i]) === kq(Q[i + 1])) continue; KIS.add(ek(Q[i], Q[i + 1])); KSEG.push([Q[i], Q[i + 1]]); } }
-  const nor = (a, b, c) => { const ux = b[0] - a[0], uy = b[1] - a[1], uz = (+b[2] || 0) - (+a[2] || 0), vx = c[0] - a[0], vy = c[1] - a[1], vz = (+c[2] || 0) - (+a[2] || 0); let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx; const L = Math.hypot(nx, ny, nz) || 1; if (nz < 0) { nx = -nx; ny = -ny; nz = -nz; } return [nx / L, ny / L, nz / L]; };
-  const dv = (u, w) => Math.acos(Math.max(-1, Math.min(1, u[0] * w[0] + u[1] * w[1] + u[2] * w[2])));
-  const ar2 = (a, b, c) => (b[0] - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (b[1] - a[1]);
-  const aci = (a, b, c) => { const L = [Math.hypot(b[0] - c[0], b[1] - c[1]), Math.hypot(a[0] - c[0], a[1] - c[1]), Math.hypot(a[0] - b[0], a[1] - b[1])]; const m = (x, y, z) => Math.acos(Math.max(-1, Math.min(1, (y * y + z * z - x * x) / (2 * y * z || 1)))) * 180 / Math.PI; return Math.min(m(L[0], L[1], L[2]), m(L[1], L[0], L[2]), m(L[2], L[0], L[1])); };
-  const zOn = (t, x, y) => { const [p, q, r] = t; const dn = (q[1] - r[1]) * (p[0] - r[0]) + (r[0] - q[0]) * (p[1] - r[1]); if (Math.abs(dn) < 1e-12) return null; const l1 = ((q[1] - r[1]) * (x - r[0]) + (r[0] - q[0]) * (y - r[1])) / dn, l2 = ((r[1] - p[1]) * (x - r[0]) + (p[0] - r[0]) * (y - r[1])) / dn; return l1 * (+p[2] || 0) + l2 * (+q[2] || 0) + (1 - l1 - l2) * (+r[2] || 0); };
-  /* kenar çevirme. mod 1: yüzey kırılması belirgin azalıyorsa ya da komşu kotlar neredeyse tam tutuyorsa; mod 2: aynısı ama komşu kotları kötüleştiren çevirme yapılmaz (şev gibi keskin kırıklarda güvenli) */
-  const cevir = (T0, lay, mod) => { const T = T0.slice(); let top = 0;
-    for (let pass = 0; pass < 12; pass++) { const E = new Map(); T.forEach((f, i) => { for (let j = 0; j < 3; j++) { const k = ek(f.p[j], f.p[(j + 1) % 3]); const v = E.get(k); if (v) v.push(i); else E.set(k, [i]); } }); let ch = 0; const dead = new Set();
-      for (const [k, v] of E) { if (v.length !== 2 || KIS.has(k) || dead.has(v[0]) || dead.has(v[1])) continue; const f = T[v[0]], g = T[v[1]]; let ia = -1; for (let i = 0; i < 3; i++) if (ek(f.p[i], f.p[(i + 1) % 3]) === k) ia = i; if (ia < 0) continue;
-        const a = f.p[ia], b = f.p[(ia + 1) % 3], c = f.p[(ia + 2) % 3], d = g.p.find(q => kq(q) !== kq(a) && kq(q) !== kq(b)); if (!d) continue;
-        if (!(ar2(c, d, a) * ar2(c, d, b) < 0) || !(ar2(a, b, c) * ar2(a, b, d) < 0)) continue; if (Math.abs(ar2(a, c, d)) < 1e-6 || Math.abs(ar2(b, d, c)) < 1e-6) continue;
-        const T1 = [a, b, c], T2 = [b, a, d], U1 = [a, c, d], U2 = [b, d, c]; let eE = 0, eY = 0, nn = 0;
-        for (const [p1, p2, te, ty] of [[a, c, T1, U1], [c, b, T1, U2], [b, d, T2, U2], [d, a, T2, U1]]) { const w = E.get(ek(p1, p2)); if (!w || w.length !== 2) continue; const oi = w.find(i => i !== v[0] && i !== v[1]); if (oi == null || dead.has(oi)) continue; const e3 = T[oi].p.find(q => kq(q) !== kq(p1) && kq(q) !== kq(p2)); if (!e3) continue; const z1 = zOn(te, e3[0], e3[1]), z2 = zOn(ty, e3[0], e3[1]); if (z1 == null || z2 == null) continue; eE += (z1 - (+e3[2] || 0)) ** 2; eY += (z2 - (+e3[2] || 0)) ** 2; nn++; }
-        const keskin = nn === 4 && eE > 1e-6 && eY < eE * 0.05; let yap = keskin;
-        if (!yap && dv(nor(a, c, d), nor(b, d, c)) < dv(nor(a, b, c), nor(b, a, d)) - 0.12) yap = mod === 1 ? true : (nn >= 2 && eY <= eE);
-        if (!yap || Math.min(aci(a, c, d), aci(b, d, c)) < 2) continue; T[v[0]] = { lay, p: U1 }; T[v[1]] = { lay, p: U2 }; dead.add(v[0]); dead.add(v[1]); ch++; }
-      top += ch; if (!ch) break; }
-    return { T, ch: top }; };
-  /* nokta tahmin hatası (ayrılan noktalar): ızgara ile hızlı üçgen bulma */
-  const sina = (T, H) => { const CS = Math.max(1, Math.sqrt(T.reduce((t, f) => t + Math.abs(ar2(f.p[0], f.p[1], f.p[2])) / 2, 0) / Math.max(1, T.length)) * 3), G = new Map(), gk = (i, j) => i * 1000003 + j;
-    T.forEach((f, n) => { const xs = f.p.map(q => q[0]), ys = f.p.map(q => q[1]); for (let i = Math.floor(Math.min(...xs) / CS); i <= Math.floor(Math.max(...xs) / CS); i++) for (let j = Math.floor(Math.min(...ys) / CS); j <= Math.floor(Math.max(...ys) / CS); j++) { const kk = gk(i, j); let a = G.get(kk); if (!a) G.set(kk, a = []); a.push(n); } });
-    let se = 0, n = 0; for (const q of H) { for (const i of G.get(gk(Math.floor(q[0] / CS), Math.floor(q[1] / CS))) || []) { const [a, b, c] = T[i].p; const dn = (b[1] - c[1]) * (a[0] - c[0]) + (c[0] - b[0]) * (a[1] - c[1]); if (Math.abs(dn) < 1e-12) continue; const l1 = ((b[1] - c[1]) * (q[0] - c[0]) + (c[0] - b[0]) * (q[1] - c[1])) / dn, l2 = ((c[1] - a[1]) * (q[0] - c[0]) + (a[0] - c[0]) * (q[1] - c[1])) / dn, l3 = 1 - l1 - l2; if (l1 >= -1e-9 && l2 >= -1e-9 && l3 >= -1e-9) { const e = l1 * a[2] + l2 * b[2] + l3 * c[2] - q[2]; se += e * e; n++; break; } } } return n ? Math.sqrt(se / n) : null; };
-  const out = []; let touched = false;
-  for (const lay of tLays()) {
-    let T = FACES.filter(f => f.lay === lay); const n0 = T.length; if (n0 < 2) continue;
-    /* 1) aynı ve sıfır alanlı üçgenler */
-    const seen = new Set(); T = T.filter(f => { const k = f.p.map(vKey).sort().join("#"); if (seen.has(k)) { sonuc.dup++; return false; } seen.add(k); if (Math.abs(ar2(f.p[0], f.p[1], f.p[2])) < 1e-9) { sonuc.bozuk++; return false; } return true; });
-    /* 2) kırık hatlar (kotlu çizgiler) yüzeyde kenar değilse yüzeyi onlarla yeniden kur: şev üstü/altı, sırt, vadi kesin olarak üçgen kenarına oturur */
-    { const Es = new Set(); for (const f of T) for (let i = 0; i < 3; i++) Es.add(ek(f.p[i], f.p[(i + 1) % 3])); const xs = T.flatMap(f => f.p.map(q => q[0])), ys = T.flatMap(f => f.p.map(q => q[1])), bx = [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
-      const ic = q => { for (const f of T) { const [a, b, c] = f.p, d1 = ar2(a, b, q), d2 = ar2(b, c, q), d3 = ar2(c, a, q); if ((d1 >= -1e-9 && d2 >= -1e-9 && d3 >= -1e-9) || (d1 <= 1e-9 && d2 <= 1e-9 && d3 <= 1e-9)) return true; } return false; };
-      const eksik = KSEG.filter(([p, q]) => !Es.has(ek(p, q)) && p[0] >= bx[0] && p[0] <= bx[2] && p[1] >= bx[1] && p[1] <= bx[3] && ic([(p[0] + q[0]) / 2, (p[1] + q[1]) / 2]));
-      if (eksik.length) { const V = new Map(); const vi = q => { const k = kq(q); let i = V.get(k); if (i == null) { i = V.size; V.set(k, i); P.push({ e: q[0], y: q[1], z: +q[2] || 0, q }); } return i; }; const P = []; for (const f of T) f.p.forEach(vi); const kis = []; for (const [p, q] of eksik) kis.push([vi(p), vi(q)]); for (const [p, q] of KSEG) if (Es.has(ek(p, q))) kis.push([vi(p), vi(q)]);
-        let I = null; try { I = K.tinIyi(P, 0, { kis: K.kisKesis ? K.kisKesis(P, kis) : kis, ayikla: false }); } catch (e) { I = null; }
-        if (I && I.length) { const Y = []; for (let i = 0; i < I.length; i += 3) { const f = { lay, p: [P[I[i]], P[I[i + 1]], P[I[i + 2]]].map(o => o.q || [o.e, o.y, o.z]) }; const c = [(f.p[0][0] + f.p[1][0] + f.p[2][0]) / 3, (f.p[0][1] + f.p[1][1] + f.p[2][1]) / 3]; if (ic(c)) Y.push(f); } if (Y.length) { T = Y; sonuc.kirik += eksik.length; } } } }
-    /* 3) dışa taşan ince üçgenler: sınırda, en uzun kenarı sınır kenarı, en küçük açı < 8°, en uzun kenar ortanca kenarın 4 katından uzun */
-    for (let pass = 0; pass < 6; pass++) {
-      const E = new Map(); for (const f of T) for (let i = 0; i < 3; i++) { const k = ek(f.p[i], f.p[(i + 1) % 3]); E.set(k, (E.get(k) || 0) + 1); }
-      const L = []; for (const f of T) for (let i = 0; i < 3; i++) L.push(Math.hypot(f.p[i][0] - f.p[(i + 1) % 3][0], f.p[i][1] - f.p[(i + 1) % 3][1])); L.sort((a, b) => a - b); const med = L[L.length >> 1] || 1;
-      const R = T.filter(f => { const ed = [0, 1, 2].map(i => [Math.hypot(f.p[i][0] - f.p[(i + 1) % 3][0], f.p[i][1] - f.p[(i + 1) % 3][1]), ek(f.p[i], f.p[(i + 1) % 3])]); const mx = ed.reduce((a, b) => b[0] > a[0] ? b : a); const sinir = E.get(mx[1]) === 1; if (sinir && !KIS.has(mx[1]) && mx[0] > 4 * med && aci(f.p[0], f.p[1], f.p[2]) < 8) return false; return true; });
-      if (R.length === T.length) break; sonuc.ince += T.length - R.length; T = R;
-    }
-    /* 4) hangi çevirme kuralı bu arazide doğru? noktaların her 8'inden biri ayrılır, kalanlarla yüzey kurulur, ayrılan noktaların kotunu en iyi tutturan kural seçilir (hiçbiri iyileştirmiyorsa çevrilmez) */
-    let mod = 1; { const Vs = new Map(); for (const f of T) for (const q of f.p) Vs.set(kq(q), q); const V = [...Vs.values()];
-      if (V.length >= 40) { const hs = q => { let h = 2166136261; const s = kq(q); for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return (h >>> 0) % 8; }; const H = V.filter(q => hs(q) === 0), R = V.filter(q => hs(q) !== 0);
-        if (H.length >= 5 && R.length >= 20) { let I = null; try { I = K.tinIyi(R.map(q => ({ e: q[0], y: q[1], z: +q[2] || 0, q })), 0, { ayikla: false }); } catch (e) { I = null; }
-          if (I && I.length) { const RP = R.map(q => ({ q })); const T0 = []; for (let i = 0; i < I.length; i += 3) T0.push({ lay, p: [R[I[i]], R[I[i + 1]], R[I[i + 2]]] }); const e0 = sina(T0, H), e1 = sina(cevir(T0, lay, 1).T, H), e2 = sina(cevir(T0, lay, 2).T, H);
-            if (e0 != null && e1 != null && e2 != null) { mod = e1 <= e2 * 0.995 ? 1 : 2; const eb = Math.min(e1, e2); if (eb > e0 * 0.995) mod = 0; sonuc.secim.push({ lay, e0, e1, e2, mod }); } } } } }
-    if (mod) { const r = cevir(T, lay, mod); T = r.T; sonuc.cevir += r.ch; }
-    if (T.length !== n0 || sonuc.cevir || sonuc.kirik) touched = true;
-    out.push({ lay, T }); sonuc.lay++;
+const tinEdgeKey = (a, b) => {
+  const p = vKey(a), q = vKey(b);
+  return p < q ? p + "|" + q : q + "|" + p;
+};
+function tinProtectedEdges() {
+  const edges = new Set();
+  for (const e of ents) {
+    if (!lays[e.lay]?.on || !["line", "pline"].includes(e.t) || !e.pts?.length ||
+        generatedContour(e) || !e.pts.every(p => Number.isFinite(p[2])) ||
+        !e.pts.some(p => p[2] !== 0)) continue;
+    for (let i = 1; i < e.pts.length; i++) edges.add(tinEdgeKey(e.pts[i - 1], e.pts[i]));
+    if (e.closed) edges.add(tinEdgeKey(e.pts.at(-1), e.pts[0]));
   }
-  sonuc.kisit = KIS.size; sonuc.out = out; sonuc.touched = touched; return sonuc;
+  return edges;
 }
-Object.assign(CMDS, {
-  UCOTO: () => { if (!tLays().length) return say("Açık tabakalarda üçgen yüzey yok", true); const t0 = performance.now(); const R = ucOto(); const kald = new Set(R.out.map(o => o.lay)); const degisti = R.dup + R.bozuk + R.ince + R.cevir + R.kirik; const sc = R.secim.length ? R.secim.map(o => o.mod ? `doğrulama: ayrılan noktalarda kot hatası ${o.e0.toFixed(3)} → ${Math.min(o.e1, o.e2).toFixed(3)} m` : `doğrulama: çevirme kotları iyileştirmiyor (${o.e0.toFixed(3)} m), kenarlar olduğu gibi bırakıldı`).join(" · ") : "";
-    if (!degisti) { let h = 0; try { h = hataBul(0).length; } catch (e) {} return say(`Üçgenler zaten düzgün (${R.lay} yüzey tarandı)${h ? ` · ⚠ ${h} şüpheli kot var: ⚠ Hatalı kot bul` : ""}`); }
-    const alanF = L_ => L_.reduce((t, f) => t + Math.abs((f.p[1][0] - f.p[0][0]) * (f.p[2][1] - f.p[0][1]) - (f.p[2][0] - f.p[0][0]) * (f.p[1][1] - f.p[0][1])) / 2, 0); const a0 = alanF(FACES.filter(f => kald.has(f.lay))); snap0(); FACES = FACES.filter(f => !kald.has(f.lay)).concat(...R.out.map(o => o.T)); const a1 = alanF(FACES.filter(f => kald.has(f.lay))); let h = 0; try { h = hataBul(0).length; } catch (e) {}
-    tinYen(`Otomatik düzeltme (${Math.round(performance.now() - t0)} ms): ${R.kirik ? `${R.kirik} kırık hat kenarı (şev/sırt/vadi çizgisi) yüzeye işlendi, ` : ""}${R.cevir} kenar çevrildi (yüzey kırığı sırt/vadiye oturdu), ${R.ince} dışa taşan ince üçgen ayıklandı, ${R.dup + R.bozuk} yinelenen/bozuk üçgen silindi${Math.abs(a1 - a0) > 0.01 ? ` · yüzey alanı ${fmtN_(Math.round(a0))} → ${fmtN_(Math.round(a1))} m²` : ""} · kotlu çizgi kenarları (${R.kisit}) korundu${sc ? " · " + sc : ""}${h ? ` · ⚠ ${h} şüpheli kot kaldı: ⚠ Hatalı kot bul` : ""} · Geri al: U`); } });
+function tinDiagonal(a, b, c, d) {
+  return tCr(a, b, c) * tCr(a, b, d) < 0 &&
+    tCr(c, d, a) * tCr(c, d, b) < 0;
+}
+const tinCCW = (a, b, c) => tCr(a, b, c) > 0 ? [a, b, c] : [a, c, b];
+function repairTin(faces, protectedEdges) {
+  const seen = new Set(), mesh = [];
+  let duplicates = 0, invalid = 0, flips = 0;
+  const vertex = p => p.slice(0, 3).join(",");
+  const edge = (a, b) => [vertex(a), vertex(b)].sort().join("|");
+  for (const f of faces) {
+    if (f.p?.length !== 3 || !f.p.every(p => p?.length >= 3 && p.slice(0, 3).every(Number.isFinite)) ||
+        Math.abs(tCr(...f.p)) < 1e-10) { invalid++; continue; }
+    const key = f.p.map(vertex).sort().join("|");
+    if (seen.has(key)) { duplicates++; continue; }
+    seen.add(key);
+    mesh.push(f);
+  }
+  // Compare the slope on both sides of the diagonal and the neighboring faces.
+  // Keeping the measured vertices and boundary keeps holes and coverage intact.
+  const normal = ([a, b, c]) => {
+    const x = b[0]-a[0], y = b[1]-a[1], z = b[2]-a[2];
+    const u = c[0]-a[0], v = c[1]-a[1], w = c[2]-a[2];
+    const n = [y*w-z*v, z*u-x*w, x*v-y*u];
+    const length = Math.hypot(...n) * Math.sign(n[2]);
+    return n.map(q => q / length);
+  };
+  const bend = (a, b) => 1 - Math.min(1, a[0]*b[0] + a[1]*b[1] + a[2]*b[2]);
+  const quality = ([a, b, c]) => {
+    const side2 = (p, q) => (p[0]-q[0])**2 + (p[1]-q[1])**2;
+    return Math.abs(tCr(a, b, c)) / (side2(a,b) + side2(b,c) + side2(c,a));
+  };
+  const edges = new Map(), normals = mesh.map(f => normal(f.p)), changed = new Set();
+  mesh.forEach(({p}, i) => {
+    for (let k = 0; k < 3; k++) {
+      const key = edge(p[k], p[(k+1)%3]);
+      if (!edges.has(key)) edges.set(key, []);
+      edges.get(key).push([i, k]);
+    }
+  });
+  for (const pair of edges.values()) {
+    if (pair.length !== 2) continue;
+    const [[i,k],[j,l]] = pair;
+    if (changed.has(i) || changed.has(j)) continue;
+    const p = mesh[i].p, q = mesh[j].p, a = p[k], b = p[(k+1)%3], c = p[(k+2)%3], d = q[(l+2)%3];
+    if (protectedEdges.has(tinEdgeKey(a,b)) || edges.has(edge(c,d)) || !tinDiagonal(a,b,c,d)) continue;
+    const left = tinCCW(a,d,c), right = tinCCW(d,b,c);
+    if (Math.min(quality(left),quality(right)) < Math.max(0.018,Math.min(quality(p),quality(q))*0.7)) continue;
+    const la = normal(left), rb = normal(right);
+    const oldBend = bend(normals[i],normals[j]), newBend = bend(la,rb);
+    if (newBend + 0.015 >= oldBend) continue;
+    let before = 0, after = 0, support = 0, conflict = false;
+    for (const [u,v,oldN,newN] of [[a,c,normals[i],la],[b,c,normals[i],rb],[a,d,normals[j],la],[b,d,normals[j],rb]]) {
+      const adjacent = edges.get(edge(u,v));
+      if (adjacent.length > 2) { conflict = true; break; }
+      const neighbor = adjacent.find(([id]) => id !== i && id !== j);
+      if (!neighbor) continue;
+      if (changed.has(neighbor[0])) { conflict = true; break; }
+      before += bend(oldN,normals[neighbor[0]]);
+      after += bend(newN,normals[neighbor[0]]);
+      support++;
+    }
+    if (conflict || support < 2 || after > before + 1e-6) continue;
+    mesh[i] = { ...mesh[i], p: left };
+    mesh[j] = { ...mesh[j], p: right };
+    changed.add(i); changed.add(j); flips++;
+  }
+  return { mesh, duplicates, invalid, flips };
+}
+CMDS.UCOTO = () => {
+  const selected = tLays();
+  if (!selected.length) return say("Açık tabakalarda üçgen yüzey yok", true);
+  const locked = tinProtectedEdges(), groups = new Map(selected.map(l => [l, []]));
+  for (const f of FACES) groups.get(f.lay)?.push(f);
+  const replacements = new Map();
+  let duplicates = 0, invalid = 0, flips = 0;
+  for (const [lay, faces] of groups) {
+    const result = repairTin(faces, locked);
+    duplicates += result.duplicates;
+    invalid += result.invalid;
+    flips += result.flips;
+    if (result.duplicates + result.invalid + result.flips) replacements.set(lay, result.mesh);
+  }
+  const summary = `${flips} ortak kenar iyileşti · ${duplicates} yinelenen, ${invalid} geçersiz üçgen`;
+  if (!replacements.size) return say("Model kontrol edildi · " + summary + " · şüpheli köşeler için Hatalı kot bul (UHATA)");
+  snap0();
+  FACES = FACES.filter(f => !replacements.has(f.lay));
+  for (const mesh of replacements.values()) for (const face of mesh) FACES.push(face);
+  tinYen("Model düzeltildi · " + summary + " ayıklandı · Geri al: U");
+};
 Object.assign(ALIAS, { UOTO: "UCOTO", UOD: "UCOTO" });
 /* ======== Üçgen köşe kotu: komşulara göre düzelt, kot gir, hatalı (sivri) kotları bul ======== */
 const vKey = q => Math.round(q[0] * 1e4) + "," + Math.round(q[1] * 1e4);
@@ -24924,8 +25077,30 @@ function vTahmin(M, k, dis) { const v = M.get(k); if (!v) return null; const N =
   if (N.length >= 3) { const A = [[s1, sx, sy], [sx, sxx, sxy], [sy, sxy, syy]], b = [sz, sxz, syz]; const det = m => m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]); const D0 = det(A);
     if (Math.abs(D0) > 1e-9 * Math.max(1, sxx * syy)) { const A0 = A.map((r, i) => [b[i], r[1], r[2]]); const a = det(A0) / D0; const zmn = Math.min(...N.map(q => +q[2] || 0)), zmx = Math.max(...N.map(q => +q[2] || 0)), pay = (zmx - zmn) * 0.5 + 0.05; if (a >= zmn - pay && a <= zmx + pay) return { z: a, n: N.length, y: "düzlem" }; } }
   return { z: wz / w, n: N.length, y: "ortalama" }; }
-function vKotYaz(lay, C) { if (!C.size) return 0; snap0(); FACES = FACES.map(f => f.lay === lay && f.p.some(q => C.has(vKey(q))) ? { lay, p: f.p.map(q => { const z = C.get(vKey(q)); return z == null ? q : [q[0], q[1], z]; }) } : f);
-  for (const e of ents) if (e.t === "point") { const z = C.get(vKey(e.pts[0])); if (z != null) e.pts[0][2] = z; } FC = null; IDX = null; persist(); draw(); return C.size; }
+function tinUpdateMeasurements(lay, changes) {
+  const previous = new Map();
+  for (const f of FACES) {
+    if (f.lay !== lay) continue;
+    for (const q of f.p) {
+      const key = vKey(q);
+      if (!changes.has(key)) continue;
+      if (!previous.has(key)) previous.set(key, new Set());
+      previous.get(key).add(q[2]);
+    }
+  }
+  let count = 0;
+  for (const e of ents) {
+    if (e.t !== "point") continue;
+    const p = e.pts[0], key = vKey(p), old = previous.get(key);
+    if (!old || ![...old].some(z => Math.abs(z - p[2]) <= 1e-4)) continue;
+    if (p[2] === changes.get(key)) continue;
+    e.pts[0] = [p[0], p[1], changes.get(key)];
+    count++;
+  }
+  return count;
+}
+function vKotYaz(lay, C) { if (!C.size) return 0; snap0(); const count = tinUpdateMeasurements(lay, C); FACES = FACES.map(f => f.lay === lay && f.p.some(q => C.has(vKey(q))) ? { ...f, p: f.p.map(q => { const z = C.get(vKey(q)); return z == null ? q : [q[0], q[1], z]; }) } : f);
+  FC = null; IDX = null; persist(); draw(); return count; }
 function hataBul(esik) { const out = []; for (const l of tLays()) { const M = vAg(l), R = []; for (const [k, v] of M) { if (v.nb.size < 3) continue; const t = vTahmin(M, k); if (t) R.push({ l, k, q: v.q, t: t.z, r: (+v.q[2] || 0) - t.z, M }); }
     let e = esik; if (!(e > 0)) { const a = R.map(r => Math.abs(r.r)).sort((x, y) => x - y); const med = a[Math.floor(a.length / 2)] || 0; e = Math.max(0.3, med * 1.4826 * 6); }
     /* sivri köşe komşularını da bozar: en büyük farktan başlayarak, onaylanan hatalı köşeleri dışarıda bırakıp yeniden sına (yanlış alarm olmasın) */
@@ -24933,21 +25108,25 @@ function hataBul(esik) { const out = []; for (const l of tLays()) { const M = vA
     for (const r of C) { const t = vTahmin(M, r.k, bad); if (!t) continue; const rr = (+r.q[2] || 0) - t.z; if (Math.abs(rr) > e * (M.get(r.k).sin ? 2.5 : 1)) { /* sınır köşesinde tahmin tek yandan: daha geniş eşik */ bad.add(r.k); out.push(Object.assign(r, { t: t.z, r: rr, e })); } } } return out.sort((a, b) => Math.abs(b.r) - Math.abs(a.r)); }
 Object.assign(CMDS, {
   UCKOTDUZ: () => { const box = $("cadOut"); let d = $("ukBox"); if (!d) { d = document.createElement("div"); d.id = "ukBox"; d.className = "card"; box.parentNode.insertBefore(d, box); } d.hidden = true;
-    cmd = { name: "Köşe kotu düzelt", rcExit: true, pt(p) { const n = fNokta(p[0], p[1], 16 / V.s); if (!n) return say("Üçgen köşesine dokun", true); const l = n.lay, M = vAg(l), k = vKey(n.q), t = vTahmin(M, k), z = +n.q[2] || 0;
+    cmd = { name: "Köşe kotu düzelt", rcExit: true, raw: true, pt(p) {
+      const hits = cadTriangleAt(p);
+      if (hits.length > 1) return say("Çakışan yüzeyler var. Düzelteceğin yüzey dışında kalan tabakaları kapat.", true);
+      const n = fNokta(p[0], p[1], 16 / V.s, hits[0]?.lay); if (!n) return say("Üçgen köşesine dokun", true); const l = n.lay, M = vAg(l), k = vKey(n.q), t = vTahmin(M, k), z = +n.q[2] || 0;
         ANN = [{ t: "pt", p: [n.q[0], n.q[1]], col: "#ff4040", lines: [`Z ${z.toFixed(3)}`] }].concat([...M.get(k).nb].map(m => ({ t: "pt", p: [M.get(m).q[0], M.get(m).q[1]], col: "#40c0ff" }))); draw();
         const f = t ? z - t.z : null; d.hidden = false; d.innerHTML = `<b>⇕ Köşe kotu</b> <small style="opacity:.75">${esc_(l)}</small><div style="margin:6px 0;line-height:1.6">Y ${fmt(n.q[0])} · X ${fmt(n.q[1])}<br>Mevcut kot <b>${z.toFixed(3)}</b>${t ? `<br>Komşulara göre (${t.n} komşu, ${t.y}) <b>${t.z.toFixed(3)}</b> · fark <b style="color:${Math.abs(f) > 0.5 ? "#e53935" : "inherit"}">${f >= 0 ? "+" : ""}${f.toFixed(3)} m</b>` : "<br>Komşu az: tahmin yok"}</div>
           <div class="row" style="gap:6px;align-items:center;flex-wrap:wrap">${t ? `<button type="button" class="primary" id="ukT">Komşulara göre düzelt</button>` : ""}<input id="ukZ" inputmode="decimal" placeholder="kot gir" style="width:110px" value="${z.toFixed(3)}"><button type="button" id="ukG">Kotu yaz</button><button type="button" id="ukX">Kapat</button></div>`;
-        const uyg = nz => { vKotYaz(l, new Map([[k, +nz.toFixed(4)]])); d.hidden = true; ANN = []; say(`Köşe kotu ${z.toFixed(3)} → ${nz.toFixed(3)} (eğriler ve yüzey güncellendi; aynı yerdeki nokta da düzeltildi) · Geri al: U · sıradaki köşeye dokun`); draw(); };
-        if (t) $("ukT").onclick = () => uyg(t.z); $("ukG").onclick = () => { const v = parseFloat(String($("ukZ").value).replace(",", ".")); if (!isFinite(v)) return say("Geçerli kot yaz", true); uyg(v); }; $("ukX").onclick = () => { d.hidden = true; ANN = []; draw(); }; } };
+        const uyg = nz => { if (Math.abs(nz-z)<1e-5) return say("Kot zaten bu değerde"); const count = vKotYaz(l, new Map([[k, +nz.toFixed(4)]])); d.hidden = true; ANN = []; say(`Köşe kotu ${z.toFixed(3)} → ${nz.toFixed(3)} · ${count} ölçü noktası güncellendi · eğriler yenileniyor · Geri al: U · sıradaki köşeye dokun`); draw(); };
+        if (t) $("ukT").onclick = () => uyg(t.z); $("ukG").onclick = () => { const v = tinNumber($("ukZ").value); if (!Number.isFinite(v)) return say("Geçerli kot yaz", true); uyg(v); }; $("ukX").onclick = () => { d.hidden = true; ANN = []; draw(); }; } };
     if (!HE.on) { HE.on = true; heKay(); FC = null; draw(); } prompt_("Köşe kotu düzelt: bozuk görünen köşeye dokun (hızlı eğrilerde sivri halka olan yer) · sağ tuş bitir"); },
   UCHATA: () => { let L = []; const goster = (esk) => { L = hataBul(esk); ANN = L.slice(0, 300).map(r => ({ t: "pt", p: [r.q[0], r.q[1]], col: "#ff3030", lines: [`${r.r > 0 ? "+" : ""}${r.r.toFixed(2)}`] })); draw();
       if (!L.length) { say(`Hatalı kot bulunmadı (eşik ${esk > 0 ? esk + " m" : "otomatik"})`); return; } outShow(`⚠ Hatalı kot şüphesi: ${L.length} köşe`, ["Tabaka", "Y", "X", "Kot", "Komşulara göre", "Fark"], L.slice(0, 500).map(r => [r.l, fmt(r.q[0]), fmt(r.q[1]), (+r.q[2]).toFixed(3), r.t.toFixed(3), (r.r > 0 ? "+" : "") + r.r.toFixed(3)]));
       prompt_(`${L.length} şüpheli köşe (eşik ${L[0].e.toFixed(2)} m, kırmızı) — "düzelt" yaz: hepsi komşularına göre düzeltilir · ya da ⇕ Köşe kotu ile tek tek bak`); };
     cmd = { name: "Hatalı kot bul", rcExit: true, ask: { ph: "eşik m / düzelt", w: 130, chips: ["oto", 0.3, 0.5, 1, 2, "düzelt"] }, val(t) { const v = String(t).trim().toLowerCase();
-        if (/^d[üu]zelt/.test(v)) { if (!L.length) return say("Önce eşik seç", true), true; const by = new Map(); for (const r of L) { if (!by.has(r.l)) by.set(r.l, new Set()); by.get(r.l).add(r.k); } let n = 0; snap0(); const U0 = U.length;
+        if (/^d[üu]zelt/.test(v)) { if (!L.length) return say("Önce eşik seç", true), true; const by = new Map(); for (const r of L) { if (!by.has(r.l)) by.set(r.l, new Set()); by.get(r.l).add(r.k); } let n = 0, measured = 0; snap0();
           for (const [l, S] of by) { const M = vAg(l), C = new Map(); for (let g = 0; g < 2; g++) for (const k of S) { const t_ = vTahmin(M, k, g === 0 ? S : null); if (t_) { C.set(k, +t_.z.toFixed(4)); M.get(k).q = [M.get(k).q[0], M.get(k).q[1], t_.z]; } }
-            FACES = FACES.map(f => f.lay === l && f.p.some(q => C.has(vKey(q))) ? { lay: l, p: f.p.map(q => { const z = C.get(vKey(q)); return z == null ? q : [q[0], q[1], z]; }) } : f); for (const e of ents) if (e.t === "point") { const z = C.get(vKey(e.pts[0])); if (z != null) e.pts[0][2] = z; } n += C.size; }
-          FC = null; IDX = null; persist(); ANN = []; L = []; draw(); say(`${n} hatalı köşe komşularına göre düzeltildi (aynı yerdeki noktalar da) · Geri al: U`); idle(); return true; }
+            measured += tinUpdateMeasurements(l, C);
+            FACES = FACES.map(f => f.lay === l && f.p.some(q => C.has(vKey(q))) ? { lay: l, p: f.p.map(q => { const z = C.get(vKey(q)); return z == null ? q : [q[0], q[1], z]; }) } : f); n += C.size; }
+          FC = null; IDX = null; persist(); ANN = []; L = []; draw(); say(`${n} köşe ve ${measured} ölçü noktası komşulara göre düzeltildi · Geri al: U`); idle(); return true; }
         const e = v === "oto" || v === "" ? 0 : parseFloat(v.replace(",", ".")); if (!(e >= 0)) return false; goster(e); return true; } };
     if (!FACES.some(fVis)) return say("Açık tabakalarda üçgen yüzey yok", true); if (!HE.on) { HE.on = true; heKay(); FC = null; } goster(0); },
   UCEGRI: () => { cmd = { name: "Hızlı eğri", rcExit: true, ask: { ph: "aralık m / kapat", w: 130, chips: ["oto", 0.1, 0.25, 0.5, 1, 2, 5, "kapat"] }, val(t) { const v = String(t).trim().toLowerCase(); if (/^kap/.test(v)) { HE.on = false; } else { const n = v === "oto" || v === "aç" || v === "" ? 0 : parseFloat(v.replace(",", ".")); if (!(n >= 0)) return false; HE.on = true; HE.adim = n; } heKay(); FC = null; HE.k = ""; draw(); const L_ = HE.on ? heHesap() : null; say(HE.on ? (L_ ? `Hızlı eğri açık: ${L_.st} m aralık${HE.adim ? "" : " (otomatik)"}, her 5. eğri kalın · kot ${L_.zn.toFixed(2)} … ${L_.zx.toFixed(2)}` : "Hızlı eğri açık (açık yüzey yok)") : "Hızlı eğri kapalı"); idle(); return true; } };
@@ -25625,10 +25804,13 @@ function pastePf(x0, y0, wv) { if (!PF) return; const ex = +(localStorage.getIte
   IDX = null; persist(); draw(); say(`Profil çizime yapıştırıldı ("PROFIL" tabakası) · yazılar gerçek mesafe ve kotları gösterir`); }
 /* ======== Eğriler: üçgen ağdan, kotun tam geçtiği yerden (üçgen kenarında doğrusal) ======== */
 /* eğri kaynağı: çizimdeki üçgen ağlar + Arazi/Kübaj siyah ve kırmızı (sabit kot hariç) */
-function egriSrc(noArz) { const out = [], FL = [...new Set(FACES.map(f => f.lay))].filter(l => lays[l] && lays[l].on && !/^EGRI/.test(l));
+function egriSrc(noArz, includeHidden = false) { const out = [], FL = [...new Set(FACES.map(f => f.lay))].filter(l => lays[l] && (includeHidden || lays[l].on) && !/^EGRI/.test(l));
   FL.forEach(l => out.push({ ad: l, pre: FL.length === 1 ? "EGRI" : "EGRI_" + l.replace(/^(UCGEN_)?(MODEL_)?/i, "").replace(/[^A-Za-z0-9ÇĞİÖŞÜçğıöşü]+/g, "_"), M: faceModel(l), red: /KIRMIZI|KRMZ|PROJE/i.test(l) })); if (out.length || noArz) return out;
   /* çizimde üçgen ağ yoksa ve çizimde kotlu nokta da yoksa: Arazi/Kübaj yüzeyleri */ if (ents.some(e => e.t === "point" && K.hasZ(e.pts[0][2]))) return out;
   if (typeof MS !== "undefined" && MS && MS.tri && MS.tri.length) out.push({ ad: "Siyah (ilk hâl)", pre: "EGRI_SIYAH", M: MS }); if (typeof MR !== "undefined" && MR && MR.tri && MR.tri.length) out.push({ ad: "Kırmızı (son hâl)", pre: "EGRI_KIRMIZI", M: MR }); return out; }
+// Legacy layers generated by A-CAD use these suffixes. Hand-drawn layers are independent.
+const generatedContour = e => e.tinContour === true ||
+  (e.tinContour !== false && /^EGRI(?:_(?!ELLE(?:_|$)).+)?_(ANA|ARA|KOT)$/.test(e.lay));
 const isEgri = e => e.t === "pline" && /^EGRI/.test(e.lay) && !/_KOT$/.test(e.lay) && e.pts.length > 1 && e.pts.every(q => q[2] === e.pts[0][2]);
 const kotTxt = z => Math.abs(z - Math.round(z)) < 1e-6 ? String(Math.round(z)) : (+z).toFixed(2);
 const txtH = () => { const raw = 13 / V.s, p = Math.pow(10, Math.floor(Math.log10(raw))); return [1, 2, 2.5, 5, 10].map(m => m * p).find(v => v >= raw) || raw; };
@@ -25636,8 +25818,8 @@ function egriLbl(e, at, h, lay) { /* eğrinin üstüne, eğri yönünde kot yaz�
   const t = Math.max(0, Math.min(1, ((at[0] - a[0]) * (b[0] - a[0]) + (at[1] - a[1]) * (b[1] - a[1])) / (((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2) || 1))), q = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
   let an = Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI; if (an > 90) an -= 180; if (an < -90) an += 180; return add({ t: "text", s: kotTxt(e.pts[0][2]), h, rot: an, al: "c", pts: [[q[0], q[1], e.pts[0][2]]], lay }); }
 let EGSTEP = (()=>{try{const n=Number(localStorage.getItem('acad-egri-step'));return Number.isFinite(n)&&n>=0&&n<=1000?n:0;}catch(_){return 0}})();
-function genEgri(step, quiet, oto) { let S = egriSrc();
-  if (!S.length) { const P = ents.filter(e => e.t === "point" && lays[e.lay] && lays[e.lay].on).map(e => ({ n: e.n, e: e.pts[0][0], y: e.pts[0][1], z: e.pts[0][2] })), d = K.dedupe(P);
+function genEgri(step, quiet, oto, sources) { let S = sources || egriSrc();
+  if (!S.length && !oto) { const P = ents.filter(e => e.t === "point" && lays[e.lay] && lays[e.lay].on).map(e => ({ n: e.n, e: e.pts[0][0], y: e.pts[0][1], z: e.pts[0][2] })), d = K.dedupe(P);
     if (d.pts.length < 3) { say("Eğri için yüzey yok: çizimde en az 3 kotlu nokta, üçgen ağ ya da Arazi/Kübaj'da siyah/kırmızı yüzey gerekir", true); return null; }
     const T = K.tinIyi(d.pts, 0), lay = layer("UCGEN_" + (ents.find(e => e.t === "point").lay || "0")); for (let i = 0; i + 2 < T.length; i += 3) { const a = d.pts[T[i]], b = d.pts[T[i + 1]], c = d.pts[T[i + 2]]; FACES.push({ lay, p: [[a.e, a.y, a.z], [b.e, b.y, b.z], [c.e, c.y, c.z]] }); } FC = null; S = egriSrc(true); if (!quiet) say(`${d.pts.length} kotlu nokta üçgenlendi${d.kotsuz.length ? ` (${d.kotsuz.length} kotsuz nokta dışarıda)` : ""}`); }
   // Calculate EVERY source first: a bad height or excessive density must not
@@ -25645,11 +25827,24 @@ function genEgri(step, quiet, oto) { let S = egriSrc();
   const prepared=S.map(s_=>{const st=step>0?step:egriStep(s_.M,0);return {s_,st,E:egriCalc(s_.M,st)};});
   // A rejected interval must not replace the last known-good auto sync setting.
   if (!oto) {EGSTEP=step>0?step:0;try{localStorage.setItem('acad-egri-step',String(EGSTEP))}catch(_){}}
-  if (!oto) snap0(); const pres = new Set(S.map(s_ => s_.pre));
-  ents = ents.filter(e => !(/^EGRI/.test(e.lay) && /_(ANA|ARA|KOT)$/.test(e.lay))); let n = 0; const used = [];
+  if (!oto) {
+    snap0();
+    for (const l of Object.values(lays)) { delete l.tinContourStep; delete l.tinContourSource; }
+  }
+  ents = ents.filter(e => !generatedContour(e)); let n = 0; const used = [];
   for (const {s_,st,E} of prepared) { const M=s_.M; used.push(`${s_.ad} ${st} m`); const rd = s_.red || s_.pre === "EGRI_KIRMIZI", la = layer(s_.pre + "_ARA", rd ? "#ff8a8a" : "#6aa0ff"), lb = layer(s_.pre + "_ANA", rd ? "#ff3030" : "#ffb000"), lt = (() => { const kl = layer(s_.pre + "_KOT", "#ffffff"); if (["#ff3030", "#ffb000"].includes(lays[kl].c)) lays[kl].c = "#ffffff"; return kl; })();
+    for (const l of [la, lb, lt]) {
+      lays[l].tinContourStep = step;
+      lays[l].tinContourSource = s_.ad;
+    }
     const h = Math.max(0.2, Math.sqrt(((M.grid.maxx - M.grid.minx) * (M.grid.maxy - M.grid.miny)) || 1) / 120);
-    for (const ln of E.lines) { const z = Math.round(ln.k * st * 1000) / 1000, ana = ((ln.k % 5) + 5) % 5 === 0; const e = add({ t: "pline", pts: ln.p.map(q => [q[0], q[1], z]), lay: ana ? lb : la }); n++; if (ana && ln.p.length > 3) egriLbl(e, ln.p[ln.p.length >> 1], h, lt); } }
+    for (const ln of E.lines) {
+      const z = ln.k * st, ana = ((ln.k % 5) + 5) % 5 === 0;
+      const e = add({ t: "pline", pts: ln.p.map(q => [q[0], q[1], z]), lay: ana ? lb : la, tinContour: true });
+      n++;
+      if (ana && ln.p.length > 3) egriLbl(e, ln.p[ln.p.length >> 1], h, lt).tinContour = true;
+    }
+  }
   IDX = null; if (EGTEM) try { egriTemizle(true); } catch (e) { console.error(e); } EGSIG = egSig(); persist(); draw(); if (!quiet) say(`${n} eğri oluştu · ${used.join(" · ")} · her 5. ana eğri (kalın, kotlu) · kot üçgen kenarında tam geçtiği yerden`); return { n, used: used.join(", ") }; }
 /* ======== PLANKOTE: parsel + kotlu noktalar (kodlarıyla) + eğriler → A3 plankote PDF ve gerçek koordinatlı DXF ======== */
 /* A-CAD 7.1.15.86 — Sadece pafta için geçici çalışma alanı (ROI), kaynak CAD nesnesi değil. */
@@ -26056,7 +26251,7 @@ CMDS.EGRICIZ = () => { cmd = { name: "Eğri çiz", pts: [], z: null, ask: { ph: 
   prompt_("Eğri çiz: önce eğrinin kotunu yaz (örn. 915)"); };
 /* Eğri sil: dokunulan eğri ya da hepsi */
 CMDS.EGRISIL = () => { cmd = { name: "Eğri sil", rcExit: true, ask: { ph: "", w: 1, chips: ["Tümü"] },
-    val(t) { if (/tüm|hepsi/i.test(t)) { const n0 = ents.length; snap0(); ents = ents.filter(e => !/^EGRI/.test(e.lay)); IDX = null; persist(); say(`${n0 - ents.length} eğri ve kot yazısı silindi — Geri al: U`); idle(); draw(); return true; } },
+    val(t) { if (/tüm|hepsi/i.test(t)) { const n0 = ents.length; snap0(); ents = ents.filter(e => !/^EGRI/.test(e.lay)); for (const l of Object.values(lays)) { delete l.tinContourStep; delete l.tinContourSource; } IDX = null; persist(); say(`${n0 - ents.length} eğri ve kot yazısı silindi — Geri al: U`); idle(); draw(); return true; } },
     ent(e) { if (!isEgri(e) && !(e.t === "text" && /^EGRI/.test(e.lay))) return say("Bu bir eğri değil", true); snap0(); ents = ents.filter(x => x !== e); IDX = null; persist(); say(`${e.t === "text" ? "Kot yazısı" : "Kot " + kotTxt(e.pts[0][2]) + " eğrisi"} silindi — sıradakine dokun · Geri al: U`); draw(); } };
   prompt_("Eğri sil: silinecek eğriye dokun · Tümü = bütün eğriler · Esc bitir"); };
 /* Eğrilere kot yaz: dokunduğun yere ya da bütün eğrilere aralıkla */
@@ -26687,7 +26882,7 @@ ALIAS.PD='PROJEDENETIM';
 
 /* halihazır sekmesi için çizime erişim */
 window.CADX = { faces(l, P, T) { KUBNOSYNC = true; try { layer(l); FACES = FACES.filter(f => f.lay !== l); for (let i = 0; i + 2 < T.length; i += 3) { const a = P[T[i]], b = P[T[i + 1]], d = P[T[i + 2]]; FACES.push({ lay: l, p: [[a.e, a.y, a.z], [b.e, b.y, b.z], [d.e, d.y, d.z]] }); } FC = null; IDX = null; KUBSIG.set(l, kubSig(l)); persist(); try { if (!$("v-cad").hidden) draw(); } catch (e) {} } finally { KUBNOSYNC = false; } },
-  bagla(l) { KUBSIG.set(l, kubSig(l)); }, egriYenile() { if (FACES.length || !ents.some(e => /^EGRI_(SIYAH|KIRMIZI)/.test(e.lay))) return; try { genEgri(EGSTEP, true, true); } catch (e) { console.error(e); } }, data: () => ({ ents, lays, faces: typeof FACES !== "undefined" ? FACES : [], doc: CDOC, version: FVER }), addEnts(list, lyc) { if (!list.length) return 0; snap0(); for (const e of list) { layer(e.lay, (lyc || {})[e.lay]); add(e); } IDX = null; persist(); renderLays && renderLays(); draw(); return list.length; } };
+  bagla(l) { KUBSIG.set(l, kubSig(l)); }, egriYenile() { egriEsitle(true); }, repairTerrain: faces => repairTin(faces, tinProtectedEdges()), data: () => ({ ents, lays, faces: typeof FACES !== "undefined" ? FACES : [], doc: CDOC, version: FVER }), addEnts(list, lyc) { if (!list.length) return 0; snap0(); for (const e of list) { layer(e.lay, (lyc || {})[e.lay]); add(e); } IDX = null; persist(); renderLays && renderLays(); draw(); return list.length; } };
 
 CADX.openFoundationModel=async function(name,colors,records,groundContext){
   const palette={1:'#e06c55',2:'#f1ce69',3:'#62bd84',4:'#65b8dc',5:'#539fec',7:'#aebac5'};
