@@ -19179,7 +19179,7 @@ function draw() { liveTick(); if(CAD_RESIZE_DIRTY){
         else{cx.beginPath();cx.arc(x,y,3*D,0,6.2832);cx.stroke();}}
       const ln_ = PV.ad && e.n && !TS.has(String(e.n).trim()) ? e.n : "", lz_ = PV.kot !== false && (PV.kot === true || rawZ) && isFinite(e.pts[0][2]) && e.pts[0][2];
       if (lbl && (ln_ || lz_) && !occ.has(Math.floor(x / (70 * D)) + "," + Math.floor(y / (13 * D)))) { occ.add(Math.floor(x / (70 * D)) + "," + Math.floor(y / (13 * D))); cx.font = `${10 * D}px Arial`; cx.textAlign = "left"; cx.fillText(`${ln_}${lz_ ? " " + (+e.pts[0][2]).toFixed(2) : ""}`, x + 5 * D, y - 4 * D); } }
-    else if (e.t === "text") { const hpx = (e.h || 1) * V.s * D; if (hpx < 3) { cx.setLineDash([]); if (hpx >= 0.2) { const w = hpx * 0.75 * String(e.s).length, a = -(e.rot || 0) * Math.PI / 180, x0 = X(e.pts[0][0]) - (e.al === "c" ? w / 2 : e.al === "r" ? w : 0) * Math.cos(a), y0 = Y(e.pts[0][1]) - (e.al === "c" ? w / 2 : e.al === "r" ? w : 0) * Math.sin(a); cx.globalAlpha = 0.6; cx.lineWidth = Math.max(1, hpx * 0.8); cx.beginPath(); cx.moveTo(x0, y0 - hpx * 0.4); cx.lineTo(x0 + w * Math.cos(a), y0 - hpx * 0.4 + w * Math.sin(a)); cx.stroke(); cx.globalAlpha = 1; } continue; } cx.save(); cx.translate(X(e.pts[0][0]), Y(e.pts[0][1])); cx.rotate(-(e.rot || 0) * Math.PI / 180); cx.font = `${hpx * 1.3}px Arial`; cx.textAlign = e.al === "c" ? "center" : e.al === "r" ? "right" : "left"; cx.textBaseline = "alphabetic"; cx.fillText(e.s, 0, 0); cx.restore(); }
+    else if (e.t === "text") { const hpx = (e.h || 1) * V.s * D; if (hpx < 3) { cx.setLineDash([]); if (hpx >= 0.2) { const w = hpx * 0.75 * String(e.s).length, a = -(e.rot || 0) * Math.PI / 180, x0 = X(e.pts[0][0]) - (e.al === "c" ? w / 2 : e.al === "r" ? w : 0) * Math.cos(a), y0 = Y(e.pts[0][1]) - (e.al === "c" ? w / 2 : e.al === "r" ? w : 0) * Math.sin(a); cx.globalAlpha = 0.6; cx.lineWidth = Math.max(1, hpx * 0.8); cx.beginPath(); cx.moveTo(x0, y0 - hpx * 0.4); cx.lineTo(x0 + w * Math.cos(a), y0 - hpx * 0.4 + w * Math.sin(a)); cx.stroke(); cx.globalAlpha = 1; } continue; } cx.save(); cx.translate(X(e.pts[0][0]), Y(e.pts[0][1])); cx.rotate(-(e.rot || 0) * Math.PI / 180); cx.font = `${hpx * 1.3}px Arial`; cx.textAlign = e.al === "c" ? "center" : e.al === "r" ? "right" : "left"; cx.textBaseline = "alphabetic"; cx.fillText(buildingLevelText(e), 0, 0); cx.restore(); }
     else if (e.t === "circle") { if (!s && !cx.getLineDash().length) { const col = cx.strokeStyle; let bp = BPATH.get(col); if (!bp) { bp = new Path2D(); BPATH.set(col, bp); } const cx_ = X(e.c[0]), cy_ = Y(e.c[1]), rr = e.r * V.s * D; bp.moveTo(cx_ + rr, cy_); bp.arc(cx_, cy_, rr, 0, 7); } else { cx.beginPath(); cx.arc(X(e.c[0]), Y(e.c[1]), e.r * V.s * D, 0, 7); cx.stroke(); } }
     else { const lx = !s && !e.fill && window.LTX && LTX.has(ltOf(e)) ? ltOf(e) : null; if (lx && LTX.per(lx) * LTX.u * V.s * D > 3) { const R_ = LTX.cached(e, lx, LTX.u); cx.setLineDash([]); cx.beginPath(); for (const [a, b] of R_.L) { cx.moveTo(X(a[0]), Y(a[1])); cx.lineTo(X(b[0]), Y(b[1])); } cx.stroke(); for (const k of R_.C) { cx.beginPath(); cx.arc(X(k.c[0]), Y(k.c[1]), Math.max(0.8, k.r * V.s * D), 0, 7); k.f ? cx.fill() : cx.stroke(); } if (R_.T.length) { const hp = R_.T[0].h * V.s * D; if (hp > 4) { cx.font = `${hp * 1.3}px Arial`; cx.textAlign = "center"; for (const t of R_.T) { cx.save(); cx.translate(X(t.p[0]), Y(t.p[1])); let r_ = t.rot; if (Math.cos(r_) < 0) r_ += Math.PI; cx.rotate(-r_); cx.fillText(t.s, 0, 0); cx.restore(); } } } }
       else if (!s && !e.fill && !cx.getLineDash().length) { const col = cx.strokeStyle; let bp = BPATH.get(col); if (!bp) { bp = new Path2D(); BPATH.set(col, bp); } const P = e.pts; let px = X(P[0][0]), py = Y(P[0][1]); bp.moveTo(px, py); for (let i = 1; i < P.length; i++) { const qx = X(P[i][0]), qy = Y(P[i][1]); if (i < P.length - 1 && Math.abs(qx - px) + Math.abs(qy - py) < 0.7) continue; bp.lineTo(qx, qy); px = qx; py = qy; } if (e.closed) bp.closePath(); }
@@ -24935,6 +24935,11 @@ function c3BulutBilgi() { const e = $("c3bn"); if (!e || !C3B) return; const K =
   if (C3 && C3.kutuSec) t.push(C3.kutuSec.p0 ? "karşı köşeye dokun…" : "ilk köşeye dokun…");
   if (K) t.push(`kutu ${(K[2] - K[0]).toFixed(1)} × ${(K[3] - K[1]).toFixed(1)} m`); if (C3B.alt != null || C3B.ust != null) t.push(`kot ${C3B.alt != null ? C3B.alt.toFixed(2) : "…"} – ${C3B.ust != null ? C3B.ust.toFixed(2) : "…"}`);
   if (BULUT) t.push(`${fmtN_(BULUT.S.n)} nokta`); e.textContent = t.join(" · "); const o = $("c3bo"); if (o) o.textContent = [{ kapali: "kapalı", rgb: "RGB", sinif: "sınıf", kot: "kot" }[C3B.md], K ? "kutu var" : "", C3B.alt != null || C3B.ust != null ? "kot süzgeci" : ""].filter(Boolean).join(" · "); }
+function buildingLevelText(e){
+  if(e.lay!=='BINA_TEMEL_KOTU' && e.lay!=='BINA_SUBASMAN')return e.s;
+  const match=/^(?:Temel alt|Subasman)\s+([+-]?\d+(?:[.,]\d+)?)\s+m$/i.exec(e.s);
+  return match?match[1]:e.s;
+}
 CMDS.GORUNUM3B = () => {
   if (document.getElementById('cadInspect3')) return;
   for (const [name,ready] of [['three.min.js',()=>window.THREE],['OrbitControls.js',()=>window.THREE?.OrbitControls]]) {
@@ -24968,7 +24973,7 @@ CMDS.GORUNUM3B = () => {
       p=p.map(q=>{const hits=cadTriangleAt(q);const top=(finalView && hits.filter(h=>h.lay!=='SIYAH_ARAZI').at(-1))||hits.at(-1);return top?[q[0],q[1],top.z]:null;});
       if(p.every(q=>!q))continue;
     }
-    if(e.t==='text' && e.s && p[0] && (/(B[Iİ]NA|BLOK|BUILDING)/i.test(e.lay)||/^(?:B|BL|BLOK)[ -]?\d+(?:[-/][A-Z]?\d+)*$/i.test(String(e.s).trim())))labels.push({p:p[0],s:e.s,level:e.lay==='BINA_TEMEL_KOTU'||e.lay==='BINA_SUBASMAN'});
+    if(e.t==='text' && e.s && p[0] && (/(B[Iİ]NA|BLOK|BUILDING)/i.test(e.lay)||/^(?:B|BL|BLOK)[ -]?\d+(?:[-/][A-Z]?\d+)*$/i.test(String(e.s).trim())))labels.push({p:p[0],s:buildingLevelText(e),level:e.lay==='BINA_TEMEL_KOTU'||e.lay==='BINA_SUBASMAN'});
     if(e.closed && e.areaName && p.length && /B[Iİ]NA|BLOK/i.test(e.lay)){
       const center=p.reduce((acc,q)=>[acc[0]+q[0]/p.length,acc[1]+q[1]/p.length,acc[2]+(q[2]||0)/p.length],[0,0,0]);labels.push({p:center,s:e.areaName});
     }
@@ -25018,10 +25023,15 @@ CMDS.GORUNUM3B = () => {
     for(const {p,s,level} of labels){
       v.set(p[0]-origin.x,p[1]-origin.y,(p[2]??0)-origin.z).project(cam);
       if(Math.abs(v.x)>1||Math.abs(v.y)>1||Math.abs(v.z)>1)continue;
-      const x=(v.x+1)*width/2,y=(1-v.y)*height/2,key=Math.floor(x/40)+'/'+Math.floor(y/15);
-      if(used.has(key)&&!level)continue;
-      const row=level&&used.has(key)?y+15:y;
-      used.add(key);pen.strokeText(s,x,row);pen.fillText(s,x,row);
+      const x=(v.x+1)*width/2,y=(1-v.y)*height/2,half=pen.measureText(s).width/2+3;
+      const left=Math.floor((x-half)/12),right=Math.floor((x+half)/12);
+      for(const dy of (level?[0,18,-18]:[0])){
+        const row=y+dy,keys=[];
+        for(let j=Math.floor((row-14)/6);j<=Math.floor((row+2)/6);j++)
+          for(let i=left;i<=right;i++)keys.push(i+','+j);
+        if(keys.some(k=>used.has(k)))continue;
+        keys.forEach(k=>used.add(k));pen.strokeText(s,x,row);pen.fillText(s,x,row);break;
+      }
     }
   }
   function size(){cam.aspect=Math.max(1,stage.clientWidth)/Math.max(1,stage.clientHeight);renderer.setSize(stage.clientWidth,stage.clientHeight,false);cam.updateProjectionMatrix();render();}
@@ -35134,20 +35144,35 @@ function mount(host) {
       const labelLayers=new Map([
         [sample?'BINA_NO':roles.noLayer,{name:'BINA_NO'}],
         [sample?'REZERV_BİNANO':roles.rezLayer,{name:'REZERV_BINA_NO'}],
-        [sample?'BINA_TEMELALTKOTU':roles.kotLayer,{name:'BINA_TEMEL_KOTU',caption:'Temel alt'}],
-        [roles.plinth,{name:'BINA_SUBASMAN',caption:'Subasman'}]
+        [sample?'BINA_TEMELALTKOTU':roles.kotLayer,{name:'BINA_TEMEL_KOTU',level:true}],
+        [roles.plinth,{name:'BINA_SUBASMAN',level:true}]
       ].filter(([source])=>source));
-      for(const t of D.texts){
+      const boxes=[];
+      const labels=D.texts.filter(t=>labelLayers.has(t.lay)).sort((a,b)=>
+        Number(!!labelLayers.get(a.lay).level)-Number(!!labelLayers.get(b.lay).level));
+      for(const t of labels){
         const target=labelLayers.get(t.lay);
         if(!target || !t.s || !Number.isFinite(t.x0) || !Number.isFinite(t.y0))continue;
-        const h=t.h>0?t.h:1,rotation=(t.r||0)*180/Math.PI;
-        const z=target.caption?KC.readLevel(t.s):0;
+        const h=(t.h>0?t.h:1)*(target.level ? .75 : 1),rotation=(t.r||0)*180/Math.PI;
+        const z=target.level?KC.readLevel(t.s):0;
         if(!Number.isFinite(z))continue;
-        const text=target.caption?target.caption+' '+t.s+' m':t.s;
-        const color=target.caption?4:2;
+        const text=String(t.s).trim();
+        const cs=Math.cos(t.r||0),sn=Math.sin(t.r||0),width=text.length*h*.83;
+        let x=t.x0,y=t.y0;
+        for(let row=0;;row++){
+          const dx=row*1.6*h;
+          x=t.x0+sn*dx;y=t.y0-cs*dx;
+          const xs=[x,x+cs*width,x-sn*h,x+cs*width-sn*h];
+          const ys=[y,y+sn*width,y+cs*h,y+sn*width+cs*h];
+          const box=[Math.min(...xs),Math.min(...ys),Math.max(...xs),Math.max(...ys)];
+          if(!target.level || !boxes.some(b=>box[0]<b[2]+.1*h && box[2]>b[0]-.1*h && box[1]<b[3]+.1*h && box[3]>b[1]-.1*h)){
+            boxes.push(box);break;
+          }
+        }
+        const color=target.level?4:2;
         layers.set(target.name,color);
-        if(dxf){dxf.lay(target.name,color);dxf.text(target.name,t.x0,t.y0,h,text,rotation,'l',0,z);}
-        else records.push(['text',target.name,[t.x0,t.y0,z],text,h,rotation,'l']);
+        if(dxf){dxf.lay(target.name,color);dxf.text(target.name,x,y,h,text,rotation,'l',0,z);}
+        else records.push(['text',target.name,[x,y,z],text,h,rotation,'l']);
       }
       if(format==='cad'){
         await window.CADX.openFoundationModel(($('parsel').value||'Temel')+' · Kazı ve dolgu',layers,records,context);
