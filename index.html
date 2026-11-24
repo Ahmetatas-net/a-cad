@@ -19696,7 +19696,8 @@ const roadLayerName = name => {
   if(!roadLayerNames.has(name))roadLayerNames.set(name,String(name||"").toLocaleUpperCase("tr-TR").normalize("NFD").replace(/\p{M}/gu,""));
   return roadLayerNames.get(name);
 };
-const roadParcel = e => e.closed && /^(?:ALAN[_ -])?(?:PARSEL|KADASTRO)(?:$|[_ -])/.test(roadLayerName(e.lay));
+const roadParcel = e => e.closed && /^(?:(?:KAD|ALAN)[_ -])?(?:PARSEL|KADASTRO)(?:$|[_ -])/.test(roadLayerName(e.lay));
+const roadRemainder = e => e.closed && /^(?:KALAN|TERK)[_ -](?:ALN|ALAN)(?:$|[_ -])/.test(roadLayerName(e.lay));
 const roadBlock = e => e.closed && /^(?:ALAN[_ -])?ADA(?:$|[_ -])/.test(roadLayerName(e.lay));
 const roadIsland = e => e.closed && /(?:^|[_ -])(?:REFUJ|KALDIRIM|BINA|TESCILSIZ|PARK)(?:$|[_ -])/.test(roadLayerName(e.lay));
 function roadSource(e) {
@@ -19704,7 +19705,177 @@ function roadSource(e) {
   return l!==ROAD_NETWORK_LAYER && /(?:^|[_ -])(?:YOL|ROAD|ASFALT|CADDE|SOKAK)(?:$|[_ -])/.test(l) &&
     !/(?:^|[_ -])(?:EKSEN|ORTA|AXIS|CENTER|CNTR|TARAMA|YAZI|AD|ADI|NO|KOT|KALDIRIM|PROFIL|KESIT|BORDUR|REFUJ|GENISLIK)(?:$|[_ -])/.test(l);
 }
-function roadNetworkInput(customLayers=new Set(), boundaryLayers=new Set(), closedRoads=new Set()) {
+// Trace the two measured sides at the seed. Crossing a layer boundary is
+// allowed at an unambiguous shared endpoint. Branches terminate a chain.
+function measuredRoadStrip(banks,seeds){
+  const G=window.ACAD_ROAD_AREA, key=p=>Math.round(p[0]*1000)+','+Math.round(p[1]*1000);
+  const nodes=new Map(),edges=[];
+  for(const e of banks){
+    const pts=G.clean(e.pts);if(pts.length<2||e.closed)continue;
+    const ends=[key(pts[0]),key(pts.at(-1))];if(ends[0]===ends[1])continue;
+    const edge={pts,ends};edges.push(edge);
+    for(const k of ends){if(!nodes.has(k))nodes.set(k,[]);nodes.get(k).push(edge);}
+  }
+  const used=new Set(),chains=[];
+  for(const edge of edges){
+    if(used.has(edge))continue;
+    const branch=i=>{
+      const out=[];let k=edge.ends[i];
+      while(nodes.get(k).length===2){
+        const next=nodes.get(k).find(e=>!used.has(e));if(!next)break;
+        used.add(next);const direct=next.ends[0]===k;
+        const pts=direct?next.pts:next.pts.slice().reverse();
+        for(let j=1;j<pts.length;j++)out.push(pts[j]);
+        k=next.ends[direct?1:0];
+      }
+      return out;
+    };
+    used.add(edge);const a=branch(0).reverse(),b=branch(1);
+    const pts=a.concat(edge.pts,b);
+    if(dist(pts[0],pts.at(-1))>.002)chains.push(pts);
+  }
+  function foot(p,line){
+    let best={d:Infinity};
+    for(let i=1;i<line.length;i++){
+      const a=line[i-1],b=line[i],dx=b[0]-a[0],dy=b[1]-a[1],len=dx*dx+dy*dy;
+      const t=Math.min(1,Math.max(0,((p[0]-a[0])*dx+(p[1]-a[1])*dy)/(len||1)));
+      const q=[a[0]+dx*t,a[1]+dy*t],d=dist(q,p);
+      if(d<best.d)best={d,q,s:i-1+t,dx,dy};
+    }
+    return best;
+  }
+  function cut(a,b){
+    const af=foot(a[0],b),bf=foot(b[0],a);
+    if(af.d<=bf.d)return {a:0,b:af.s,pa:a[0],pb:af.q};
+    return {a:bf.s,b:0,pa:bf.q,pb:b[0]};
+  }
+  const cropped=(line,s,e,p,q)=>[p,...line.slice(Math.floor(s)+1,Math.ceil(e)),q];
+  const results=new Map();
+  for(const p of seeds){
+    const nearby=chains.map((line,i)=>({line,i,f:foot(p,line)})).filter(x=>x.f.d<38).sort((x,y)=>x.f.d-y.f.d).slice(0,12);
+    const candidates=[];
+    for(let i=0;i<nearby.length;i++)for(let j=i+1;j<nearby.length;j++){
+      const {line:a,f:u}=nearby[i],{line:other,f:v}=nearby[j];
+      if((u.q[0]-p[0])*(v.q[0]-p[0])+(u.q[1]-p[1])*(v.q[1]-p[1])>-.25*u.d*v.d)continue;
+      if(Math.abs(u.dx*v.dx+u.dy*v.dy)<.45*Math.hypot(u.dx,u.dy)*Math.hypot(v.dx,v.dy))continue;
+      const width=u.d+v.d;if(width>38||width<.2)continue;
+      const ar=a.slice().reverse();
+      for(const b of [other,other.slice().reverse()]){
+        const br=b.slice().reverse(),first=cut(a,b),last=cut(ar,br);
+        const enda=a.length-1-last.a,endb=b.length-1-last.b;
+        if(enda<=first.a||endb<=first.b)continue;
+        const left=cropped(a,first.a,enda,first.pa,last.pa),right=cropped(b,first.b,endb,first.pb,last.pb);
+        const pair=G.paired({pts:G.clean(left)},{pts:G.clean(right)},{maxCap:Math.min(38,Math.max(9,width*2.5))});
+        if(pair.ok&&G.inside(pair.poly,p))candidates.push({pts:pair.poly,width,id:[nearby[i].i,nearby[j].i].sort((a,b)=>a-b).join('-')});
+      }
+    }
+    candidates.sort((a,b)=>a.width-b.width);
+    if(candidates.length&&(!candidates[1]||candidates[1].id===candidates[0].id||candidates[1].width>candidates[0].width*1.12)){
+      const c=candidates[0];results.set(c.id,{id:'strip-'+c.id,pts:c.pts,ring:true});
+    }
+  }
+  return [...results.values()];
+}
+// Limit topology work to complete measured chains near the tap on large drawings.
+function nearbyRoadBanks(p,eligible){
+  const found=new Set(),pending=near(p,38).filter(eligible);
+  for(const e of pending)found.add(e);
+  let vertices=0;
+  for(let i=0;i<pending.length;i++){
+    const pts=pending[i].pts;
+    vertices+=pts.length;if(vertices>12000)return [];
+    for(const tip of [pts[0],pts.at(-1)]){
+      for(const other of near(tip,.005)){
+        if(found.has(other)||!eligible(other))continue;
+        if(dist(tip,other.pts[0])>.002&&dist(tip,other.pts.at(-1))>.002)continue;
+        found.add(other);pending.push(other);
+      }
+    }
+  }
+  return pending;
+}
+function frontageRoadFaces(banks, parcels, labels) {
+  const G=window.ACAD_ROAD_AREA, lines=banks.map(e=>G.clean(e.pts)).filter(p=>p.length>1);
+  const rings=parcels.map(e=>G.clean(e.pts)).filter(r=>r.length>=3);
+  if(!lines.length||!labels.length)return null;
+  const pointKey=p=>Math.round(p[0]*1000)+','+Math.round(p[1]*1000);
+  const nearest=(p,paths,closed)=>{
+    let distance=Infinity,point=null;
+    for(const r of paths)for(let i=0;i<r.length-(closed?0:1);i++){
+      const a=r[i],b=r[(i+1)%r.length],dx=b[0]-a[0],dy=b[1]-a[1];
+      const t=Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dy)/(dx*dx+dy*dy||1)));
+      const q=[a[0]+dx*t,a[1]+dy*t],d=Math.hypot(q[0]-p[0],q[1]-p[1]);
+      if(d<distance){distance=d;point=q;}
+    }
+    return {distance,point};
+  };
+  const size=lines.concat(rings).reduce((n,r)=>n+r.length,0);
+  if(size>7000||labels.length>200)return null;
+  const seeds=labels.filter(p=>!rings.some(r=>G.inside(r,p))&&nearest(p,lines,false).distance<38);
+  if(!seeds.length)return null;
+  const nodes=new Map(), parent=new Map();
+  const root=k=>{while(parent.has(k)){const next=parent.get(k);if(parent.has(next))parent.set(k,parent.get(next));k=next;}return k;};
+  for(const line of lines)for(let i=1;i<line.length;i++){
+    const a=line[i-1],b=line[i];
+    const ka=root(pointKey(a)),kb=root(pointKey(b));if(ka!==kb)parent.set(ka,kb);
+    for(const [p,q] of [[a,b],[b,a]]){
+      const key=pointKey(p),node=nodes.get(key);
+      if(node)node.degree++;else nodes.set(key,{p,q,degree:1});
+    }
+  }
+  const raw=[...lines,...rings.map(r=>r.concat([r[0]]))];
+  const facesWithRoad=paths=>A.faces(paths,.002).filter(face=>{
+    if(!seeds.some(p=>G.inside(face,p)))return false;
+    // Reject a sheet outline and a loose end traced twice by the face walk.
+    // A real corridor must be flanked by two nearby, opposing measured edges.
+    const enclosed=seeds.filter(p=>G.inside(face,p));
+    return enclosed.some(p=>{
+      for(let k=0;k<12;k++){
+        const angle=k*Math.PI/12,u=[Math.cos(angle),Math.sin(angle)];let lo=-Infinity,hi=Infinity;
+        for(let i=0;i<face.length;i++){
+          const a=face[i],b=face[(i+1)%face.length],dx=b[0]-a[0],dy=b[1]-a[1],den=u[0]*dy-u[1]*dx;
+          if(Math.abs(den)<.55*Math.hypot(dx,dy)||!den)continue;
+          const x=a[0]-p[0],y=a[1]-p[1],t=(x*dy-y*dx)/den,v=(x*u[1]-y*u[0])/den;
+          if(v<0||v>1)continue;
+          if(t<0)lo=Math.max(lo,t);else hi=Math.min(hi,t);
+        }
+        if(hi-lo<=38)return true;
+      }
+      return false;
+    });
+  });
+  let faces=facesWithRoad(raw);
+  if(!seeds.every(p=>faces.some(r=>G.inside(r,p)))){
+    // Close only short, transverse survey ends. Never extend a bank along
+    // its tangent or connect across a measured parcel to reach a seed.
+    const ends=[...nodes.values()].filter(n=>n.degree===1&&nearest(n.p,rings,true).distance>.005);
+    const transverse=(e,p)=>{
+      const dx=e.p[0]-e.q[0],dy=e.p[1]-e.q[1],x=p[0]-e.p[0],y=p[1]-e.p[1];
+      return Math.abs(dx*x+dy*y)<.75*Math.hypot(dx,dy)*Math.hypot(x,y);
+    };
+    if(ends.length>600)return faces.map((pts,i)=>({id:"frontage-"+i,pts,ring:true}));
+    const pairs=ends.map(e=>ends.filter(f=>{
+      const ax=e.p[0]-e.q[0],ay=e.p[1]-e.q[1],bx=f.p[0]-f.q[0],by=f.p[1]-f.q[1];
+      return root(pointKey(e.p))!==root(pointKey(f.p))&&dist(e.p,f.p)<=9&&ax*bx+ay*by>.65*Math.hypot(ax,ay)*Math.hypot(bx,by)&&transverse(e,f.p)&&transverse(f,e.p);
+    }));
+    const caps=[];
+    ends.forEach((e,i)=>{
+      const f=pairs[i][0];
+      if(pairs[i].length===1&&pairs[ends.indexOf(f)].length===1){
+        if(i<ends.indexOf(f))caps.push([e.p,f.p]);
+      }else if(!pairs[i].length){
+        const group=root(pointKey(e.p));
+        const other=lines.filter(r=>root(pointKey(r[0]))!==group);
+        const parcel=nearest(e.p,rings,true),edge=nearest(e.p,other,false);
+        const q=edge.distance<parcel.distance?edge:parcel;
+        if(q.distance>.005&&q.distance<=16&&transverse(e,q.point))caps.push([e.p,q.point]);
+      }
+    });
+    if(caps.length)faces=facesWithRoad(raw.concat(caps));
+  }
+  return faces.map((pts,i)=>({id:'frontage-'+i,pts,ring:true}));
+}
+function roadNetworkInput(customLayers=new Set(), boundaryLayers=new Set(), closedRoads=new Set(), pick=null) {
   const G=window.ACAD_ROAD_AREA, roads=[], blocks=[], parcels=[], islands=[];
   for(const e of ents) {
     if(e.roadArea||e.roadBorder||!["line","pline"].includes(e.t)||e.pts?.length<2)continue;
@@ -19713,7 +19884,7 @@ function roadNetworkInput(customLayers=new Set(), boundaryLayers=new Set(), clos
     if(boundaryLayers.has(e.lay)&&e.closed)blocks.push(e);
     else if(roadBlock(e))blocks.push(e);
     else if(roadParcel(e))parcels.push(e);
-    else if(roadIsland(e))islands.push(e);
+    else if(roadIsland(e)||roadRemainder(e))islands.push(e);
   }
   // The parcel and block geometries describe the same area. Use complete
   // block boundaries where available, avoiding duplicate internal seams.
@@ -19724,6 +19895,27 @@ function roadNetworkInput(customLayers=new Set(), boundaryLayers=new Set(), clos
   for(const item of islands){
     const ring=G.clean(item.pts);
     if(ring.length>=3)exclusions.push(ring);
+  }
+  const large=ents.length>=16000, wholeCadastre=cadastral&&boundaries.length>12;
+  if(!closedRoads.size&&!boundaryLayers.size&&(large?pick&&!wholeCadastre:parcels.length||!roads.length||customLayers.size)){
+    const labels=(large?[]:ents).filter(e=>e.t==="text"&&lays[e.lay]?.on&&/^(?:(?:TOPRAK|ASFALT|STABILIZE|IMAR) )?YOL$/.test(roadLayerName(e.s).trim())).map(e=>e.pts[0]);
+    if(pick||labels.length){
+      const eligible=e=>{
+        if(e.roadArea||e.roadBorder||e.closed||!lays[e.lay]?.on||!["line","pline"].includes(e.t)||e.pts?.length<2)return false;
+        if(customLayers.size)return customLayers.has(e.lay);
+        const name=roadLayerName(e.lay);
+        if(/(?:^|[_ -])(?:CERCEVE|SABLON|PAFTA|GRID|KARELAJ|KO|EGRI|MUNHANI|UCGEN|TIN|KOT|TARAMA|OLCU|SEMBOL|YAZI|EKSEN|KESIT|CEPHE)(?:$|[_ -])/.test(name))return false;
+        return !roads.length||roadSource(e)||/(?:^|[_ -])(?:DUVAR|SABIT|BORDUR)(?:$|[_ -])/.test(name);
+      };
+      const banks=large?nearbyRoadBanks(pick,eligible):ents.filter(eligible);
+      const seeds=pick?[pick]:labels;
+      const localParcels=large?near(pick,50).filter(roadParcel):parcels;
+      const faces=frontageRoadFaces(banks,localParcels,seeds)||[];
+      const missing=seeds.filter(p=>!exclusions.some(r=>G.inside(r,p))&&!faces.some(f=>G.inside(f.pts,p)));
+      if(missing.length&&missing.length<=200)faces.push(...measuredRoadStrip(banks,missing));
+      if(faces.length||!roads.length&&parcels.length&&labels.length)
+        return {roads:faces,exclusions,cadastral:false,frontage:true,hint:null};
+    }
   }
   if(cadastral&&!customLayers.size)for(const e of boundaries){
     const pts=G.clean(e.pts);if(pts.length>=3)roads.push({id:e.id,pts,border:true});
@@ -19777,20 +19969,9 @@ function roadNetworkWork(input, owner, progress) {
     }catch(e){reject(e);}finally{URL.revokeObjectURL(url);}
   });
 }
-function roadNetworkAt(networks, p) {
+function roadNetworkAt(networks,p){
   const inside=window.ACAD_ROAD_AREA.inside;
-  const hits=networks.filter(n=>inside(n.rings[0],p)&&!n.rings.slice(1).some(r=>inside(r,p)));
-  if(hits.length)return hits[0];
-  const limit=Math.min(2.4,12/Math.max(V.s,.001));
-  const near=[];
-  for(const n of networks){
-    const ring=n.rings[0];
-    let distance=limit;
-    for(let i=0;i<ring.length;i++)distance=Math.min(distance,segD(p,ring[i],ring[(i+1)%ring.length])[0]);
-    if(distance<limit)near.push({n,distance});
-  }
-  near.sort((a,b)=>a.distance-b.distance);
-  return near.length&&(!near[1]||near[1].distance-near[0].distance>.35)?near[0].n:null;
+  return networks.find(n=>inside(n.rings[0],p)&&!n.rings.slice(1).some(r=>inside(r,p)))||null;
 }
 function roadNetworkKey(shape) {
   const r=shape.rings[0];
@@ -19817,7 +19998,7 @@ function roadNetworkStore(networks, input, unused, combine, refresh=false) {
     for (const n of prepared) {
       const partitioned=n.rings.length>1;
       for (const ring of n.parts) add({t:"pline",closed:true,pts:ring.map(q=>[q[0],q[1],null]),lay,
-        roadArea:true,roadNetworkVersion:3,roadInterior:partitioned,roadGroup:first||n.key,roadKey:n.key,
+        roadArea:true,roadNetworkVersion:4,roadInterior:partitioned,roadGroup:first||n.key,roadKey:n.key,
         areaQuality:n.inferred?"review-required":"closed-source-geometry"});
       if (partitioned) for (const ring of n.rings) add({t:"pline",closed:true,pts:ring.map(q=>[q[0],q[1],null]),
         lay,roadBorder:true,roadGroup:first||n.key,roadKey:n.key});
@@ -19846,11 +20027,17 @@ function roadNetworkCommand() {
     if(!refresh&&ents.some(e=>e.roadArea&&e.roadKey&&e.lay===ROAD_NETWORK_LAYER&&!e.roadNetworkVersion))
       return say("Önceki yol ağı çizimde var. Güncel açık kaynaklardan tekrar hesaplamak için Yenile’ye dokun.",true);
     const owner=cmd, revision=FVER, current=ents;
+    const pointKey=p?p.join(','):'all';
     const visible=Object.keys(lays).filter(k=>k!==ROAD_NETWORK_LAYER&&lays[k].on).join("\0")+"|"+JSON.stringify([[...customLayers],[...boundaryLayers],[...closedRoads]]);
-    const cached=!refresh&&roadNetworkCache?.revision===revision&&roadNetworkCache.ents===current&&roadNetworkCache.visible===visible?roadNetworkCache:null;
-    const input=cached?.input||roadNetworkInput(customLayers,boundaryLayers,closedRoads);
-    if(!input.roads.length){picking="road";prompt_("Yol kenarını seç");return say("Yol sınırına dokun. Kadastro çizgileri için Ada/parsel tabakasını seç.",true);}
+    const sameSource=!refresh&&roadNetworkCache?.revision===revision&&roadNetworkCache.ents===current&&roadNetworkCache.visible===visible;
+    const cached=sameSource&&(roadNetworkCache.pointKey===pointKey||roadNetworkCache.input.cadastral&&ents.length>=16000)?roadNetworkCache:null;
+    const input=cached?.input||roadNetworkInput(customLayers,boundaryLayers,closedRoads,p);
     if(p&&input.exclusions.some(r=>window.ACAD_ROAD_AREA.inside(r,p)))return say("Ada, parsel veya yapı içinde seçim. Yolun içine dokun.",true);
+    if(input.frontage&&!input.roads.length)return say("Bu konumda iki yol kenarı doğrulanamadı. Karşı kenarı kontrol et.",true);
+    if(!refresh&&input.frontage&&ents.some(e=>e.roadArea&&e.roadKey&&e.lay===ROAD_NETWORK_LAYER&&e.roadNetworkVersion!==4))
+      return say("Eski yol dolgusu çizimde. Ölçülü kenarlardan yeniden oluşturmak için Yenile’ye dokun.",true);
+    if(!input.roads.length){picking="road";prompt_("Yol kenarını seç");return say("Yol sınırına dokun. Kadastro çizgileri için Ada/parsel tabakasını seç.",true);}
+
     active={};
     say(input.cadastral?"Ada kenarları taranıyor…":"Bağlı yol kenarları taranıyor…");
     await new Promise(requestAnimationFrame);
@@ -19860,11 +20047,11 @@ function roadNetworkCommand() {
       const {networks,unused}=result;
       if(cmd!==owner||revision!==FVER||current!==ents)return;
       const n=p?roadNetworkAt(networks,p):null;
-      roadNetworkCache={input,result,revision,ents:current,visible};
+      roadNetworkCache={input,result,revision,ents:current,visible,pointKey};
       const selected=p?(n?([n]):[]):networks;
       if(!selected.length)return say("Bu noktada güvenli yol alanı kurulamadı. Açık uçları ve karşı kenarı kontrol et.",true);
       roadNetworkStore(selected,input,unused,!!p,refresh);
-      roadNetworkCache={input,result,revision:FVER,ents,visible};
+      roadNetworkCache={input,result,revision:FVER,ents,visible,pointKey};
       prompt_(message);
     }catch(e){if(cmd===owner)say(e.message,true);}
     finally{active=null;}
@@ -45579,7 +45766,7 @@ function buildRoadNetwork(input, phase=()=>{}) {
   const joined=open.length ? offset(offset(open,radius),-radius) : [];
   const initial=paths(clip([...open,...joined,...known],[],C.ClipType.ctUnion));
   phase("Kavşaklar ve kesintiler çözümleniyor…");
-  const links=cadastral?bankLinks(initial):surveyedLinks(initial);
+  const links=input.frontage?[]:cadastral?bankLinks(initial):surveyedLinks(initial);
   const openJoined=paths(clip([...open,...joined,...links],[],C.ClipType.ctUnion));
   phase("Yol dışındaki alanlar ayrılıyor…");
   const protectedPaths=exclusions.length?paths(clip(exclusions.map(r=>path(r.map(local))),[],C.ClipType.ctUnion)):[];
@@ -45687,7 +45874,7 @@ function buildRoadNetwork(input, phase=()=>{}) {
         parts=faces.map(r=>r.map(world));
       }
     }
-    networks.push({rings,parts,area:square,inferred:!closedOnly});
+    networks.push({rings,parts,area:square,inferred:!!input.frontage||!closedOnly});
   }
   return {networks,unused:roads.filter(r=>!used.has(r.id)).length};
 }
