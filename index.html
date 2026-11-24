@@ -25025,7 +25025,7 @@ CMDS.GORUNUM3B = () => {
       if(Math.abs(v.x)>1||Math.abs(v.y)>1||Math.abs(v.z)>1)continue;
       const x=(v.x+1)*width/2,y=(1-v.y)*height/2,half=pen.measureText(s).width/2+3;
       const left=Math.floor((x-half)/12),right=Math.floor((x+half)/12);
-      for(const dy of (level?[0,18,-18]:[0])){
+      for(const dy of (level?[0,24,-24]:[0])){
         const row=y+dy,keys=[];
         for(let j=Math.floor((row-14)/6);j<=Math.floor((row+2)/6);j++)
           for(let i=left;i<=right;i++)keys.push(i+','+j);
