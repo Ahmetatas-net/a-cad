@@ -19350,17 +19350,18 @@ function draw() { liveTick(); if(CAD_RESIZE_DIRTY){
   const acadAreaLabels=[],acadPlainAreaNames=[];
   // Batch solid road coverage, then draw the survey boundary lines above it.
   if(showAreaHatch()){
-    const roadPath=new Path2D(), parcelsPath=new Path2D();
+    const roadPath=new Path2D(), parcelsPath=new Path2D(), parksPath=new Path2D();
     for(const item of visibleEntities){
       if(!lays[item.lay]?.on)continue;
-      const target=item.roadArea?roadPath:item.t==="pline"&&roadParcel(item)?parcelsPath:null;
+      const park=item.closed&&/(?:^|[_ -])PARK(?:$|[_ -])/.test(roadLayerName(item.lay));
+      const target=item.roadArea?roadPath:item.t==="pline"&&roadParcel(item)?parcelsPath:park?parksPath:null;
       if(!target)continue;
       const b=ebb(item);
       if(b&&(b[2]<vx0||b[0]>vx1||b[3]<vy0||b[1]>vy1))continue;
       item.pts.forEach((p,i)=>i?target.lineTo(X(p[0]),Y(p[1])):target.moveTo(X(p[0]),Y(p[1])));
       target.closePath();
     }
-    cx.save();cx.fillStyle='rgba(48,153,228,.63)';cx.fill(roadPath);cx.fillStyle='rgba(225,170,67,.26)';cx.fill(parcelsPath);cx.restore();
+    cx.save();cx.fillStyle='rgba(48,153,228,.63)';cx.fill(roadPath);cx.fillStyle='rgba(225,170,67,.26)';cx.fill(parcelsPath);cx.fillStyle="rgba(61,161,115,.34)";cx.fill(parksPath);cx.restore();
   }
 
   for(const e of visibleEntities){if(e.roadArea||e.roadBorder||e.t!=='pline'||!e.closed||e.pts?.length<3||!lays[e.lay]?.on)continue;const parcel=roadParcel(e);const _alanK=!!(e.areaHatch||/^ALAN_CEVIR(?:$|_)/i.test(e.lay));if(!_alanK&&e.id!==ALAN_AKTIF&&!e.areaName)continue;
@@ -19614,7 +19615,7 @@ const roadLayerName = name => {
 };
 const roadParcel = e => e.closed && /^(?:ALAN[_ -])?(?:PARSEL|KADASTRO)(?:$|[_ -])/.test(roadLayerName(e.lay));
 const roadBlock = e => e.closed && /^(?:ALAN[_ -])?ADA(?:$|[_ -])/.test(roadLayerName(e.lay));
-const roadIsland = e => e.closed && /(?:^|[_ -])(?:REFUJ|KALDIRIM|BINA|TESCILSIZ)(?:$|[_ -])/.test(roadLayerName(e.lay));
+const roadIsland = e => e.closed && /(?:^|[_ -])(?:REFUJ|KALDIRIM|BINA|TESCILSIZ|PARK)(?:$|[_ -])/.test(roadLayerName(e.lay));
 function roadSource(e) {
   const l=roadLayerName(e.lay);
   return l!==ROAD_NETWORK_LAYER && /(?:^|[_ -])(?:YOL|ROAD|ASFALT|CADDE|SOKAK)(?:$|[_ -])/.test(l) &&
@@ -19623,8 +19624,8 @@ function roadSource(e) {
 function roadNetworkInput() {
   const G=window.ACAD_ROAD_AREA, roads=[], blocks=[], parcels=[], islands=[];
   for(const e of ents) {
-    if(e.roadArea||e.roadBorder||!lays[e.lay]?.on||!["line","pline"].includes(e.t)||e.pts?.length<2)continue;
-    if(roadSource(e)){const pts=G.clean(e.pts);if(pts.length>=2)roads.push({id:e.id,pts,ring:e.closed&&pts.length>=3});}
+    if(e.roadArea||e.roadBorder||!["line","pline"].includes(e.t)||e.pts?.length<2)continue;
+    if(lays[e.lay]?.on&&roadSource(e)){const pts=G.clean(e.pts);if(pts.length>=2)roads.push({id:e.id,pts,ring:e.closed&&pts.length>=3});}
     if(roadBlock(e))blocks.push(e);
     else if(roadParcel(e))parcels.push(e);
     else if(roadIsland(e))islands.push(e);
@@ -19634,11 +19635,13 @@ function roadNetworkInput() {
   const cadastral=!roads.length, boundaries=blocks.length?blocks:parcels;
   const boundaryRings=boundaries.map(e=>G.clean(e.pts)).filter(p=>p.length>=3);
   const exclusions=[...boundaryRings];
+  if(blocks.length)for(const parcel of parcels){const ring=G.clean(parcel.pts);if(ring.length>=3)exclusions.push(ring);}
   for(const item of islands){
     const ring=G.clean(item.pts);
-    if(ring.length>=3&&!boundaryRings.some(p=>G.inside(p,ring[0])&&ring.every(q=>G.inside(p,q))))exclusions.push(ring);
+    if(ring.length>=3)exclusions.push(ring);
   }
-  if(cadastral)for(const e of boundaries){
+  if(cadastral)for(const e of (blocks.some(e=>lays[e.lay]?.on)?blocks:parcels)){
+    if(!lays[e.lay]?.on)continue;
     const pts=G.clean(e.pts);if(pts.length>=3)roads.push({id:e.id,pts,border:true});
   }
   let hint=null;
@@ -19689,32 +19692,6 @@ function roadNetworkAt(networks, p) {
   near.sort((a,b)=>a.distance-b.distance);
   return near.length&&(!near[1]||near[1].distance-near[0].distance>.35)?near[0].n:null;
 }
-// Survey junctions can remain open between measured runs. Group nearby
-// inferred arms in one operation without painting the unknown gap itself.
-function roadNetworkBranches(seed, all) {
-  const selected=new Set([seed]);
-  const gap=6.5;
-  for(const node of selected){
-    if(!node.inferred)continue;
-    const a=node.rings[0], b0=roadNetworkBounds(a);
-    for(const other of all){
-      if(selected.has(other)||!other.inferred||other.area<20)continue;
-      const b=other.rings[0], b1=roadNetworkBounds(b);
-      if(b0[0]>b1[2]+gap||b1[0]>b0[2]+gap||b0[1]>b1[3]+gap||b1[1]>b0[3]+gap)continue;
-      if(a.some(p=>b.some((q,i)=>segD(p,q,b[(i+1)%b.length])[0]<=gap)) ||
-         b.some(p=>a.some((q,i)=>segD(p,q,a[(i+1)%a.length])[0]<=gap))) selected.add(other);
-    }
-  }
-  return [...selected];
-}
-function roadNetworkBounds(ring){
-  const box=[Infinity,Infinity,-Infinity,-Infinity];
-  for(const [x,y] of ring){
-    box[0]=Math.min(box[0],x);box[1]=Math.min(box[1],y);
-    box[2]=Math.max(box[2],x);box[3]=Math.max(box[3],y);
-  }
-  return box;
-}
 function roadNetworkKey(shape) {
   const r=shape.rings[0];
   let hash=0x811c9dc5;
@@ -19724,18 +19701,23 @@ function roadNetworkKey(shape) {
   }
   return r.length+":"+hash.toString(16)+":"+shape.area.toFixed(3);
 }
-function roadNetworkStore(networks, input, unused, combine) {
-  const saved=new Set(ents.filter(e=>e.roadArea).map(e=>e.roadKey||e.roadGroup));
+function roadNetworkStore(networks, input, unused, combine, refresh=false) {
+  const saved=new Set((refresh?[]:ents).filter(e=>e.roadArea).map(e=>e.roadKey||e.roadGroup));
   const first=combine?networks.map(roadNetworkKey).sort().join("|"):null;
   const prepared=networks.map(n=>({ ...n, key:roadNetworkKey(n) })).filter(x=>!saved.has(x.key));
   if (prepared.length) {
     snap0();
+    if(refresh){
+      const generated=e=>(e.roadArea||e.roadBorder)&&e.roadKey&&e.lay===ROAD_NETWORK_LAYER;
+      for(const e of ents)if(generated(e))sel.delete(e.id);
+      ents=ents.filter(e=>!generated(e));
+    }
     const lay=layer(ROAD_NETWORK_LAYER,"#4099df");
     lays[lay].on=true;
     for (const n of prepared) {
       const partitioned=n.rings.length>1;
       for (const ring of n.parts) add({t:"pline",closed:true,pts:ring.map(q=>[q[0],q[1],null]),lay,
-        roadArea:true,roadInterior:partitioned,roadGroup:first||n.key,roadKey:n.key,
+        roadArea:true,roadNetworkVersion:2,roadInterior:partitioned,roadGroup:first||n.key,roadKey:n.key,
         areaQuality:n.inferred?"review-required":"closed-source-geometry"});
       if (partitioned) for (const ring of n.rings) add({t:"pline",closed:true,pts:ring.map(q=>[q[0],q[1],null]),
         lay,roadBorder:true,roadGroup:first||n.key,roadKey:n.key});
@@ -19755,9 +19737,11 @@ let roadNetworkCache=null;
 function roadNetworkCommand() {
   let active=null;
   const title="Yol ağı";
-  const message="Yol ağı: yolun içine dokun · Tümü: ayrı yol alanlarını da ekle";
-  const run=async p=>{
+  const message="Yolun içine dokun · Tümü: ayrı yolları ekle · Yenile: üretilmiş yol ağlarını tekrar hesapla";
+  const run=async (p,refresh=false)=>{
     if(active)return;
+    if(!refresh&&ents.some(e=>e.roadArea&&e.roadKey&&e.lay===ROAD_NETWORK_LAYER&&!e.roadNetworkVersion))
+      return say("Önceki yol ağı çizimde var. Güncel açık kaynaklardan tekrar hesaplamak için Yenile’ye dokun.",true);
     const owner=cmd, revision=FVER, current=ents;
     const visible=Object.keys(lays).filter(k=>k!==ROAD_NETWORK_LAYER&&lays[k].on).join("\0");
     const cached=roadNetworkCache?.revision===revision&&roadNetworkCache.ents===current&&roadNetworkCache.visible===visible?roadNetworkCache:null;
@@ -19774,17 +19758,17 @@ function roadNetworkCommand() {
       if(cmd!==owner||revision!==FVER||current!==ents)return;
       const n=p?roadNetworkAt(networks,p):null;
       roadNetworkCache={input,result,revision,ents:current,visible};
-      const selected=p?(n?(input.cadastral?[n]:roadNetworkBranches(n,networks)):[]):networks;
+      const selected=p?(n?([n]):[]):networks;
       if(!selected.length)return say("Bu noktada güvenli yol alanı kurulamadı. Açık uçları ve karşı kenarı kontrol et.",true);
-      roadNetworkStore(selected,input,unused,!!p);
+      roadNetworkStore(selected,input,unused,!!p,refresh);
       roadNetworkCache={input,result,revision:FVER,ents,visible};
       prompt_(message);
     }catch(e){if(cmd===owner)say(e.message,true);}
     finally{active=null;}
   };
-  cmd={name:title,raw:true,rcExit:true,ask:{ph:"Tümü",chips:["Tümü"],w:90},
+  cmd={name:title,raw:true,rcExit:true,ask:{ph:"Tümü",chips:["Tümü","Yenile"],w:90},
     pt(p){last=null;void run(p);},ent(e,p){if(p)this.pt(p);},
-    val(text){if(/^t(ü|u)m(ü|u)?$/i.test(String(text).trim())){void run(null);return true;}return false;}
+    val(text){if(/^yenile$/i.test(String(text).trim())){void run(null,true);return true;}if(/^t(ü|u)m(ü|u)?$/i.test(String(text).trim())){void run(null);return true;}return false;}
   };
   prompt_(message);
 };
@@ -45172,6 +45156,27 @@ THIS SOFTWARE.
 
 /* Road coverage from measured rings and opposing surveyed edges.
    Polygon operations run in a local coordinate system for metre-scale precision. */
+/* Delaunator 5.0.1
+ISC License
+
+Copyright (c) 2021, Mapbox
+
+Permission to use, copy, modify, and/or distribute this software for any purpose
+with or without fee is hereby granted, provided that the above copyright notice
+and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
+OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+THIS SOFTWARE.
+
+*/
+!function(t,i){"object"==typeof exports&&"undefined"!=typeof module?module.exports=i():"function"==typeof define&&define.amd?define(i):(t="undefined"!=typeof globalThis?globalThis:t||self).Delaunator=i()}(this,(function(){"use strict";const t=11102230246251565e-32,i=134217729,s=(3+8*t)*t;function e(t,i,s,e,n){let h,r,l,o,a=i[0],f=e[0],c=0,u=0;f>a==f>-a?(h=a,a=i[++c]):(h=f,f=e[++u]);let _=0;if(c<t&&u<s)for(f>a==f>-a?(r=a+h,l=h-(r-a),a=i[++c]):(r=f+h,l=h-(r-f),f=e[++u]),h=r,0!==l&&(n[_++]=l);c<t&&u<s;)f>a==f>-a?(r=h+a,o=r-h,l=h-(r-o)+(a-o),a=i[++c]):(r=h+f,o=r-h,l=h-(r-o)+(f-o),f=e[++u]),h=r,0!==l&&(n[_++]=l);for(;c<t;)r=h+a,o=r-h,l=h-(r-o)+(a-o),a=i[++c],h=r,0!==l&&(n[_++]=l);for(;u<s;)r=h+f,o=r-h,l=h-(r-o)+(f-o),f=e[++u],h=r,0!==l&&(n[_++]=l);return 0===h&&0!==_||(n[_++]=h),_}function n(t){return new Float64Array(t)}const h=22204460492503146e-32,r=11093356479670487e-47,l=n(4),o=n(8),a=n(12),f=n(16),c=n(4);function u(t,n,u,_,d,g){const y=(n-g)*(u-d),w=(t-d)*(_-g),b=y-w,A=Math.abs(y+w);return Math.abs(b)>=33306690738754716e-32*A?b:-function(t,n,u,_,d,g,y){let w,b,A,k,M,p,x,S,T,z,U,m,K,L,v,F,P,E;const H=t-d,I=u-d,N=n-g,j=_-g;L=H*j,p=i*H,x=p-(p-H),S=H-x,p=i*j,T=p-(p-j),z=j-T,v=S*z-(L-x*T-S*T-x*z),F=N*I,p=i*N,x=p-(p-N),S=N-x,p=i*I,T=p-(p-I),z=I-T,P=S*z-(F-x*T-S*T-x*z),U=v-P,M=v-U,l[0]=v-(U+M)+(M-P),m=L+U,M=m-L,K=L-(m-M)+(U-M),U=K-F,M=K-U,l[1]=K-(U+M)+(M-F),E=m+U,M=E-m,l[2]=m-(E-M)+(U-M),l[3]=E;let q=function(t,i){let s=i[0];for(let e=1;e<t;e++)s+=i[e];return s}(4,l),D=h*y;if(q>=D||-q>=D)return q;if(M=t-H,w=t-(H+M)+(M-d),M=u-I,A=u-(I+M)+(M-d),M=n-N,b=n-(N+M)+(M-g),M=_-j,k=_-(j+M)+(M-g),0===w&&0===b&&0===A&&0===k)return q;if(D=r*y+s*Math.abs(q),q+=H*k+j*w-(N*A+I*b),q>=D||-q>=D)return q;L=w*j,p=i*w,x=p-(p-w),S=w-x,p=i*j,T=p-(p-j),z=j-T,v=S*z-(L-x*T-S*T-x*z),F=b*I,p=i*b,x=p-(p-b),S=b-x,p=i*I,T=p-(p-I),z=I-T,P=S*z-(F-x*T-S*T-x*z),U=v-P,M=v-U,c[0]=v-(U+M)+(M-P),m=L+U,M=m-L,K=L-(m-M)+(U-M),U=K-F,M=K-U,c[1]=K-(U+M)+(M-F),E=m+U,M=E-m,c[2]=m-(E-M)+(U-M),c[3]=E;const B=e(4,l,4,c,o);L=H*k,p=i*H,x=p-(p-H),S=H-x,p=i*k,T=p-(p-k),z=k-T,v=S*z-(L-x*T-S*T-x*z),F=N*A,p=i*N,x=p-(p-N),S=N-x,p=i*A,T=p-(p-A),z=A-T,P=S*z-(F-x*T-S*T-x*z),U=v-P,M=v-U,c[0]=v-(U+M)+(M-P),m=L+U,M=m-L,K=L-(m-M)+(U-M),U=K-F,M=K-U,c[1]=K-(U+M)+(M-F),E=m+U,M=E-m,c[2]=m-(E-M)+(U-M),c[3]=E;const C=e(B,o,4,c,a);L=w*k,p=i*w,x=p-(p-w),S=w-x,p=i*k,T=p-(p-k),z=k-T,v=S*z-(L-x*T-S*T-x*z),F=b*A,p=i*b,x=p-(p-b),S=b-x,p=i*A,T=p-(p-A),z=A-T,P=S*z-(F-x*T-S*T-x*z),U=v-P,M=v-U,c[0]=v-(U+M)+(M-P),m=L+U,M=m-L,K=L-(m-M)+(U-M),U=K-F,M=K-U,c[1]=K-(U+M)+(M-F),E=m+U,M=E-m,c[2]=m-(E-M)+(U-M),c[3]=E;const G=e(C,a,4,c,f);return f[G-1]}(t,n,u,_,d,g,A)}const _=Math.pow(2,-52),d=new Uint32Array(512);class g{static from(t,i=M,s=p){const e=t.length,n=new Float64Array(2*e);for(let h=0;h<e;h++){const e=t[h];n[2*h]=i(e),n[2*h+1]=s(e)}return new g(n)}constructor(t){const i=t.length>>1;if(i>0&&"number"!=typeof t[0])throw new Error("Expected coords to contain numbers.");this.coords=t;const s=Math.max(2*i-5,0);this._triangles=new Uint32Array(3*s),this._halfedges=new Int32Array(3*s),this._hashSize=Math.ceil(Math.sqrt(i)),this._hullPrev=new Uint32Array(i),this._hullNext=new Uint32Array(i),this._hullTri=new Uint32Array(i),this._hullHash=new Int32Array(this._hashSize),this._ids=new Uint32Array(i),this._dists=new Float64Array(i),this.update()}update(){const{coords:t,_hullPrev:i,_hullNext:s,_hullTri:e,_hullHash:n}=this,h=t.length>>1;let r=1/0,l=1/0,o=-1/0,a=-1/0;for(let i=0;i<h;i++){const s=t[2*i],e=t[2*i+1];s<r&&(r=s),e<l&&(l=e),s>o&&(o=s),e>a&&(a=e),this._ids[i]=i}const f=(r+o)/2,c=(l+a)/2;let d,g,w;for(let i=0,s=1/0;i<h;i++){const e=y(f,c,t[2*i],t[2*i+1]);e<s&&(d=i,s=e)}const k=t[2*d],M=t[2*d+1];for(let i=0,s=1/0;i<h;i++){if(i===d)continue;const e=y(k,M,t[2*i],t[2*i+1]);e<s&&e>0&&(g=i,s=e)}let p=t[2*g],x=t[2*g+1],S=1/0;for(let i=0;i<h;i++){if(i===d||i===g)continue;const s=b(k,M,p,x,t[2*i],t[2*i+1]);s<S&&(w=i,S=s)}let T=t[2*w],z=t[2*w+1];if(S===1/0){for(let i=0;i<h;i++)this._dists[i]=t[2*i]-t[0]||t[2*i+1]-t[1];A(this._ids,this._dists,0,h-1);const i=new Uint32Array(h);let s=0;for(let t=0,e=-1/0;t<h;t++){const n=this._ids[t],h=this._dists[n];h>e&&(i[s++]=n,e=h)}return this.hull=i.subarray(0,s),this.triangles=new Uint32Array(0),void(this.halfedges=new Uint32Array(0))}if(u(k,M,p,x,T,z)<0){const t=g,i=p,s=x;g=w,p=T,x=z,w=t,T=i,z=s}const U=function(t,i,s,e,n,h){const r=s-t,l=e-i,o=n-t,a=h-i,f=r*r+l*l,c=o*o+a*a,u=.5/(r*a-l*o);return{x:t+(a*f-l*c)*u,y:i+(r*c-o*f)*u}}(k,M,p,x,T,z);this._cx=U.x,this._cy=U.y;for(let i=0;i<h;i++)this._dists[i]=y(t[2*i],t[2*i+1],U.x,U.y);A(this._ids,this._dists,0,h-1),this._hullStart=d;let m=3;s[d]=i[w]=g,s[g]=i[d]=w,s[w]=i[g]=d,e[d]=0,e[g]=1,e[w]=2,n.fill(-1),n[this._hashKey(k,M)]=d,n[this._hashKey(p,x)]=g,n[this._hashKey(T,z)]=w,this.trianglesLen=0,this._addTriangle(d,g,w,-1,-1,-1);for(let h,r,l=0;l<this._ids.length;l++){const o=this._ids[l],a=t[2*o],f=t[2*o+1];if(l>0&&Math.abs(a-h)<=_&&Math.abs(f-r)<=_)continue;if(h=a,r=f,o===d||o===g||o===w)continue;let c=0;for(let t=0,i=this._hashKey(a,f);t<this._hashSize&&(c=n[(i+t)%this._hashSize],-1===c||c===s[c]);t++);c=i[c];let y,b=c;for(;y=s[b],u(a,f,t[2*b],t[2*b+1],t[2*y],t[2*y+1])>=0;)if(b=y,b===c){b=-1;break}if(-1===b)continue;let A=this._addTriangle(b,o,s[b],-1,-1,e[b]);e[o]=this._legalize(A+2),e[b]=A,m++;let k=s[b];for(;y=s[k],u(a,f,t[2*k],t[2*k+1],t[2*y],t[2*y+1])<0;)A=this._addTriangle(k,o,y,e[o],-1,e[k]),e[o]=this._legalize(A+2),s[k]=k,m--,k=y;if(b===c)for(;y=i[b],u(a,f,t[2*y],t[2*y+1],t[2*b],t[2*b+1])<0;)A=this._addTriangle(y,o,b,-1,e[b],e[y]),this._legalize(A+2),e[y]=A,s[b]=b,m--,b=y;this._hullStart=i[o]=b,s[b]=i[k]=o,s[o]=k,n[this._hashKey(a,f)]=o,n[this._hashKey(t[2*b],t[2*b+1])]=b}this.hull=new Uint32Array(m);for(let t=0,i=this._hullStart;t<m;t++)this.hull[t]=i,i=s[i];this.triangles=this._triangles.subarray(0,this.trianglesLen),this.halfedges=this._halfedges.subarray(0,this.trianglesLen)}_hashKey(t,i){return Math.floor(function(t,i){const s=t/(Math.abs(t)+Math.abs(i));return(i>0?3-s:1+s)/4}(t-this._cx,i-this._cy)*this._hashSize)%this._hashSize}_legalize(t){const{_triangles:i,_halfedges:s,coords:e}=this;let n=0,h=0;for(;;){const r=s[t],l=t-t%3;if(h=l+(t+2)%3,-1===r){if(0===n)break;t=d[--n];continue}const o=r-r%3,a=l+(t+1)%3,f=o+(r+2)%3,c=i[h],u=i[t],_=i[a],g=i[f];if(w(e[2*c],e[2*c+1],e[2*u],e[2*u+1],e[2*_],e[2*_+1],e[2*g],e[2*g+1])){i[t]=g,i[r]=c;const e=s[f];if(-1===e){let i=this._hullStart;do{if(this._hullTri[i]===f){this._hullTri[i]=t;break}i=this._hullPrev[i]}while(i!==this._hullStart)}this._link(t,e),this._link(r,s[h]),this._link(h,f);const l=o+(r+1)%3;n<d.length&&(d[n++]=l)}else{if(0===n)break;t=d[--n]}}return h}_link(t,i){this._halfedges[t]=i,-1!==i&&(this._halfedges[i]=t)}_addTriangle(t,i,s,e,n,h){const r=this.trianglesLen;return this._triangles[r]=t,this._triangles[r+1]=i,this._triangles[r+2]=s,this._link(r,e),this._link(r+1,n),this._link(r+2,h),this.trianglesLen+=3,r}}function y(t,i,s,e){const n=t-s,h=i-e;return n*n+h*h}function w(t,i,s,e,n,h,r,l){const o=t-r,a=i-l,f=s-r,c=e-l,u=n-r,_=h-l,d=f*f+c*c,g=u*u+_*_;return o*(c*g-d*_)-a*(f*g-d*u)+(o*o+a*a)*(f*_-c*u)<0}function b(t,i,s,e,n,h){const r=s-t,l=e-i,o=n-t,a=h-i,f=r*r+l*l,c=o*o+a*a,u=.5/(r*a-l*o),_=(a*f-l*c)*u,d=(r*c-o*f)*u;return _*_+d*d}function A(t,i,s,e){if(e-s<=20)for(let n=s+1;n<=e;n++){const e=t[n],h=i[e];let r=n-1;for(;r>=s&&i[t[r]]>h;)t[r+1]=t[r--];t[r+1]=e}else{let n=s+1,h=e;k(t,s+e>>1,n),i[t[s]]>i[t[e]]&&k(t,s,e),i[t[n]]>i[t[e]]&&k(t,n,e),i[t[s]]>i[t[n]]&&k(t,s,n);const r=t[n],l=i[r];for(;;){do{n++}while(i[t[n]]<l);do{h--}while(i[t[h]]>l);if(h<n)break;k(t,n,h)}t[s+1]=t[h],t[h]=r,e-n+1>=h-s?(A(t,i,n,e),A(t,i,s,h-1)):(A(t,i,s,h-1),A(t,i,n,e))}}function k(t,i,s){const e=t[i];t[i]=t[s],t[s]=e}function M(t){return t[0]}function p(t){return t[1]}return g}));
+
+
 function buildRoadNetwork(input) {
   const { roads, exclusions, cadastral, hint } = input;
   if (!roads.length) return { networks: [], unused: 0 };
@@ -45262,7 +45267,7 @@ function buildRoadNetwork(input) {
   for(const band of strips)if(band.width<=widthLimit){inferred.push([band.ring]);used.add(band.a);used.add(band.b);}
   if(hint?.pts?.length>=3) inferred.push([hint.pts.map(local)]);
   // Integer overlay avoids microscopic seams at large projected coordinates.
-  const C=ClipperLib, scale=1000;
+  const C=ClipperLib, scale=100000;
   const path=ring=>{
     const result=ring.map(p=>({X:Math.round(p[0]*scale),Y:Math.round(p[1]*scale)}));
     if(!C.Clipper.Orientation(result))result.reverse();
@@ -45277,24 +45282,193 @@ function buildRoadNetwork(input) {
     return result;
   }
   function offset(paths, distance) {
-    const buffer=new C.ClipperOffset(2,160), result=new C.Paths();
+    const buffer=new C.ClipperOffset(2,.16*scale), result=new C.Paths();
     buffer.AddPaths(paths,C.JoinType.jtRound,C.EndType.etClosedPolygon);
     buffer.Execute(result,distance*scale);
     return result;
   }
   const paths=tree=>C.Clipper.PolyTreeToPaths(tree);
+  // At a junction opposing edges cease to overlap. Triangulate samples on the
+  // measured banks to span that space, using existing road strips as anchors.
+  function bankLinks(footprint, mask) {
+    if (!footprint.length) return [];
+    const samples=[], owners=[], seen=new Map();
+    for (const road of roads) {
+      const bank=road.pts.map(local);
+      for(let i=0;i<(road.border||road.ring?bank.length:bank.length-1);i++) {
+        const a=bank[i],b=bank[(i+1)%bank.length],steps=Math.ceil(length(a,b)/4);
+        for(let j=0;j<steps;j++){
+          const p=lerp(a,b,j/steps), key=Math.round(p[0]*1000)+','+Math.round(p[1]*1000);
+          if(seen.has(key))continue;
+          if(samples.length>=240000)throw Error('Yol sınırı çok yoğun. Daha küçük bir bölge veya daha az açık tabaka seçin.');
+          seen.set(key,samples.length);samples.push(p);owners.push(road.id);
+        }
+      }
+    }
+    if(samples.length<3)return [];
+    const mesh=Delaunator.from(samples),ix=mesh.triangles,selected=new Uint8Array(ix.length/3);
+    for(let i=0;i<ix.length;i+=3){
+      const a=ix[i],b=ix[i+1],c=ix[i+2];
+      if(owners[a]===owners[b]&&owners[b]===owners[c])continue;
+      const ring=[samples[a],samples[b],samples[c]];
+      const ab=length(ring[0],ring[1]),bc=length(ring[1],ring[2]),ca=length(ring[2],ring[0]);
+      const twice=2*area(ring);
+      // Empty-circle diameter bounds a junction's width, including at a bend.
+      if(twice<.002 || ab*bc*ca/twice>(cadastral?maxWidth*1.4:Math.max(10,typical*3.2)))continue;
+      selected[i/3]=1;
+    }
+    // Trace the outside of adjacent accepted triangles once. Passing thousands
+    // of overlapping triangle edges to the polygon overlay stalls large jobs.
+    const next=e=>e%3===2?e-2:e+1, visited=new Uint8Array(ix.length), faces=[];
+    const inner=e=>e>=0&&selected[Math.floor(e/3)];
+    const reverse=ix.length && signedArea([samples[ix[0]],samples[ix[1]],samples[ix[2]]])<0;
+    for(let start=0;start<ix.length;start++){
+      if(!inner(start)||inner(mesh.halfedges[start])||visited[start])continue;
+      const contour=[];
+      let e=start;
+      do {
+        visited[e]=1;
+        const p=samples[ix[e]];
+        contour.push({X:Math.round(p[0]*scale),Y:Math.round(p[1]*scale)});
+        e=next(e);
+        while(inner(mesh.halfedges[e]))e=next(mesh.halfedges[e]);
+      } while(e!==start&&!visited[e]);
+      if(contour.length>=3)faces.push(reverse?contour.reverse():contour);
+    }
+    if(!faces.length)return [];
+    const support=mask||offset(footprint,Math.max(9,Math.min(26,typical*1.6)));
+    return paths(clip(faces,support,C.ClipType.ctIntersection));
+  }
+  // An interrupted surveyed road has two mouths facing each other. Join
+  // matching mouths using their measured widths and orientation.
+  function surveyedLinks(footprint) {
+    const ports=[], binsByPort=new Map(), links=[];
+    for(const poly of footprint) {
+      if(!C.Clipper.Orientation(poly))continue;
+      const r=C.Clipper.CleanPolygon(poly,.045*scale).map(q=>[q.X/scale,q.Y/scale]),count=r.length;
+      function back(start,dir,dist){
+        let i=start;
+        for(let k=1;k<count;k++){
+          const j=(i+dir+count)%count, d=length(r[i],r[j]);
+          if(d>=dist)return lerp(r[i],r[j],dist/d);
+          i=j;dist-=d;
+        }
+        return null;
+      }
+      for(let i=0;i<count;i++){
+        const j=(i+1)%count,a=r[i],b=r[j],w=length(a,b);
+        if(w<1.4||w>maxWidth)continue;
+        const p=lerp(a,b,.5),n=[(b[1]-a[1])/w,(a[0]-b[0])/w];
+        const q=back(i,-1,w*.95),s=back(j,1,w*.95);
+        if(!q||!s||dot(delta(a,q),n)<w*.66||dot(delta(b,s),n)<w*.66)continue;
+        const port={a,b,w,p,n},key=ports.length;
+        bins(box([p]),0,k=>{if(!binsByPort.has(k))binsByPort.set(k,[]);binsByPort.get(k).push(key);});
+        ports.push(port);
+      }
+    }
+    const best=new Map();
+    for(let i=0;i<ports.length;i++){
+      const a=ports[i],candidates=new Set();
+      bins(box([a.p]),maxWidth,key=>{for(const j of binsByPort.get(key)||[])if(j!==i)candidates.add(j);});
+      for(const j of candidates){
+        const b=ports[j],d=delta(b.p,a.p),span=Math.hypot(...d),w=Math.min(a.w,b.w);
+        if(span<.15||span>Math.min(maxWidth,Math.max(8,w*2.6))||Math.max(a.w,b.w)>w*1.65)continue;
+        if(dot(a.n,b.n)>-.70||dot(d,a.n)<.70*span||dot(d,b.n)>-.70*span)continue;
+        if(Math.abs(cross(a.n,d))>w*.7||Math.abs(cross(b.n,d))>w*.7)continue;
+        if(!best.has(i)||span<best.get(i).span)best.set(i,{j,span});
+      }
+    }
+    for(const [i,{j}] of best)if(i<j&&best.get(j)?.j===i){
+      const a=ports[i],b=ports[j];
+      links.push(path([a.a,a.b,b.a,b.b]));
+    }
+    // Small, local contact between two surveyed arms can be a T or Y junction:
+    // their mouths need not be opposed. Reject elongated side-by-side contact.
+    const components=footprint.filter(p=>C.Clipper.Orientation(p)).map(p=>{
+      const ring=p.map(v=>[v.X/scale,v.Y/scale]);
+      return {ring,bb:box(ring)};
+    });
+    const nodeReach=Math.min(16,Math.max(5,typical*1.9)), nearGrid=new Map();
+    const steps=[];
+    for(let h=0;h<components.length;h++){
+      const ring=components[h].ring;
+      for(let k=0;k<ring.length;k++){
+        const a=ring[k],b=ring[(k+1)%ring.length],count=Math.ceil(length(a,b)/3);
+        for(let i=0;i<count;i++){
+          const p=lerp(a,b,i/count), index=steps.length;
+          bins(box([p]),0,key=>{if(!nearGrid.has(key))nearGrid.set(key,[]);nearGrid.get(key).push(index);});
+          steps.push({p,h});
+        }
+      }
+    }
+    const contacts=new Map();
+    for(const {p,h} of steps){
+      bins(box([p]),nodeReach,key=>{
+        for(const index of nearGrid.get(key)||[]){
+          const {p:q,h:g}=steps[index];
+          if(g<=h||length(p,q)>nodeReach)continue;
+          const tag=h+','+g;
+          if(!contacts.has(tag))contacts.set(tag,new Map());
+          const pts=contacts.get(tag);
+          pts.set(p,p);pts.set(q,q);
+        }
+      });
+    }
+    const localHulls=[];
+    for(const contact of contacts.values()){
+      const points=[...contact.keys()].sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
+      const bb=box(points);
+      if(length(bb.slice(0,2),bb.slice(2))>nodeReach*3.2||points.length<3)continue;
+      const half=list=>{
+        const result=[];
+        for(const p of list){
+          while(result.length>1&&cross(delta(result.at(-1),result.at(-2)),delta(p,result.at(-1)))<=0)result.pop();
+          result.push(p);
+        }
+        return result.slice(0,-1);
+      };
+      const hull=[...half(points),...half(points.reverse())];
+      if(hull.length>=3)localHulls.push(path(hull));
+    }
+    if(localHulls.length){
+      const supported=bankLinks(footprint,localHulls);
+      links.push(...supported);
+    }
+    return links;
+  }
   const open=paths(clip(inferred.map(x=>path(x[0])),[],C.ClipType.ctUnion));
   const known=closed.map(x=>path(x[0]));
   // Close small discrepancies between survey runs and reconstructed junctions.
   // Retain the original strips in full; cadastral exclusions are applied after the join.
   const radius=cadastral?3:3.25;
   const joined=open.length ? offset(offset(open,radius),-radius) : [];
-  const openJoined=paths(clip([...open,...joined],[],C.ClipType.ctUnion));
-  const estimated=openJoined.length && exclusions.length
-    ? paths(clip(openJoined,exclusions.map(e=>path(e.map(local))),C.ClipType.ctDifference))
+  const initial=paths(clip([...open,...joined,...known],[],C.ClipType.ctUnion));
+  const links=cadastral?bankLinks(initial):surveyedLinks(initial);
+  const openJoined=paths(clip([...open,...joined,...links],[],C.ClipType.ctUnion));
+  const protectedPaths=exclusions.length?paths(clip(exclusions.map(r=>path(r.map(local))),[],C.ClipType.ctUnion)):[];
+  const estimated=openJoined.length && protectedPaths.length
+    ? paths(clip(openJoined,protectedPaths,C.ClipType.ctDifference))
     : openJoined;
-  const simplified=C.Clipper.CleanPolygons(estimated,18).filter(r=>r.length>=3);
-  const tree=clip([...known,...simplified],[],C.ClipType.ctUnion);
+  const simplified=C.Clipper.CleanPolygons(estimated,.018*scale).filter(r=>r.length>=3);
+  // Guard sub-millimetre rounding where a junction grazes a protected vertex.
+  const guard=protectedPaths.length?offset(protectedPaths,.0001):[];
+  let tree=protectedPaths.length?clip([...known,...simplified],guard,C.ClipType.ctDifference):
+    clip([...known,...simplified],[],C.ClipType.ctUnion);
+  if(cadastral){
+    // A small void wholly surrounded by the reconstructed network is often
+    // the centre of a broad intersection. Keep every registered island.
+    const pockets=[];
+    for(const ring of paths(tree)){
+      if(C.Clipper.Orientation(ring))continue;
+      const bounds=C.Clipper.GetBounds([ring]);
+      if(Math.hypot(bounds.right-bounds.left,bounds.bottom-bounds.top)>maxWidth*2.2*scale)continue;
+      pockets.push(ring.slice().reverse());
+    }
+    if(pockets.length){
+      const infill=paths(clip(pockets,guard,C.ClipType.ctDifference));
+      if(infill.length)tree=clip([...paths(tree),...infill],[],C.ClipType.ctUnion);
+    }
+  }
   const merged=[];
   function visit(node) {
     if (!node.IsHole()) merged.push([node.Contour(),...node.Childs().filter(c=>c.IsHole()).map(c=>c.Contour())]
