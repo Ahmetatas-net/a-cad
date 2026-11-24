@@ -33421,6 +33421,7 @@ function mount(host) {
     <label class="kd-file">Plan ekle<input type="file" accept=".dxf" multiple data-k="append"></label>
     <button data-k="ornek">🧪 261/1 örneği</button>
     <button class="kd-pri" data-k="hesap" disabled>▶ Hesapla</button>
+    <span>Plan ve model indir</span> <button data-k="modeldxf" disabled>DXF</button> <button data-k="modelncz" disabled>NCZ</button>
     <button data-k="xls" disabled>📊 Excel</button>
     <button data-k="json" disabled>İmalat JSON</button>
     <button data-k="kop" disabled>📋 Kopyala</button>
@@ -33481,7 +33482,7 @@ function mount(host) {
   function lockResults() {
     invalidInput=true;KR=[];DR.clear();ST=null;clearPlanPlayer();
     if(V3){V3.dispose();V3=null;fresh();}
-    for(const key of ['xls','pak','json','kop','hesap'])$(key).disabled=true;
+    for(const key of ['xls','pak','json','kop','hesap','modeldxf','modelncz'])$(key).disabled=true;
     $('sonuc').replaceChildren();$('bolge').replaceChildren();$('labs').replaceChildren();$('planKey').hidden=true;
   }
   function blank() {
@@ -33585,7 +33586,7 @@ function mount(host) {
     if (V3) { V3.dispose(); V3 = null; fresh(); }
     D = data; B = buildings;PV={k:1,x:0,y:0};
     DR = new Map(); ICI = new Map(); K = new Map(); ST = null;
-    for (const key of ['xls', 'kop', 'pak', 'json']) $(key).disabled = true;
+    for (const key of ['xls', 'kop', 'pak', 'json','modeldxf','modelncz']) $(key).disabled = true;
     $('roles').hidden=sample;const prefs=sample?{}:(ls.get(prefsKey())||{});
     if(!sample){roleControls();ICI=new Map(prefs.interior||[]);K=new Map(prefs.dimensions||[]);}
     const ground = sample ? tinL.find(l => /ARAZ|ZEM|SİYAH|SIYAH/i.test(l)) || tinL[0] : (prefs.ground??roles.ground);
@@ -33707,7 +33708,7 @@ function mount(host) {
   });
   $('hesap').addEventListener('click', () => {
     $('hesap').disabled = true; st('Hesaplanıyor…');
-    const revision=importRevision;setTimeout(() => { if(revision!==importRevision)return;try { run(); const miss = KR.reduce((sum, r) => sum + r.miss, 0); const warn = !sample && miss >= 0.01; st(warn ? `Hesap tamam. Üçgen kapsamı dışında kalan toplam örnek alanı ${fmt(miss)} m².` : 'Hesap tamam.', warn); } catch (x) { KR=[];DR.clear();ST=null;$('sonuc').replaceChildren();for(const k of ['xls','pak','kop','json'])$(k).disabled=true;draw();st(x.message,1); } $('hesap').disabled = false; }, 20);
+    const revision=importRevision;setTimeout(() => { if(revision!==importRevision)return;try { run(); const miss = KR.reduce((sum, r) => sum + r.miss, 0); const warn = !sample && miss >= 0.01; st(warn ? `Hesap tamam. Üçgen kapsamı dışında kalan toplam örnek alanı ${fmt(miss)} m².` : 'Hesap tamam.', warn); } catch (x) { KR=[];DR.clear();ST=null;$('sonuc').replaceChildren();for(const k of ['xls','pak','kop','json','modeldxf','modelncz'])$(k).disabled=true;draw();st(x.message,1); } $('hesap').disabled = false; }, 20);
   });
   const opt = () => { const f=KC.readLevel($('sf').value); return {strict:!sample, subasman:u=>Number.isFinite(u?.plinth)?u.plinth:Number.isFinite(u?.kot)&&Number.isFinite(f)?u.kot+f:NaN, rezerv: $('rez').value, step: +$('adim').value }; };
   function run() {
@@ -33777,7 +33778,7 @@ function mount(host) {
   function finishResults() {
     const hm = items.map(i => i.hak).filter(Boolean).sort().pop();
     $('bolge').innerHTML = '<option value="hepsi" selected>Tüm imalat</option>' + (hm ? `<option value="son">Hakediş ${htmlText(hm)} imalatı + dolgu</option>` : '') + items.map(i => `<option>${htmlText(i.ad)}</option>`).join('');
-    ['xls', 'kop', 'pak', 'json'].forEach(k => $(k).disabled = false); ST = null; render(); draw();
+    ['xls', 'kop', 'pak', 'json','modeldxf','modelncz'].forEach(k => $(k).disabled = false); ST = null; render(); draw();
     if (sample && !sampleOutputKey) sampleOutputKey = JSON.stringify(job());
   }
   const sum = s => String(s).split(/[+\s;]+/).map(num).filter(v => !isNaN(v));
@@ -34911,6 +34912,74 @@ function mount(host) {
       if (dl) { await dl.save({ filename: name, data }); return true; } } catch (e) { if (e && e.code === 'declined') return false; }
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data], { type: mime })); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1500); return true;
   }
+  async function downloadPlanModel(format) {
+    if (!KR.length || modelBusy || invalidInput) return;
+    modelBusy=true;
+    const result=KR;
+    try {
+      st('Plan ve üçgen model hazırlanıyor…');
+      await new Promise(resolve=>setTimeout(resolve,30));
+      if(result!==KR || invalidInput)return;
+      const {S,M,Zs}=stages(items);
+      const dxf=format==='dxf'?window.O.dxf():null;
+      const layers=new Map(), records=[];
+      const ca=Math.cos(B.ang), sa=Math.sin(B.ang);
+      const world=(u,v,z)=>[u*ca-v*sa,u*sa+v*ca,z];
+      function add(kind,layer,color,...args) {
+        if(!layers.has(layer)){layers.set(layer,color);if(dxf)dxf.lay(layer,color);}
+        if(dxf)dxf[kind](layer,...args);
+        else records.push([kind==='poly3'?'pline':kind,layer,...args]);
+      }
+      const nu=S.U.length, xy=[];
+      for(const v of S.V)for(const u of S.U)xy.push(world(u,v,0));
+      function triangle(ids) {
+        const points=(z)=>ids.map(k=>[xy[k][0],xy[k][1],z[k]]);
+        add('face','SIYAH_ARAZI',7,...points(Zs[0]));
+        for(let j=1;j<M.length;j++){
+          const before=Zs[j-1],after=Zs[j];
+          if(ids.every(k=>after[k]===before[k]))continue;
+          const cut=M[j].t==='kazi',label=(cut?'KAZI_':'DOLGU_')+j;
+          add('face',label+'_ONCE',8,...points(before));
+          add('face',label,cut?1:3,...points(after));
+        }
+      }
+      const end=Zs[Zs.length-1];
+      for(let j=0;j<S.V.length-1;j++)for(let i=0;i<nu-1;i++){
+        const a=j*nu+i,b=a+1,c=a+nu,d=c+1;
+        if([a,b,c,d].every(k=>Number.isFinite(end[k])&&Number.isFinite(Zs[0][k]))){
+          triangle([a,b,c]);triangle([b,d,c]);
+        }
+      }
+      if(!layers.has('SIYAH_ARAZI'))throw Error('Simülasyon kapsamında geçerli arazi üçgeni bulunamadı.');
+      // The reference project renders interior fills as separate solids above the terrain mesh.
+      for(const [j,m] of M.entries()){
+        if(!sample || !m.combined || m.t!=='dolgu')continue;
+        const plan=interiorPlans[m.it.ad];
+        if(!plan)continue;
+        const {box,top0}=DR.get(m.it.ad),ic=ICI.get(m.it.ad);
+        for(const [type,part] of Object.entries(plan)){
+          const h=type==='full'?ic.ht:ic.hu;
+          if(!(h>0))continue;
+          const at=(p,z)=>world((box[0]+box[2])/2+p[0],(box[1]+box[3])/2+p[1],z);
+          for(const tri of part.triangles){
+            add('face','IC_DOLGU_'+j+'_ONCE',8,...tri.map(p=>at(p,top0-h)));
+            add('face','IC_DOLGU_'+j,4,...tri.map(p=>at(p,top0)));
+          }
+        }
+      }
+      const layer=sample?'BINA_ALAN':roles.binaLayer;
+      for(const [x,y,X,Y] of D.lines[layer]||[])add('line','BINA_PLAN',5,[x,y,0],[X,Y,0]);
+      for(const p of D.polys[layer]||[])if(p.P.length>=2)add('poly3','BINA_PLAN',5,p.P.map(([x,y])=>[x,y,0]),!!p.closed);
+      if(!dxf && layers.size>=250)throw Error('NCZ tabaka sınırı aşıldı. DXF biçimini kullanın.');
+      const bytes=dxf?new TextEncoder().encode(dxf._b()):await window.NCZW.build({layers:Array.from(layers,([n,c])=>({n,c})),items:records});
+      if(!dxf && new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength).getUint32(81,true)!==records.length)throw Error('NCZ nesne sayısı doğrulanamadı.');
+      if(result!==KR || invalidInput)return;
+      const parcel=($('parsel').value||'Temel').replace(/[^\p{L}\d_-]+/gu,'-');
+      if(await save(parcel+'-Plan-ve-Model.'+format,bytes,'application/octet-stream'))st('Plan ve model indirildi. Aynı numaralı ÖNCE ve sonuç tabakalarını karşılaştırabilirsiniz. Üçgenler simülasyon modeline aittir.');
+    } catch(error){st(error.message,1);} finally{modelBusy=false;}
+  }
+  let modelBusy=false;
+  for(const format of ['dxf','ncz'])$('model'+format).onclick=()=>downloadPlanModel(format);
   async function parcelArtifact(mode) {
     const exchange=exportProject({includeGeometry:mode==='pak'}),project=exchange.project;
     if(!project.parcel || !project.reportDate)throw Error('Çıktı için ada/parseli ve rapor tarihini girin.');
