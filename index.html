@@ -8139,11 +8139,34 @@ A.kroki = (D, P) => { const g = A.pg(297, 210); const { L, T, R } = g; R(10, 12,
   A.krokiPlan(g, D.ifraz ? {...D,nearSketch:true} : D, [14, 50, cx - 4, P.sira ? 180 : 196], null); if ((D.imar || []).length) { g.G.push({ t: "l", p: [[cx - 62, 52.5], [cx - 46, 52.5]], w: 0.3, color: "#0000ff" }); T(cx - 44, 51.9, "İmar Ada Kenarı", 1.8); } return g.G; };
 /* Output-space crop shared by the two ifraz sketches. Keep the open ends
    of surveyed boundaries: there is no artificial line along the crop. */
+// Choose paper positions only within the visible part of the source polygon.
+// The collision solver checks all four text corners and the surveyed segments.
+A.ifzRegionLabel=(g,F,box,frame,ring,s,size,anchor,rot=0,priority=12)=>{
+  const paper=ring.map(F.M),bb=A.bbox(paper),bbFrame=A.bbox([F.M(frame.slice(0,2)),F.M(frame.slice(2))]);
+  const lo=[0,1].map(i=>Math.max(bb[i],box[i],bbFrame[i])),hi=[0,1].map(i=>Math.min(bb[i+2],box[i+2],bbFrame[i+2]));
+  if(hi[0]<=lo[0]||hi[1]<=lo[1])return;
+  const origin=F.M(anchor),cand=[];
+  for(let i=0;i<19;i++)for(let j=0;j<15;j++){
+    const x=lo[0]+(hi[0]-lo[0])*(i+.5)/19,y=lo[1]+(hi[1]-lo[1])*(j+.5)/15;
+    if(A.inPoly(paper,x,y))cand.push([x,y]);
+  }
+  const center=[(lo[0]+hi[0])/2,(lo[1]+hi[1])/2];
+  const score=p=>Math.hypot(p[0]-center[0],p[1]-center[1])+.35*Math.hypot(p[0]-origin[0],p[1]-origin[1]);
+  cand.sort((a,b)=>score(a)-score(b));
+  if(priority===5&&A.inPoly(paper,...origin))cand.unshift(origin);
+  if(cand.length)g.T(...cand[0],s,size,{al:"c",rot,inP:paper,cand,pr:priority,regionOnly:true,regionFrame:[...lo,...hi]});
+};
+
 A.ifzSketchContext = (D,F) => {
   const ring=D.parent.pts,[x0,y0,x1,y1]=A.bbox(ring);
   const margin=d=>Math.min(35/F.s,Math.max(4/F.s,d));
   const mx=margin((x1-x0)*.18),my=margin((y1-y0)*.18);
   const frame=[x0-mx,y0-my,x1+mx,y1+my],lines=[],seen=new Set();
+  const survey=D.survey;
+  for(const r of survey?.corridors||[])for(const p of r.region){
+    frame[0]=Math.min(frame[0],p[0]-7/F.s);frame[1]=Math.min(frame[1],p[1]-7/F.s);
+    frame[2]=Math.max(frame[2],p[0]+7/F.s);frame[3]=Math.max(frame[3],p[1]+7/F.s);
+  }
   const inside=p=>A.inPoly(ring,p[0],p[1]);
   function add(a,b){
     const cut=A.clipSeg(a,b,frame);
@@ -8151,17 +8174,19 @@ A.ifzSketchContext = (D,F) => {
     const k=cut.map(v=>v.map(x=>x.toFixed(3)).join(',')).sort().join('|');
     if(!seen.has(k)){seen.add(k);lines.push(cut);}
   }
-  for(const r of D.komsuP||[])for(let i=0;i<r.length;i++)add(r[i],r[(i+1)%r.length]);
+  for(const r of (survey?survey.parcels.map(o=>o.pts):D.komsuP||[]))for(let i=0;i<r.length;i++)add(r[i],r[(i+1)%r.length]);
   for(const k of D.komsu||[])add(k.s,k.e);
   for(const [a,b,layer] of D.cadCiz||[]){
     if((inside(a)&&inside(b))||/PARSEL|KADASTRO|ADA.*KENAR|YOL|CADDE|SOKAK|KALDIRIM|SINIR/i.test(layer||''))add(a,b);
   }
   const inFrame=([x,y])=> x>=frame[0]&&x<=frame[2]&&y>=frame[1]&&y<=frame[3];
   const nearby=t=>inFrame(t.p)&&ring.some((a,i)=>A.segDist(t.p,a,ring[(i+1)%ring.length])<=Math.max(mx,my));
-  return {...D,komsu:[],komsuP:[],cadCiz:lines,cadYazi:(D.cadYazi||[]).filter(t=>inside(t.p)),
-    yolYazi:(D.yolYazi||[]).filter(nearby),komsuAd:(D.komsuAd||[]).filter(nearby)};
+  return {...D,frame,komsu:[],komsuP:[],cadCiz:lines,cadYazi:(D.cadYazi||[]).filter(t=>inside(t.p)),
+    yolYazi:[...(survey?.corridors||[]),...(D.yolYazi||[]).filter(t=>nearby(t)&&!(survey?.corridors||[]).some(r=>A.inPoly(r.region,...t.p))&&!(survey?.parcels||[]).some(o=>A.inPoly(o.pts,...t.p)))],
+    komsuAd:survey?survey.parcels.filter(o=>o.s).map(o=>({s:o.s,ada:o.ada,p:o.anchor,region:o.pts})):
+      (D.komsuAd||[]).filter(nearby).map(t=>({...t,region:D.komsuP?.[t.ringIndex]||(D.komsuP||[]).find(r=>A.inPoly(r,...t.p))}))};
 };
-A.krokiPlan = (g, D, box, list) => { const i0 = g.G.length; const all = [...D.parent.pts, ...D.parts.flatMap(p => p.pts)]; const bw = box[2] - box[0], bh = box[3] - box[1], ib = [box[0] + bw * 0.1, box[1] + bh * 0.1, box[2] - bw * 0.1, box[3] - bh * 0.1]; /* çevrede komşu numarası ve yol yazısı için pay */ const F = A.fitPlan(all, ib, list);
+A.krokiPlan = (g, D, box, list) => { const i0 = g.G.length; const all = [...D.parent.pts, ...D.parts.flatMap(p => p.pts)]; const bw = box[2] - box[0], bh = box[3] - box[1], ib = [box[0] + bw * 0.1, box[1] + bh * 0.1, box[2] - bw * 0.1, box[3] - bh * 0.1]; /* çevrede komşu numarası ve yol yazısı için pay */ const fitPts=D.nearSketch&&!list&&D.survey?[...all,...D.survey.corridors.flatMap(r=>r.region)]:all; const F = A.fitPlan(fitPts, ib, list);
   if(D.gridFrame&&F.olc){
     const original=F.M,inv=F.inv,step=F.olc/10,bb=A.bbox(all.map(original));
     let best=null;
@@ -8189,10 +8214,16 @@ A.krokiPlan = (g, D, box, list) => { const i0 = g.G.length; const all = [...D.pa
   for (const [a0, b0] of D.cadCiz || []) { const c0 = A.clipSeg(a0, b0, KW); if (!c0) continue; const s_ = cl(M(c0[0]), M(c0[1])); if (s_) g.G.push({ t: "l", p: s_, w: 0.15, color: "#000" }); }
   for (const y of D.cadYazi || []) { const q = M(y.p); if (!inB(q)) continue; let r = +y.rot || 0; if (Math.abs(r) <= 2 * Math.PI + 1e-9 && !Number.isInteger(r)) r = r * 180 / Math.PI; r = ((r % 360) + 360) % 360; if (r > 90 && r <= 270) r -= 180; if (r > 270) r -= 360; T(q[0], q[1], y.s, 1.9, Math.abs(r) > 1 ? { al: "c", rot: r } : { al: "c" }); }
   /* komşu parsel numarası (örnek krokiler): aynı adada yalnız parsel no; başka adada ada no büyük, parsel no altında */
-  for (const k of D.komsuAd || []) { const q = M(k.p); if (!inB(q)) continue; const ba = k.ada != null && String(k.ada) !== "" && D.ada != null && String(k.ada) !== String(D.ada);
+  for (const k of D.komsuAd || []) { const q = M(k.p);
+    if(D.nearSketch){
+      if(k.region){const name=k.ada&&String(k.ada)!==String(D.ada)?k.ada+"/"+k.s:k.s;A.ifzRegionLabel(g,F,box,D.frame,k.region,name,2.8,k.p);}
+      continue;
+    }
+    if (!inB(q)) continue; const ba = k.ada != null && String(k.ada) !== "" && D.ada != null && String(k.ada) !== String(D.ada);
     if (ba) { T(q[0], q[1] + 1.8, String(k.ada), 4, { al: "c", color: "#000", grp: "ka" + q[0].toFixed(1) }); T(q[0], q[1] - 2.2, k.s, 2.8, { al: "c", color: "#000", grp: "ka" + q[0].toFixed(1) }); } else T(q[0], q[1], k.s, 2.8, { al: "c", color: "#000" }); }
   { /* YOL yalnız ana projede (dosyada) YOL yazan yerlere yazılır */
-    for (const t of D.yolYazi || []) { const q = M(t.p); if (!inB(q)) continue; let r = 0; if (t.a && t.b) { const a0 = M(t.a), b0 = M(t.b); r = Math.atan2(b0[1] - a0[1], b0[0] - a0[0]) * 180 / Math.PI; if (r > 90) r -= 180; if (r < -90) r += 180; } T(q[0], q[1], t.s, 2.6, r ? { al: "c", rot: r } : { al: "c" }); } }
+    for (const t of D.yolYazi || []) { const q = M(t.p); if (!inB(q)) continue; let r = 0; if (t.a && t.b) { const a0 = M(t.a), b0 = M(t.b); r = Math.atan2(b0[1] - a0[1], b0[0] - a0[0]) * 180 / Math.PI; if (r > 90) r -= 180; if (r < -90) r += 180; } if(D.nearSketch&&t.region){A.ifzRegionLabel(g,F,box,D.frame,t.region,t.s,2.6,t.p,r,5);continue;}
+      T(q[0], q[1], t.s, 2.6, D.nearSketch?{al:"c",rot:r,pr:5,maxR:1.6}:r ? { al: "c", rot: r } : { al: "c" }); } }
   /* imar ada kenarı (mavi) */ for (const ln of D.imar || []) { const Q = ln.kapali ? [...ln.pts, ln.pts[0]] : ln.pts; for (let i = 0; i + 1 < Q.length; i++) { const s_ = cl(M(Q[i]), M(Q[i + 1])); if (s_) g.G.push({ t: "l", p: s_, w: 0.3, color: "#0000ff" }); } }
   /* birleştirmede kalkan eski sınırlar: çizgi + çarpı işaretleri; eski parsel numaraları üstü çizili */ for (const [a0, b0] of D.iptal || []) { const ma = M(a0), mb = M(b0); g.G.push({ t: "l", p: [ma, mb], w: 0.3, color: "#b000b0" }); for (const t of [0.3, 0.7]) { const c = [ma[0] + (mb[0] - ma[0]) * t, ma[1] + (mb[1] - ma[1]) * t]; L([[c[0] - 1, c[1] - 1], [c[0] + 1, c[1] + 1]], 0.2); L([[c[0] - 1, c[1] + 1], [c[0] + 1, c[1] - 1]], 0.2); } }
   for (const e of D.eskiNo || []) { const q = M(e.p); if (!inB(q)) continue; T(q[0], q[1], e.s, 2.6, { al: "c" }); L([[q[0] - 2, q[1] - 0.6], [q[0] + 2, q[1] + 1.6]], 0.2); }
@@ -8486,7 +8517,8 @@ A.declutter = (G, i0, i1, reg, opt = {}) => {
 
       g0.x = done.tc[0]; g0.y = done.tc[1]; g0.rot = done.rot || undefined; g0.al = "c"; if (done.kk) g0.size *= done.kk; delete g0.lk; for (const [p1, p2] of done.segs) { G.push({ t: "l", p: [p1, p2], w: 0.12, color: col }); addSeg(p1, p2); } A.sym(G, L0.kind, done.sc[0], done.sc[1], (L0.kind === "pk" ? 1.0 : 0.95) * (done.kk || 1));
       addBox(done.ot); addBox(done.os); moved++; continue; }
-    for (const k of [1, 0.85, 0.72]) { for (const [dx, dy, rr] of steps) { const os = u.gs.map(g => tbox(g, dx, dy, k)); if (u.inP && !os.every(o => corners(o).every(p => A.inPoly(u.inP, p[0], p[1])))) continue; if (free(os)) { best = { dx, dy, k, os, r: rr }; break; } } if (best) break; if (u.noShrink) break; }
+    for (const k of [1, 0.85, 0.72]) { for (const [dx, dy, rr] of steps) { const os = u.gs.map(g => tbox(g, dx, dy, k)); if (u.inP && !os.every(o => corners(o).every(p => A.inPoly(u.inP, p[0], p[1])))) continue; if(g0.regionFrame&&os.some(o=>{const b=aabb(o),f=g0.regionFrame;return b[0]<f[0]||b[1]<f[1]||b[2]>f[2]||b[3]>f[3];}))continue; if (free(os)) { best = { dx, dy, k, os, r: rr }; break; } } if (best) break; if (u.noShrink) break; }
+    if(!best&&g0.regionOnly){g0.s="";continue;}
     if (!best && u.cand) { const [dx, dy] = steps[0]; for (const g of u.gs) { g.x += dx; g.y += dy; } }
     if (!best) { kept++; (A._kept = A._kept || []).push(u.gs.map(g => g.s).join("/"));
       if (u._acadKot) { for (const g of u.gs) g._acadOmit = true; G._acadOmitted = (G._acadOmitted || 0) + u.gs.length; continue; }
@@ -13770,6 +13802,42 @@ function parselNo(P) { if (!FD) return null; const c = A.label(P);
   const s2 = cand.find(x => x !== f && !x.m[1] && x.t.s.trim() !== f.t.s.trim() && Math.hypot(x.t.e - f.t.e, x.t.y - f.t.y) < 15 && Math.abs(x.t.y - f.t.y) > 0.3);
   if (s2) { const [up, lo] = s2.t.y > f.t.y ? [s2, f] : [f, s2]; return { ada: up.m[2], no: lo.m[2] }; }
   return { ada: null, no: f.m[2] }; }
+// A block layer can be hidden for drawing and still supply the official ID.
+const ifzIdCache=new WeakMap();
+function surveyLayer(lay){
+  const s=String(lay||'').toLocaleUpperCase('tr-TR');
+  if(/YEN[İI]|ESK[İI]|PAS[İI]F|[İI]PTAL|YAZI|TEXT/.test(s))return '';
+  if(/(^|[_ -])PARSEL($|[_ -]SINIR)/.test(s))return 'parcel';
+  if(/(^|[_ -])ADA($|[_ -]SINIR)/.test(s))return 'block';
+  return '';
+}
+function ifzSourceIds(fd) {
+  if(ifzIdCache.has(fd))return ifzIdCache.get(fd);
+  const blockText=[],parcelText=[],blocks=[];
+  const contains=(o,p)=>p[0]>=o.bb[0]&&p[0]<=o.bb[2]&&p[1]>=o.bb[1]&&p[1]<=o.bb[3]&&A.inPoly(o.pts,...p);
+  const entries=(o,T)=>T.filter(t=>contains(o,t.p));
+  for(const t of fd.texts){const s=String(t.s||'').trim(),lay=t.lay||'';
+    if(!/^\d+(?:\s*\/\s*\d+)?$/.test(s)||!Number.isFinite(t.e)||!Number.isFinite(t.y))continue;
+    if(/PARSEL/i.test(lay))parcelText.push({p:[t.e,t.y],s});
+    else if(/ADA/i.test(lay))blockText.push({p:[t.e,t.y],s});
+  }
+  for(const o of fd.polys){if(!o.closed||surveyLayer(o.lay)!=='block')continue;
+    const block={pts:o.pts,bb:o._ifzBBox||(o._ifzBBox=A.bbox(o.pts))};
+    const names=new Set(entries(block,blockText).map(t=>t.s));if(names.size===1)block.id=[...names][0];
+    blocks.push(block);
+  }
+  function identify(o){
+    const anchors=entries(o,parcelText),names=new Set(anchors.map(t=>t.s));
+    const anchor=anchors[0]?.p||A.label(o.pts),match=blocks.filter(k=>contains(k,anchor));
+    const block=match.length===1?match[0]:null,identity={block,anchor};
+    if(names.size===1){const pair=anchors[0].s.split(/\s*\/\s*/),s=pair.pop();
+      if(!pair[0]||!block?.id||pair[0]===block.id)Object.assign(identity,{s,ada:pair[0]||block?.id||''});
+    }
+    return identity;
+  }
+  const value={blocks,identify};ifzIdCache.set(fd,value);return value;
+}
+
 function fileCands() { if (!FD) return []; if (FD._c) return FD._c; const out = [];
   FD.polys.forEach((p, i) => { if (!p.closed || p.pts.length < 3) return; const q = A.clean(p.pts.map(v => [v[0], v[1]]), 0.002, true); const a = A.area(q); if (a >= 20) out.push({ v: "f" + i, lay: p.lay, pts: q, a }); });
   const by = {}; FD.lines.forEach(l => (by[l.lay] = by[l.lay] || []).push(l.pts)); FD.polys.forEach(p => { if (!p.closed || p.pts.length < 3) (by[p.lay] = by[p.lay] || []).push(p.pts); });
@@ -13788,6 +13856,12 @@ function fileCands() { if (!FD) return []; if (FD._c) return FD._c; const out = 
   const n = parselNo(o.pts);o.no = n;
     o.ad = o.kad ? `Kadastro noktalarından (${o.pts.length} köşe, açıya göre dizildi — sıra yanlışsa adlarla yaz)` : `${n ? (n.ada ? n.ada + "/" : "") + n.no + " parsel" : "tabaka " + o.lay}${o.cizgi ? " (çizgilerden)" : ""}${o.cerceve ? " (pafta çerçevesi?)" : ""}`; });
   adaYay(out);
+  const surveyIds=ifzSourceIds(FD);
+  if(surveyIds.blocks.length)for(const o of out){
+    if(surveyLayer(o.lay)!=='parcel'||o.cerceve)continue;
+    const id=surveyIds.identify(o);
+    if(id.s){o.no={ada:id.ada||null,no:id.s};o.ad=(id.ada?id.ada+"/":"")+id.s+" parsel"+(o.cizgi?" (çizgilerden)":"");}
+  }
   const num = o => o.no ? (+(o.no.ada || 0)) * 1e6 + (+o.no.no) : Infinity; const many = out.filter(o => o.no).length > 4;
   out.sort((x, y) => (x.cerceve - y.cerceve) || (many ? num(x) - num(y) : 0) || (!!x.cizgi - !!y.cizgi) || y.a - x.a); return FD._c = out; }
 /* ada numarası her parselde değil, adanın bir parselinde yazılıysa (KGM/kadastro paftası): komşuluk üzerinden aynı adaya yayılır */
@@ -15537,7 +15611,7 @@ const ifzNames={'00':'00_Basvuru_Dilekcesi','01':'01_Durum_Haritasi','02':'02_Ol
 function ifzMainPages(pages){return pages.filter(p=>p.code!=='11');}
 function ifzProjectFile(a,D){
   const context={};
-  for(const k of ['cadCiz','cadYazi','yolYazi','komsu','komsuP','komsuAd'])context[k]=D[k];
+  for(const k of ['cadCiz','cadYazi','yolYazi','komsu','komsuP','komsuAd','survey'])context[k]=D[k];
   return JSON.stringify({proj:{dosya:'IFRAZ',parsel:[a.antet.ada,a.antet.parselNo].join('/')},set:{cm:Number(a.antet.dom)||null},
     S:{pts:[],tri:null,src:''},R:{mode:'sabit',pts:[],tri:null,flat:0},alanlar:[],eksen:[],
     apl:{antet:a.antet,parsel:a.parsel,ifz:{...a.ifz,krokiKaynak:{key:JSON.stringify(a.parsel.pts),context}},
@@ -15671,7 +15745,78 @@ $("aoP").addEventListener("click", async () => { const a = S(); if (!a.res) retu
   try { const all=pagesNow(),pa=all.find(p=>p.ad==="Yapı aplikasyon paftası");if(!pa)throw Error("Pafta hazırlanamadı");
     if(pa.G.coz!==false&&window.APLGEO?.cakisma&&!pa.G.__coz)window.APLGEO.cakisma(pa.G);
     const pages=all.filter(p=>p.ad==="Yapı aplikasyon paftası"||p.ad.startsWith('Ek-1 koordinat devamı')||p.ad.startsWith('İstinat koordinatları'));const control=referenceOutput93(a);await saveFile(fnm(control.count?"YAPI_APL_KONTROL.pdf":"YAPI_APL.pdf"),A.vectorPdf(checkedPages93(pages,control,false)),$("aoMsg")); } catch (e) { msg("aoMsg", "PDF oluşturulamadı: " + e.message, true); } });
-function ifzData() {const a=S(),d=ifzDataFor(a.parsel,a.ifz,a.antet);d.ifraz=true;
+// Use surveyed parcel and block polygons when both exist. A number in a
+// neighboring block, a building, or the enclosing block is not a parcel ID.
+const ifzSurveyCache=new WeakMap();
+function ifzSurveyContext(par,f) {
+  if(!FD)return null;
+  const hidden=HID(), key=JSON.stringify([par.pts,f.yol||[],[...hidden].sort()]);
+  let cache=ifzSurveyCache.get(FD);
+  if(!cache){cache=new Map();ifzSurveyCache.set(FD,cache);}
+  if(cache.has(key))return cache.get(key);
+  const result=build();if(cache.size>=12)cache.clear();cache.set(key,result);return result;
+  function build(){
+    const P=par.pts,b=A.bbox(P),pad=Math.max(45,.45*Math.max(b[2]-b[0],b[3]-b[1]));
+    const W=[b[0]-pad,b[1]-pad,b[2]+pad,b[3]+pad];
+    const ids=ifzSourceIds(FD);if(!ids.blocks.length)return null;
+    const parcels=[],excluded=[],water=[],roads=[];
+    const covers=(b,x,y)=>x>=b[0]&&x<=b[2]&&y>=b[1]&&y<=b[3];
+    for(const o of FD.polys){
+      if(!o.closed||!o.pts?.length)continue;
+      const layer=String(o.lay).toLocaleUpperCase('tr-TR');
+      if(/YEN[İI]|ESK[İI]|PAS[İI]F|[İI]PTAL|YAZI|TEXT/.test(layer))continue;
+      const list=surveyLayer(layer)==='parcel'?parcels:/DERE|KANAL|ORMAN|MERA|PARK|KUMS|HAM[_ ]T|NEH[İI]R/.test(layer)?excluded:null;
+      if(!list||(list===parcels&&hidden.has(o.lay)))continue;const bb=o._ifzBBox||(o._ifzBBox=A.bbox(o.pts));if(!inRegion(bb,W))continue;
+      const pts=A.clean(o.pts.map(p=>p.slice(0,2)),.002,true);if(pts.length>=3)list.push({pts,bb});
+    }
+    if(!parcels.length)return null;
+    for(const t of FD.texts){
+      if(hidden.has(t.lay)||!Number.isFinite(t.e)||!Number.isFinite(t.y))continue;
+      const s=String(t.s||'').trim(),p=[t.e,t.y],layer=t.lay||'';
+      if(covers(W,...p)){
+        if(/DERE|ORMAN|MERA|KANAL|NEH[İI]R|PARK|KUMSAL/i.test(s))water.push(p);
+        else if(/^(?:Y\s*O\s*L|.*CADDE(?:S[İI])?|.*SOKAK|.*BULVAR[I]?)$/i.test(s))roads.push({p,s});
+      }
+    }
+    const contains=(o,p)=>covers(o.bb,...p)&&A.inPoly(o.pts,...p);
+    const center=A.label(P),own=parcels.find(o=>contains(o,center)&&P.every(q=>A.nearOnRing(o.pts,q)[1]<.045)&&o.pts.every(q=>A.nearOnRing(P,q)[1]<.045));
+    if(!own)return null;
+    for(const o of parcels)Object.assign(o,ids.identify(o));
+    const others=parcels.filter(o=>o!==own),corridors=[],selected=new Set(f.yol||[]);
+    const sign=Math.sign(A.sArea(P));
+    for(let i=0;i<P.length;i++){
+      const a=P[i],b=P[(i+1)%P.length],dx=b[0]-a[0],dy=b[1]-a[1],len=Math.hypot(dx,dy);
+      if(len<2)continue;
+      const n=[sign*dy/len,-sign*dx/len],outer=[],inner=[];
+      for(const t of [.025,.25,.5,.75,.975]){
+        const h=[a[0]+dx*t,a[1]+dy*t],at=w=>[h[0]+n[0]*w,h[1]+n[1]*w];
+        if(others.some(o=>contains(o,at(.2))))break;
+        let width=Infinity,opp;
+        for(const o of others){if(!inRegion(o.bb,A.bbox([h,at(40)])))continue;
+          for(let j=0;j<o.pts.length;j++){
+            const u=o.pts[j],v=o.pts[(j+1)%o.pts.length],e=[v[0]-u[0],v[1]-u[1]],delta=[u[0]-h[0],u[1]-h[1]],den=cross(n,e);
+            if(Math.abs(den)<1e-9)continue;
+            const w=cross(delta,e)/den,k=cross(delta,n)/den;
+            if(w>.05&&w<width&&k>=0&&k<=1){width=w;opp=o;}
+          }
+        }
+        if(width<1.5||width>35||!opp)break;
+        if(!selected.has(i)&&(!own.block?.id||!opp.block?.id||own.block.id===opp.block.id))break;
+        inner.push(h);outer.push(at(width));
+      }
+      if(inner.length!==5)continue;
+      const widths=inner.map((p,j)=>Math.hypot(p[0]-outer[j][0],p[1]-outer[j][1]));
+      const region=[...inner,...outer.slice().reverse()];
+      if(Math.max(...widths)>3*Math.min(...widths)||water.some(p=>A.inPoly(region,...p)))continue;
+      if(excluded.some(o=>o.pts.some(p=>A.inPoly(region,...p))||outer.some((p,j)=>contains(o,[(p[0]+inner[j][0])/2,(p[1]+inner[j][1])/2]))||region.some((p,j)=>o.pts.some((q,k)=>A.segInt(p,region[(j+1)%region.length],q,o.pts[(k+1)%o.pts.length])))))continue;
+      const tag=roads.find(t=>A.inPoly(region,...t.p));
+      corridors.push({a,b,p:[(inner[2][0]+outer[2][0])/2,(inner[2][1]+outer[2][1])/2],s:tag?.s||'YOL',region});
+    }
+    return {parcels:others.map(({pts,s,ada,anchor})=>({pts,s,ada,anchor})),corridors};
+  }
+}
+
+function ifzData() {const a=S(),d=ifzDataFor(a.parsel,a.ifz,a.antet);d.ifraz=true;if(FD)d.survey=ifzSurveyContext(a.parsel,a.ifz);
   const backup=a.ifz.krokiKaynak;if(!FD&&backup?.key===JSON.stringify(a.parsel.pts))Object.assign(d,backup.context);
   return d;}function ifzDataFor(par, f, ant) { const parts_ = (f.parts || []).map(p => ({ ad: p.ad, pts: p.pts, names: p.names })); const pts = new Map();
   const add = (p, n) => { const k = p[0].toFixed(3) + "," + p[1].toFixed(3); if (!pts.has(k)) pts.set(k, { n, p }); }; par.pts.forEach((p, i) => add(p, par.names[i])); (f.yeni || []).forEach(q => add(q.p, q.n)); for(const part of parts_)part.pts.forEach((p,i)=>add(p,part.names?.[i]));
@@ -15687,9 +15832,9 @@ function ifzData() {const a=S(),d=ifzDataFor(a.parsel,a.ifz,a.antet);d.ifraz=tru
         let dm = Infinity; for (const q of PB) dm = Math.min(dm, eD(o.pts, q)); for (const q of o.pts) if (q[0] > W[0] && q[0] < W[2] && q[1] > W[1] && q[1] < W[3]) dm = Math.min(dm, eD(PB, q)); if (dm > gap) continue;
         komsuP.push(o.pts); const pk = size * 0.4, X0 = Math.max(ob[0], bb[0] - pk), Y0 = Math.max(ob[1], bb[1] - pk), X1 = Math.min(ob[2], bb[2] + pk), Y1 = Math.min(ob[3], bb[3] + pk); /* numara krokide görünen pencerenin içinde */ const mind = Math.max(2.5, size * 0.07); let best = null, bs = Infinity;
         for (let i = 1; i < 24; i++) for (let j = 1; j < 24; j++) { const q = [X0 + (X1 - X0) * i / 24, Y0 + (Y1 - Y0) * j / 24]; if (!A.inPoly(o.pts, q[0], q[1]) || A.inPoly(PB, q[0], q[1])) continue; if (eD(o.pts, q) < mind || eD(PB, q) < mind) continue; const dd = Math.hypot(q[0] - pc[0], q[1] - pc[1]); if (dd < bs) { bs = dd; best = q; } }
-        if (best) { komsuAd.push({ p: best, s: nn, ada: o.no.ada }); seenNo.add(nn); } continue; }
+        if (best) { komsuAd.push({ p: best, s: nn, ada: o.no.tahmin?null:o.no.ada,ringIndex:komsuP.length-1 }); seenNo.add(nn); } continue; }
       if (A.inPoly(PB, ...A.label(o.pts)) && Math.abs(o.a - A.area(PB)) < 0.01) continue; komsuP.push(o.pts); seenNo.add(nn); const c0 = [sh.reduce((x, q) => x + q[0], 0) / sh.length, sh.reduce((x, q) => x + q[1], 0) / sh.length]; if (A.inPoly(PB, ...A.label(o.pts)) && Math.abs(o.a - A.area(PB)) < 0.01) continue;
-      let d = [c0[0] - pc[0], c0[1] - pc[1]]; const l = Math.hypot(...d) || 1; d = [d[0] / l, d[1] / l]; let pos = null; for (const k of [0.05, 0.08, 0.14, 0.22, 0.32]) { const q = [c0[0] + d[0] * size * k, c0[1] + d[1] * size * k]; if (A.inPoly(o.pts, q[0], q[1]) && !A.inPoly(PB, q[0], q[1])) { pos = q; break; } } if (!pos) { const lc = A.label(o.pts); if (inW(lc)) pos = lc; } if (pos) komsuAd.push({ p: pos, s: o.no.no, ada: o.no.ada }); }
+      let d = [c0[0] - pc[0], c0[1] - pc[1]]; const l = Math.hypot(...d) || 1; d = [d[0] / l, d[1] / l]; let pos = null; for (const k of [0.05, 0.08, 0.14, 0.22, 0.32]) { const q = [c0[0] + d[0] * size * k, c0[1] + d[1] * size * k]; if (A.inPoly(o.pts, q[0], q[1]) && !A.inPoly(PB, q[0], q[1])) { pos = q; break; } } if (!pos) { const lc = A.label(o.pts); if (inW(lc)) pos = lc; } if (pos) komsuAd.push({ p: pos, s: o.no.no, ada: o.no.tahmin?null:o.no.ada,ringIndex:komsuP.length-1 }); }
     /* CAD projesinden: kroki penceresindeki komşu yapı, duvar, yol, çit vb. çizgileri ve yapı cinsi yazıları (kapalı tabakalar ve malik yazıları hariç) */
     { const pk = size * 0.9, KW = [bb[0] - pk, bb[1] - pk, bb[2] + pk, bb[3] + pk], LOK = /BINA|BİNA|YAPI|DUVAR|MEVCUT|YOL|KALDIRIM|DERE|KANAL|SINIR|PARSEL|[ÇC][İI]T|TEL|[İI]ST[İI]NAT|[ŞS]EV|HAL[İI]HAZIR|HH_|TOPO|BAH[ÇC]E|SUNDURMA|AMBAR|AH[İI]R|SERA|HAVUZ/i, LNO = /KOT|E[ŞS]Y[ÜU]K|E[ĞG]R[İI]|TABLO|[ÇC]ER[ÇC]EVE|PAFTA|L[ÉE]JANT|GR[İI]D|KAROLAJ|ANTET|YAZI|TEXT|NOKTA|KOORD|[ÖO]L[ÇC][ÜU]|DIM|MAL[İI]K|TAHD[İI]T/i;
       const onPB = q => PB.some((v, i) => A.segDist(q, v, PB[(i + 1) % PB.length]) < 0.05); let n_ = 0;
