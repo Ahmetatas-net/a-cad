@@ -24952,13 +24952,20 @@ CMDS.GORUNUM3B = () => {
     const dest=groups.get(key).xyz;
     for(const p of pts){dest.push(p[0],p[1],p[2]??0);bounds.expandByPoint(v.set(p[0],p[1],p[2]??0));}
   }
-  for(const f of FACES)if(fVis(f))put(f.lay,'face',f.p.slice(0,3));
+  const context=CDOC.groundContext;
+  const finalView=context && (lays.KAZI?.on || lays.DOLGU?.on);
+  for(const f of FACES)if(fVis(f) && !(finalView && f.lay==='SIYAH_ARAZI'))put(f.lay,'face',f.p.slice(0,3));
+  if(finalView && lays.SIYAH_ARAZI?.on){
+    const {u,v,z,indices,angle}=context,ca=Math.cos(angle),sa=Math.sin(angle);
+    const at=k=>{const a=u[k%u.length],b=v[Math.floor(k/u.length)];return [a*ca-b*sa,a*sa+b*ca,z[k]];};
+    for(let i=0;i<indices.length;i+=3)put('SIYAH_ARAZI','face',[at(indices[i]),at(indices[i+1]),at(indices[i+2])]);
+  }
   for(const e of ents){
     if(!lays[e.lay]?.on)continue;
     let p=e.pts||[];
     // The foundation plan is 2D. Place its overlay on the visible model only in this view.
     if(CDOC.foundationModel && ['BINA_PLAN','BINA_NO','REZERV_BINA_NO'].includes(e.lay)){
-      p=p.map(q=>{const hits=cadTriangleAt(q);return hits.length?[q[0],q[1],hits.at(-1).z]:null;});
+      p=p.map(q=>{const hits=cadTriangleAt(q);const top=(finalView && hits.filter(h=>h.lay!=='SIYAH_ARAZI').at(-1))||hits.at(-1);return top?[q[0],q[1],top.z]:null;});
       if(p.every(q=>!q))continue;
     }
     if(e.t==='text' && e.s && p[0] && (/(B[Iİ]NA|BLOK|BUILDING)/i.test(e.lay)||/^(?:B|BL|BLOK)[ -]?\d+(?:[-/][A-Z]?\d+)*$/i.test(String(e.s).trim())))labels.push({p:p[0],s:e.s});
@@ -26539,7 +26546,7 @@ ALIAS.PD='PROJEDENETIM';
 window.CADX = { faces(l, P, T) { KUBNOSYNC = true; try { layer(l); FACES = FACES.filter(f => f.lay !== l); for (let i = 0; i + 2 < T.length; i += 3) { const a = P[T[i]], b = P[T[i + 1]], d = P[T[i + 2]]; FACES.push({ lay: l, p: [[a.e, a.y, a.z], [b.e, b.y, b.z], [d.e, d.y, d.z]] }); } FC = null; IDX = null; KUBSIG.set(l, kubSig(l)); persist(); try { if (!$("v-cad").hidden) draw(); } catch (e) {} } finally { KUBNOSYNC = false; } },
   bagla(l) { KUBSIG.set(l, kubSig(l)); }, egriYenile() { if (FACES.length || !ents.some(e => /^EGRI_(SIYAH|KIRMIZI)/.test(e.lay))) return; try { genEgri(EGSTEP, true, true); } catch (e) { console.error(e); } }, data: () => ({ ents, lays, faces: typeof FACES !== "undefined" ? FACES : [], doc: CDOC, version: FVER }), addEnts(list, lyc) { if (!list.length) return 0; snap0(); for (const e of list) { layer(e.lay, (lyc || {})[e.lay]); add(e); } IDX = null; persist(); renderLays && renderLays(); draw(); return list.length; } };
 
-CADX.openFoundationModel=async function(name,colors,records){
+CADX.openFoundationModel=async function(name,colors,records,groundContext){
   const palette={1:'#e06c55',2:'#f1ce69',3:'#62bd84',4:'#65b8dc',5:'#539fec',7:'#aebac5'};
   const entities=[],faces=[];
   for(const [kind,lay,a,b,c,h,r] of records){
@@ -26557,7 +26564,7 @@ CADX.openFoundationModel=async function(name,colors,records){
   for(const [lay,color] of colors)layer(lay,palette[color]);
   const sheet=cadSheets[cadSheetIndex];sheet.name=name;sheet.manualName=true;
   ents=entities;FACES=faces;nid=entities.length+1;
-  CDOC={name,fmt:'',foundationModel:true};IDX=null;FC=null;FVER++;UVER++;
+  CDOC={name,fmt:'',foundationModel:true,groundContext};IDX=null;FC=null;FVER++;UVER++;
   renderLays();cadTabsRender();docInfo();zoomAll();persist();
   CMDS.GORUNUM3B();
 };
@@ -35072,32 +35079,39 @@ function mount(host) {
       }
       const nu=S.U.length, xy=[];
       for(const v of S.V)for(const u of S.U)xy.push(world(u,v,0));
-      function triangle(ids) {
-        const points=(z)=>ids.map(k=>[xy[k][0],xy[k][1],z[k]]);
-        if(format==='cad'){
-          let last=M.length-1;
-          while(last>0 && ids.every(k=>Zs[last][k]===Zs[last-1][k]))last--;
-          const cut=M[last].t==='kazi';
-          add('face',last?(cut?'KAZI_':'DOLGU_')+last:'SIYAH_ARAZI',last?(cut?1:3):7,...points(Zs[Zs.length-1]));
-          return;
-        }
-        add('face','SIYAH_ARAZI',7,...points(Zs[0]));
-        for(let j=1;j<M.length;j++){
-          const before=Zs[j-1],after=Zs[j];
-          if(ids.every(k=>after[k]===before[k]))continue;
-          const cut=M[j].t==='kazi',label=(cut?'KAZI_':'DOLGU_')+j;
-          add('face',label+'_ONCE',8,...points(before));
-          add('face',label,cut?1:3,...points(after));
-        }
+      // Preserve the measured TIN used by KC.kazi; the display grid is only for the final surface.
+      const sourceGround=D.faces[$('zemin').value];
+      if(!sourceGround?.length)throw Error('Hesapta kullanılan siyah arazi bulunamadı.');
+      for(const f of sourceGround)add('face','SIYAH_ARAZI',7,f.slice(0,3),f.slice(3,6),f.slice(6,9));
+      const end=Zs.at(-1), lastChange=new Uint16Array(end.length);
+      for(let stage=1;stage<M.length;stage++)for(let k=0;k<end.length;k++){
+        if(Zs[stage][k]!==Zs[stage-1][k])lastChange[k]=stage;
       }
-      const end=Zs[Zs.length-1];
+      const context=format==='cad'?{u:S.U,v:S.V,angle:B.ang,z:Array.from(Zs[0],z=>Number.isFinite(z)?z:null),indices:[]}:null;
+      function finalKind(a,b,c){
+        const stage=Math.max(lastChange[a],lastChange[b],lastChange[c]);
+        return stage===0?0:M[stage].t==='kazi'?1:2;
+      }
+      function emit(a,b,c,type){
+        if(!type){if(context)context.indices.push(a,b,c);return;}
+        add('face',type===1?'KAZI':'DOLGU',type===1?1:3,...[a,b,c].map(k=>[...xy[k].slice(0,2),end[k]]));
+      }
+      const valid=k=>Number.isFinite(end[k])&&Number.isFinite(Zs[0][k]);
       for(let j=0;j<S.V.length-1;j++)for(let i=0;i<nu-1;i++){
         const a=j*nu+i,b=a+1,c=a+nu,d=c+1;
-        if([a,b,c,d].every(k=>Number.isFinite(end[k])&&Number.isFinite(Zs[0][k]))){
-          triangle([a,b,c]);triangle([b,d,c]);
-        }
+        if(![a,b,c,d].every(valid))continue;
+        const first=finalKind(a,b,c),second=finalKind(b,d,c);
+        // Merge horizontal strips only when the top is exactly planar and belongs to one material.
+        if(first && first===second && [b,c,d].every(k=>end[k]===end[a])){
+          let right=b;
+          while(i+1<nu-1 && valid(right+1) && valid(right+nu+1) &&
+                end[right+1]===end[a] && end[right+nu+1]===end[a] &&
+                finalKind(right,right+1,right+nu)===first && finalKind(right+1,right+nu+1,right+nu)===first){
+            right++;i++;
+          }
+          emit(a,right,c,first);emit(right,right+nu,c,first);
+        }else{emit(a,b,c,first);emit(b,d,c,second);}
       }
-      if(!layers.size)throw Error('Simülasyon kapsamında geçerli arazi üçgeni bulunamadı.');
       // The reference project renders interior fills as separate solids above the terrain mesh.
       for(const [j,m] of M.entries()){
         if(!sample || !m.combined || m.t!=='dolgu')continue;
@@ -35109,8 +35123,7 @@ function mount(host) {
           if(!(h>0))continue;
           const at=(p,z)=>world((box[0]+box[2])/2+p[0],(box[1]+box[3])/2+p[1],z);
           for(const tri of part.triangles){
-            if(format!=='cad')add('face','IC_DOLGU_'+j+'_ONCE',8,...tri.map(p=>at(p,top0-h)));
-            add('face','IC_DOLGU_'+j,4,...tri.map(p=>at(p,top0)));
+            add('face','DOLGU',3,...tri.map(p=>at(p,top0)));
           }
         }
       }
@@ -35127,7 +35140,7 @@ function mount(host) {
         else records.push(['text',target,[t.x0,t.y0,0],t.s,h,rotation,'l']);
       }
       if(format==='cad'){
-        await window.CADX.openFoundationModel(($('parsel').value||'Temel')+' · Kazı ve dolgu',layers,records);
+        await window.CADX.openFoundationModel(($('parsel').value||'Temel')+' · Kazı ve dolgu',layers,records,context);
         return;
       }
       if(!dxf && layers.size>=250)throw Error('NCZ tabaka sınırı aşıldı. DXF biçimini kullanın.');
@@ -35135,7 +35148,7 @@ function mount(host) {
       if(!dxf && new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength).getUint32(81,true)!==records.length)throw Error('NCZ nesne sayısı doğrulanamadı.');
       if(result!==KR || invalidInput)return;
       const parcel=($('parsel').value||'Temel').replace(/[^\p{L}\d_-]+/gu,'-');
-      if(await save(parcel+'-Plan-ve-Model.'+format,bytes,'application/octet-stream'))st('Plan ve model indirildi. Aynı numaralı ÖNCE ve sonuç tabakalarını karşılaştırabilirsiniz. Üçgenler simülasyon modeline aittir.');
+      if(await save(parcel+'-Plan-ve-Model.'+format,bytes,'application/octet-stream'))st('Plan ve model indirildi. Siyah arazi ve son kazı/dolgu yüzeyleri ayrı tabakalarda.');
     } catch(error){st(error.message,1);} finally{modelBusy=false;}
   }
   let modelBusy=false;
