@@ -25020,18 +25020,16 @@ CMDS.GORUNUM3B = () => {
     pen.setTransform(ratio,0,0,ratio,0,0);pen.clearRect(0,0,width,height);
     pen.font='600 12px system-ui';pen.textAlign='center';pen.lineWidth=3;pen.strokeStyle='#162632';pen.fillStyle='#fff19d';
     const used=new Set();
-    for(const {p,s,level} of labels){
+    for(const {p,s} of labels){
       v.set(p[0]-origin.x,p[1]-origin.y,(p[2]??0)-origin.z).project(cam);
       if(Math.abs(v.x)>1||Math.abs(v.y)>1||Math.abs(v.z)>1)continue;
       const x=(v.x+1)*width/2,y=(1-v.y)*height/2,half=pen.measureText(s).width/2+3;
       const left=Math.floor((x-half)/12),right=Math.floor((x+half)/12);
-      for(const dy of (level?[0,24,-24]:[0])){
-        const row=y+dy,keys=[];
-        for(let j=Math.floor((row-14)/6);j<=Math.floor((row+2)/6);j++)
-          for(let i=left;i<=right;i++)keys.push(i+','+j);
-        if(keys.some(k=>used.has(k)))continue;
-        keys.forEach(k=>used.add(k));pen.strokeText(s,x,row);pen.fillText(s,x,row);break;
-      }
+      const keys=[];
+      for(let j=Math.floor((y-14)/6);j<=Math.floor((y+2)/6);j++)
+        for(let i=left;i<=right;i++)keys.push(i+','+j);
+      if(keys.some(k=>used.has(k)))continue;
+      keys.forEach(k=>used.add(k));pen.strokeText(s,x,y);pen.fillText(s,x,y);
     }
   }
   function size(){cam.aspect=Math.max(1,stage.clientWidth)/Math.max(1,stage.clientHeight);renderer.setSize(stage.clientWidth,stage.clientHeight,false);cam.updateProjectionMatrix();render();}
@@ -35147,28 +35145,14 @@ function mount(host) {
         [sample?'BINA_TEMELALTKOTU':roles.kotLayer,{name:'BINA_TEMEL_KOTU',level:true}],
         [roles.plinth,{name:'BINA_SUBASMAN',level:true}]
       ].filter(([source])=>source));
-      const boxes=[];
-      const labels=D.texts.filter(t=>labelLayers.has(t.lay)).sort((a,b)=>
-        Number(!!labelLayers.get(a.lay).level)-Number(!!labelLayers.get(b.lay).level));
-      for(const t of labels){
+      for(const t of D.texts){
         const target=labelLayers.get(t.lay);
         if(!target || !t.s || !Number.isFinite(t.x0) || !Number.isFinite(t.y0))continue;
-        const h=(t.h>0?t.h:1)*(target.level ? .75 : 1),rotation=(t.r||0)*180/Math.PI;
+        const h=t.h>0?t.h:1,rotation=(t.r||0)*180/Math.PI;
         const z=target.level?KC.readLevel(t.s):0;
         if(!Number.isFinite(z))continue;
         const text=String(t.s).trim();
-        const cs=Math.cos(t.r||0),sn=Math.sin(t.r||0),width=text.length*h*.83;
-        let x=t.x0,y=t.y0;
-        for(let row=0;;row++){
-          const dx=row*1.6*h;
-          x=t.x0+sn*dx;y=t.y0-cs*dx;
-          const xs=[x,x+cs*width,x-sn*h,x+cs*width-sn*h];
-          const ys=[y,y+sn*width,y+cs*h,y+sn*width+cs*h];
-          const box=[Math.min(...xs),Math.min(...ys),Math.max(...xs),Math.max(...ys)];
-          if(!target.level || !boxes.some(b=>box[0]<b[2]+.1*h && box[2]>b[0]-.1*h && box[1]<b[3]+.1*h && box[3]>b[1]-.1*h)){
-            boxes.push(box);break;
-          }
-        }
+        const x=t.x0,y=t.y0;
         const color=target.level?4:2;
         layers.set(target.name,color);
         if(dxf){dxf.lay(target.name,color);dxf.text(target.name,x,y,h,text,rotation,'l',0,z);}
