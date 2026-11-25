@@ -1835,7 +1835,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     <div class="cadnav" id="cadNav"><button data-m="ciz" class="on">Çiz</button><button data-m="duz">Düzenle</button><button data-m="alan">▱ Alan İşlemleri</button><button data-m="det">Detaylar</button><button data-m="mim">Mimari oturt</button><button data-m="hes">Hesap</button><button data-m="olc">Ölç</button><button data-m="gor">Seç / Görünüm</button><button data-m="tab">Tabakalar</button><button data-m="dos">Dosya</button><button data-m="yaz">Yazdır</button><button data-m="arz">⛰ Arazi</button><button data-m="ucg">◬ Üçgen</button><button data-m="hhz">🗺 Halihazır</button><button data-m="yar">Yardım</button></div>
     <div id="cadTools" class="cadbar">
       <div class="grp" data-g="ciz" data-cap="Çizim"><button data-c="CIZGI" data-n="Çizgi">╱ Çizgi <kbd>L</kbd></button><button data-c="CIZGITIPI" data-n="Çizgi tipi">┅ Çizgi tipi <kbd>LT</kbd></button><button data-c="CCIZGI" data-n="Çoklu çizgi">⌇ Çoklu <kbd>PL</kbd></button></div>
-      <div class="grp" data-g="duz" data-cap="Sorgu"><button data-c="SORGU" data-n="Sorgula">🔍 Sorgula <kbd>SO</kbd></button><button data-c="UCSORGU" data-n="Üçgen sorgula">△ Üçgen sorgula <kbd>USOR</kbd></button><button data-c="TOPLUSORGU" data-n="Toplu sorgu">▤ Toplu sorgu / değiştir <kbd>TS</kbd></button><button data-c="KOORDINAT" data-n="Koordinat">⌖ XYZ sor <kbd>ID</kbd></button><button data-c="XYZYAZ" data-n="XYZ yaz">xyz XYZ yaz <kbd>XYZ</kbd></button><button data-c="MESAFE" data-n="Mesafe">↔ Mesafe <kbd>DI</kbd></button><button data-c="SIL" data-n="Sil" class="dangerb">✕ Sil <kbd>E</kbd></button></div>
+      <div class="grp" data-g="duz" data-cap="Sorgu"><button data-c="SORGU" data-n="Sorgula">🔍 Sorgula <kbd>SO</kbd></button><button data-c="UCSORGU" data-n="Üçgen sorgula">△ Üçgen sorgula <kbd>USOR</kbd></button><button data-c="TOPLUSORGU" data-n="Toplu sorgu">▤ Toplu sorgu / değiştir <kbd>TS</kbd></button><button data-c="BULDEGISTIR" data-n="Bul / Değiştir">⇄ Bul / Değiştir <kbd>BD</kbd></button><button data-c="KOORDINAT" data-n="Koordinat">⌖ XYZ sor <kbd>ID</kbd></button><button data-c="XYZYAZ" data-n="XYZ yaz">xyz XYZ yaz <kbd>XYZ</kbd></button><button data-c="MESAFE" data-n="Mesafe">↔ Mesafe <kbd>DI</kbd></button><button data-c="SIL" data-n="Sil" class="dangerb">✕ Sil <kbd>E</kbd></button></div>
       <div class="grp" data-g="alan" data-cap="Alan İşlemleri · sıralı komutlar">
 <button data-c="ALAN" data-n="Alan Çevir" title="Köşelere dokunarak kapalı alan çiz ve adlandır">1 · Alan Çevir</button>
 <button data-c="ALANSORGU" data-n="Alan Sorgula" title="Alan adı, m², çevre, köşe koordinatları; Excel ve çizime özet">2 · Alan Sorgula</button>
@@ -23832,7 +23832,7 @@ function selectByPolygon(){
       if(!waiting)sel.clear();
       for(const id of ids)sel.add(id);
       RUNKEY=null;rub=false;
-      if(waiting&&ids.length){
+      if(waiting&&(ids.length||waiting.win)){
         cmd=waiting;
         if(waiting.pick&&waiting.done)waiting.done();
         else if(waiting.name==="Sil")CMDS.SIL();
@@ -23878,7 +23878,7 @@ function polygonSelectionIds(P,crossing){
 }
 
 function run(name, rep) { const k = name.toUpperCase().replace(/[İI]/g, "I").replace(/Ç/g, "C").replace(/Ğ/g, "G").replace(/Ö/g, "O").replace(/Ş/g, "S").replace(/Ü/g, "U").replace(/\s+/g, ""); const c = CMDS[k] || CMDS[ALIAS[k]];
-  if (!c) return false; if (c!==CMDS.TOPLUSORGU && c!==CMDS.GERI && c!==CMDS.ILERI && c!==CMDS.PENCERE) { const panel=$("tsDeg"); if(panel){panel.hidden=true;panel.style.display="none";} } if(c===selectByPolygon){selectByPolygon();return true;} if (AREA_EDIT_SESSION && k!=="ALANDUZELT") document.getElementById("acadAreaEdit")?.__close?.(); if (!rep && !/^(TUMU|GERI|ILERI|ARZTIN|ARZEGRI|PENCERE)$/.test(CMDS[k] ? k : ALIAS[k])) ANN = []; if (cmd && cmd.done && cmd.pts && cmd.pts.length >= 2 && !cmd.pick && cmd.name !== "Pencere") { const old = cmd; RUNKEY = null; CXL = true; try { old.done(); } catch (e) { } CXL = false; } cmd = null; rub = null; last = null; RUNKEY = null; if (!rep) { const bx = document.getElementById("arzBox"); if (bx) bx.hidden = true; /* yeni komut: bilgi kutusu tuvali örtmesin (bilgi durum satırında kalır) */ } c(); if (cmd && (cmd.pt || cmd.ent || cmd.pick)) RUNKEY = CMDS[k] ? k : ALIAS[k]; markTools(); draw(); return true; }
+  if (!c) return false; if(c!==CMDS.BULDEGISTIR && c!==CMDS.GERI && c!==CMDS.ILERI) $("cadBulkFind")?.remove(); if (c!==CMDS.TOPLUSORGU && c!==CMDS.GERI && c!==CMDS.ILERI && c!==CMDS.PENCERE) { const panel=$("tsDeg"); if(panel){panel.hidden=true;panel.style.display="none";} } if(c===selectByPolygon){selectByPolygon();return true;} if (AREA_EDIT_SESSION && k!=="ALANDUZELT") document.getElementById("acadAreaEdit")?.__close?.(); if (!rep && !/^(TUMU|GERI|ILERI|ARZTIN|ARZEGRI|PENCERE)$/.test(CMDS[k] ? k : ALIAS[k])) ANN = []; if (cmd && cmd.done && cmd.pts && cmd.pts.length >= 2 && !cmd.pick && cmd.name !== "Pencere") { const old = cmd; RUNKEY = null; CXL = true; try { old.done(); } catch (e) { } CXL = false; } cmd = null; rub = null; last = null; RUNKEY = null; if (!rep) { const bx = document.getElementById("arzBox"); if (bx) bx.hidden = true; /* yeni komut: bilgi kutusu tuvali örtmesin (bilgi durum satırında kalır) */ } c(); if (cmd && (cmd.pt || cmd.ent || cmd.pick)) RUNKEY = CMDS[k] ? k : ALIAS[k]; markTools(); draw(); return true; }
 /* komut tekrarı: biten çizim/düzenleme komutu, başka komut seçilene ya da Esc / boşta sağ tuşa basılana kadar kendiliğinden yeniden başlar */
 function markTools() { setTimeout(ctxBar, 0); pvMark(); document.querySelectorAll("#cadTools [data-c]").forEach(b => /^NG(SYM|AD|KOT)$/.test(b.dataset.c) || b.classList.toggle("on", (cmd && b.dataset.n === cmd.name) || (b.dataset.c === "PENCERE" && winSel) || (b.dataset.c === "ARZTIN" && !!CARZ.tin) || (b.dataset.c === "ARZEGRI" && !!CARZ.egri))); $("cadOrtho").classList.toggle("on", ortho); $("cadGrad").textContent = grad ? "Açı: grad" : "Açı: derece"; }
 $("cadIn").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); enter(); } else if (e.key === "Escape") { esc(); } });
@@ -27070,7 +27070,34 @@ function cizgiKot(x, y, R) { const S = kotluSeg(); if (!S.length) return null; l
 function projeKot(x, y) { const P = projeModel(); const k = P ? K.zAt(P, x, y) : null; if (k != null && isFinite(k)) return { k, d: 0, src: "yüzey" }; const c = cizgiKot(x, y); return c ? { k: c.k, d: c.d, lay: c.lay, src: "çizgi" } : null; }
 function kdHtml(f) { if (f == null || !isFinite(f)) return ""; const a = Math.abs(f); if (a < 0.005) return `<span style="background:#2e7d32;color:#fff;padding:1px 6px;border-radius:5px;font-weight:700">✓ KOTUNDA</span>`; return `<span style="background:${f < 0 ? "#c62828" : "#1565c0"};color:#fff;padding:1px 6px;border-radius:5px;font-weight:700;font-size:1.15em">${f < 0 ? "⬇ KAZI" : "⬆ DOLGU"} ${a.toFixed(2)} m</span>`; }
 function kotAt(x, y) { const M = kotModel(), P = projeModel(); const z = M ? K.zAt(M, x, y) : null, k = P ? K.zAt(P, x, y) : null; return { s: z == null ? null : z, k: k == null ? null : k }; }
+function cadCompactQueryStyle(){
+  if($("cadCompactQueryCSS"))return;
+  const style=document.createElement("style");style.id="cadCompactQueryCSS";style.textContent=`
+  #tsDeg,#cadBulkFind{width:min(340px,calc(100vw - 20px))!important;padding:9px!important;gap:5px!important;border-radius:10px!important;max-height:66vh!important; font-size:12px!important;line-height:1.25!important;}
+  #tsDeg button,#cadBulkFind button{padding:5px 8px!important;min-height:28px!important;font-size:12px!important;line-height:1.15!important;border-radius:5px!important;}
+  #tsDeg label,#cadBulkFind label{font-size:11px!important;color:inherit!important;min-width:0;gap:3px!important;margin:0!important;}
+  #tsDeg input:not([type=checkbox]),#tsDeg select,#cadBulkFind input:not([type=checkbox]),#cadBulkFind select{min-height:28px!important;padding:4px 6px!important;font-size:12px!important;border-radius:5px!important;max-width:100%;}
+  #tsDeg input[type=checkbox],#cadBulkFind input[type=checkbox]{width:14px!important;height:14px!important;min-height:0!important;margin:0 4px!important;vertical-align:middle;}
+  #tsDeg #cadPaftaBulDeg{padding:5px 0!important;gap:5px!important;}
+  #cadBulkFind [data-grip],#tsGrip{padding-bottom:5px;border-bottom:1px solid var(--line,#638099);}
+  #tsDeg [data-region],#cadBulkFind [data-region]{width:100%;display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+  #cadBulkFind [data-form]{gap:6px!important;margin-top:7px!important}
+  @media(max-width:600px){#tsDeg,#cadBulkFind{max-height:61dvh!important;}}
+  `;document.head.append(style);
+}
+// Select objects within an existing closed CAD area, without changing its geometry.
+function cadBulkAreaSelect(waiting){
+  winSel=false;winBox=null;RUNKEY=null;rub=false;
+  cmd={name:"Alanla seç",raw:true,rcExit:true,pt(p){
+    const area=ents.filter(e=>e.t==="pline"&&e.closed&&e.pts?.length>=3&&lays[e.lay]?.on&&inPolyC(e.pts,p[0],p[1])).sort((a,b)=>Math.abs(areaOf(a.pts))-Math.abs(areaOf(b.pts)))[0];
+    if(!area)return say("Kapalı bir alanın içine dokun.",true);
+    const ids=polygonSelectionIds(area.pts,false);for(const id of ids)sel.add(id);
+    cmd=waiting;waiting?.win?.(ids.length);markTools();draw();say(`${ids.length} nesne alan içinden seçildi.`);
+  },cancel(){cmd=waiting;waiting?.win?.(0);}};
+  prompt_("Kapalı alanın içine dokun · Esc iptal");markTools();draw();
+}
 function topluDeg(n, yen) {
+  cadCompactQueryStyle();
   let d = $("tsDeg");
   if (!d) {
     d = document.createElement("div"); d.id = "tsDeg"; d.className = "card acad-floating";
@@ -27085,7 +27112,7 @@ function topluDeg(n, yen) {
   const TXT_ = ents.filter(e => sel.has(e.id) && e.t === "text");
   const singleText_ = TXT_.length === 1 && sel.size === 1 ? TXT_[0] : null;
 
-  d.innerHTML = `<div id="tsGrip" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px"><b>Toplu sorgu / değiştir · ${n} nesne</b><button id="tsClose" type="button">Kapat</button></div><div style="width:100%;display:flex;flex-wrap:wrap;gap:5px"><button id="tsAll" type="button">Görünür tümünü seç</button><button id="tsClear" type="button">Seçimi temizle</button><button id="tsExcel" type="button">Excel</button><label><input id="tsWindow" type="checkbox"> Pencere seç (telefon)</label></div><label>Tür<select id="tsType"><option value="">Tümü</option><option value="text">Yazı</option><option value="point">Nokta</option><option value="line">Çizgi</option><option value="pline">Çoklu çizgi</option><option value="circle">Daire</option></select></label><label>Kaynak tabaka<select id="tsSource"><option value="">Tümü</option>${ly.map(l=>`<option>${esc_(l)}</option>`).join("")}</select></label><button id="tsFilter" type="button">Seçimi süz</button><label style="font-size:.78rem">Tabaka<select id="tdLay"><option value="">— aynı kalsın —</option>${ly.map(l => `<option>${esc_(l)}</option>`).join("")}<option value="*yeni">+ yeni tabaka…</option></select></label><label style="font-size:.78rem">Yazı boyu (m)<input id="tdH" inputmode="decimal" style="width:70px" placeholder="aynı"></label><label style="font-size:.78rem">Çizgi tipi<input id="tdLt" list="tdLtL" style="width:120px" placeholder="aynı"><datalist id="tdLtL">${window.LTX && LTX.LIB ? Object.keys(LTX.LIB).slice(0, 300).map(k => `<option value="${esc_(k)}">`).join("") : ""}</datalist></label><label style="font-size:.78rem">Yazı metni<input id="tdS" style="width:110px" placeholder="aynı"></label><button type="button" id="tdGo" class="primary">Uygula</button>${NP_ ? `<div style="width:100%;display:flex;gap:6px;flex-wrap:wrap;align-items:end;border-top:1px dashed rgba(128,128,128,.5);padding-top:6px"><b style="width:100%;font-size:.8rem">Noktalar (${NP_}): kot ve ad</b><label style="font-size:.78rem">Kot (Z)<select id="tdZm"><option value="">— aynı kalsın —</option><option value="sabit">Hepsini bu kota getir</option><option value="ekle">Kota ekle / çıkar (±)</option><option value="model">Arazi modelinden kot getir</option><option value="sifir">Kotu sil (0)</option></select></label><label style="font-size:.78rem">Değer (m)<input id="tdZv" inputmode="decimal" style="width:80px" placeholder="örn. 125.40"></label><label style="font-size:.78rem">Yeni ad: başlangıç<input id="tdNn" style="width:80px" placeholder="örn. 100"></label><button type="button" id="tdNk" class="primary">Noktalara uygula</button></div>` : ""}<button type="button" id="tdDel" class="dangerb">🗑 Seçilileri sil</button>`;
+  d.innerHTML = `<div id="tsGrip" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px"><b>Toplu sorgu / değiştir · ${n} nesne</b><button id="tsClose" type="button">Kapat</button></div><div style="width:100%;display:flex;flex-wrap:wrap;gap:5px"><button id="tsAll" type="button">Görünür tümünü seç</button><button id="tsClear" type="button">Seçimi temizle</button><button id="tsExcel" type="button">Excel</button><button id="tsFindFull" type="button">Gelişmiş Bul / Değiştir</button></div><div data-region><button id="tsPolygon" type="button">Çokgenle seç</button><button id="tsArea" type="button">Alanla seç</button><label><input id="tsWindow" type="checkbox"> Pencere</label></div><label>Tür<select id="tsType"><option value="">Tümü</option><option value="text">Yazı</option><option value="point">Nokta</option><option value="line">Çizgi</option><option value="pline">Çoklu çizgi</option><option value="circle">Daire</option></select></label><label>Kaynak tabaka<select id="tsSource"><option value="">Tümü</option>${ly.map(l=>`<option>${esc_(l)}</option>`).join("")}</select></label><button id="tsFilter" type="button">Seçimi süz</button><label style="font-size:.78rem">Tabaka<select id="tdLay"><option value="">— aynı kalsın —</option>${ly.map(l => `<option>${esc_(l)}</option>`).join("")}<option value="*yeni">+ yeni tabaka…</option></select></label><label style="font-size:.78rem">Yazı boyu (m)<input id="tdH" inputmode="decimal" style="width:70px" placeholder="aynı"></label><label style="font-size:.78rem">Çizgi tipi<input id="tdLt" list="tdLtL" style="width:120px" placeholder="aynı"><datalist id="tdLtL">${window.LTX && LTX.LIB ? Object.keys(LTX.LIB).slice(0, 300).map(k => `<option value="${esc_(k)}">`).join("") : ""}</datalist></label><label style="font-size:.78rem">Yazı metni<input id="tdS" style="width:110px" placeholder="aynı"></label><button type="button" id="tdGo" class="primary">Uygula</button>${NP_ ? `<div style="width:100%;display:flex;gap:6px;flex-wrap:wrap;align-items:end;border-top:1px dashed rgba(128,128,128,.5);padding-top:6px"><b style="width:100%;font-size:.8rem">Noktalar (${NP_}): kot ve ad</b><label style="font-size:.78rem">Kot (Z)<select id="tdZm"><option value="">— aynı kalsın —</option><option value="sabit">Hepsini bu kota getir</option><option value="ekle">Kota ekle / çıkar (±)</option><option value="model">Arazi modelinden kot getir</option><option value="sifir">Kotu sil (0)</option></select></label><label style="font-size:.78rem">Değer (m)<input id="tdZv" inputmode="decimal" style="width:80px" placeholder="örn. 125.40"></label><label style="font-size:.78rem">Yeni ad: başlangıç<input id="tdNn" style="width:80px" placeholder="örn. 100"></label><button type="button" id="tdNk" class="primary">Noktalara uygula</button></div>` : ""}<button type="button" id="tdDel" class="dangerb">🗑 Seçilileri sil</button>`;
   // Pafta genelinde ad / açıklama düzeltme: yalnız CAD metinleri değişir.
   // Kullanıcı seçimi varsa kapsam yalnız seçili metinlerdir; aksi halde tüm görünür CAD yazıları.
   let replBox = $("cadPaftaBulDeg");
@@ -27146,12 +27173,79 @@ function topluDeg(n, yen) {
   for(const [id,value] of Object.entries(previous)){const el=$(id);if(el){if(el.type==="checkbox")el.checked=value;else el.value=value;}}
   enablePanelMove(d,$("tsGrip"));
   $("tsClose").onclick=()=>{d.hidden=true;d.style.display="none";winSel=false;if(cmd?.name==="Toplu sorgu")esc();};
-  $("tsWindow").checked=winSel;$("tsWindow").onchange=()=>{winSel=$("tsWindow").checked;markTools();};
+  const selectionCommand=()=>{if(cmd?.name!=="Toplu sorgu")cmd={name:"Toplu sorgu",rcExit:true,win(){yen();},ent(e){if(sel.has(e.id))sel.delete(e.id);else sel.add(e.id);yen();}};return cmd;};
+  $("tsPolygon").onclick=()=>{selectionCommand();selectByPolygon();};
+  $("tsArea").onclick=()=>cadBulkAreaSelect(selectionCommand());
+  $("tsWindow").checked=winSel;$("tsWindow").onchange=()=>{selectionCommand();winSel=$("tsWindow").checked;markTools();};
   $("tsClear").onclick=()=>{sel.clear();yen();draw();};
   $("tsExcel").onclick=()=>$("cadOutX").click();
+  $("tsFindFull").onclick=()=>run("BULDEGISTIR");
   $("tsAll").onclick=()=>{for(const e of ents)if(lays[e.lay]?.on)sel.add(e.id);yen();draw();};
   $("tsFilter").onclick=()=>{const type=$("tsType").value,source=$("tsSource").value;for(const e of ents)if(sel.has(e.id)&&((type&&e.t!==type)||(source&&e.lay!==source)))sel.delete(e.id);yen();draw();};
   $("tdDel").onclick = () => { if(!sel.size)return; snap0(); const k = sel.size; ents = ents.filter(e => !sel.has(e.id)); sel.clear(); IDX = null; persist(); renderLays(); draw(); say(`${k} nesne silindi — Geri al: U`); yen(); }; }
+// Literal text search, with Turkish case handling and Unicode word boundaries.
+function cadFindPattern(query, mode, sensitive) {
+  if (!query) return null;
+  const escape = value => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const body = Array.from(query, ch => {
+    if(sensitive) return escape(ch);
+    const forms = [...new Set([ch,ch.toLocaleLowerCase("tr-TR"),ch.toLocaleUpperCase("tr-TR")])];
+    return forms.length===1?escape(ch):"(?:"+forms.map(escape).join("|")+")";
+  }).join("");
+  const pattern=mode==="exact"?"^(?:"+body+")$":mode==="word"?"(?<![\\p{L}\\p{N}_])(?:"+body+")(?![\\p{L}\\p{N}_])":body;
+  return new RegExp(pattern,"gu");
+}
+CMDS.BULDEGISTIR = () => {
+  cadCompactQueryStyle();
+  $("cadBulkFind")?.remove();
+  const originalSheet=cadSheets[cadSheetIndex],originalDoc=CDOC,initialSelection=new Set(sel);
+  const panel=document.createElement("section");panel.id="cadBulkFind";panel.className="card acad-floating";
+  panel.style.cssText="position:fixed;right:18px;top:135px;width:min(410px,calc(100vw - 24px));max-height:72vh;overflow:auto;padding:12px;background:var(--panel,#203445);color:var(--text,#eaf5ff);";
+  panel.innerHTML=`<div data-grip style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b>Yazı bul / değiştir</b><button type="button" data-close>Kapat</button></div>
+  <div data-form style="display:grid;gap:9px;margin-top:12px"><label>Aranan yazı<input data-find autocomplete="off" placeholder="03.06.2026"></label><label>Yeni değer<input data-replace autocomplete="off" placeholder="04.07.2026"></label>
+  <label>Arama kapsamı<select data-scope><option value="all">Aktif çizimdeki tüm yazılar</option><option value="visible">Görünür tabakalar</option><option value="selected">Başlangıçta seçili nesneler (${initialSelection.size})</option></select></label>
+  <div data-region><button type="button" data-polygon>Çokgenle seç</button><button type="button" data-area>Alanla seç</button><button type="button" data-window>Pencereyle seç</button></div>
+  <label>Tabaka<select data-layer><option value="">Tüm tabakalar</option>${Object.keys(lays).sort((a,b)=>a.localeCompare(b,"tr")).map(l=>`<option value="${esc_(l)}">${esc_(l)}</option>`).join("")}</select></label>
+  <label>Eşleşme<select data-mode><option value="contains">Metin içinde</option><option value="word">Tam sözcük</option><option value="exact">Tüm yazı aynı</option></select></label><label><input type="checkbox" data-case checked> Büyük / küçük harfe duyarlı</label>
+  <div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" data-prev>◀ Önceki</button><button type="button" data-next>Bul / Sonraki ▶</button><button type="button" data-one>Bu yazıyı değiştir</button><button type="button" data-all class="primary">Tümünü değiştir</button></div>
+  <div data-status role="status" style="font-weight:600"></div><div data-preview style="white-space:pre-wrap;overflow-wrap:anywhere;font-size:.85rem"></div><button type="button" data-bulk>Toplu sorgu / özellikler</button></div>`;
+  $("cadBox").append(panel);enablePanelMove(panel,panel.querySelector("[data-grip]"));
+  const get=name=>panel.querySelector("[data-"+name+"]"),status=text=>get("status").textContent=text;
+  if(initialSelection.size)get("scope").value="selected";
+  let currentId=null,highlight=null;
+  const clearHighlight=()=>{if(highlight){ANN=ANN.filter(a=>a!==highlight);highlight=null;}};
+  const close=()=>{clearHighlight();panel.remove();draw();};
+  function matches(){
+    if(cadSheets[cadSheetIndex]!==originalSheet||CDOC!==originalDoc){status("Çizim değişti. Komutu tekrar açın.");return [];}
+    const re=cadFindPattern(get("find").value,get("mode").value,get("case").checked);if(!re)return [];
+    const scope=get("scope").value,lay=get("layer").value,to=get("replace").value,result=[];
+    for(const e of ents){if(e.t!=="text"||typeof e.s!=="string"||(lay&&e.lay!==lay)||(scope==="selected"&&!initialSelection.has(e.id))||(scope==="visible"&&!lays[e.lay]?.on))continue;
+      re.lastIndex=0;if(!re.test(e.s))continue;re.lastIndex=0;result.push({e,next:e.s.replace(re,()=>to)});
+    }return result;
+  }
+  function refresh(reset=false){if(reset){currentId=null;clearHighlight();}const list=matches();status(`${list.length} eşleşen yazı · ${list.filter(x=>x.next!==x.e.s).length} değişecek`);
+    const selected=list.find(x=>x.e.id===currentId)||list[0];get("preview").textContent=selected?`Önce: ${selected.e.s}\nSonra: ${selected.next}`:"";
+    get("one").disabled=!list.length;get("all").disabled=!list.some(x=>x.next!==x.e.s);get("next").disabled=!list.length;get("prev").disabled=!list.length;return list;}
+  function focus(step){const list=matches();if(!list.length)return refresh();const index=list.findIndex(x=>x.e.id===currentId),item=list[index<0?(step<0?list.length-1:0):(index+step+list.length)%list.length];currentId=item.e.id;clearHighlight();
+    if(lays[item.e.lay]?.on){highlight={t:"hl",e:item.e};ANN.push(highlight);zoomAll([item.e]);}else {draw();}
+    refresh();status(`${list.indexOf(item)+1} / ${list.length} · ${item.e.lay}${lays[item.e.lay]?.on?"":" (kapalı tabaka)"}`);}
+  function apply(all){const list=matches();const selected=all?list:[list.find(x=>x.e.id===currentId)||list[0]].filter(Boolean);const changed=selected.filter(x=>x.next!==x.e.s);if(!changed.length)return refresh();
+    snap0();for(const item of changed)item.e.s=item.next;clearHighlight();IDX=null;persist();draw();currentId=null;refresh();status(`${changed.length} yazı güncellendi · Geri al: U`);say(`${changed.length} yazı güncellendi — Geri al: U`);}
+  panel.addEventListener("keydown",ev=>{ev.stopPropagation();if(ev.key==="Escape"){ev.preventDefault();close();}else if(ev.key==="Enter"&&ev.target===get("find")){ev.preventDefault();focus(1);}});
+  for(const name of ["find","replace","scope","layer","mode","case"])get(name).addEventListener("input",()=>refresh(true));
+  function region(mode){
+    clearHighlight();sel.clear();
+    const waiting={name:"Yazı seç",raw:true,win(){initialSelection.clear();for(const id of sel)initialSelection.add(id);get("scope").options[2].textContent=`Seçili nesneler (${initialSelection.size})`;get("scope").value="selected";cmd=null;winSel=false;refresh(true);markTools();draw();}};
+    cmd=waiting;
+    if(mode==="polygon")selectByPolygon();else if(mode==="area")cadBulkAreaSelect(waiting);else{winSel=true;prompt_("Pencere çizerek yazıları seç");markTools();draw();}
+  }
+  get("polygon").onclick=()=>region("polygon");get("area").onclick=()=>region("area");get("window").onclick=()=>region("window");
+  get("close").onclick=()=>{if(cmd?.name==="Yazı seç"||cmd?.polygonPick||cmd?.name==="Alanla seç"){cmd=null;winSel=false;markTools();}close();};get("next").onclick=()=>focus(1);get("prev").onclick=()=>focus(-1);get("one").onclick=()=>apply(false);get("all").onclick=()=>apply(true);get("bulk").onclick=()=>{close();run("TOPLUSORGU");};
+  refresh();get("find").focus();
+};
+Object.assign(ALIAS,{BD:"BULDEGISTIR",BULDEGIS:"BULDEGISTIR"});
+document.addEventListener("keydown",ev=>{if((ev.ctrlKey||ev.metaKey)&&!ev.altKey&&ev.key.toLowerCase()==="h"&&!$("v-cad")?.hidden){ev.preventDefault();run("BULDEGISTIR");}});
+
 /* ---------- Detaylar: XYZ yaz, uzunluk yazdır, alan yazdır, paralel ölçülendir, karelaj ---------- */
 const yazH = () => { const v = +String($("cadTh").value || "").replace(",", "."); if (v > 0) return v; const raw = 12 / V.s, p = Math.pow(10, Math.floor(Math.log10(raw))); return [1, 2, 2.5, 5, 10].map(m => m * p).find(v_ => v_ >= raw) || raw; };
 CMDS.XYZYAZ = () => { cmd = { name: "XYZ yaz", rcExit: true, pt(p) { const z = typeof kotAt === "function" ? kotAt(p[0], p[1]).s : null; const pe = ents.find(e => e.t === "point" && dist(e.pts[0], p) < 1e-4); const zz = pe && Math.abs(pe.pts[0][2] || 0) > 1e-6 ? pe.pts[0][2] : z; const h = yazH(); snap0();
