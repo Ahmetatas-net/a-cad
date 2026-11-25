@@ -1431,11 +1431,13 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       <option value="yol">Yol Projesi</option><option value="altyapi">Alt Yapı</option><option value="pafta25">1/25.000 Pafta Sayısallaştırma</option>
       <option value="hh">Hâlihazır</option><option value="kad">3B Kadastro</option>
     </select>
+    <button type="button" id="acadBackupMenu" popovertarget="acadBackupTools" aria-label="Yedekleme ve kurtarma">Yedek ▾</button>
+    <div id="acadBackupTools" popover="auto"><strong>Yedekleme ve kurtarma</strong>
     <span id="acadSafeStatus" role="status" aria-live="polite" style="font-size:.8rem;flex:1;min-width:175px">◯ Modül geçişi: çalışma verileri korunuyor</span>
     <button type="button" id="acadSafeDownload" title="CAD, kübaj ve Alt Yapı çalışma verilerinin JSON yedeği. 1/25.000 pafta çalışmasını ayrıca modülden ZIP/JSON olarak kaydet.">💾 Çalışma yedeği indir</button>
     <button type="button" id="acadSafeRestore" title="Önceki güvenli yerel kontrol noktasını göster">↶ Yerel kurtarma</button>
     <input id="acadSafeOpen" type="file" accept=".json,application/json" hidden>
-    <button type="button" id="acadSafeImport">📂 Yedekten aç</button>
+    <button type="button" id="acadSafeImport">📂 Yedekten aç</button></div>
   </div>
   <nav class="tabs subtabs" id="kubSub" role="tablist" hidden>
     <button role="tab" data-tab="veri">1 · Veri</button>
@@ -9765,7 +9767,10 @@ function showTabCommit(t) {
   if (t === "yol" && window.yolShow) window.yolShow();
   try { window.dispatchEvent(new CustomEvent("acad:tab", { detail: { tab: t } })); } catch (e) {}
 }
-tabs.forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab)));
+tabs.forEach(b => b.addEventListener("click", ev => {
+  if(ev.isTrusted && window.ACAD_ACTIVE_PARCEL?.navigate(b.dataset.tab))return;
+  showTab(b.dataset.tab);
+}));
 
 /* ================= VERİ ================= */
 const fmtN = n => n.toLocaleString("tr-TR");
@@ -14333,12 +14338,13 @@ function fileCands() { if (!FD) return []; if (FD._c) return FD._c; const out = 
   out.forEach(o => {const b=o.bb||(o.bb=A.bbox(o.pts));
   if(isRect(o.pts)&&T.length>5){let inCount=0,possible=0;for(const t of T){if(t.e<b[0]||t.e>b[2]||t.y<b[1]||t.y>b[3])continue;possible++;if(A.inPoly(o.pts,t.e,t.y))inCount++;}o.cerceve=inCount>T.length*0.8;}
   else o.cerceve=false;
-  const n = parselNo(o.pts);o.no = n;
+  const sourceId=/^f\d+$/.test(o.v)&&/^(\d+)[_/](\d+)$/.exec(FD.polys[Number(o.v.slice(1))]?.nativeName||"");
+  const n = sourceId?{ada:sourceId[1],no:sourceId[2]}:parselNo(o.pts);o.no = n;
     o.ad = o.kad ? `Kadastro noktalarından (${o.pts.length} köşe, açıya göre dizildi — sıra yanlışsa adlarla yaz)` : `${n ? (n.ada ? n.ada + "/" : "") + n.no + " parsel" : "tabaka " + o.lay}${o.cizgi ? " (çizgilerden)" : ""}${o.cerceve ? " (pafta çerçevesi?)" : ""}`; });
   adaYay(out);
   const surveyIds=ifzSourceIds(FD);
   if(surveyIds.blocks.length)for(const o of out){
-    if(surveyLayer(o.lay)!=='parcel'||o.cerceve)continue;
+    if(surveyLayer(o.lay)!=='parcel'||o.cerceve||(/^f\d+$/.test(o.v)&&/^\d+[_/]\d+$/.test(FD.polys[Number(o.v.slice(1))]?.nativeName||"")))continue;
     const id=surveyIds.identify(o);
     if(id.s){o.no={ada:id.ada||null,no:id.s};o.ad=(id.ada?id.ada+"/":"")+id.s+" parsel"+(o.cizgi?" (çizgilerden)":"");}
   }
@@ -14396,12 +14402,14 @@ function ifzReadParcelHeader(a,drawing,pts,no){
   for(const field of ["il","ilce","mahalle","ada","parselNo","pafta"])if(P[field])a.antetSrc[field]="parsel";
   if(drawing.wgs&&drawing.cm)P.dom=String(drawing.cm);
 }
-function setParsel(pts, ad, src, no, strictCad, verifiedNames) { const a = S(); if(MOD==="ifz"&&src==="dosya"&&FD?.meta?.length){ifzReadParcelHeader(a,FD,pts,no);fillAntet();} if (no) { if (no.ada) a.antet.ada = no.ada; a.antet.parselNo = no.no; fillAntet(); } pts = A.clean(pts.map(p => [p[0], p[1]]), 0.002, true); const nm0 = strictCad ? pts.map((p,i) => verifiedNames && verifiedNames[i] ? String(verifiedNames[i]) : "") : pts.map(p => nameOf(p)); if (!strictCad) { tableNames(pts, nm0); textNames(pts, nm0); }
-  const raw = pts.map(p => [p[0], p[1]]); if (!strictCad) { const NP = named(); pts = pts.map((p, i) => { let b = null, bd = 0.03; for (const q of NP) { const d = Math.hypot(q.e - p[0], q.y - p[1]); if (d < bd) { bd = d; b = q; } } return b ? [b.e, b.y] : p; }); } /* köşe, adlı ölçü noktasının kendi koordinatına oturur */ let k = 0; const names = nm0.map(n => n || ("K" + (++k)));
-  const autoNames = nm0.map(n => !n); /* kadastro koordinatı 2 hane: köşeler cm'ye yuvarlanır, alanlar yuvarlanmış koordinattan hesaplanır (kontrol mühendisi çizelgeden aynı alanı bulur); kaynak değer raw'da kalır */ pts = pts.map(p => K.cm(p));
+function setParsel(pts, ad, src, no, strictCad, verifiedNames, exactCad=false) { const a = S(); if(MOD==="ifz"&&src==="dosya"&&FD?.meta?.length){ifzReadParcelHeader(a,FD,pts,no);fillAntet();} if (no) { if (no.ada) a.antet.ada = no.ada; a.antet.parselNo = no.no; fillAntet(); } pts = exactCad ? pts.map(p=>p.slice(0,2)) : A.clean(pts.map(p => [p[0], p[1]]), 0.002, true); const nm0 = strictCad ? pts.map((p,i) => verifiedNames && verifiedNames[i] ? String(verifiedNames[i]) : "") : pts.map(p => nameOf(p)); if (!strictCad) { tableNames(pts, nm0); textNames(pts, nm0); }
+  const raw = pts.map(p => [p[0], p[1]]); if (!strictCad && !exactCad) { const NP = named(); pts = pts.map((p, i) => { let b = null, bd = 0.03; for (const q of NP) { const d = Math.hypot(q.e - p[0], q.y - p[1]); if (d < bd) { bd = d; b = q; } } return b ? [b.e, b.y] : p; }); } /* köşe, adlı ölçü noktasının kendi koordinatına oturur */ let k = 0; const names = nm0.map(n => n || ("K" + (++k)));
+  const autoNames = nm0.map(n => !n); /* kadastro koordinatı 2 hane: köşeler cm'ye yuvarlanır, alanlar yuvarlanmış koordinattan hesaplanır (kontrol mühendisi çizelgeden aynı alanı bulur); kaynak değer raw'da kalır */ if(!exactCad)pts = pts.map(p => K.cm(p));
   a.parsel = { pts, names, autoNames, ad, src, raw }; a.kom = []; a.res = null; a.ifz.parts = null; a.ifz.cuts = []; a.ifz.yeni = []; a.ifz.yol = []; a.ifz.roadSpan=null;a.ifz.roadMarks=null; a.ifz.yolSource = "none"; PLACED = null; const usedRoad=!!FD?.ifzNetwork?.length&&useIfzRoadNetwork(); save(); renderAll(); fitA(); if (MOD === "ifz"&&!usedRoad) { const note=$("iYolNot"); if(note)note.textContent="Parsel seçildi. Yol kenarını aşağıdan işaretle veya Yol ara komutunu kullan."; } if (MOD === "akr") setTimeout(() => { try { akRender(); akPrev(); } catch (e) {} }, 0); }
 function renderPar() { const a = S(), c = parcelCands(); const sel = $("aPar"); const cur = a.parsel;
-  sel.innerHTML = `<option value="">${c.length ? "Parsel seç…" : "Önce dosya yükle ya da koordinat yapıştır"}</option>` + c.map(o => `<option value="${o.v}" ${cur && Math.abs(o.a - A.area(cur.pts)) < 0.01 && Math.hypot(o.pts[0][0] - cur.pts[0][0], o.pts[0][1] - cur.pts[0][1]) < 50 ? "selected" : ""}>${esc(o.ad)} — ${tra(o.a)} m²</option>`).join("");
+  const ring=cur?.raw||cur?.pts;
+  const chosen=ring&&c.find(o=>o.pts.length===ring.length&&o.pts.every((p,i)=>Math.hypot(p[0]-ring[i][0],p[1]-ring[i][1])<1e-7));
+  sel.innerHTML = `<option value="">${c.length ? "Parsel seç…" : "Önce dosya yükle ya da koordinat yapıştır"}</option>` + c.map(o => `<option value="${o.v}" ${o===chosen ? "selected" : ""}>${esc(o.ad)} — ${tra(o.a)} m²</option>`).join("");
   $("aParInfo").innerHTML = cur ? `<span class="pill ok">${esc(cur.ad || "Parsel")}</span> Alan <b>${tra(A.area(cur.pts))} m²</b> · ${cur.pts.length} köşe · çevre ${tru(K.perim(cur.pts))} m` : "Parsel seçilmedi.";
   const eo = cur ? cur.pts.map((p, i) => { const q = cur.pts[(i + 1) % cur.pts.length]; return `<option value="${i}">Kenar ${i + 1}: ${esc(cur.names[i])} – ${esc(cur.names[(i + 1) % cur.pts.length])} (${tru(Math.hypot(q[0] - p[0], q[1] - p[1]))} m)</option>`; }).join("") : "";
   $("aFi").innerHTML = eo; $("aSi").innerHTML = eo; $("aFi").value = a.fi; $("aSi").value = a.si; }
@@ -16844,8 +16852,8 @@ window.aplShow = m => { if(m==='ifz'&&$('ifzDocSettings').open)ifzOpenSettings()
   S(); renderAll(); rs(); if (!V.s || V.s === 1) fitA(); else drawA(); };
 S(); renderAll(); { const h = location.hash.slice(1); if (h === "apl" || h === "ifz" || h === "kam" || h === "akr" || h === "trk") window.aplShow(h); }
 // CAD çiziminden aktarım: dosya geometrisi olarak yükle, seçili parsel varsa doğrudan kullan
-function fromCad(d, name, pts, no, strictCad, verifiedNames, target) { window.acadConsumeDwg82=null; FD = d; FDname = name; ZTIN = null; PLACED = null; const a = S(); if(target==="ifz"){ifzReadParcelHeader(a,d,pts,no);fillAntet();} if (no && no.no) { if (no.ada) a.antet.ada = no.ada; a.antet.parselNo = no.no; fillAntet(); }
-  if (pts) setParsel(pts, no && no.no ? `${no.ada ? no.ada + "/" : ""}${no.no}` : null, "dosya", null, !!strictCad, verifiedNames); else { a.parsel = null; a.res = null; a.ifz.parts = null; a.ifz.cuts = []; a.ifz.yeni = []; a.ifz.yol = []; save(); renderAll(); fitA(); }
+function fromCad(d, name, pts, no, strictCad, verifiedNames, target, exactCad=false) { window.acadConsumeDwg82=null; FD = d; FDname = name; ZTIN = null; PLACED = null; const a = S(); if(target&&pts){a.antet.ada="";a.antet.parselNo="";} if(target==="ifz"){ifzReadParcelHeader(a,d,pts,no);fillAntet();} if (no && no.no) { if (no.ada) a.antet.ada = no.ada; a.antet.parselNo = no.no; fillAntet(); }
+  if (pts) setParsel(pts, no && no.no ? `${no.ada ? no.ada + "/" : ""}${no.no}` : null, "dosya", null, !!strictCad, verifiedNames, exactCad); else { a.parsel = null; a.res = null; a.ifz.parts = null; a.ifz.cuts = []; a.ifz.yeni = []; a.ifz.yol = []; save(); renderAll(); fitA(); }
   { const bc = binaCands().find(o => /^F:BINA$/i.test(o.v)); if (bc) { S().bina = bc.v; save(); renderAll(); } }
   const ctx=FD?.ifrazContext;
   if($('iContextInfo'))$('iContextInfo').textContent=ctx?`CAD yakın çevresi: ${ctx.neighbors} olası komşu parsel · ${ctx.roadObjects} yol nesnesi · ${ctx.kept} nesne aktarıldı${ctx.truncated?' (çok yoğun veri için yakın nesneler öncelikli)':''}. Kaynak çizim değiştirilmedi.`:'Parsel, komşu sınırlar ve yakındaki yol çizgilerini birlikte açabilirsin.';
@@ -21172,6 +21180,7 @@ function sourceAreaRole(layer){
   let role="";
   if(/(?:^|_)(?:DOLGU|SOLID|FILL)(?:_|$)/.test(name))role="solid";
   else if(/(?:^|_)(?:TARAMA|HATCH)(?:_|$)/.test(name))role="hatchLine";
+  else if(/(?:^|_)(?:CEPHE|KENAR_UZUNLUGU)(?:_|$)/.test(name))role="frontage";
   else if(/(?:^|_)(?:NADI|NOKTA_ADI|NOKTA_NO)(?:_|$)/.test(name))role="pointName";
   else if(/(?:^|_)(?:NKOT|NOKTA_KOTU)(?:_|$)/.test(name))role="height";
   else if(/(?:^|_)(?:YAZI_(?:PARSEL|ADA|ALAN|BINA)|(?:PARSEL|ALAN|BINA)_(?:ADI|AD|NO|YAZI))(?:_|$)/.test(name))role="label";
@@ -21300,9 +21309,13 @@ function draw() { liveTick(); if(CAD_RESIZE_DIRTY){
   const visibleEntities=cadScreenItems(vx0,vx1,vy0,vy1);
   const vis = (x, y) => x > -50 && y > -50 && x < W + 50 && y < H + 50; let nv = 0; for (const e of visibleEntities) if (e.t === "point" && vis(X(e.pts[0][0]), Y(e.pts[0][1])) && ++nv >= 600) break; const lbl = nv < 600; const occ = new Set(); if (BBK.a !== ents || BBK.n !== ents.length || BBK.rev !== FVER || !BBK.TS || !!drag) {
     BBK.m = new Map(); BBK.a = ents; BBK.n = ents.length; BBK.rev = FVER;
-    BBK.TS = new Set(); BBK.areaTexts=new Map();
+    BBK.TS = new Set(); BBK.areaTexts=new Map();BBK.frontageTexts=new Map();
     for (const e of ents) if (e.t === "text"&&lays[e.lay]?.on){
       BBK.TS.add(String(e.s).trim());
+      if(sourceAreaRole(e.lay)==="frontage"){
+        const value=String(e.s).trim().replace(/\s*m$/i,"").replace(",",".");
+        if(/^\d+(?:\.\d+)?$/.test(value)){const key=Number(value).toFixed(2);if(!BBK.frontageTexts.has(key))BBK.frontageTexts.set(key,[]);BBK.frontageTexts.get(key).push(e.pts[0]);}
+      }
       if(sourceAreaRole(e.lay)==="label"){
         const name=String(e.s).trim();
         if(!BBK.areaTexts.has(name))BBK.areaTexts.set(name,[]);
@@ -21335,7 +21348,7 @@ function draw() { liveTick(); if(CAD_RESIZE_DIRTY){
   const nativeArea=e=>e.nczSourceBoundary||e.importedBoundary;
   const feature=e=>sourceAreaRole(e.lay);
   const isSourceSolid=e=>e.sourceSolid||e.closed&&feature(e)==="solid";
-  const eligible=e=>!isSourceSolid(e)&&!e.fill&&(e.areaName||feature(e)==="area");
+  const eligible=e=>e.areaName||feature(e)==="area"||e.showFrontages||sel.has(e.id);
   const nativeStyle=window.ACAD_NATIVE_COLOR_VIEW!==false;
   const sourceNames=BBK.areaTexts;
   // Batch solid road coverage, then draw the survey boundary lines above it.
@@ -21354,18 +21367,21 @@ function draw() { liveTick(); if(CAD_RESIZE_DIRTY){
     cx.save();cx.fillStyle='rgba(48,153,228,.63)';cx.fill(roadPath);cx.fillStyle='rgba(225,170,67,.26)';cx.fill(parcelsPath);cx.fillStyle="rgba(61,161,115,.34)";cx.fill(parksPath);cx.restore();
   }
 
-  for(const e of visibleEntities){if(e.roadArea||e.roadBorder||e.t!=='pline'||!e.closed||e.pts?.length<3||!lays[e.lay]?.on)continue;const parcel=roadParcel(e);const _alanK=!!(e.areaHatch||/^ALAN_CEVIR(?:$|_)/i.test(e.lay));if(isSourceSolid(e)||e.fill||(!_alanK&&e.id!==ALAN_AKTIF&&!eligible(e)))continue;
+  for(const e of visibleEntities){if(e.roadArea||e.roadBorder||e.t!=='pline'||!e.closed||e.pts?.length<3||!lays[e.lay]?.on)continue;const parcel=roadParcel(e);const _alanK=!!(e.areaHatch||/^ALAN_CEVIR(?:$|_)/i.test(e.lay));if(isSourceSolid(e)||e.fill)continue;
+    const displayArea=_alanK||e.id===ALAN_AKTIF||eligible(e);
+    if(!displayArea&&!(showFrontages()&&nativeArea(e)&&!feature(e)))continue;
     const b=ebb(e);if(b&&(b[2]<vx0||b[0]>vx1||b[3]<vy0||b[1]>vy1))continue;
     // When editing the same polygon, the moving geometry gets the visible preview instead.
     if(AREA_EDIT_SESSION?.id===e.id&&cmd?.name==='Alan Düzelt'&&(cmd.preview?.parts?.length||cmd._liveOn))continue;
     const act_=AREA_EDIT_SESSION&&AREA_EDIT_SESSION.second===e.id?'second':(sel.has(e.id)||AREA_EDIT_SESSION?.id===e.id||ALAN_AKTIF===e.id?'first':null);
-    if(showFrontages()&&(e.showFrontages||_alanK||(!nativeArea(e)&&e.areaName)))drawFrontages74(cx,e.pts,v=>[X(v[0]),Y(v[1])],D,true);
+    if(showFrontages()&&!e.sourceCurveApprox&&b&&Math.hypot(b[2]-b[0],b[3]-b[1])*V.s>=64)drawFrontages74(cx,e.pts,v=>[X(v[0]),Y(v[1])],D,true);
+    if(!displayArea)continue;
     ALAN_VIS.fill(cx,X,Y,D,e.pts,{active:act_,color:(()=>{try{return parcel&&!nativeArea(e)?"#ca8c2e":renk(lays[e.lay].c);}catch(x){return lays[e.lay]?.c;}})(),stroke:!!act_?true:false,reviewRequired:_alanK&&(alanKaynakGuncelMi(e)===false||e.areaQuality==='review-required'||(e.areaInferredBridges||[]).some(b=>b.metres>20))});if(_alanK)acadAreaLabels.push(e);else if(showAreaName()&&e.areaName&&!sourceNames.get(String(e.areaName).trim())?.some(t=>inPolyC(e.pts,t.pts[0][0],t.pts[0][1]))&&acadPlainAreaNames.length<120&&areaLabelScale(b)>0)acadPlainAreaNames.push(e);
   }
 
   for (const e of visibleEntities) {
     const role=e.displayRole||sourceAreaRole(e.lay);
-    if(e.t==="text"&&((role==="label"&&!showAreaName())||(role==="pointName"&&!PV.ad)||(role==="height"&&PV.kot===false)))continue;
+    if(e.t==="text"&&((role==="frontage"&&!showFrontages())||(role==="label"&&!showAreaName())||(role==="pointName"&&!PV.ad)||(role==="height"&&PV.kot===false)))continue;
     if((e.sourceHatchLine||role==="hatchLine")&&!showAreaHatch())continue;
     if((e.roadInterior||e.roadBorder||e.roadArea)&&!sel.has(e.id)&&(e.roadInterior||!showAreaHatch()))continue; const L = lays[e.lay]; if (!L || !L.on) continue; { const b = ebb(e); if (b && (b[2] < vx0 || b[0] > vx1 || b[3] < vy0 || b[1] > vy1)) continue; if (b && e.t !== "point" && e.t !== "text" && !sel.has(e.id) && (b[2] - b[0] + b[3] - b[1]) * V.s * D < 0.6) continue; } const s = sel.has(e.id); if (!s && !e.fill && !isSourceSolid(e) && (e.t === "line" || e.t === "pline") && e.pts.length > 1) { const lt_ = ltOf(e); if (!lt_ || (!ltDash(lt_, 1) && !(window.LTX && LTX.has(lt_)))) { const col = renk(e.sourceInk||L.c); let bp = BPATH.get(col); if (!bp) { bp = new Path2D(); BPATH.set(col, bp); } const P = e.pts; let px = X(P[0][0]), py = Y(P[0][1]); bp.moveTo(px, py); for (let i = 1; i < P.length; i++) { const qx = X(P[i][0]), qy = Y(P[i][1]); if (i < P.length - 1 && Math.abs(qx - px) + Math.abs(qy - py) < 0.7) continue; bp.lineTo(qx, qy); px = qx; py = qy; } if (e.closed) bp.closePath(); continue; } } cx.strokeStyle = cx.fillStyle = s ? "#36c3ff" : renk(e.sourceInk||L.c); cx.lineWidth = (s ? 2 : 1.2) * D; let dsf = false; if (s) { cx.setLineDash([6 * D, 4 * D]); dsf = true; } else if (e.t === "line" || e.t === "pline" || e.t === "circle") { const dd = ltDash(ltOf(e), 1.6 * D); if (dd) { cx.setLineDash(dd); dsf = true; } }
     if (e.t === "point") { const x = X(e.pts[0][0]), y = Y(e.pts[0][1]); if (!vis(x, y)) { cx.setLineDash([]); continue; }
@@ -23148,7 +23164,8 @@ function drawFrontages74(ctx,points,project,unit,screenView=false){
   const lengthPx=Math.hypot(dx,dy)/unit;
   if(screenView && lengthPx<64)continue;
   if(screenView)ctx.font=(Math.min(11,8+(lengthPx-64)/24)*unit)+'px Arial';
-  const text=Math.hypot(b[0]-a[0],b[1]-a[1]).toFixed(2)+' m';
+  const length=Math.hypot(b[0]-a[0],b[1]-a[1]),value=length.toFixed(2),text=value+' m';
+  if(screenView&&BBK.frontageTexts?.get(value)?.some(v=>Math.hypot(v[0]-(a[0]+b[0])/2,v[1]-(a[1]+b[1])/2)<Math.min(5,length*.18)))continue;
   if(Math.hypot(dx,dy)<ctx.measureText(text).width+8*unit)continue;
   ctx.save();ctx.translate((p[0]+q[0])/2,(p[1]+q[1])/2);
   ctx.rotate(Math.atan2(dy,dx)+(dx<0?Math.PI:0));ctx.lineWidth=3*unit;
@@ -23259,7 +23276,7 @@ const ACAD_CEPHE = (() => {
   function pick(point){let best=null,ba=Infinity,preferred=null,pra=Infinity;
     if(pickCacheRef!==ents||pickCacheLength!==ents.length){
       pickCacheRef=ents;pickCacheLength=ents.length;
-      pickCacheList=ents.filter(o=>o.t==='pline'&&o.closed&&o.pts?.length>=3);
+      pickCacheList=ents.filter(o=>o.t==='pline'&&o.closed&&o.pts?.length>=3&&!o.fill&&!o.sourceSolid&&sourceAreaRole(o.lay)!=='solid');
     }
     for(const o of pickCacheList){if(lays[o.lay]?.on===false)continue;
       const b=ebb(o);if(!b||point[0]<b[0]||point[0]>b[2]||point[1]<b[1]||point[1]>b[3])continue;
@@ -23267,7 +23284,7 @@ const ACAD_CEPHE = (() => {
       let ar;try{ar=window.ACAD_AREA_EDIT.area(o.pts);}catch(_){continue;}
       if(!(ar>0))continue;
       if(ar<ba){best=o;ba=ar;}
-      if(/^ALAN_PARSEL$/i.test(o.lay)&&ar<pra){preferred=o;pra=ar;}
+      if((sourceAreaRole(o.lay)==='area'||/^KAD_ALN$/i.test(o.lay))&&ar<pra){preferred=o;pra=ar;}
     }
     return preferred||best;
   }
@@ -23606,7 +23623,7 @@ $("cadEsc").addEventListener("click", () => esc());
 $("cadOrtho").addEventListener("click", () => { ortho = !ortho; markTools(); say(ortho ? "Orto açık (yatay/dikey)" : "Orto kapalı"); });
 $("cadGrad").addEventListener("click", () => { grad = !grad; markTools(); persist(); });
 document.querySelectorAll("#cadSnaps input").forEach(i => { i.checked = !!SN[i.dataset.s]; i.addEventListener("change", () => SN[i.dataset.s] = i.checked); });
-document.addEventListener("keydown", e => { if ($("v-cad").hidden) return; const tg = e.target.tagName; if (tg === "INPUT" && e.target.id !== "cadIn" || tg === "TEXTAREA" || tg === "SELECT") return;
+document.addEventListener("keydown", e => { if ($("v-cad").hidden||document.getElementById("acadBackupTools")?.matches(":popover-open")) return; const tg = e.target.tagName; if (tg === "INPUT" && e.target.id !== "cadIn" || tg === "TEXTAREA" || tg === "SELECT") return;
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); undo(); return; } if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") { e.preventDefault(); redo(); return; }
   const inEmpty = e.target.id !== "cadIn" || !e.target.value; if (inEmpty && (e.ctrlKey || e.metaKey) && (e.key === "a" || e.key === "A")) { e.preventDefault(); run("HEPSI"); return; } if (inEmpty && (e.key === "Delete" || e.key === "Backspace") && !cmd && sel.size) { e.preventDefault(); run("SIL"); return; }
   if (e.key === "Delete" && !cmd) { run("SIL"); return; } if (e.key === "Escape") { esc(); return; } if (e.key === "Enter" && e.target.id !== "cadIn" && !(tg === "BUTTON" || tg === "A")) { e.preventDefault(); enter(); return; } /* Enter: komut satırına odak gerekmeden bitir / son komutu tekrarla */ if (e.key === "F8") { e.preventDefault(); ortho = !ortho; markTools(); return; }
@@ -28854,24 +28871,24 @@ $("cadF2").addEventListener("change", async e => { const f = e.target.files[0]; 
 const toFD = L => { L = L.filter(e => !(typeof e.lay === 'string' && e.lay.startsWith('MIM_KOORDINATSIZ:'))); /* koordinatsız mimari paftaları (projenin yanına dizilmiş) koordinatlı modüllere gönderilmez */ const d = { lines: [], polys: [], points: [], texts: [], circles: [] };
   L.forEach(e => { if (!lays[e.lay] || lays[e.lay].on === false) return; const q = e.pts;
     if (e.t === "line") d.lines.push({ lay: e.lay, pts: q.map(p => [p[0], p[1], p[2] || 0]) });
-    else if (e.t === "pline") d.polys.push({ lay: e.lay, closed: !!e.closed, pts: q.map(p => [p[0], p[1], p[2] || 0]) });
+    else if (e.t === "pline") d.polys.push({ lay: e.lay, nativeName:e.areaName||e.n||"", sourceSolid:e.sourceSolid, closed: !!e.closed, pts: q.map(p => [p[0], p[1], p[2] || 0]) });
     else if (e.t === "point") d.points.push({ lay: e.lay, n: e.n || "", e: q[0][0], y: q[0][1], z: q[0][2] || 0 });
     else if (e.t === "text") d.texts.push({ lay: e.lay, s: e.s, e: q[0][0], y: q[0][1], h: e.h || 1, rot: e.rot || 0, al: e.al, c: lays[e.lay] && lays[e.lay].c });
     else if (e.t === "circle") { const P = []; for (let k = 0; k < 36; k++) { const a = k / 36 * 2 * Math.PI; P.push([e.c[0] + e.r * Math.cos(a), e.c[1] + e.r * Math.sin(a), 0]); } d.polys.push({ lay: e.lay, closed: true, pts: P }); } });
   return d; };
 
-function ifzLocalCadContext(P){
+function ifzLocalCadContext(P,selectedEntity){
  const pbb=A.bbox(P),w=pbb[2]-pbb[0],h=pbb[3]-pbb[1],R=Math.max(45,Math.min(120,Math.max(w,h)*.8));
  const box=[pbb[0]-R,pbb[1]-R,pbb[2]+R,pbb[3]+R];
  const near=e=>{const P0=e.t==='circle'?[e.c]:e.pts;if(!P0?.length)return false;
   let minx=Infinity,miny=Infinity,maxx=-Infinity,maxy=-Infinity;for(const p of P0){if(p[0]<minx)minx=p[0];if(p[0]>maxx)maxx=p[0];if(p[1]<miny)miny=p[1];if(p[1]>maxy)maxy=p[1];}
   return maxx>=box[0]&&minx<=box[2]&&maxy>=box[1]&&miny<=box[3];};
- const selected=selEnts().find(e=>e.t==='pline'&&e.closed),layerName=selected?.lay||'',candidates=[];
+ const selected=selectedEntity||selEnts().find(e=>e.t==='pline'&&e.closed),layerName=selected?.lay||'',candidates=[];
  let parcelN=0,roadN=0;
  for(const e of ents){if(e.roadArea||e.roadBorder||!lays[e.lay]||lays[e.lay].on===false||!near(e))continue;
   if(typeof e.lay==='string'&&e.lay.startsWith('MIM_KOORDINATSIZ:'))continue;
   let priority=2;
-  if(e===selected)priority=0;
+  if(e===selected)priority=-1;
   else if(e.t==='pline'&&e.closed&&e.pts?.length>=3){priority=(e.lay===layerName||/PARSEL|ADA|ALAN|KADASTRO/i.test(e.lay))?0:2;if(priority===0)parcelN++;}
   else if(/YOL|CADDE|SOKAK|BULVAR|YOL_/i.test(e.lay||'')||(e.t==='text'&&/YOL|CADDE|SOKAK|BULVAR/i.test(e.s||''))){priority=0;roadN++;}
   else if(e.t==='line'||e.t==='pline')priority=1;
@@ -28889,13 +28906,13 @@ function parcelOfSel() { const L = selEnts(); const cl = L.filter(e => e.t === "
 // parsel içindeki "ada/parsel" yazısı
 function noOf(P) { if (!P) return null; const known=window.ACAD_PARCEL_META?.forPolygon(P); if(known)return known; for (const e of ents) if (e.t === "text" && window.A && A.inPoly(P, e.pts[0][0], e.pts[0][1])) { const m = String(e.s).trim().match(/^(\d{1,5})\s*\/\s*(\d{1,5})$/); if (m) return { ada: m[1], no: m[2] }; } return null; }
 const projName = () => (CDOC && CDOC.name ? String(CDOC.name).replace(/\.[^.]+$/, "") : "") || (Object.keys(lays).find(l => l !== "0") || "Çizim");
-function flowTo(m, selectedParcelOnly=false) { if (!ents.length) return say("Önce 📂 Dosya aç ile bir proje yükle", true); if (PLAN) return say("Önce açık düzenlemeyi ✓ Uygula ya da ✕ Vazgeç ile bitir", true);
-  let P = sel.size ? parcelOfSel() : null; if (!sel.size) { const C = ents.filter(e => e.t === "pline" && e.closed && e.pts.length >= 3 && lays[e.lay] && lays[e.lay].on); if (C.length === 1) P = C[0].pts.map(q => [q[0], q[1]]); } if (sel.size && !P) return say("Seçimden kapalı bir parsel sınırı çıkmadı. Kapalı çizgiyi ya da parseli oluşturan çizgileri seç.", true);
-  const a = window.APLT.S(); if (m === "apl" && a.ifz && a.ifz.parts && a.ifz.parts.length && !flowTo.arm) { flowTo.arm = 1; setTimeout(() => flowTo.arm = 0, 5000); return say("İfraz sekmesindeki bölme sonucu, yeni parsel aktarılınca silinir. Çıktılarını aldıysan ya da ⬅ Sonucu çizime al ile çizime eklediysen ② Yapı APL'ye tekrar bas.", true); } flowTo.arm = 0;
+async function flowTo(m, selectedParcelOnly=false, active=null) { if (!ents.length) return say("Önce 📂 Dosya aç ile bir proje yükle", true); if (PLAN) return say("Önce açık düzenlemeyi ✓ Uygula ya da ✕ Vazgeç ile bitir", true);
+  let P = active ? active.P.map(p=>p.slice()) : sel.size ? parcelOfSel() : null; if (!active&&!sel.size) { const C = ents.filter(e => e.t === "pline" && e.closed && e.pts.length >= 3 && lays[e.lay] && lays[e.lay].on); if (C.length === 1) P = C[0].pts.map(q => [q[0], q[1]]); } if (sel.size && !P) return say("Seçimden kapalı bir parsel sınırı çıkmadı. Kapalı çizgiyi ya da parseli oluşturan çizgileri seç.", true);
+  const a = window.APLT.S(); if (!active && m === "apl" && a.ifz && a.ifz.parts && a.ifz.parts.length && !flowTo.arm) { flowTo.arm = 1; setTimeout(() => flowTo.arm = 0, 5000); return say("İfraz sekmesindeki bölme sonucu, yeni parsel aktarılınca silinir. Çıktılarını aldıysan ya da ⬅ Sonucu çizime al ile çizime eklediysen ② Yapı APL'ye tekrar bas.", true); } flowTo.arm = 0;
   // V7.0.34: Yapı Aplikasyonu aktarımında doğrulanmamış nokta adı kullanma.
   // İfraz ve parselsiz çizim aktarımının eski davranışı korunur.
   /* Parsel köşelerinden ardışık tekrar eden ve kapanış noktası temizlenir (sıfır uzunluklu kenar aktarımı durdurmasın) */
-  if (P && P.length > 3) { const Q = []; for (const q of P) if (!Q.length || Math.hypot(q[0] - Q[Q.length - 1][0], q[1] - Q[Q.length - 1][1]) > 1e-4) Q.push(q); while (Q.length > 3 && Math.hypot(Q[0][0] - Q[Q.length - 1][0], Q[0][1] - Q[Q.length - 1][1]) <= 1e-4) Q.pop(); P = Q; }
+  if (!active && P && P.length > 3) { const Q = []; for (const q of P) if (!Q.length || Math.hypot(q[0] - Q[Q.length - 1][0], q[1] - Q[Q.length - 1][1]) > 1e-4) Q.push(q); while (Q.length > 3 && Math.hypot(Q[0][0] - Q[Q.length - 1][0], Q[0][1] - Q[Q.length - 1][1]) <= 1e-4) Q.pop(); P = Q; }
   var strictYapi=(m==="apl"&&!!P), verifiedYapi=null;
   if(strictYapi){
     if(!window.ACAD_CAD_AUDIT)return say("Nokta kimliği denetimi yüklenmedi; Yapı Aplikasyonu aktarımı durduruldu.",true);
@@ -28910,9 +28927,9 @@ function flowTo(m, selectedParcelOnly=false) { if (!ents.length) return say("Ön
     yAudit.matched.forEach(function(hit){if(!cakAd.has(hit.name))verifiedYapi[hit.corner-1]=hit.name;});
     if(yAudit.warnings.length&&!confirm("Yapı Aplikasyonu aktarım uyarıları:\\n"+yAudit.warnings.join("\\n")+"\\n\\nKoordinatları değiştirmeden aktarılsın mı?"))return;
   }
-  const localIfz=selectedParcelOnly&&P&&m==='ifz'?ifzLocalCadContext(P):null;
-  const passedEntities=localIfz?localIfz.entities:(selectedParcelOnly&&P)?ents.filter(e=>{
-    if(e.t==='pline'&&e.closed&&sel.has(e.id))return true;
+  const localIfz=selectedParcelOnly&&P&&m==='ifz'?ifzLocalCadContext(P,active?.e):null;
+  const passedEntities=localIfz?localIfz.entities:(selectedParcelOnly&&P&&(!active||m==='kam'))?ents.filter(e=>{
+    if(e.t==='pline'&&e.closed&&(active?e===active.e:sel.has(e.id)))return true;
     if(e.t!=='point'||!e.pts?.[0])return false;
     const q=e.pts[0];return P.some(p=>Math.abs(p[0]-q[0])<=.025&&Math.abs(p[1]-q[1])<=.025&&Math.hypot(p[0]-q[0],p[1]-q[1])<=.025);
   }):ents;
@@ -28948,9 +28965,31 @@ function flowTo(m, selectedParcelOnly=false) { if (!ents.length) return say("Ön
     }
     d.ifzNetwork=rings;
   }
-  window.APLT.fromCad(d, projName(), P, noOf(P), strictYapi, verifiedYapi,m); if (typeof showTab === "function") showTab(m);
-  setTimeout(() => window.APLT.fitA(!!localIfz), 60);
-  say(P ? `${sel.size ? "Seçili parsel" : "Çizimdeki kapalı alan"} ${m === "ifz" ? "ifraza" : "yapı aplikasyonuna"} gönderildi (${fmt(Math.abs(areaOf(P)))} m²)` : `Çizim gönderildi — ${m === "ifz" ? "İfraz" : "Yapı APL"} sekmesinde parselin içine dokun`); }
+  const sourceName=projName();
+  const ident=active ? (active.meta.parsel?{ada:active.meta.ada,no:active.meta.parsel}:null) : noOf(P);
+  if(active&&ident?.ada&&ident.no){
+    const source=d.polys.find(o=>o.closed&&o.lay===active.e.lay&&o.pts.length===active.e.pts.length&&o.pts.every((q,i)=>q[0]===active.e.pts[i][0]&&q[1]===active.e.pts[i][1]));
+    if(source)source.nativeName=ident.ada+"/"+ident.no;
+  }
+  const revision=UVER;
+  await showTab(m);
+  if(document.querySelector('.tabs button[aria-selected=true]')?.dataset.tab!==m)return;
+  window.APLT.fromCad(d,sourceName,P,ident,strictYapi,verifiedYapi,m,!!active);
+  if(active){
+    if(m==='kam'){
+      const k=window.APLT.KM(),key=parcelTransferKey(active.e);
+      if(k.parcelFile!==key){
+        k.fileInfo||={};if(k.parcelFile)k.fileInfo[k.parcelFile]=k.bilgi;
+        Object.assign(k,{parcelFile:key,bilgi:k.fileInfo[key]||{},list:[],sinir:null,ax:null,axSrc:"",pi:null,yeni:[],harici:0,hariciP:[],hariciL:[],hariciKalan:0,kayitFarki:null});
+        window.aplShow('kam');
+      }
+    }
+    const par=window.APLT.S().parsel;
+    par.cadParcelKey=parcelTransferKey(active.e);par.cadTransferMode=m;par.cadRevision=revision;
+    window.APLT.saveData();
+  }
+  window.APLT.fitA(!active&&!!localIfz);
+  say(P ? `${sel.size ? "Seçili parsel" : "Çizimdeki kapalı alan"} ${({ifz:"ifraza",apl:"yapı aplikasyonuna",trk:"yola terk / ihdasa",kam:"kamulaştırmaya"})[m]} gönderildi (${fmt(Math.abs(areaOf(P)))} m²)` : `Çizim gönderildi — ${m === "ifz" ? "İfraz" : "Yapı APL"} sekmesinde parselin içine dokun`); }
 // kübaj: kotlu noktalar, kotlu çizgi köşeleri ve ondalıklı kot yazıları tabaka tabaka
 function zSrc() { const M = {}, seen = new Set(); const put = (l, x, y, z, n) => { const k = l + "|" + Math.round(x * 1000) + "|" + Math.round(y * 1000); if (seen.has(k)) return; seen.add(k); (M[l] = M[l] || []).push({ n: n || "", e: x, y, z }); };
   ents.forEach(e => { if (e.t === "point") { if (Math.abs(e.pts[0][2] || 0) > 1e-3) put(e.lay, e.pts[0][0], e.pts[0][1], e.pts[0][2], e.n); }
@@ -29086,7 +29125,8 @@ try{const box=$("cadBox");if(box&&typeof ResizeObserver!=='undefined'){
  const observer=new ResizeObserver(()=>{if(!$("v-cad").hidden)acad65SizeRequest(false);});observer.observe(box);
 }}catch(e){console.warn('CAD panel boyutu gözlenemedi',e)}
 try { arzSave(); } catch (e) {}
-/* A-CAD 7.1.15.56 - Active parcel, no destructive changes to source coordinates. */
+function parcelTransferKey(e){return JSON.stringify([CDOC?.name||'',e.lay,e.id,e.pts]);}
+ /* A-CAD 7.1.15.56 - Active parcel, no destructive changes to source coordinates. */
 (()=>{'use strict';
   let current=null;const inSession=new Map();
   const fmt=(v,d=2)=>Number(v).toLocaleString('tr-TR',{minimumFractionDigits:d,maximumFractionDigits:d});
@@ -29096,23 +29136,32 @@ try { arzSave(); } catch (e) {}
   const hash=s=>{let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return(h>>>0).toString(16)};
   const parcelKey=e=>'acad:parcel-info:v1:'+hash((CDOC?.name||'')+'|'+e.lay+'|'+coords(e));
   function candidates(e,P){const found=new Set();const areaName=clean(e.areaName);const re=/(?:ADA\s*[:.]?\s*)?(\d{1,6})\s*[/\\]\s*(?:PARSEL\s*[:.]?\s*)?(\d{1,6})/i;
+    const native=/^(\d{1,6})\s*[/_]\s*(\d{1,6})$/.exec(areaName);
+    if(native)return {ada:native[1],parsel:native[2],origin:'Çizimden okundu',confirmed:false};
     if(re.test(areaName)){const m=areaName.match(re);found.add(m[1]+'/'+m[2]);}
     // Only exact paired cadastral references count; standalone numbers are ambiguous.
-    const bb=ebb(e);
+    const bb=ebb(e),blocks=new Set(),parcels=new Set();
     for(const x of ents){if(x.t!=='text'||!x.pts?.[0])continue;const q=x.pts[0];if(q[0]<bb[0]||q[0]>bb[2]||q[1]<bb[1]||q[1]>bb[3])continue;
       const m=clean(x.s).match(/^(?:ADA\s*[:.]?\s*)?(\d{1,6})\s*\/\s*(?:PARSEL\s*[:.]?\s*)?(\d{1,6})$/i);
-      if(m&&inPolyC(P,q[0],q[1]))found.add(m[1]+'/'+m[2]);
+      if(!inPolyC(P,q[0],q[1]))continue;
+      if(m)found.add(m[1]+'/'+m[2]);
+      else if(/^\d{1,6}$/.test(clean(x.s))){
+        const name=String(x.lay||'').toUpperCase();
+        if(/^(?:YAZI_)?ADA(?:_NO|_ADI|_YAZI)?$/.test(name))blocks.add(clean(x.s));
+        if(/^(?:YAZI_)?PARSEL(?:_NO|_ADI|_YAZI)?$/.test(name))parcels.add(clean(x.s));
+      }
     }
+    if(blocks.size===1&&parcels.size===1)found.add([...blocks][0]+'/'+[...parcels][0]);
     if(found.size===1){const [ada,parsel]=[...found][0].split('/');return {ada,parsel,origin:'Çizimden okundu',confirmed:false};}
     return {ada:'',parsel:'',origin:found.size>1?'Çelişen ada/parsel etiketleri; elle doğrula':'Ada/parsel bulunamadı; elle gir',confirmed:false};
   }
   function loadMeta(e,P){const fallback=candidates(e,P);const memo=inSession.get(parcelKey(e));if(memo?.signature===coords(e))return {ada:memo.ada,parsel:memo.parsel,origin:'Kullanıcı doğruladı',confirmed:true};try{const j=JSON.parse(localStorage.getItem(parcelKey(e))||'null');if(j?.signature===coords(e)&&/^\d{1,6}$/.test(j.ada)&&/^\d{1,6}$/.test(j.parsel))return {ada:j.ada,parsel:j.parsel,origin:'Kullanıcı doğruladı',confirmed:true};}catch(_){}return fallback;}
   const valid=()=>{if(!current)return false;const e=ents.find(x=>x===current.e);if(!e||coords(e)!==current.signature||lays[e.lay]?.on===false){current=null;announce();return false;}return true};
   function announce(){const detail=current?{id:current.e.id,layer:current.e.lay,area:Math.abs(areaOf(current.P)),corners:current.P.length,ada:current.meta.ada,parsel:current.meta.parsel,origin:current.meta.origin,confirmed:current.meta.confirmed}:null;window.dispatchEvent(new CustomEvent('acad:active-parcel',{detail}));}
-  function activate(e){if(!e||e.t!=='pline'||!e.closed||e.pts?.length<3){say('Kapalı parsel sınırı seçilemedi.',true);return false;}
+  function activate(e,selectOnly=true){if(!e||e.t!=='pline'||!e.closed||e.pts?.length<3){say('Kapalı parsel sınırı seçilemedi.',true);return false;}
     let a;try{a=ACAD_CEPHE.get(e)}catch(ex){say('Parsel geçersiz: '+ex.message,true);return false;}
     current={e,P:p2(e),signature:coords(e),meta:loadMeta(e,a.P)};
-    sel.clear();sel.add(e.id);draw();announce();say(`${current.P.length} köşeli parsel seçildi · ${fmt(a.area)} m² · ${e.lay}`);return true;
+    if(selectOnly){sel.clear();sel.add(e.id);}draw();announce();say(`${current.P.length} köşeli parsel seçildi · ${fmt(a.area)} m² · ${e.lay}`);return true;
   }
   function choose(){if(!ents.length)return say('Önce proje dosyasını aç.',true);
     cmd={name:'Parsel Seç',raw:true,rcExit:true,pt(p){const e=ACAD_CEPHE.pick(p);if(!e){say('Kapalı parselin içine tıkla. Alan bulunamadı.',true);return;}activate(e);cmd=null;markTools();draw();}};
@@ -29133,13 +29182,39 @@ try { arzSave(); } catch (e) {}
     for(let i=0;i<P.length;i++)if(Math.hypot(P[i][0]-current.P[i][0],P[i][1]-current.P[i][1])>0.000001)return null;
     return current.meta.ada&&current.meta.parsel?{ada:current.meta.ada,no:current.meta.parsel}:null;
   }
-  function send(dest){if(!valid())return say('Önce geçerli bir parsel seç.',true);
-    sel.clear();sel.add(current.e.id);
+  let navigating=false;
+  function navigate(dest){
+    if($('v-cad').hidden||!['ifz','apl','akr','trk','kam'].includes(dest))return false;
+    const areas=selEnts().filter(e=>e.t==='pline'&&e.closed&&e.pts.length>=3&&!e.fill&&!e.sourceSolid&&lays[e.lay]?.on!==false);
+    if(!areas.length){if(!sel.size&&valid()){send(dest);return true;}return false;}
+    const e=areas.length===1?areas[0]:areas.find(item=>valid()&&item===current.e);
+    if(!e){say('Birden fazla alan seçili. Aktarılacak alanı Parsel Seç ile belirle.',true);return true;}
+    if((!valid()||current.e!==e)&&!activate(e,false))return true;
+    send(dest);return true;
+  }
+  async function send(dest){if(!valid())return say('Önce geçerli bir parsel seç.',true);
     try{
-      if(dest==='ifz'||dest==='apl')flowTo(dest,true);
-      else if(dest==='kam'){
-        // Selecting a parcel must never silently redefine the acquisition boundary.
-        const fd=toFD([current.e]);window.APLT.fromCad(fd,projName(),null,null);showTab('kam');say('Seçili parsel Kamulaştırma için kaynak veridir. Kamulaştırma sınırını ayrıca seç veya çiz.');
+      if(['ifz','apl','trk','kam','akr'].includes(dest)){
+        if(navigating)return;
+        const st=window.APLT.S(),same=st.parsel?.cadParcelKey===parcelTransferKey(current.e)&&
+          (!current.meta.parsel||(String(st.antet.ada)===current.meta.ada&&String(st.antet.parselNo)===current.meta.parsel));
+        if(same&&((st.parsel.cadTransferMode===dest&&st.parsel.cadRevision===UVER)||st.ifz.parts?.length)){
+          await showTab(dest);return;
+        }
+        if(PLAN)return say('Açık CAD düzenlemesini Uygula veya Vazgeç ile bitir.',true);
+        if(dest==='kam'){
+          const k=window.APLT.KM();
+          if((k.list?.length||k.sinir||k.ax?.length)&&k.parcelFile!==parcelTransferKey(current.e)&&!confirm('Bu parsel için yeni kamulaştırma çalışması açılsın mı? Mevcut sınır ve sonuçlar değişecek.'))return;
+        }
+        if(st.ifz.parts?.length&&dest!=='akr'&&!confirm('Yeni parsel aktarılırsa mevcut ifraz sonucu değişecek. Devam edilsin mi?'))return;
+        navigating=true;
+        try{
+          if(dest==='akr'){
+            const saved=[...sel];sel.clear();sel.add(current.e.id);
+            try{document.querySelector('#cadFlow [data-cad-dest="akr"]').click();}
+            finally{sel.clear();saved.forEach(id=>sel.add(id));}
+          }else await flowTo(dest,true,current);
+        }finally{navigating=false;}
       }
       else if(dest==='cephe')ACAD_CEPHE.options(ACAD_CEPHE.get(current.e),true);
       else if(dest==='pdf')ACAD_CEPHE.pdf(ACAD_CEPHE.get(current.e)).catch(ex=>say('PDF: '+ex.message,true));
@@ -29151,7 +29226,7 @@ try { arzSave(); } catch (e) {}
   // Only refresh on changes; do not add a polling timer to the CAD drawing loop.
   window.addEventListener('acad:cad-changed',()=>{if(current&&!valid())announce()});
   window.ACAD_PARCEL_META={forEntity:getForEntity,forPolygon:getForPolygon};
-  window.ACAD_ACTIVE_PARCEL={choose,activate,update,send,clear(){current=null;sel.clear();announce();draw()},get current(){return valid()?{id:current.e.id,area:Math.abs(areaOf(current.P)),vertices:current.P.length,layer:current.e.lay,meta:{...current.meta}}:null},verify:valid};
+  window.ACAD_ACTIVE_PARCEL={choose,activate,update,send,navigate,clear(){current=null;sel.clear();announce();draw()},get current(){return valid()?{id:current.e.id,corners:current.P.length,...current.meta,area:Math.abs(areaOf(current.P)),vertices:current.P.length,layer:current.e.lay,meta:{...current.meta}}:null},verify:valid};
   CMDS.PARSELSEC=choose;ALIAS.PS='PARSELSEC';
 })();
 
@@ -31557,8 +31632,9 @@ try { window.IFC = IFC; } catch (e) {}
           if(!confirm(summary))return;
           var verifiedNames=poly.map(function(){return "";});
           audit.matched.forEach(function(m){verifiedNames[m.corner-1]=m.name;});
-          window.APLT.fromCad(toFD(ents),projName(),poly,pn,true,verifiedNames);
-          target.click();
+          const fd=toFD(ents),sourceName=projName();
+          await showTab(t);if(target.getAttribute('aria-selected')!=='true')return;
+          window.APLT.fromCad(fd,sourceName,poly,pn,true,verifiedNames,t,true);window.APLT.fitA();
           if(typeof say==='function')say('CAD parseli Aplikasyon Krokisi’ne aktarıldı ('+poly.length+' köşe).');
         }catch(err){alert('Aplikasyon Krokisi aktarımı tamamlanamadı: '+err.message);}
         return;
@@ -33242,7 +33318,7 @@ const refresh=ensureResize();
  // that *same* working button next to Open, retaining the IndexedDB handler.
  let recent=flow.querySelector('.rfBtn');
  if(!recent){recent=document.createElement('button');recent.type='button';recent.className='rfBtn';recent.addEventListener('click',()=>window.RECENT?.show?.($('cadF2')));}
- recent.id='acadRecentBesideOpen';recent.textContent='🕘 Son Açılanlar';
+ recent.id='acadRecentBesideOpen';recent.textContent='◷ Son açılan';recent.setAttribute('aria-label','Son açılan dosyaları göster');
  recent.title='Bu cihazda daha önce açılan dosyalar';recent.setAttribute('aria-label','Son açılan dosyaları göster');
  recent.classList.add('acad-recent-visible');bar.append(recent,close,save,saveAs,print,append);
  actions.prepend(bar);
@@ -34588,7 +34664,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  const old=document.getElementById('cadFlow');if(old){const wrap=document.createElement('details');wrap.id='acad56-legacy';wrap.innerHTML='<summary>Diğer modül aktarım araçları</summary>';old.parentNode.insertBefore(wrap,old);wrap.appendChild(old);}
  const $=id=>document.getElementById(id),edit=[ $('acad56-ada'),$('acad56-parsel')];
  function render(s){const picked=!!s;for(const b of dock.querySelectorAll('[data-acad-p]')){if(b.dataset.acadP==='select')continue;b.disabled=!picked;}edit.forEach(x=>{x.disabled=!picked});
-   $('acad56-status').textContent=picked?`${s.corners} köşe · ${Number(s.area).toLocaleString('tr-TR',{maximumFractionDigits:2})} m² · ${s.layer} · ${s.origin}`:'Parsel seçili değil · “Parsel Seç” ile alanın içine tıkla';
+   $('acad56-status').textContent=picked?`${s.ada&&s.parsel?s.ada+"/"+s.parsel+" · ":""}${s.corners} köşe · ${Number(s.area).toLocaleString('tr-TR',{maximumFractionDigits:2})} m² · ${s.layer} · ${s.origin}`:'Parsel seçili değil · “Parsel Seç” ile alanın içine tıkla';
    edit[0].value=picked?s.ada||'':'';edit[1].value=picked?s.parsel||'':'';}
  dock.addEventListener('click',e=>{const b=e.target.closest('[data-acad-p]');if(!b||b.disabled)return;const kind=b.dataset.acadP;
    if(kind==='select')engine.choose();else if(kind==='confirm')engine.update(edit[0].value,edit[1].value);else engine.send(kind);});
@@ -35022,7 +35098,7 @@ body.acad65-panel-adjusting #cadCv{image-rendering:auto}
      document.querySelector('#cadFlow button.rfBtn');
    btn=old||document.createElement('button');
    btn.id='acadRecentBesideOpen';btn.classList.add('rfBtn','acad-recent-visible');
-   btn.type='button';btn.textContent='🕘 Son Açılanlar';btn.title='Bu cihazda son açılan dosyalar';
+   btn.type='button';btn.textContent='◷ Son açılan';btn.title='Bu cihazda son açılan dosyalar';
    btn.setAttribute('aria-label','Son açılan dosyaları göster');
    if(!old)btn.addEventListener('click',()=>window.RECENT?.show?.(inp));
   }
@@ -35223,7 +35299,7 @@ body.acad65-panel-adjusting #cadCv{image-rendering:auto}
  if(!bar||!info)return;
  const DB='acad-safe-switch-v70',STORE='checkpoint',TYPES={cad:'CAD sayfaları',core:'Arazi / Kübaj',infra:'Alt Yapı'};
  let noStore=false, dbPromise=null, writing=false, lastError='', lastCheckpoint=0, sticky=false;
- const status=(t,bad=false)=>{info.textContent=(bad?'⚠ ':'✓ ')+t;info.style.color=bad?'#d78d54':'';info.title=lastError||'';};
+ const status=(t,bad=false)=>{info.textContent=(bad?'⚠ ':'✓ ')+t;info.style.color=bad?'#d78d54':'';info.title=lastError||t;$('acadBackupMenu').title=t;$('acadBackupMenu').classList.toggle('needs-attention',bad);};
  function openDB(){return dbPromise||(dbPromise=new Promise((ok,no)=>{
   try{const req=indexedDB.open(DB,1);
    req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains(STORE))req.result.createObjectStore(STORE);};
@@ -35380,7 +35456,7 @@ body.acad65-panel-adjusting #cadCv{image-rendering:auto}
    await restoreAll(payload.modules);
   }catch(e){lastError=e.message;status('Yedek açılamadı: '+e.message,true)}
  }
- $('acadSafeGo').addEventListener('change',e=>{const name=e.target.value;e.target.value='';if(!name)return;const tab=[...document.querySelectorAll('.tabs button[data-tab]')].find(x=>x.dataset.tab===name);if(tab)tab.click();});
+ $('acadSafeGo').addEventListener('change',e=>{const name=e.target.value;e.target.value='';if(!name||window.ACAD_ACTIVE_PARCEL?.navigate(name))return;const tab=[...document.querySelectorAll('.tabs button[data-tab]')].find(x=>x.dataset.tab===name);if(tab)tab.click();});
  $('acadSafeDownload').addEventListener('click',exportAll);
  $('acadSafeRestore').addEventListener('click',recovery);
  $('acadSafeImport').addEventListener('click',()=>$('acadSafeOpen').click());
@@ -48711,3 +48787,28 @@ window.ACAD_SKETCH_DETAIL.manual=manual;
 </script>
 </body>
 </html>
+
+<style id="acad-compact-module-controls">
+body #acadSafeBar#acadSafeBar{display:inline-flex!important;align-items:center;align-self:center;flex:0 0 auto;flex-wrap:nowrap!important;gap:4px!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;margin:0!important;padding:0!important}
+body #acad57Quickfiles>#acadSafeBar#acadSafeBar{margin-left:auto!important}
+body #acadSafeBar #acadSafeGo,body #acadSafeBar #acadBackupMenu{box-sizing:border-box;width:auto!important;min-width:0!important;max-width:8.4rem!important;min-height:28px!important;height:28px!important;margin:0;padding:3px 7px!important;border:1px solid #597384;border-radius:5px;color:#f0f6fa;background:#304c60;font:600 12px/1.15 system-ui;cursor:pointer}
+body #acadSafeBar #acadSafeGo{width:8.2rem!important;text-overflow:ellipsis}
+body #acadSafeBar #acadBackupMenu.needs-attention{color:#ffcf82;border-color:#cd9246}
+body #acadBackupTools{position:fixed;inset:0;margin:auto;width:min(280px,85vw);padding:16px!important;background:var(--card,#fff);color:var(--ink,#142736);border:1px solid #718696;border-radius:9px;box-shadow:0 8px 28px #0004;white-space:normal}
+body #acadBackupTools:popover-open{display:grid!important;gap:8px}
+body #acadBackupTools::backdrop{background:#17243240}
+body #acadBackupTools #acadSafeStatus{display:block!important;min-width:0!important;font-size:12px}
+body #acadBackupTools button{width:100%;text-align:start}
+@media(max-width:760px){body #acad57Quickfiles>#acadSafeBar#acadSafeBar{order:-1;margin-left:0!important;margin-right:2px!important}body #acadSafeBar #acadSafeGo{width:6.5rem!important}body #acad57Quickfiles #acadRecentBesideOpen{width:32px!important;font-size:0!important}body #acadRecentBesideOpen::before{content:"◷";font:20px/1 system-ui}}
+</style>
+<script id="acad-compact-module-placement">
+(()=>{
+ const bar=document.getElementById('acadSafeBar'), filebar=document.getElementById('acad57Quickfiles');
+ const header=document.querySelector('.wrap > header');
+ function place(){
+   const host=!document.getElementById('v-cad').hidden&&filebar?filebar:header?.lastElementChild;
+   if(host&&bar.parentElement!==host)host.append(bar);
+ }
+ place();window.addEventListener('acad:tab',place);
+})();
+</script>
