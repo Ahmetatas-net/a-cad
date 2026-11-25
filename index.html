@@ -1136,6 +1136,21 @@ body{font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif;letter-spac
 </style>
 
 <style id="acad-v106-query-ux">
+/* Compact window chrome; title drag and icon buttons share one sticky row. */
+#arzBox.acad-query-v106 .acad-v106-head{cursor:grab;touch-action:none;user-select:none;flex-wrap:nowrap!important;gap:6px}
+#arzBox.acad-query-v106 .acad-v106-head:active{cursor:grabbing}
+#arzBox.acad-query-v106 .acad-v106-head-title{flex:1;overflow:hidden}
+#arzBox.acad-query-v106 .acad-v106-head-title strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#arzBox.acad-query-v106 .acad-v106-head-title small{display:none}
+#arzBox.acad-query-v106 .acad-v106-head-actions{flex-wrap:nowrap!important;gap:4px}
+#arzBox.acad-query-v106 .acad-v106-head-actions button{min-width:32px;width:32px;min-height:32px!important;padding:3px!important;font-size:17px!important;line-height:1;flex:none}
+#arzBox.acad-query-v106 .acad-v106-head-actions #arzX{font-size:19px!important}
+#arzBox.acad-query-v106 .acad-v106-head-actions #arzX:hover{background:#fce0e0!important;color:#952e2e!important}
+#cadInfo>.acad-panel-grip,#cadProp>.acad-panel-grip{gap:5px;flex-wrap:nowrap}
+#cadProp:has(>.acad-panel-grip) #cpX{display:none!important}
+#cadInfo>.acad-panel-grip button,#cadProp>.acad-panel-grip button{font-size:17px;padding:2px 8px;min-width:30px}
+@media(max-width:460px){#arzBox.acad-query-v106 .acad-v106-head-title strong{font-size:12px}#arzBox.acad-query-v106 .acad-v106-head-actions button{width:30px;min-width:30px;min-height:36px!important}}
+
 #arzBox.acad-query-v106{touch-action:pan-x pan-y!important;scroll-behavior:auto!important;scrollbar-gutter:stable}
 #arzBox.acad-query-v106 :is(div,section,details)[style*="overflow:auto"],#arzBox.acad-query-v106 .acad-area-elev-scroll{overscroll-behavior-y:auto!important;overscroll-behavior-x:contain!important;touch-action:pan-x pan-y!important;scroll-behavior:auto!important}
 #arzBox.acad-query-v106 .acad-v106-head-actions button.acad-jump{min-width:30px;padding:4px 7px!important}
@@ -21005,6 +21020,7 @@ function arzBox(html) {
   let b=document.getElementById("arzBox");
   if(!b){b=document.createElement("div");b.id="arzBox";document.body.appendChild(b);}
   b.setAttribute("role","dialog");b.setAttribute("aria-label","CAD sorgu ve işlem bilgileri");
+  const savedPosition=b._acadQueryPosition;const savedExpanded=b.dataset.acadQueryExpanded==='1';
   // Reset on EVERY opening. Older dialogs and mobile CSS must not leave a translucent/cropped pane.
   b.style.cssText="position:fixed!important;z-index:2147483000!important;left:50%!important;right:auto!important;bottom:max(12px,env(safe-area-inset-bottom))!important;top:auto!important;transform:translateX(-50%)!important;width:min(560px,calc(100vw - 16px))!important;max-width:calc(100vw - 16px)!important;max-height:min(72dvh,660px)!important;overflow-x:hidden!important;overflow-y:auto!important;box-sizing:border-box!important;opacity:1!important;filter:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:var(--qp-bg)!important;color:var(--qp-text)!important;border:2px solid #366888!important;border-radius:12px!important;box-shadow:0 12px 38px rgba(0,0,0,.58)!important;padding:12px 14px!important;font-size:14px!important;line-height:1.45!important;isolation:isolate!important;overscroll-behavior:contain!important;touch-action:pan-y!important;color-scheme:var(--qp-scheme)!important";
   // Use the VISUAL viewport; unrelated CAD toolbar min-width can enlarge innerWidth on phones.
@@ -21014,8 +21030,8 @@ function arzBox(html) {
   b.style.setProperty('left',(availableWidth/2)+'px','important');
   // iOS/Android may report a taller layout viewport than the actual visible window.
   b.style.setProperty('bottom',(Math.max(0,window.innerHeight-(window.visualViewport?.height||document.documentElement.clientHeight||window.innerHeight))+12)+'px','important');
-  b.innerHTML=`<style>#arzBox>b,#arzBox p,#arzBox p b,#arzBox .note{color:#24384a!important;opacity:1!important;text-shadow:none!important}#arzBox p.road-gap-warning{color:#7a3c00!important;background:#fff1d6!important;border:1px solid #d7ad61;padding:7px 9px;border-radius:6px;font-weight:700!important}#arzBox button{opacity:1!important}</style><div class="acad-v106-head"><div class="acad-v106-head-title"><strong>CAD · Sorgu / İşlem</strong><small>Kaynak koordinatlar korunur</small></div><div class="acad-v106-head-actions"><button type="button" class="acad-jump" id="arzTop" title="Panelin başına git" aria-label="Panelin başına git">↑</button><button type="button" class="acad-jump" id="arzBottom" title="Panelin sonuna git" aria-label="Panelin sonuna git">↓</button><button type="button" id="arzCopy" title="Ekrandaki sorgu bilgilerini kopyala">Kopyala</button><button type="button" id="arzExpand" aria-pressed="false" title="Sorgu penceresini genişlet / daralt">Genişlet</button><button type="button" id="arzX" title="Sorgu penceresini kapat" aria-label="Sorgu penceresini kapat">✕</button></div></div>`+html;
-  clearTimeout(b._pe);b.style.pointerEvents='';b.classList.add('acad-query-v106');b.classList.remove('acadAreaPreviewCompact','acad-query-expanded');b.dataset.acadQueryExpanded='0';b.hidden=false;b.scrollTop=0; try { window.ACAD_UI_FLOAT?.setup(b); } catch(_e){}
+  b.innerHTML=`<style>#arzBox>b,#arzBox p,#arzBox p b,#arzBox .note{color:#24384a!important;opacity:1!important;text-shadow:none!important}#arzBox p.road-gap-warning{color:#7a3c00!important;background:#fff1d6!important;border:1px solid #d7ad61;padding:7px 9px;border-radius:6px;font-weight:700!important}#arzBox button{opacity:1!important}</style><div class="acad-v106-head"><div class="acad-v106-head-title" title="Başlıktan tutup paneli taşı"><strong>⠿ Sorgu / İşlem</strong></div><div class="acad-v106-head-actions"><button type="button" class="acad-jump" id="arzTop" title="Panelin başına git" aria-label="Panelin başına git">↑</button><button type="button" class="acad-jump" id="arzBottom" title="Panelin sonuna git" aria-label="Panelin sonuna git">↓</button><button type="button" id="arzCopy" aria-label="Kopyala" title="Ekrandaki sorgu bilgilerini kopyala">⧉</button><button type="button" id="arzExpand" aria-pressed="false" aria-label="Büyüt" title="Büyüt">⛶</button><button type="button" id="arzX" title="Sorgu penceresini kapat" aria-label="Sorgu penceresini kapat">✕</button></div></div>`+html;
+  clearTimeout(b._pe);b.style.pointerEvents='';b.classList.add('acad-query-v106');b.classList.remove('acadAreaPreviewCompact','acad-query-expanded');b.dataset.acadQueryExpanded='0';b.hidden=false;b.scrollTop=0; try { window.ACAD_UI_FLOAT?.setup(b); if(savedPosition)window.ACAD_UI_FLOAT?.place(b,savedPosition.x,savedPosition.y); } catch(_e){}
   document.getElementById("arzX").onclick=()=>{b.hidden=true;};
   b.querySelector('#arzTop').onclick=()=>{b.scrollTop=0;};
   b.querySelector('#arzBottom').onclick=()=>{b.scrollTop=b.scrollHeight;};
@@ -21038,18 +21054,20 @@ function arzBox(html) {
       b.style.setProperty('width',safeWidth+'px','important');b.style.setProperty('max-width',safeWidth+'px','important');
       b.style.setProperty('left','8px','important');b.style.setProperty('right','auto','important');
     }
-    b.scrollTop=oldScroll;exp.textContent=wide?'Daralt':'Genişlet';exp.setAttribute('aria-pressed',wide?'true':'false');
+    window.ACAD_UI_FLOAT?.place(b,before.left,before.top);b.scrollTop=oldScroll;exp.textContent=wide?'❐':'⛶';exp.title=wide?'Önceki boyuta dön':'Büyüt';exp.setAttribute('aria-label',exp.title);exp.setAttribute('aria-pressed',wide?'true':'false');
   };
+  b.querySelector('.acad-v106-head-title').ondblclick=()=>exp.click();
+  if(savedExpanded)exp.click();
   b.querySelector('#arzCopy').onclick=async()=>{
     const button=b.querySelector('#arzCopy');
     const part=Array.from(b.children).filter(el=>!el.classList?.contains('acad-v106-head')&&!el.classList?.contains('acad-panel-grip')&&el.tagName!=='STYLE');
     const value=part.map(el=>el.innerText||el.textContent||'').join('\n').trim().slice(0,30000);
-    if(!value){button.textContent='Boş';return;}
+    if(!value){button.title='Kopyalanacak bilgi yok';return;}
     try{
       if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(value);
       else{const ta=document.createElement('textarea');ta.value=value;ta.style.cssText='position:fixed;left:-9999px';document.body.appendChild(ta);ta.select();if(!document.execCommand('copy'))throw Error('Kopyalama izni yok');ta.remove();}
-      button.textContent='Kopyalandı ✓';
-    }catch(err){button.textContent='İzin gerekli';}
+      button.textContent='✓';button.title='Kopyalandı';setTimeout(()=>{if(button.isConnected){button.textContent='⧉';button.title='Ekrandaki sorgu bilgilerini kopyala';}},1000);
+    }catch(err){button.textContent='!';button.title='Kopyalama izni gerekli';}
   };
 }
 const f3_ = v => v == null || !isFinite(v) ? "—" : (+v).toFixed(3), noModel = () => !(typeof MS !== "undefined" && MS && MS.tri && MS.tri.length);
@@ -33891,10 +33909,11 @@ D.style.display="none";ciz();})();
    const r=dimensions||el.getBoundingClientRect();
    const width=Math.min(r.width||460,innerWidth-16),height=Math.min(r.height||200,innerHeight-16);
    x=Math.max(8,Math.min(innerWidth-width-8,Number(x)||8));
-   y=Math.max(8,Math.min(innerHeight-Math.min(height,120)-8,Number(y)||8));
+   y=Math.max(8,Math.min(innerHeight-(el.id==='arzBox'?height:Math.min(height,120))-8,Number(y)||8));
    el.style.setProperty('left',Math.round(x)+'px','important');
    el.style.setProperty('top',Math.round(y)+'px','important');
    el.style.setProperty('right','auto','important');el.style.setProperty('bottom','auto','important');el.style.setProperty('transform','none','important');
+   if(el.id==='arzBox')el._acadQueryPosition={x,y};
  }
  function undock(el,r){
    if(el.classList.contains('acad-floating'))return;
@@ -33905,32 +33924,32 @@ D.style.display="none";ciz();})();
  }
  function dock(el){el.classList.remove('acad-floating','acad65-panel-max');
    for(const prop of ['position','left','top','right','bottom','transform','z-index','width','height','min-height','max-width','max-height','overflow'])el.style.removeProperty(prop);
-   const btn=el.querySelector(':scope > .acad-panel-grip .acad65-dock');if(btn)btn.textContent='↗ Taşı';
-   const zoom=el.querySelector(':scope > .acad-panel-grip .acad65-size');if(zoom)zoom.textContent='⤢ Büyüt';
+   const btn=el.querySelector(':scope > .acad-panel-grip .acad65-dock');if(btn)btn.textContent='↗';
+   const zoom=el.querySelector(':scope > .acad-panel-grip .acad65-size');if(zoom)zoom.textContent='⛶';
  }
  function makeGrip(el,arz=false){
    if(!el)return;
-   let bar=el.querySelector(':scope > .acad-panel-grip');
+   let bar=arz?el.querySelector(':scope > .acad-v106-head'):el.querySelector(':scope > .acad-panel-grip');
    if(!bar){bar=document.createElement('div');bar.className='acad-panel-grip'+(arz?' acad-arz-grip':'');
-     const name=document.createElement('span');name.textContent=arz?'⠿ Bilgi penceresini taşı':'⠿ Paneli taşı';
-     const btn=document.createElement('button');btn.type='button';btn.className='acad65-dock';btn.textContent=arz?'Ortala':'↗ Taşı';btn.title=arz?'Konumunu sıfırla':'Panele sabitle / taşıma moduna geç';
-     btn.addEventListener('click',ev=>{ev.stopPropagation();if(arz){el.classList.remove('acad-floating');const props=['left','top','right','bottom','transform'];for(const k of props)el.style.removeProperty(k);el.style.setProperty('left',(Math.max(280,Math.min(document.documentElement.clientWidth,innerWidth))/2)+'px','important');el.style.setProperty('bottom','12px','important');el.style.setProperty('transform','translateX(-50%)','important');return;} if(el.classList.contains('acad-floating'))dock(el);else{const r=el.getBoundingClientRect();undock(el,r);setXY(el,r.left,r.top);btn.textContent='↙ Sabitle';}});
-     const sz=document.createElement('button');sz.className='acad65-size';sz.type='button';sz.textContent='⤢ Büyüt';sz.title='Sorgu / işlem panelini genişlet veya küçült';
+     const name=document.createElement('span');name.textContent='⠿ Panel';name.title='Sürükleyerek taşı';
+     const btn=document.createElement('button');btn.type='button';btn.className='acad65-dock';btn.textContent='↗';btn.title=arz?'Konumunu sıfırla':'Panele sabitle / taşıma moduna geç';
+     btn.addEventListener('click',ev=>{ev.stopPropagation();if(arz){el.classList.remove('acad-floating');const props=['left','top','right','bottom','transform'];for(const k of props)el.style.removeProperty(k);el.style.setProperty('left',(Math.max(280,Math.min(document.documentElement.clientWidth,innerWidth))/2)+'px','important');el.style.setProperty('bottom','12px','important');el.style.setProperty('transform','translateX(-50%)','important');return;} if(el.classList.contains('acad-floating'))dock(el);else{const r=el.getBoundingClientRect();undock(el,r);setXY(el,r.left,r.top);btn.textContent='↙';}});
+     const sz=document.createElement('button');sz.className='acad65-size';sz.type='button';sz.textContent='⛶';sz.title='Sorgu / işlem panelini genişlet veya küçült';
      if(!arz)sz.addEventListener('click',ev=>{
        ev.stopPropagation();const r=el.getBoundingClientRect();undock(el,r);
        const big=el.classList.toggle('acad65-panel-max');
-       if(big){el.dataset.acadNormalWidth=String(r.width);el.style.width=Math.min(innerWidth-24,Math.max(640,Math.round(innerWidth*.62)))+'px';el.style.height=Math.min(innerHeight-48,Math.round(innerHeight*.75))+'px';sz.textContent='⤡ Küçült';}
-       else{el.style.width=Math.min(innerWidth-24,Math.max(260,Math.min(580,Number(el.dataset.acadNormalWidth)||r.width)))+'px';el.style.removeProperty('height');sz.textContent='⤢ Büyüt';}
-       setXY(el,r.left,r.top);btn.textContent='↙ Sabitle';
+       if(big){el.dataset.acadNormalWidth=String(r.width);el.style.width=Math.min(innerWidth-24,Math.max(640,Math.round(innerWidth*.62)))+'px';el.style.height=Math.min(innerHeight-48,Math.round(innerHeight*.75))+'px';sz.textContent='❐';}
+       else{el.style.width=Math.min(innerWidth-24,Math.max(260,Math.min(580,Number(el.dataset.acadNormalWidth)||r.width)))+'px';el.style.removeProperty('height');sz.textContent='⛶';}
+       setXY(el,r.left,r.top);btn.textContent='↙';
      });
-     bar.append(name,btn);if(!arz){bar.append(sz);if(el.id==='cadInfo'){const close=document.createElement('button');close.textContent='Kapat';close.onclick=()=>el.dispatchEvent(new Event('cad-close-info'));bar.append(close);}}el.insertBefore(bar,el.firstChild);
+     bar.append(name,btn);if(!arz){bar.append(sz);if(el.id==='cadInfo'||el.id==='cadProp'){const close=document.createElement('button');close.textContent='✕';close.title='Kapat';close.setAttribute('aria-label','Kapat');close.onclick=()=>{if(el.id==='cadInfo')el.dispatchEvent(new Event('cad-close-info'));else el.hidden=true;};bar.append(close);}}el.insertBefore(bar,el.firstChild);
    }
    if(bar.dataset.dragAttached)return;bar.dataset.dragAttached='1';
    bar.addEventListener('pointerdown',ev=>{
      if(ev.button!==0 || ev.target.closest('button,input,select,a,textarea'))return;
      ev.preventDefault();
      const r=el.getBoundingClientRect();
-     if(!arz && !el.classList.contains('acad-floating')){undock(el,r);bar.querySelector('.acad65-dock').textContent='↙ Sabitle';}
+     if(!arz && !el.classList.contains('acad-floating')){undock(el,r);bar.querySelector('.acad65-dock').textContent='↙';}
      else if(arz){el.classList.add('acad-floating');}
      setXY(el,r.left,r.top);
      const startX=ev.clientX,startY=ev.clientY,xx=r.left,yy=r.top;
@@ -33946,7 +33965,7 @@ D.style.display="none";ciz();})();
  for(const id of panelIds){const el=$(id);if(!el)continue;makeGrip(el);if(id==='cadInfo'||id==='cadProp'){
    let busy=false;new MutationObserver(()=>{if(busy||el.querySelector(':scope > .acad-panel-grip'))return;busy=true;makeGrip(el);busy=false;}).observe(el,{childList:true});
  }}
- window.ACAD_UI_FLOAT={setup:el=>makeGrip(el,true)};
+ window.ACAD_UI_FLOAT={setup:el=>makeGrip(el,true),place:(el,x,y)=>setXY(el,x,y)};
  // Keyboard-friendly navigation; hide offscreen flyouts on module changes.
  document.querySelectorAll('nav.tabs [role="tab"]').forEach(b=>b.setAttribute('tabindex','0'));
  window.ACAD_UI_INFO={groups:groups.length,hasQuality:!!qselect,panels:panelIds.filter(id=>!!$(id))};
