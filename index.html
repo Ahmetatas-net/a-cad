@@ -15823,6 +15823,8 @@ function editPage() { const pg = pagesNow(), p = pg[Math.max(0, Math.min(PV, pg.
   });
 }
 function openSheetEditor(p,pdf,back){
+  if(!p._detailChoice){const choice=document.createElement("dialog");choice.style.cssText="background:#172b3c;color:white;border:1px solid #69849b;border-radius:12px;padding:16px";choice.innerHTML='<b>Pafta düzenle</b><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px"><button data-normal>Yazı / çizgi düzenle</button><button data-detail>Ayrıntı oluştur</button><button data-cancel>İptal</button></div>';document.body.append(choice);const close=()=>choice.remove();choice.querySelector("[data-normal]").onclick=()=>{close();openSheetEditor({...p,_detailChoice:true},pdf,back);};choice.querySelector("[data-detail]").onclick=()=>{close();ACAD_SKETCH_DETAIL.manual(p,pdf,back,G=>{SHEo()[p.key]={st:p.st,G};save();});};choice.querySelector("[data-cancel]").onclick=close;choice.oncancel=close;choice.showModal();return;}
+
   const st=p.st,before=SHEo()[p.key];let current=p;
   window.cadEdit({title:`Pafta düzenleniyor · ${p.ad}`,hint:"Taşı veya Sil ile paftayı düzenle. Uygula ile kaydet.",
     load(add, layer) { const L = c => { const n = "Renk " + (c || "#000"); layer(n, dispCol(c)); return n; }; layer("Kâğıt sınırı", "#555"); add({ t: "pline", pts: [[0, 0, 0], [p.W, 0, 0], [p.W, p.H, 0], [0, p.H, 0]], closed: true, lay: "Kâğıt sınırı", ref: true });
@@ -47149,6 +47151,118 @@ export { initSync, __wbg_init as default };
   for(const id of ['acadYolV5','acad25Frame','inf69Frame','acadAreaKitFrame']){
     const frame=document.getElementById(id);if(frame){frame.addEventListener('load',()=>bind(frame));bind(frame);}
   }
+})();
+</script>
+<script>
+(function(){
+const distance=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
+const circle=(c,r)=>Array.from({length:97},(_,i)=>[c[0]+r*Math.cos(i*Math.PI/48),c[1]+r*Math.sin(i*Math.PI/48)]);
+const clip=(a,b,c,r)=>{
+ const dx=b[0]-a[0],dy=b[1]-a[1],x=a[0]-c[0],y=a[1]-c[1],aa=dx*dx+dy*dy;
+ if(!aa)return null;
+ const bb=x*dx+y*dy,disc=bb*bb-aa*(x*x+y*y-r*r);
+ if(disc<0)return null;
+ const lo=Math.max(0,(-bb-Math.sqrt(disc))/aa),hi=Math.min(1,(-bb+Math.sqrt(disc))/aa);
+ return hi>lo?[[a[0]+lo*dx,a[1]+lo*dy],[a[0]+hi*dx,a[1]+hi*dy]]:null;
+};
+const label=(p,s,size=2,extra={})=>({t:'x',x:p[0],y:p[1],s:String(s),size,al:'c',color:'#000',sabit:true,fix:true,...extra});
+const line=(p,w=.18,color='#000')=>({t:'l',p,w,color,detail:true});
+function inset(source,src,r,dst,R,n,opts={}){
+ const k=R/r, map=p=>[dst[0]+(p[0]-src[0])*k,dst[1]+(p[1]-src[1])*k],out=[],texts=[];
+ for(const g of source){
+  if(g.detail)continue;
+  if(g.t==='l'){
+   if(g.ust&&g.p.length>8){const b=A.bbox(g.p),p=[(b[0]+b[2])/2,(b[1]+b[3])/2];if(distance(p,src)<r-.2)out.push({...line(circle(map(p),.55),.16,g.color),ust:true});continue;}
+   for(let j=1;j<g.p.length;j++){
+    const pair=clip(g.p[j-1],g.p[j],src,r);
+    if(pair)out.push(line(pair.map(map),g.w,g.color));
+   }
+  }else if(g.t==='x'&&g.s&&!g._acadOmit){
+   const a=g.anc||g.acadAnchor||[g.x,g.y];
+   if(distance(a,src)>r-0.6)continue;
+   if(opts.real&&(g.pointNumber||g.it||g.acadRole==='frontage'||g.acadRole==='corner'))continue;
+   const p=map([g.x,g.y]),h=Math.max(1.9,Math.min(2.7,g.size||2)),w=A.tw(g.s,h);
+   if(distance(p,dst)+Math.hypot(w/2,h)<R-.5)texts.push(label(p,g.s,h,{rot:g.rot||0,color:g.color||'#000',it:g.it}));
+  }
+ }
+ if(opts.real){
+  const {nodes,edges,F}=opts.real;
+  const candidates=[];
+  for(const node of nodes){
+   const a=F.M(node.p);if(distance(a,src)>r-.3)continue;
+   const q=map(a);out.push({...line(circle(q,.55),.17),ust:true});
+   const h=2.05,w=A.tw(node.n,h);
+   const cand=[];
+   for(const gap of [1.5,2.2,3.1])for(let i=0;i<16;i++){
+    const t=i*Math.PI/8,p=[q[0]+Math.cos(t)*(gap+w/2),q[1]+Math.sin(t)*(gap+1)];
+    if(distance(p,dst)+Math.hypot(w/2,h/2)<R-.7)cand.push(p);
+   }
+   if(cand.length)candidates.push({...label(cand[0],node.n,h),fix:false,sabit:false,cand,anc:q,pr:1,pointNumber:true,regionOnly:true});
+  }
+  for(const [a,b] of edges){
+   const ma=F.M(a),mb=F.M(b),mid=[(ma[0]+mb[0])/2,(ma[1]+mb[1])/2];if(distance(mid,src)>r-1)continue;
+   const pa=map(ma),pb=map(mb),len=distance(pa,pb),s=K.fu(distance(a,b)),h=1.9;
+   if(len<1e-8)continue;
+   const ang=Math.atan2(pb[1]-pa[1],pb[0]-pa[0])*180/Math.PI,rot=ang>90?ang-180:ang< -90?ang+180:ang;
+   const cand=ACAD_KROKI_LAYOUT.edgeCandidates(pa,pb,h,1).filter(p=>distance(p,dst)+Math.hypot(A.tw(s,h)/2,h)<R-.7);
+   if(cand.length)candidates.push({...label(cand[0],s,h),fix:false,sabit:false,cand,rot,it:true,regionOnly:true,pr:2});
+  }
+  const first=out.length;out.push(...candidates);A.declutter(out,first,out.length,[dst[0]-R,dst[1]-R,dst[0]+R,dst[1]+R],{pad:.25});
+ }
+ out.push(...texts,line(circle(dst,R),.32),label([dst[0],dst[1]-R-3.2],'AYRINTI '+n,2.3,{bold:true}),label([dst[0],dst[1]-R-6.2],opts.scale?'1/'+Number((opts.scale/k).toFixed(2)):k.toFixed(1)+'×',1.9));
+ return out.filter(g=>g.t!=='x'||g.s).map(g=>({...g,detail:true,sabit:true,fix:true}));
+}
+const original=A.krokiPlan;
+A.krokiPlan=function(g,D,box,list){
+ if(D.noLen||!D.points?.length||box[2]-box[0]<130||box[3]-box[1]<85)return original(g,D,box,list);
+ const all=[D.parent.pts,...D.parts.map(p=>p.pts)],edges=[],keys=new Set();
+ for(const ring of all)for(let i=0;i<ring.length;i++){const a=ring[i],b=ring[(i+1)%ring.length],key=[a,b].map(p=>p.slice(0,2).join(',')).sort().join('|');if(!keys.has(key)&&distance(a,b)>0.001){keys.add(key);edges.push([a,b]);}}
+ const bw=box[2]-box[0],bh=box[3]-box[1];
+ const f=A.fitPlan(all.flat(),[box[0]+bw*.1,box[1]+bh*.1,box[2]-bw*.1,box[3]-bh*.1],list);
+ const dense=edges.filter(([a,b])=>distance(Fake(a),Fake(b))<5.5).sort((a,b)=>distance(...a)-distance(...b));
+ function Fake(p){return f.M(p)}
+ if(!dense.length)return original(g,D,box,list);
+ const start=g.G.length,main=[box[0],box[1],box[2]-Math.min(68,bw*.34),box[3]];
+ const F=original(g,{...D,noHidNote:true},main,list);
+ const source=g.G.slice(start),R=Math.min(28,(box[2]-main[2]-5)/2,(bh-14)/2);
+ if(R<15)return F;
+ const centers=[];let placed=0;
+ for(const [a,b] of dense){const m=F.M([(a[0]+b[0])/2,(a[1]+b[1])/2]);if(centers.every(c=>distance(c,m)>20))centers.push(m);if(centers.length>=Math.min(2,Math.floor(bh/(2*R+10))))break;}
+ for(const [i,src] of centers.entries()){
+  const r=R/3,dst=[(main[2]+box[2])/2,box[3]-R-3-i*(2*R+10)],n=String.fromCharCode(65+i);
+  if(dst[1]-R-7<box[1])continue;
+  const detail=inset(source,src,r,dst,R,n,{real:{nodes:D.points.filter(p=>p.n),edges,F},scale:F.olc||1000/F.s});
+  if(!detail.some(t=>t.pointNumber))continue;
+  const names=new Set(detail.filter(t=>t.pointNumber).map(t=>t.s));
+  for(const t of source)if(t.t==='x'&&t.pointNumber&&names.has(t.s)&&distance(t.anc||[t.x,t.y],src)<r)t.s='';
+  placed++;g.G.push(line(circle(src,r),.22,'#555555'),label([src[0]+r+.9,src[1]+r*.66],n,2.3,{bold:true,detail:true}),...detail);
+ }
+ if(!placed){g.G.splice(start);return original(g,D,box,list);}
+ return F;
+};
+window.ACAD_SKETCH_DETAIL={inset,clip};
+// Manual detail works on any editable paper sheet and uses only its paper objects.
+function manual(p,pdf,back,persist){
+ const dialog=document.createElement('dialog');dialog.style.cssText='width:min(900px,95vw);max-height:90vh;padding:12px;background:#132638;color:#fff;border:1px solid #688196;border-radius:14px';
+ dialog.innerHTML='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><b>Ayrıntı oluştur</b><select aria-label="Büyütme"><option>2</option><option selected>3</option><option>5</option></select><label>×</label><input type="range" min="5" max="35" value="12" aria-label="Kaynak yarıçapı"><button data-undo>Geri al</button><button data-ok>Uygula</button><button data-close>İptal</button></div><p data-status>1. Ana krokide ayrıntı merkezine dokun.</p><canvas style="width:100%;height:auto;touch-action:manipulation;background:white"></canvas>';
+ document.body.append(dialog);const cv=dialog.querySelector('canvas'),ctx=cv.getContext('2d'),status=dialog.querySelector('[data-status]');
+ let G=p.G.slice(),src=null,added=0;const history=[];
+ const paint=()=>{cv.width=Math.round(p.W*4);cv.height=Math.round(p.H*4);O.paint(ctx,G,4,p.W,p.H);if(src){ctx.strokeStyle='#078c9a';ctx.lineWidth=2;ctx.beginPath();ctx.arc(src[0]*4,(p.H-src[1])*4,+dialog.querySelector('input').value*4,0,Math.PI*2);ctx.stroke();}};
+ cv.onclick=e=>{
+  const b=cv.getBoundingClientRect(),q=[(e.clientX-b.left)/b.width*p.W,p.H-(e.clientY-b.top)/b.height*p.H],r=+dialog.querySelector('input').value,k=+dialog.querySelector('select').value,R=r*k;
+  if(!src){src=q;status.textContent='2. Büyütülmüş daire için paftadaki boş yere dokun.';paint();return;}
+  if(q[0]-R<3||q[0]+R>p.W-3||q[1]-R-8<3||q[1]+R>p.H-3||distance(src,q)<r+R){status.textContent='Paftaya sığan, kaynak dairesinden ayrı bir yer seç.';return;}
+  const occupied=G.some(g=>g.t==='x'&&g.s&&distance([g.x,g.y],q)<R+2||g.t==='l'&&g.p.some((a,i)=>i&&clip(g.p[i-1],a,q,R+1))||g.t==='f'&&g.p.some(a=>distance(a,q)<R+1));
+  if(occupied){status.textContent='Bu yerde çizim veya yazı bulunuyor. Boş alan seç ya da yarıçapı azalt.';return;}
+  history.push(G);const used=G.filter(g=>g.detail&&g.t==='x'&&/^AYRINTI /.test(g.s)).map(g=>g.s.slice(-1));let n='A';while(used.includes(n))n=String.fromCharCode(n.charCodeAt(0)+1);
+  G=G.concat(line(circle(src,r),.22,'#555'),label([src[0]+r+1,src[1]],n,2.2,{detail:true}),...inset(G,src,r,q,R,n));added++;src=null;status.textContent='Ayrıntı eklendi. Yeni bölge seçebilir veya Uygula diyebilirsin.';paint();
+ };
+ dialog.querySelector('input').oninput=paint;dialog.querySelector('[data-undo]').onclick=()=>{if(src)src=null;else if(history.length){G=history.pop();added--;}status.textContent='Ana krokide ayrıntı merkezine dokun.';paint();};
+ const close=()=>dialog.remove();dialog.querySelector('[data-close]').onclick=close;dialog.oncancel=close;
+ dialog.querySelector('[data-ok]').onclick=()=>{if(added){G.coz=false;persist(G);}close();if(back)back();};
+ dialog.showModal();paint();
+}
+window.ACAD_SKETCH_DETAIL.manual=manual;
 })();
 </script>
 </body>
