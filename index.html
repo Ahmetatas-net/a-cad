@@ -6465,9 +6465,9 @@ const COLD = { "#808080": 8, "#9a9a9a": 8, "#000": 7, "#000000": 7, "#d00000": 1
 O.sheetToDxf = (D, G, ox, oy, s = 1) => { // sayfa ilkellerini DXF'e (mm → s birim) koy
   const lay = D.lay("ENKESIT_SAYFA", 7), ls = D.lay("ENK_SIYAH", 7), lk = D.lay("ENK_KIRMIZI", 1), lg = D.lay("ENK_SIYIRMA", 3), lt = D.lay("ENK_YAZI", 7);
   for (const g of G) {
-    if (g.t === "l") { const l = g.color === "#d00000" ? lk : g.color === "#00a000" ? lg : g.w === 0.6 && g.color === "#000" && g.p.length > 2 ? ls : lay;
+    if (g.t === "l") { const l = g.detail ? D.lay("AYRINTI_GORSEL",7) : g.color === "#d00000" ? lk : g.color === "#00a000" ? lg : g.w === 0.6 && g.color === "#000" && g.p.length > 2 ? ls : lay;
       const pts = g.p.map(([x, y]) => [ox + x * s, oy + y * s]); if (pts.length === 2) D.line(l, pts[0], pts[1], l === lay ? COLD[g.color] : 0); else D.poly(l, pts, false); }
-    else if (g.t === "x") D.text(lt, ox + g.x * s, oy + g.y * s, g.size * s * 0.9, g.s, g.rot, g.al, COLD[g.color] && COLD[g.color] !== 7 ? COLD[g.color] : 0);
+    else if (g.t === "x") D.text(g.detail?D.lay("AYRINTI_YAZI",7):lt, ox + g.x * s, oy + g.y * s, g.size * s * 0.9, g.s, g.rot, g.al, COLD[g.color] && COLD[g.color] !== 7 ? COLD[g.color] : 0);
   }
 };
 
@@ -8311,7 +8311,7 @@ A.krokiPlan = (g, D, box, list) => { const i0 = g.G.length; const all = [...D.pa
       { /* Ortak kroki kuralı: kenar üzerinde sağa/sola kaydır; bağlantı çizgisi yok. */
         const hh=1.8,from=[ma[0],ma[1]],to=[mb[0],mb[1]];
         const cand=window.ACAD_KROKI_LAYOUT.edgeCandidates(from,to,hh,sg);
-        T(cand[0][0],cand[0][1],K.fu(d),hh,{al:"c",rot:ang,it:true,cand,lead:false,maxR:3});
+        T(cand[0][0],cand[0][1],K.fu(d),hh,{al:"c",rot:ang,it:true,cand,lead:false,maxR:3,detailEdge:[ma,mb].map(p=>p.map(v=>v.toFixed(5)).join(",")).sort().join("|")});
       } } }
   // nokta numaraları
   const pc=A.centroid(D.parent.pts), nodes=D.points.map(q=>M(q.p));
@@ -8714,7 +8714,7 @@ A.apkKroki = (D) => { const W = 210, H = 297, s = Math.min((W - 10) / 226.9, (H 
   /* aplikasyon kontrolü: köşeler, iki aplikasyon farkı (cm) */ (D.kontrol || []).slice(0, 12).forEach((r, i) => { const y = 222.2 - i * 3.41, [ym, yc] = sp(r[1]), [xm, xc] = sp(r[2]); const sg = v => isFinite(v) ? (v > 0 ? "+" : v < 0 ? "-" : "") + Math.abs(Math.round(v)) : ""; T(69, y, sg(r[3]), 2.2, { al: "c", color: "#90008a" }); T(74.5, y, sg(r[4]), 2.2, { al: "c", color: "#90008a" }); T(84, y, r[0], 2.2, { al: "c", color: "#1f3fbf" }); T(102, y, ym, 2.2, { al: "c", color: "#90008a" }); T(117.2, y, yc, 2.2, { al: "c", color: "#90008a" }); T(130, y, xm, 2.2, { al: "c", color: "#90008a" }); T(146.3, y, xc, 2.2, { al: "c", color: "#90008a" }); });
   /* imza tablosu */ const I = D.imza || {}; const nm = (x, v, sz = 1.73) => { const t = String(v || ""); if (t.length > 26) { const m = t.lastIndexOf(" ", 26) > 0 ? t.lastIndexOf(" ", 26) : 26; T(x, 16.6, t.slice(0, m), 1.35, { al: "c", color: "#007a20" }); T(x, 14.4, t.slice(m).trim(), 1.35, { al: "c", color: "#007a20" }); } else T(x, 15.5, t, sz, { al: "c", color: "#007a20" }); };
   nm(36, I.malik); nm(83, I.yapan); nm(122, I.kont1); nm(167, I.kont2); nm(209, I.tasdik); [36, 83, 122, 167, 209].forEach(x => T(x, 9.5, I.tarih || "", 2.1, { al: "c" }));
-  /* kroki alanı */ const box = [4, 52, 223, 175]; const P = D.parsel.pts, bb = A.bbox(P), wx = bb[2] - bb[0], wy = bb[3] - bb[1];
+  /* kroki alanı */ const planStart=G.length,box = [4, 52, 223, 175]; const P = D.parsel.pts, bb = A.bbox(P), wx = bb[2] - bb[0], wy = bb[3] - bb[1];
   const OL = [250, 500, 1000, 2000, 2500, 5000, 10000, 25000]; const fit = o => wx * 1000 / o <= (box[2] - box[0]) * 0.72 && wy * 1000 / o <= (box[3] - box[1]) * 0.72; const olc = +D.olcek || OL.find(fit) || 25000; const k = 1000 / olc;
   const cx = (box[0] + box[2]) / 2, cy = (box[1] + box[3]) / 2, mx = (bb[0] + bb[2]) / 2, my = (bb[1] + bb[3]) / 2; const M = p => [cx + (p[0] - mx) * k, cy + (p[1] - my) * k]; const clip = (a, b) => A.clipSeg(M(a), M(b), box);
   for (const [a, b] of D.komsu || []) { const c = clip(a, b); if (c) L(c, 0.18, "#e00000"); }
@@ -8731,12 +8731,23 @@ A.apkKroki = (D) => { const W = 210, H = 297, s = Math.min((W - 10) / 226.9, (H 
   const away = q => { let p = q.slice(); const d = [q[0] - pcM[0], q[1] - pcM[1]], l = Math.hypot(...d) || 1; for (let i = 0; i < 6 && busy.some(b => Math.abs(b[0] - p[0]) < 5 && Math.abs(b[1] - p[1]) < 2.4); i++) p = [p[0] + d[0] / l * 2, p[1] + d[1] / l * 2]; busy.push(p); return p; };
   for (const t of D.komsuAd || []) { if(!t?.p||A.inPoly(P,t.p[0],t.p[1]))continue; const q = away(M(t.p)); if (!inB(q)||A.inPoly(P,mx+(q[0]-cx)/k,my+(q[1]-cy)/k)) continue; const ba = t.ada != null && String(t.ada) !== "" && D.ada != null && String(t.ada) !== String(D.ada); if (ba) { G.push({ raw: 1, t: "x", x: q[0], y: q[1] + 1.6, s: String(t.ada), size: 3.4 * 0.76, color: "#007a8a", al: "c",acadRole:"neighbor",acadAnchor:[q[0],q[1]+1.6] }); G.push({ raw: 1, t: "x", x: q[0], y: q[1] - 1.6, s: t.s, size: 2.6 * 0.76, color: "#007a8a", al: "c",acadRole:"neighbor",acadAnchor:[q[0],q[1]-1.6] }); } else G.push({ raw: 1, t: "x", x: q[0], y: q[1], s: t.s, size: 2.6 * 0.76, color: "#007a8a", al: "c",acadRole:"neighbor",acadAnchor:q.slice() }); }  /* aplikasyon krokisinin çizim alanı küçük: yapı cinsi yazıları eklenmez, yalnız çizgiler */
   for (const t of D.yolYazi || []) { const q = away(M(t.p)); if (!inB(q)) continue; let r = 0; if (t.a && t.b) { const a = M(t.a), b = M(t.b); r = Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI; if (r > 90) r -= 180; if (r < -90) r += 180; } G.push({ raw: 1, t: "x", x: q[0], y: q[1], s: t.s.split("").join(" "), size: 2.4 * 0.76, color: "#007a8a", al: "c", rot: r,acadRole:"road",acadAnchor:q.slice() }); }
-  /* kuzey */ { const n = F([222.5, 39]); G.push({ t: "l", p: [[n[0], n[1]], [n[0], n[1] + 7]], w: 0.25, color: "#000" }); G.push({ t: "l", p: [[n[0] - 1.2, n[1] + 4.6], [n[0], n[1] + 7], [n[0] + 1.2, n[1] + 4.6]], w: 0.25, color: "#000" }); }
+  const planEnd=G.length; /* kuzey */ { const n = F([222.5, 39]); G.push({ t: "l", p: [[n[0], n[1]], [n[0], n[1] + 7]], w: 0.25, color: "#000" }); G.push({ t: "l", p: [[n[0] - 1.2, n[1] + 4.6], [n[0], n[1] + 7], [n[0] + 1.2, n[1] + 4.6]], w: 0.25, color: "#000" }); }
   for (const g of G) if (g.raw) { const q = F([g.x, g.y]); g.x = q[0]; g.y = q[1];g.size *= s; if(g.acadAnchor)g.acadAnchor=F(g.acadAnchor); delete g.raw; }
   /* Yalnızca kroki çizim alanında etiket çakışmalarını azaltır.
      Şablon, koordinat, cephe, alan ve hesap değerlerine dokunmaz. */
   const r0=F([box[0]+1,box[1]+1]),r1=F([box[2]-1,box[3]-1]);
   const bounds=[Math.min(r0[0],r1[0]),Math.min(r0[1],r1[1]),Math.max(r0[0],r1[0]),Math.max(r0[1],r1[1])];
+  if(window.ACAD_SKETCH_DETAIL&&!D.olcek&&P.some((p,i)=>Math.hypot(p[0]-P[(i+1)%P.length][0],p[1]-P[(i+1)%P.length][1])*k*s<9)){
+    const g=A.pg(W,H),points=P.map((p,i)=>({p,n:D.parsel.names[i]}));
+    const cadCiz=[...(D.cadCiz||[]),...(D.komsu||[]),...(D.komsuP||[]).flatMap(r=>r.map((a,i)=>[a,r[(i+1)%r.length]]))];
+    const f=A.krokiPlan(g,{parent:{pts:P},parts:[],points,ada:D.ada,parselNo:D.parselNo,cadCiz,komsuAd:D.komsuAd,yolYazi:D.yolYazi},bounds,null);
+    if(g.G.some(o=>o.detail&&o.t==='x'&&/^AYRINTI /.test(o.s))){
+      G.splice(planStart,planEnd-planStart,...g.G);G.detailMeta=g.G.detailMeta;
+      const names=new Set(g.G.filter(o=>o.pointNumber&&o.s).map(o=>o.s));
+      return {G,W,H,olc:Number((1000/f.s).toFixed(2)),labelIssues:points.filter(p=>p.n&&!names.has(p.n)).length};
+    }
+  }
+
   const labels=G.filter(g=>g.t==='x' && g.s && g.x>=bounds[0] && g.x<=bounds[2] && g.y>=bounds[1] && g.y<=bounds[3]);
   const boxes=[];
   // Only inspect drawing-area geometry; never edit parcel coordinates or template.
@@ -15681,8 +15692,8 @@ function ifzSheetDxf(pg){
   const d=O.dxf(),line=d.lay('FORM_CIZGI',7),text=d.lay('FORM_YAZI',7),red=d.lay('DEGISEN_SINIR',1);
   for(const g of pg.G){
     if(g._acadOmit)continue;
-    const layer=/^#(?:c00000|d00000|ff0000)$/i.test(g.color)?red:line;
-    if(g.t==='x')d.text(layer===red?red:text,g.x,g.y,g.size,g.s,g.rot,g.al);
+    const layer=g.detail?d.lay('AYRINTI_GORSEL',7):/^#(?:c00000|d00000|ff0000)$/i.test(g.color)?red:line;
+    if(g.t==='x')d.text(g.detail?d.lay('AYRINTI_YAZI',7):layer===red?red:text,g.x,g.y,g.size,g.s,g.rot,g.al);
     else if(g.t==='l'&&g.p.length===2)d.line(layer,...g.p);
     else if((g.t==='l'||g.t==='f')&&g.p.length>2)d.poly(layer,g.p,g.t==='f');
   }
@@ -16534,7 +16545,7 @@ $("tyGo").addEventListener("click", () => tyHesapla());
 $("tyNew").addEventListener("click", () => { if (!confirm("Terk/ihdas çalışması temizlensin mi?")) return; S().tk = TY0(); save(); tyRender(); drawA(); $("tyPrev").innerHTML = ""; tyMsg(""); });
 $("tyPdf").addEventListener("click", async () => { const k = TY(); if (!k.res) return tyMsg("Önce Hesapla.", true); tyMsg("Evrak hazırlanıyor…"); await new Promise(r => setTimeout(r, 20)); try { const cs = tyPages().map(pg => kmPaint(pg.G, pg.W, pg.H)); await saveFile(fnm(k.mod === "terk" ? "YOLA_TERK.pdf" : "YOLDAN_IHDAS.pdf"), await O.pdf(cs), $("tyMsg")); tyMsg(`Evrak hazır: ${cs.length} sayfa (rölöve ölçü krokisi, durum haritası, alan hesabı, tescil bildirimi).`); } catch (e) { console.error(e); tyMsg("PDF oluşturulamadı: " + e.message, true); } });
 $("tyNcn").addEventListener("click", async () => { const o = tyDocs(); if (!o) return tyMsg("Önce Hesapla.", true); const txt = o.D.koord.map(q => `${q[0]} ${q[1]} ${q[2]}`).join("\r\n") + "\r\n"; await saveFile(fnm("TERK.ncn"), new TextEncoder().encode(txt), $("tyMsg")); });
-$("tyDxf").addEventListener("click", async () => { const o = tyDocs(); if (!o) return tyMsg("Önce Hesapla.", true); try { const Dx = O.dxf(); for (const p of TY().pars) Dx.poly("KAD_PARSEL", p.pts, true); for (const q of TY().res.parts) Dx.poly(q.terk ? "TERK_ALAN" : q.ihdas ? "IHDAS_ALAN" : "KALAN_ALAN", q.pts, true); for (const l of TY().imar) Dx.poly("IMAR_ADA_KENARI", l.pts, !!l.kapali); for (const q of o.D.points) { Dx.point("NOKTA", q.p[0], q.p[1]); Dx.text("NOKTANO", q.p[0] + 0.3, q.p[1] + 0.3, 0.6, q.n); } for (const q of TY().res.parts) { const c = A.label(q.pts); Dx.text("PARCA", c[0], c[1], 1.5, q.ad, 0, "c"); } await saveFile(fnm("TERK.dxf"), Dx.build(), $("tyMsg")); } catch (e) { tyMsg("DXF oluşturulamadı: " + e.message, true); } });
+$("tyDxf").addEventListener("click", async () => { const o = tyDocs(); if (!o) return tyMsg("Önce Hesapla.", true); try { const Dx = O.dxf(); for (const p of TY().pars) Dx.poly("KAD_PARSEL", p.pts, true); for (const q of TY().res.parts) Dx.poly(q.terk ? "TERK_ALAN" : q.ihdas ? "IHDAS_ALAN" : "KALAN_ALAN", q.pts, true); for (const l of TY().imar) Dx.poly("IMAR_ADA_KENARI", l.pts, !!l.kapali); for (const q of o.D.points) { Dx.point("NOKTA", q.p[0], q.p[1]); Dx.text("NOKTANO", q.p[0] + 0.3, q.p[1] + 0.3, 0.6, q.n); } for (const q of TY().res.parts) { const c = A.label(q.pts); Dx.text("PARCA", c[0], c[1], 1.5, q.ad, 0, "c"); } const files=[{name:fnm("TERK.dxf"),data:Dx.build()}];for(const [i,page] of tyPages().slice(0,2).entries()){const d=O.dxf();O.sheetToDxf(d,page.G,0,0,1);files.push({name:fnm(i?"DURUM_HARITASI.dxf":"OLCU_KROKISI.dxf"),data:d.build()});}await saveFile(fnm("TERK_DXF.zip"),O.zip(files),$("tyMsg")); } catch (e) { tyMsg("DXF oluşturulamadı: " + e.message, true); } });
 
 window.APLT = { akSheetBW,akSheet,reviewShape82, reviewedLayout83, saveData:()=>save(), refreshResults:()=>renderRes(), refreshPreview:()=>prevA(), getBinaCandidates:()=>binaCands(),
   approveBina:(value)=>{const list=binaCands(); const c=list.find(x=>x.v===value);
@@ -22154,6 +22165,16 @@ const ACAD_CEPHE = (() => {
       for(const p of P){const q=xy(p);ctx.beginPath();ctx.arc(q[0],q[1],3.5,0,Math.PI*2);ctx.fill();}
       window.ACAD_KROKI_LAST_LAYOUT={vertexCount:P.length,frontageCount:edgeLabels.length,omittedFromPlan:omitted,leaders:0};
       ctx.restore();ctx.textAlign='left';ctx.textBaseline='alphabetic';
+      if(window.ACAD_SKETCH_DETAIL&&(omitted.length||nodeLabels.length<P.length)){
+        const mmW=(plot.w-12)/4,mmH=(plot.h-48)/4,g=A.pg(mmW,mmH);
+        const points=P.map((p,i)=>({p,n:a.names[i]}));
+        A.krokiPlan(g,{parent:{pts:P},parts:[],points,ada:a.ada,parselNo:a.parsel},[2,2,mmW-2,mmH-2],null);
+        if(g.G.some(o=>o.detail&&o.t==='x'&&/^AYRINTI /.test(o.s))){
+          const image=document.createElement('canvas');image.width=Math.round(mmW*4);image.height=Math.round(mmH*4);
+          O.paint(image.getContext('2d'),g.G,4,mmW,mmH);
+          ctx.drawImage(image,plot.x+6,plot.y+42,plot.w-12,plot.h-48);
+        }
+      }
     }else{ctx.font='22px Arial';ctx.fillStyle='#5b7384';ctx.fillText('KOORDİNAT ÇİZELGESİ DEVAMI',plot.x+40,plot.y+85);}
     ctx.fillStyle='#e9f0f4';ctx.fillRect(table.x+1,table.y+1,table.w-2,50);
     ctx.fillStyle='#183e59';ctx.font='bold 20px Arial';ctx.fillText(a.ada&&a.parsel?`ADA ${a.ada} / PARSEL ${a.parsel}`:'KÖŞE / CEPHE / KOORDİNATLAR',table.x+17,table.y+32);
@@ -47204,8 +47225,8 @@ function inset(source,src,r,dst,R,n,opts={}){
    const pa=map(ma),pb=map(mb),len=distance(pa,pb),s=K.fu(distance(a,b)),h=1.9;
    if(len<1e-8)continue;
    const ang=Math.atan2(pb[1]-pa[1],pb[0]-pa[0])*180/Math.PI,rot=ang>90?ang-180:ang< -90?ang+180:ang;
-   const cand=ACAD_KROKI_LAYOUT.edgeCandidates(pa,pb,h,1).filter(p=>distance(p,dst)+Math.hypot(A.tw(s,h)/2,h)<R-.7);
-   if(cand.length)candidates.push({...label(cand[0],s,h),fix:false,sabit:false,cand,rot,it:true,regionOnly:true,pr:2});
+   const cand=[...ACAD_KROKI_LAYOUT.edgeCandidates(pa,pb,h,1),...ACAD_KROKI_LAYOUT.edgeCandidates(pa,pb,h,-1)].filter(p=>distance(p,dst)+Math.hypot(A.tw(s,h)/2,h)<R-.7);
+   if(cand.length)candidates.push({...label(cand[0],s,h),fix:false,sabit:false,cand,rot,it:true,regionOnly:true,pr:2,detailEdge:[ma,mb].map(p=>p.map(v=>v.toFixed(5)).join(",")).sort().join("|")});
   }
   const first=out.length;out.push(...candidates);A.declutter(out,first,out.length,[dst[0]-R,dst[1]-R,dst[0]+R,dst[1]+R],{pad:.25});
  }
@@ -47219,26 +47240,29 @@ A.krokiPlan=function(g,D,box,list){
  for(const ring of all)for(let i=0;i<ring.length;i++){const a=ring[i],b=ring[(i+1)%ring.length],key=[a,b].map(p=>p.slice(0,2).join(',')).sort().join('|');if(!keys.has(key)&&distance(a,b)>0.001){keys.add(key);edges.push([a,b]);}}
  const bw=box[2]-box[0],bh=box[3]-box[1];
  const f=A.fitPlan(all.flat(),[box[0]+bw*.1,box[1]+bh*.1,box[2]-bw*.1,box[3]-bh*.1],list);
- const dense=edges.filter(([a,b])=>distance(Fake(a),Fake(b))<5.5).sort((a,b)=>distance(...a)-distance(...b));
+ const dense=edges.filter(([a,b])=>distance(Fake(a),Fake(b))<9).sort((a,b)=>distance(...a)-distance(...b));
  function Fake(p){return f.M(p)}
- if(!dense.length)return original(g,D,box,list);
+ const remember=F=>{g.G.detailMeta={real:{nodes:D.points.filter(p=>p.n),edges,F},scale:1000/F.s};return F;};
+ if(!dense.length)return remember(original(g,D,box,list));
  const start=g.G.length,main=[box[0],box[1],box[2]-Math.min(68,bw*.34),box[3]];
  const F=original(g,{...D,noHidNote:true},main,list);
  const source=g.G.slice(start),R=Math.min(28,(box[2]-main[2]-5)/2,(bh-14)/2);
  if(R<15)return F;
  const centers=[];let placed=0;
- for(const [a,b] of dense){const m=F.M([(a[0]+b[0])/2,(a[1]+b[1])/2]);if(centers.every(c=>distance(c,m)>20))centers.push(m);if(centers.length>=Math.min(2,Math.floor(bh/(2*R+10))))break;}
- for(const [i,src] of centers.entries()){
-  const r=R/3,dst=[(main[2]+box[2])/2,box[3]-R-3-i*(2*R+10)],n=String.fromCharCode(65+i);
+ for(const [a,b] of dense){const m=F.M([(a[0]+b[0])/2,(a[1]+b[1])/2]);if(centers.every(c=>distance(c.src,m)>20))centers.push({src:m,len:distance(F.M(a),F.M(b))});if(centers.length>=Math.min(2,Math.floor(bh/(2*R+10))))break;}
+ for(const [i,entry] of centers.entries()){
+  const {src,len}=entry,k=Math.max(3,Math.min(12,Math.ceil(6/len)));
+  const r=R/k,dst=[(main[2]+box[2])/2,box[3]-R-3-i*(2*R+10)],n=String.fromCharCode(65+i);
   if(dst[1]-R-7<box[1])continue;
   const detail=inset(source,src,r,dst,R,n,{real:{nodes:D.points.filter(p=>p.n),edges,F},scale:F.olc||1000/F.s});
   if(!detail.some(t=>t.pointNumber))continue;
-  const names=new Set(detail.filter(t=>t.pointNumber).map(t=>t.s));
-  for(const t of source)if(t.t==='x'&&t.pointNumber&&names.has(t.s)&&distance(t.anc||[t.x,t.y],src)<r)t.s='';
+  const names=new Set(detail.filter(t=>t.pointNumber).map(t=>t.s)),edgeKeys=new Set(detail.filter(t=>t.detailEdge).map(t=>t.detailEdge));
+  for(const t of source)if(t.t==='x'&&(t.pointNumber&&names.has(t.s)&&distance(t.anc||[t.x,t.y],src)<r||t.detailEdge&&edgeKeys.has(t.detailEdge)))t.s='';
   placed++;g.G.push(line(circle(src,r),.22,'#555555'),label([src[0]+r+.9,src[1]+r*.66],n,2.3,{bold:true,detail:true}),...detail);
  }
- if(!placed){g.G.splice(start);return original(g,D,box,list);}
- return F;
+ if(!placed){g.G.splice(start);return remember(original(g,D,box,list));}
+ g.G.push(label([(main[0]+main[2])/2,main[1]+2],'Ana kroki 1/'+Number((1000/F.s).toFixed(2)),1.8,{detail:true}));
+ return remember(F);
 };
 window.ACAD_SKETCH_DETAIL={inset,clip};
 // Manual detail works on any editable paper sheet and uses only its paper objects.
@@ -47255,7 +47279,7 @@ function manual(p,pdf,back,persist){
   const occupied=G.some(g=>g.t==='x'&&g.s&&distance([g.x,g.y],q)<R+2||g.t==='l'&&g.p.some((a,i)=>i&&clip(g.p[i-1],a,q,R+1))||g.t==='f'&&g.p.some(a=>distance(a,q)<R+1));
   if(occupied){status.textContent='Bu yerde çizim veya yazı bulunuyor. Boş alan seç ya da yarıçapı azalt.';return;}
   history.push(G);const used=G.filter(g=>g.detail&&g.t==='x'&&/^AYRINTI /.test(g.s)).map(g=>g.s.slice(-1));let n='A';while(used.includes(n))n=String.fromCharCode(n.charCodeAt(0)+1);
-  G=G.concat(line(circle(src,r),.22,'#555'),label([src[0]+r+1,src[1]],n,2.2,{detail:true}),...inset(G,src,r,q,R,n));added++;src=null;status.textContent='Ayrıntı eklendi. Yeni bölge seçebilir veya Uygula diyebilirsin.';paint();
+  G=G.concat(line(circle(src,r),.22,'#555'),label([src[0]+r+1,src[1]],n,2.2,{detail:true}),...inset(G,src,r,q,R,n,p.G.detailMeta||{}));added++;src=null;status.textContent='Ayrıntı eklendi. Yeni bölge seçebilir veya Uygula diyebilirsin.';paint();
  };
  dialog.querySelector('input').oninput=paint;dialog.querySelector('[data-undo]').onclick=()=>{if(src)src=null;else if(history.length){G=history.pop();added--;}status.textContent='Ana krokide ayrıntı merkezine dokun.';paint();};
  const close=()=>dialog.remove();dialog.querySelector('[data-close]').onclick=close;dialog.oncancel=close;
