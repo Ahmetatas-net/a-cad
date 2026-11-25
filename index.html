@@ -21020,7 +21020,7 @@ function arzBox(html) {
   let b=document.getElementById("arzBox");
   if(!b){b=document.createElement("div");b.id="arzBox";document.body.appendChild(b);}
   b.setAttribute("role","dialog");b.setAttribute("aria-label","CAD sorgu ve işlem bilgileri");
-  const savedPosition=b._acadQueryPosition;const savedExpanded=b.dataset.acadQueryExpanded==='1';
+  const savedPosition=b._acadQueryPosition,savedSize=b._acadQuerySize;const savedExpanded=b.dataset.acadQueryExpanded==='1';
   // Reset on EVERY opening. Older dialogs and mobile CSS must not leave a translucent/cropped pane.
   b.style.cssText="position:fixed!important;z-index:2147483000!important;left:50%!important;right:auto!important;bottom:max(12px,env(safe-area-inset-bottom))!important;top:auto!important;transform:translateX(-50%)!important;width:min(560px,calc(100vw - 16px))!important;max-width:calc(100vw - 16px)!important;max-height:min(72dvh,660px)!important;overflow-x:hidden!important;overflow-y:auto!important;box-sizing:border-box!important;opacity:1!important;filter:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:var(--qp-bg)!important;color:var(--qp-text)!important;border:2px solid #366888!important;border-radius:12px!important;box-shadow:0 12px 38px rgba(0,0,0,.58)!important;padding:12px 14px!important;font-size:14px!important;line-height:1.45!important;isolation:isolate!important;overscroll-behavior:contain!important;touch-action:pan-y!important;color-scheme:var(--qp-scheme)!important";
   // Use the VISUAL viewport; unrelated CAD toolbar min-width can enlarge innerWidth on phones.
@@ -21031,7 +21031,7 @@ function arzBox(html) {
   // iOS/Android may report a taller layout viewport than the actual visible window.
   b.style.setProperty('bottom',(Math.max(0,window.innerHeight-(window.visualViewport?.height||document.documentElement.clientHeight||window.innerHeight))+12)+'px','important');
   b.innerHTML=`<style>#arzBox>b,#arzBox p,#arzBox p b,#arzBox .note{color:#24384a!important;opacity:1!important;text-shadow:none!important}#arzBox p.road-gap-warning{color:#7a3c00!important;background:#fff1d6!important;border:1px solid #d7ad61;padding:7px 9px;border-radius:6px;font-weight:700!important}#arzBox button{opacity:1!important}</style><div class="acad-v106-head"><div class="acad-v106-head-title" title="Başlıktan tutup paneli taşı"><strong>⠿ Sorgu / İşlem</strong></div><div class="acad-v106-head-actions"><button type="button" class="acad-jump" id="arzTop" title="Panelin başına git" aria-label="Panelin başına git">↑</button><button type="button" class="acad-jump" id="arzBottom" title="Panelin sonuna git" aria-label="Panelin sonuna git">↓</button><button type="button" id="arzCopy" aria-label="Kopyala" title="Ekrandaki sorgu bilgilerini kopyala">⧉</button><button type="button" id="arzExpand" aria-pressed="false" aria-label="Büyüt" title="Büyüt">⛶</button><button type="button" id="arzX" title="Sorgu penceresini kapat" aria-label="Sorgu penceresini kapat">✕</button></div></div>`+html;
-  clearTimeout(b._pe);b.style.pointerEvents='';b.classList.add('acad-query-v106');b.classList.remove('acadAreaPreviewCompact','acad-query-expanded');b.dataset.acadQueryExpanded='0';b.hidden=false;b.scrollTop=0; try { window.ACAD_UI_FLOAT?.setup(b); if(savedPosition)window.ACAD_UI_FLOAT?.place(b,savedPosition.x,savedPosition.y); } catch(_e){}
+  clearTimeout(b._pe);b.style.pointerEvents='';b.classList.add('acad-query-v106');b.classList.remove('acadAreaPreviewCompact','acad-query-expanded');b.dataset.acadQueryExpanded='0';b.hidden=false;b.scrollTop=0; if(savedSize){const vw=Math.min(innerWidth,document.documentElement.clientWidth||innerWidth,window.visualViewport?.width||innerWidth),vh=Math.min(innerHeight,window.visualViewport?.height||innerHeight);b.style.setProperty('width',Math.min(savedSize.width,vw-16)+'px','important');b.style.setProperty('height',Math.min(savedSize.height,vh-16)+'px','important');b.style.setProperty('max-height',(vh-16)+'px','important');} try { window.ACAD_UI_FLOAT?.setup(b); if(savedPosition)window.ACAD_UI_FLOAT?.place(b,savedPosition.x,savedPosition.y); } catch(_e){}
   document.getElementById("arzX").onclick=()=>{b.hidden=true;};
   b.querySelector('#arzTop').onclick=()=>{b.scrollTop=0;};
   b.querySelector('#arzBottom').onclick=()=>{b.scrollTop=b.scrollHeight;};
@@ -21040,9 +21040,10 @@ function arzBox(html) {
     const wide=b.dataset.acadQueryExpanded!=='1',before=b.getBoundingClientRect(),oldScroll=b.scrollTop;b.dataset.acadQueryExpanded=wide?'1':'0';
     b.classList.toggle('acad-query-expanded',wide);
     const vw=Math.max(280,Math.min(document.documentElement.clientWidth||Infinity,window.visualViewport?.width||Infinity,window.innerWidth));
-    const w=Math.max(260,Math.min(wide?880:560,vw-16));
+    const manual=b._acadQuerySize;const w=Math.max(260,Math.min(wide?880:(manual?.width||560),vw-16));
+    b.style.removeProperty('height');if(!wide&&manual)b.style.setProperty('height',Math.min(manual.height,innerHeight-16)+'px','important');
     b.style.setProperty('width',w+'px','important');b.style.setProperty('max-width',(vw-16)+'px','important');
-    b.style.setProperty('max-height',wide?'min(90dvh,880px)':'min(72dvh,660px)','important');
+    b.style.setProperty('max-height',wide?'min(90dvh,880px)':manual?'calc(100dvh - 16px)':'min(72dvh,660px)','important');
     // The existing floating-panel manager may pin the dialog by TOP. Growing it without redocking moves controls below the viewport.
     // Re-anchor to the visible bottom edge when resizing; do not mutate the CAD canvas or geometry.
     const bottomGap=Math.max(12,window.innerHeight-(window.visualViewport?.height||window.innerHeight)+12);
@@ -21050,7 +21051,7 @@ function arzBox(html) {
     b.style.setProperty('left',Math.max(8,Math.min(before.left,vw-w-8))+'px','important');b.style.setProperty('right','auto','important');b.style.setProperty('transform','none','important');
     if(vw<=650){
       // Mobile viewport can reserve a vertical scrollbar; anchor from the left to avoid any clipped column.
-      const safeWidth=Math.max(260,Math.min(wide?880:560,(document.documentElement.clientWidth||vw)-16));
+      const safeWidth=Math.max(260,Math.min(wide?880:(manual?.width||560),(document.documentElement.clientWidth||vw)-16));
       b.style.setProperty('width',safeWidth+'px','important');b.style.setProperty('max-width',safeWidth+'px','important');
       b.style.setProperty('left','8px','important');b.style.setProperty('right','auto','important');
     }
@@ -33905,15 +33906,17 @@ D.style.display="none";ciz();})();
 
  // Draggable information panels: attach grip, detached from any CAD mutation.
  const panelIds=['cadInfo','cadProp','cadKub','cadOut','cadPad','acadPerfPanel','acadGuardPanel'];
+  const windowBounds=()=>({w:Math.min(innerWidth,document.documentElement.clientWidth||innerWidth,window.visualViewport?.width||innerWidth),h:Math.min(innerHeight,window.visualViewport?.height||innerHeight)});
   function setXY(el,x,y,dimensions){
    const r=dimensions||el.getBoundingClientRect();
-   const width=Math.min(r.width||460,innerWidth-16),height=Math.min(r.height||200,innerHeight-16);
-   x=Math.max(8,Math.min(innerWidth-width-8,Number(x)||8));
-   y=Math.max(8,Math.min(innerHeight-(el.id==='arzBox'?height:Math.min(height,120))-8,Number(y)||8));
+   const {w,h}=windowBounds();const width=Math.min(r.width||460,w-16),height=Math.min(r.height||200,h-16);
+   x=Math.max(8,Math.min(w-width-8,Number(x)||8));
+   y=Math.max(8,Math.min(h-height-8,Number(y)||8));
    el.style.setProperty('left',Math.round(x)+'px','important');
    el.style.setProperty('top',Math.round(y)+'px','important');
    el.style.setProperty('right','auto','important');el.style.setProperty('bottom','auto','important');el.style.setProperty('transform','none','important');
    if(el.id==='arzBox')el._acadQueryPosition={x,y};
+   el._acadCornerSync?.();
  }
  function undock(el,r){
    if(el.classList.contains('acad-floating'))return;
@@ -33927,6 +33930,80 @@ D.style.display="none";ciz();})();
    const btn=el.querySelector(':scope > .acad-panel-grip .acad65-dock');if(btn)btn.textContent='↗';
    const zoom=el.querySelector(':scope > .acad-panel-grip .acad65-size');if(zoom)zoom.textContent='⛶';
  }
+
+ function cornerRect(start,dir,dx,dy,vw,vh){
+   const minW=Math.min(260,vw-16),minH=Math.min(160,vh-16);
+   let l=start.left,t=start.top,r=start.right,b=start.bottom;
+   if(dir.includes('w'))l=Math.max(8,Math.min(r-minW,l+dx));else r=Math.min(vw-8,Math.max(l+minW,r+dx));
+   if(dir.includes('n'))t=Math.max(8,Math.min(b-minH,t+dy));else b=Math.min(vh-8,Math.max(t+minH,b+dy));
+   return {left:l,top:t,width:r-l,height:b-t};
+ }
+ function attachWindowMotion(el,arz){
+   if(el._acadCornerSync)return;
+   el.classList.add('acad-window-managed');
+   const corners=['nw','ne','sw','se'].map(dir=>{
+     const h=document.createElement('span');h.className='acad-window-corner';h.dataset.dir=dir;h.title='Köşeden boyutlandır';h.hidden=true;h.setAttribute('aria-hidden','true');document.body.append(h);return h;
+   });
+   const edges=['n','e','s','w'].map(dir=>{const e=document.createElement('span');e.className='acad-window-edge';e.dataset.dir=dir;e.title='Buradan paneli taşı';e.hidden=true;e.setAttribute('aria-hidden','true');document.body.append(e);return e;});
+   let frame=0,active=false;
+   const sync=()=>{
+     frame=0;const visible=!el.hidden&&el.getClientRects().length>0&&(arz||el.classList.contains('acad-floating'));
+     const r=el.getBoundingClientRect(),{w,h}=windowBounds();
+     const z=Number(getComputedStyle(el).zIndex)||2147480500;
+     for(const c of corners){
+       c.hidden=!visible||r.width<30||r.height<30||r.bottom<0||r.top>h;if(c.hidden)continue;
+       const d=c.dataset.dir,sz=c.offsetWidth||18;
+       c.style.left=Math.max(0,Math.min(w-sz,(d.includes('w')?r.left:r.right)-sz/2))+'px';
+       c.style.top=Math.max(0,Math.min(h-sz,(d.includes('n')?r.top:r.bottom)-sz/2))+'px';
+       c.style.zIndex=String(z+2);
+     }
+     for(const e of edges){e.hidden=!visible||r.width<40||r.height<40||r.bottom<0||r.top>h;if(e.hidden)continue;
+       const d=e.dataset.dir,vertical=d==='e'||d==='w',gap=14,thick=8;
+       e.style.left=(vertical?(d==='w'?r.left-thick/2:r.right-thick/2):r.left+gap)+'px';
+       e.style.top=(vertical?r.top+gap:(d==='n'?r.top-thick/2:r.bottom-thick/2))+'px';
+       e.style.width=(vertical?thick:Math.max(0,r.width-2*gap))+'px';
+       e.style.height=(vertical?Math.max(0,r.height-2*gap):thick)+'px';
+       e.style.zIndex=String(z+1);
+     }
+   };
+   el._acadCornerSync=()=>{if(!frame)frame=requestAnimationFrame(sync);};
+   const anchor=()=>{const r=el.getBoundingClientRect();if(!arz){undock(el,r);const dockBtn=el.querySelector('.acad65-dock');if(dockBtn)dockBtn.textContent='↙';}else el.classList.add('acad-floating');setXY(el,r.left,r.top);return el.getBoundingClientRect();};
+   function gesture(target,ev,paint,start){
+     if(active||ev.button!==0)return;active=true;ev.preventDefault();ev.stopPropagation();
+     const id=ev.pointerId,x=ev.clientX,y=ev.clientY;let raf=0,dx=0,dy=0;
+     el.classList.add('acad-window-dragging');
+     try{target.setPointerCapture(id);}catch(_){}
+     const apply=()=>{raf=0;paint(start,dx,dy);};
+     const move=e=>{if(e.pointerId!==id)return;dx=e.clientX-x;dy=e.clientY-y;if(!raf)raf=requestAnimationFrame(apply);};
+     const finish=e=>{if(e.pointerId!==id)return;if(raf)cancelAnimationFrame(raf);apply();active=false;el.classList.remove('acad-window-dragging');target.removeEventListener('pointermove',move);target.removeEventListener('pointerup',finish);target.removeEventListener('pointercancel',finish);target.removeEventListener('lostpointercapture',finish);try{target.releasePointerCapture(id);}catch(_){}el._acadCornerSync();};
+     target.addEventListener('pointermove',move);target.addEventListener('pointerup',finish);target.addEventListener('pointercancel',finish);target.addEventListener('lostpointercapture',finish);
+   }
+   for(const c of corners)c.addEventListener('pointerdown',ev=>{
+     if(active||ev.button!==0)return;const rect=anchor(),dir=c.dataset.dir;
+     el.classList.remove('acad65-panel-max','acad-query-expanded');
+     if(arz){el.dataset.acadQueryExpanded='0';const exp=el.querySelector('#arzExpand');if(exp){exp.textContent='⛶';exp.title='Büyüt';exp.setAttribute('aria-pressed','false');exp.setAttribute('aria-label','Büyüt');}}
+     else{const exp=el.querySelector('.acad65-size');if(exp)exp.textContent='⛶';}
+     gesture(c,ev,(base,dx,dy)=>{
+       const {w,h}=windowBounds(),r=cornerRect(base,dir,dx,dy,w,h);
+       el.style.setProperty('max-width',(w-16)+'px','important');el.style.setProperty('max-height',(h-16)+'px','important');
+       el.style.setProperty('width',Math.round(r.width)+'px','important');el.style.setProperty('height',Math.round(r.height)+'px','important');
+       setXY(el,r.left,r.top,{width:r.width,height:r.height});
+       if(arz)el._acadQuerySize={width:r.width,height:r.height};
+     },rect);
+   });
+   for(const e of edges)e.addEventListener('pointerdown',ev=>{if(active||ev.button!==0)return;const rect=anchor();gesture(e,ev,(base,dx,dy)=>setXY(el,base.left+dx,base.top+dy,base),rect);});
+   // Move from ordinary panel surfaces; keep all editable controls, coordinate tables and touch scrolling native.
+   el.addEventListener('pointerdown',ev=>{
+     if(active||ev.button!==0||ev.defaultPrevented||ev.shiftKey||ev.target.closest('button,input,select,textarea,a,label,summary,table,canvas,.acad-panel-grip,.acad-v106-head,[contenteditable],.scroll,[style*="overflow:auto"]'))return;
+     if(ev.pointerType==='touch'&&ev.target!==el)return;
+     const rect=anchor();gesture(el,ev,(base,dx,dy)=>setXY(el,base.left+dx,base.top+dy,base),rect);
+   });
+   if(typeof ResizeObserver!=='undefined')new ResizeObserver(el._acadCornerSync).observe(el);
+   new MutationObserver(el._acadCornerSync).observe(el,{attributes:true,attributeFilter:['style','class','hidden']});
+   window.addEventListener('resize',el._acadCornerSync,{passive:true});window.visualViewport?.addEventListener('resize',el._acadCornerSync,{passive:true});
+   el._acadCornerSync();
+ }
+
  function makeGrip(el,arz=false){
    if(!el)return;
    let bar=arz?el.querySelector(':scope > .acad-v106-head'):el.querySelector(':scope > .acad-panel-grip');
@@ -33944,7 +34021,7 @@ D.style.display="none";ciz();})();
      });
      bar.append(name,btn);if(!arz){bar.append(sz);if(el.id==='cadInfo'||el.id==='cadProp'){const close=document.createElement('button');close.textContent='✕';close.title='Kapat';close.setAttribute('aria-label','Kapat');close.onclick=()=>{if(el.id==='cadInfo')el.dispatchEvent(new Event('cad-close-info'));else el.hidden=true;};bar.append(close);}}el.insertBefore(bar,el.firstChild);
    }
-   if(bar.dataset.dragAttached)return;bar.dataset.dragAttached='1';
+   attachWindowMotion(el,arz);if(bar.dataset.dragAttached)return;bar.dataset.dragAttached='1';
    bar.addEventListener('pointerdown',ev=>{
      if(ev.button!==0 || ev.target.closest('button,input,select,a,textarea'))return;
      ev.preventDefault();
@@ -35946,6 +36023,23 @@ render();
 </script>
 
 <style id="acad65-fluid-panels">
+.acad-window-corner{position:fixed;width:18px;height:18px;box-sizing:border-box;touch-action:none;user-select:none;pointer-events:auto;border:0;background:transparent;border-radius:3px;opacity:.75}
+.acad-window-corner::after{content:"";position:absolute;inset:3px;border:0 solid #7295af;border-width:0;pointer-events:none}
+.acad-window-corner[data-dir="nw"],.acad-window-corner[data-dir="se"]{cursor:nwse-resize}
+.acad-window-corner[data-dir="ne"],.acad-window-corner[data-dir="sw"]{cursor:nesw-resize}
+.acad-window-corner[data-dir="nw"]::after{border-top-width:2px;border-left-width:2px}
+.acad-window-corner[data-dir="ne"]::after{border-top-width:2px;border-right-width:2px}
+.acad-window-corner[data-dir="sw"]::after{border-bottom-width:2px;border-left-width:2px}
+.acad-window-corner[data-dir="se"]::after{border-bottom-width:2px;border-right-width:2px}
+.acad-window-corner:hover,.acad-window-corner:active{opacity:1;background:#759bb52b}
+.acad-window-corner[hidden],.acad-window-edge[hidden]{display:none!important}
+.acad-window-edge{position:fixed;background:transparent;cursor:grab;touch-action:none;user-select:none;pointer-events:auto}
+.acad-window-edge:hover{background:#7295af33}.acad-window-edge:active{cursor:grabbing}
+html body .acad-window-managed.acad-floating{resize:none!important;min-width:min(260px,calc(100vw - 16px))!important}
+.acad-window-dragging,.acad-window-dragging *{user-select:none!important}
+.acad-window-managed:not(.acad-floating):not(#arzBox)>.acad-window-corner{display:none}
+@media(pointer:coarse){.acad-window-corner{width:24px;height:24px}}
+
 /* A-CAD v7.1.15.65.  CSS only: positions/sizes, never engineering data. */
 #v-cad .acad-floating:not(#arzBox),#cadInfo.acad-floating,#cadProp.acad-floating,#cadKub.acad-floating,#cadPad.acad-floating,
 #acadPerfPanel.acad-floating,#acadGuardPanel.acad-floating{
