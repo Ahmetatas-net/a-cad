@@ -1434,7 +1434,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   function hazir() {
     if (!window.ACAD_USER) { girisEkrani(saatGeri ? "Telefonun tarihi/saati geri alınmış. Saati otomatiğe al." : ses && ses.u ? (kalanGun(ses.bit) <= 0 ? "Kullanım süren bitti." : "Güvenlik için yeniden giriş yap.") : ""); return; }
     kimlik(); try { var A_ = window.APLT && APLT.S && APLT.S(); if (A_ && A_.antet && !A_.antet.duzenleyen) A_.antet.duzenleyen = window.ACAD_USER.ad; } catch (e) {} try { var o = document.getElementById("openUrl"); if (o && o.parentNode) o.parentNode.style.display = "none"; } catch (e) {}
-    if (window.ACAD_USER.plan === "deneme" && window.O && O.pdf && !O.pdf._f) { var op = O.pdf; O.pdf = function (cs) { (cs || []).forEach(filigran); return op.apply(this, arguments); }; O.pdf._f = 1; }
+    if (window.ACAD_USER.plan === "deneme" && window.O && O.pdf && !O.pdf._f) { var op = O.pdf; O.pdf = function (cs) { function* pages(){for(const page of cs || []){filigran(page);yield page;}} return op.call(this,pages()); }; O.pdf._f = 1; }
     if (navigator.onLine !== false) denetle(); window.addEventListener("online", denetle); }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", function () { setTimeout(hazir, 0); }); else setTimeout(hazir, 0);
 })();
@@ -5196,7 +5196,7 @@ window.__DY=window.__DY||function(n){var v=Math.round(n*100)/100;return &#x27;1D
       <div class="row"><select aria-label="Düzenlenecek kamulaştırma paftası" id="kmSheetChoice"></select><button id="kmSheetEdit" type="button">Paftayı düzenle</button></div><div class="note" id="kmPvInfo" style="margin-top:8px"></div><div style="overflow:auto;border:1px solid var(--line);border-radius:6px;background:#fff;margin-top:4px"><canvas id="kmPv" hidden style="width:100%;height:auto;display:block"></canvas></div>
     </div>
     <div class="card" data-mod="akr">
-      <h2>📐 Aplikasyon krokisi (EK-5)</h2><label id="akGroupSwitch" hidden>Seçili parseller <select aria-label="Aplikasyon parseli"></select></label>
+      <h2>📐 Aplikasyon krokisi (EK-5)</h2><label id="akGroupSwitch" hidden>Seçili parseller <select aria-label="Aplikasyon parseli"></select></label><button type="button" id="akJointPdf" hidden>Ortak aplikasyon krokisi PDF</button>
       <details id="akNamesBox" style="margin:8px 0;border:1px solid var(--line);border-radius:9px;padding:9px"><summary style="cursor:pointer;font-weight:700">⌖ Gerçek köşe nokta adları / Kontrol et</summary>
         <p class="note">Kaynak projede bulunan numaralar aynı kalır. Kaynakta adı bulunmayan <b>K1, K2…</b> geçicidir; gerçek nokta adıymış gibi PDF'ye basılmaz. Aşağıdaki satırlar parsel köşeleriyle aynı sıradadır. Yalnız adları düzenler, Y–X değiştirmez.</p>
         <textarea id="akNamesList" rows="7" spellcheck="false" style="width:100%;font:13px monospace;box-sizing:border-box;padding:7px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--ink)"></textarea>
@@ -8503,10 +8503,12 @@ A.ifzImzaTablo=(g,x0,y0,x1,y1,P,kind)=>{
 /* EK-18 ölçü krokisi (A4 yatay) */
 A.kroki = (D, P) => { const g = A.pg(297, 210); const { L, T, R } = g; R(10, 12, 287, 200, 0.45);
   T(148, 204, P.baslik || (P.kgm ? "ÖLÇÜ KROKİSİ" : `${P.ada || ""} ADA ÖLÇÜ KROKİSİ`), 3.2, { al: "c" }); T(287, 204, P.kgm ? "EK-18" : "Ek-18", 2.6, { al: "r" }); if (String(P.formKod || "").trim() !== "-") T(10, 8, String(P.formKod || "").trim() || "32381507 FR. 521 Rev.No/ Tarihi:01/06.06.2024", 1.6); /* TKGM form seri kodu (örnek Ek-18 sol alt) */
+  const titleInfo=[P.il,P.ilce,P.mahalle,P.pafta&&"Pafta "+P.pafta,[P.ada,P.parselNo].filter(Boolean).join("/")].filter(Boolean).join("   ·   ");
+  if(titleInfo)T(148,201.4,titleInfo,1.9,{al:"c",sabit:true});
   if (P.sira) { R(204, 182, 218, 196, 0.3); T(211, 187.5, String(P.sira), 3.2, { al: "c" }); }
   const cx = 222; L([[cx, 12], [cx, 200]], 0.35); // sağ sütun: kuzey, datum, koordinat çizelgesi
   /* örnek Ek-18 düzeni: üstte N oku + KROKİ, altında Datum / Projeksiyon */ { const nx = 254.5; T(nx, 197.6, "N", 2.2, { al: "c", bold: true }); g.G.push({ t: "f", p: [[nx, 196.2], [nx + 1.3, 190.4], [nx, 191.3]], color: "#000" }, { t: "l", p: [[nx, 196.2], [nx - 1.3, 190.4], [nx, 191.3], [nx, 196.2]], w: 0.2, color: "#000" }); L([[nx, 191.3], [nx, 188.6]], 0.25); T(nx, 186.6, "KROKİ", 2, { al: "c", bold: true }); L([[cx, 184.4], [287, 184.4]], 0.3); }
-  T(225, 180.4, `Datum : ${String(P.datum || "ITRF96").replace(/^ITRF-96$/i, "ITRF96")}`, 2.2); T(225, 175.6, `Projeksiyon : ${String(P.projK || "TM 3°").replace(/^UTM 3°$/i, "TM 3°")}`, 2.2);
+  T(225, 180.4, `Datum : ${String(P.datum || "—").replace(/^ITRF-96$/i, "ITRF96")}`, 2.2); T(225, 175.6, `Projeksiyon : ${String(P.projK || "—").replace(/^UTM 3°$/i, "TM 3°")}`, 2.2);
   L([[cx, 172], [287, 172]], 0.3); L([[cx, 165], [287, 165]], 0.3); const cc = [cx, 238, 260, 280, 287]; ["Nokta No", "Y", "X", "MK"].forEach((s, i) => T((cc[i] + cc[i + 1]) / 2, 168.5, s, 1.8, { al: "c" }));
   cc.slice(1, -1).forEach(c => L([[c, 12], [c, 172]], 0.2));
   const rows = D.koord || [], rh = 3.2, nfit = Math.floor((165 - 13) / rh);
@@ -8733,8 +8735,13 @@ A.krokiPlan = (g, D, box, list) => { const i0 = g.G.length; const all = [...D.pa
     for (const t of D.yolYazi || []) { const q = M(t.p); if (!inB(q)) continue; let r = 0; if (t.a && t.b) { const a0 = M(t.a), b0 = M(t.b); r = Math.atan2(b0[1] - a0[1], b0[0] - a0[0]) * 180 / Math.PI; if (r > 90) r -= 180; if (r < -90) r += 180; } if(D.nearSketch&&t.region){A.ifzRegionLabel(g,F,box,D.frame,t.region,t.s,2.45,t.p,r,5);continue;}
       T(q[0], q[1], t.s, 2.6, D.nearSketch?{al:"c",rot:r,pr:5,maxR:1.6}:r ? { al: "c", rot: r } : { al: "c" }); } }
   /* imar ada kenarı (mavi) */ for (const ln of D.imar || []) { const Q = ln.kapali ? [...ln.pts, ln.pts[0]] : ln.pts; for (let i = 0; i + 1 < Q.length; i++) { const s_ = cl(M(Q[i]), M(Q[i + 1])); if (s_) g.G.push({ t: "l", p: s_, w: 0.3, color: "#0000ff" }); } }
-  /* birleştirmede kalkan eski sınırlar: çizgi + çarpı işaretleri; eski parsel numaraları üstü çizili */ for (const [a0, b0] of D.iptal || []) { const ma = M(a0), mb = M(b0); g.G.push({ t: "l", p: [ma, mb], w: 0.3, color: "#b000b0" }); for (const t of [0.3, 0.7]) { const c = [ma[0] + (mb[0] - ma[0]) * t, ma[1] + (mb[1] - ma[1]) * t]; L([[c[0] - 1, c[1] - 1], [c[0] + 1, c[1] + 1]], 0.2); L([[c[0] - 1, c[1] + 1], [c[0] + 1, c[1] - 1]], 0.2); } }
-  for (const e of D.eskiNo || []) { const q = M(e.p); if (!inB(q)) continue; T(q[0], q[1], e.s, 2.6, { al: "c" }); L([[q[0] - 2, q[1] - 0.6], [q[0] + 2, q[1] + 1.6]], 0.2); }
+  for(const [a,b] of D.iptal||[]){
+    const seg=cl(M(a),M(b));if(!seg)continue;const [p,q]=seg,len=Math.hypot(q[0]-p[0],q[1]-p[1]);
+    L(seg,.22,"#555");const count=Math.max(1,Math.ceil(len/16)),r=Math.min(.95,len*.25);
+    for(let i=0;i<count;i++){const f=(i+.5)/count,x=p[0]+f*(q[0]-p[0]),y=p[1]+f*(q[1]-p[1]);if(!inB([x,y]))continue;
+      L([[x-r,y-r],[x+r,y+r]],.24,"#b00000");L([[x-r,y+r],[x+r,y-r]],.24,"#b00000");}
+  }
+  for(const e of D.eskiNo||[]){const q=M(e.p);if(inB(q)&&e.s)T(q[0],q[1],e.s,2.6,{al:"c",cancelledParcel:true,pr:3,...(e.ring?{inP:e.ring.map(M)}:{})});}
   { const P = D.parent.pts; L([...P, P[0]].map(M), 0.8); } /* ana parsel kalın */
   { /* balastro: ana parselin ve parçaların bütün köşelerinde */ const bs = new Set(); for (const P of [D.parent.pts, ...polys.map(pr => pr.pts)]) for (const p of P) { const k = p[0].toFixed(3) + "," + p[1].toFixed(3); if (bs.has(k)) continue; bs.add(k); const m = M(p); if (inB(m)) A.balastro(g.G, m[0], m[1], D.points && D.points.length ? 0.6 : 0.45, 0.2); } }
   const LBL = []; for (const pr of polys) { const P = pr.pts; L([...P, P[0]].map(M), D.parts.length ? 0.3 : 0.6); if (!D.noLen) for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length], k = ek(a, b); if (seen.has(k)) continue; seen.add(k);
@@ -8766,20 +8773,42 @@ A.krokiPlan = (g, D, box, list) => { const i0 = g.G.length; const all = [...D.pa
     }
     if(candidates.length)T(...candidates[0],name,size,{al:"c",cand:candidates,anc:m,pr:4,pointNumber:true,regionOnly:true,sabit:true});
   }
-  for (const pr of polys) { const c = M(A.label(pr.pts)); if (D.parts.length) { const group=D.nearSketch?{grp:"part"+g.G.length,inP:pr.pts.map(M),pr:2}:{}; T(c[0], c[1] + (D.nearSketch?2.2:1.2), pr.ad, 3.4, { al: "c", bold: true,...group }); T(c[0], c[1] - (D.nearSketch?3.0:2.4), `${K.fa(A.area(pr.pts))} m²`, D.nearSketch?2.15:1.7, { al: "c",...group }); } }
+  for (const pr of polys) { const c = M(A.label(pr.pts)); if (D.parts.length) { const group=D.nearSketch?{grp:"part"+g.G.length,inP:pr.pts.map(M),pr:2}:{}; T(c[0], c[1] + (D.nearSketch?2.2:1.2), pr.ad, 3.4, { al: "c", bold: true,cancelledParcel:!!pr.cancelledParcel,...group }); T(c[0], c[1] - (D.nearSketch?3.0:2.4), `${K.fa(A.area(pr.pts))} m²`, D.nearSketch?2.15:1.7, { al: "c",...group }); } }
   if (D.ada) { const c = M(A.label(D.parent.pts)); let q = [c[0], c[1]]; if (D.parts.length) { /* ada numarası: bölme hatlarından, parça yazılarından ve sınırdan en uzak boş yer */ const PM = D.parent.pts.map(M), cs = polys.map(pr => M(A.label(pr.pts))), cuts = (D.cuts || []).map(l => l.map(M)); const bb_ = A.bbox(PM); let best = null, bs = -1;
       const sd_ = (p, a, b) => A.segDist(p, a, b); for (let i = 1; i < 18; i++) for (let j = 1; j < 18; j++) { const p = [bb_[0] + (bb_[2] - bb_[0]) * i / 18, bb_[1] + (bb_[3] - bb_[1]) * j / 18]; if (!A.inPoly(PM, p[0], p[1])) continue;
         let d = Infinity; for (const l of cuts) for (let k = 0; k + 1 < l.length; k++) d = Math.min(d, sd_(p, l[k], l[k + 1]) / 6); for (const z of cs) d = Math.min(d, Math.hypot(p[0] - z[0], p[1] - z[1]) / 8); for (let k = 0; k < PM.length; k++) d = Math.min(d, sd_(p, PM[k], PM[(k + 1) % PM.length]) / 7); if (d > bs) { bs = d; best = p; } } if (best) q = best; }
-    const group={grp:"parentId",inP:D.parent.pts.map(M),pr:3}; T(q[0], q[1] + 1.6, D.ada, 4.4, { al: "c", bold: true,color:"#000",...group }); const pn = String(D.parselNo || ""); if (pn) T(q[0], q[1] - 2.6, pn, 2.6, { al:"c",color:"#000",parentParcelNo:true,...group }); }
+    const group={grp:"parentId",inP:D.parent.pts.map(M),pr:3}; T(q[0], q[1] + 1.6, D.ada, 4.4, { al: "c", bold: true,color:"#000",...group }); const pn = D.eskiNo?.length?"":String(D.parselNo || ""); if (pn) T(q[0], q[1] - 2.6, pn, 2.6, { al:"c",color:"#000",parentParcelNo:true,...group }); }
   try { A.declutter(g.G, i0, g.G.length, box, { pad: D.nearSketch ? .95 : .2 }); } catch (e) { console.error(e); }
   const unplaced=g.G.slice(i0).filter(o=>o.pointNumber&&!o.s).length+D.points.length-g.G.slice(i0).filter(o=>o.pointNumber).length;
   if(unplaced&&!D.noHidNote) T(box[0]+1,box[1]+1,`Sık noktalardan ${unplaced} tanesinin numarası koordinat özetinde.`,1.5,{sabit:true});
   // İfraz: numara siyah kalır; iptal çizgisi kırmızı ve numaranın tam üstündedir.
   const old=g.G.slice(i0).find(o=>o.parentParcelNo&&o.s);
-  if(D.parts.length&&old){const r=A.tw(old.s,old.size)/2+.35;L([[old.x-r,old.y],[old.x+r,old.y]],.25,D.ifraz?"#d00000":"#000");}
+  if(D.parts.length&&old){
+    const r=A.tw(old.s,old.size)/2+.35;
+    if(D.ifraz){L([[old.x-r,old.y-.55],[old.x+r,old.y+.55]],.22,"#d00000");L([[old.x-r,old.y+.55],[old.x+r,old.y-.55]],.22,"#d00000");}
+    else L([[old.x-r,old.y],[old.x+r,old.y]],.25,"#000");
+  }
+  for(const o of g.G.slice(i0).filter(o=>o.cancelledParcel&&o.s)){const r=A.tw(o.s,o.size)/2+.25;
+    L([[o.x-r,o.y-.85],[o.x+r,o.y+.85]],.22,"#b00000");L([[o.x-r,o.y+.85],[o.x+r,o.y-.85]],.22,"#b00000");}
   A.krokiKomsuLabels(g,D,F,box,D.frame||KW);
-  for(const o of g.G.slice(i0))if(o.t==="x"&&(D.nearSketch||o.grp==="parentId"))o.sabit=true;
+  for(const o of g.G.slice(i0))if(o.t==="x"&&(D.nearSketch||o.grp==="parentId"||o.cancelledParcel))o.sabit=true;
   return F; };
+// Önceki kenarın, sonuçta hâlâ sınır olan parçalarını çıkar. Farklı düğüm sıklıklarını da kapsar.
+A.removedParcelEdges=(before,after)=>{
+ const edges=rings=>rings.flatMap(P=>P.map((a,i)=>[a,P[(i+1)%P.length]]));
+ const kept=edges(after),removed=[],eps=.001;
+ for(const [a,b] of edges(before)){
+  const dx=b[0]-a[0],dy=b[1]-a[1],len=Math.hypot(dx,dy);if(len<=eps)continue;
+  const ux=dx/len,uy=dy/len,project=p=>(p[0]-a[0])*ux+(p[1]-a[1])*uy,off=p=>Math.abs((p[0]-a[0])*uy-(p[1]-a[1])*ux);
+  const covered=[];for(const [p,q] of [...kept,...removed]){
+   if(off(p)>eps||off(q)>eps)continue;const u=project(p),v=project(q),lo=Math.max(0,Math.min(u,v)),hi=Math.min(len,Math.max(u,v));if(hi>lo)covered.push([lo,hi]);
+  }
+  const at=t=>[a[0]+ux*t,a[1]+uy*t];let last=0;
+  for(const [lo,hi] of covered.sort((a,b)=>a[0]-b[0])){if(lo-last>eps)removed.push([at(last),at(lo)]);last=Math.max(last,hi);}
+  if(len-last>eps)removed.push([at(last),at(len)]);
+ }
+ return removed;
+};
 A.label = P => { const c = A.centroid(P); if (A.inPoly(P, c[0], c[1])) return c; // içerideki en geniş yatay kesitin ortası
   const [x0, y0, x1, y1] = A.bbox(P); let best = c, bw = -1; for (let k = 1; k < 20; k++) { const y = y0 + (y1 - y0) * k / 20, xs = [];
     for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length]; if ((a[1] > y) !== (b[1] > y)) xs.push(a[0] + (y - a[1]) / (b[1] - a[1]) * (b[0] - a[0])); } xs.sort((a, b) => a - b);
@@ -14448,6 +14477,9 @@ function ifzReadParcelHeader(a,drawing,pts,no){
     const value=m?.[source]??(useText?ky[source]:null);
     P[field]=value==null?"":String(value);
   }
+  if(m&&Object.hasOwn(m,"groupDatum")){
+    P.datum=m.groupDatum;P.projK="";P.proj="";P.elipsoid="";P.dilim="";P.dom="";
+  }
   P.tapuAlan="";
   if(m?.alan!=null&&String(m.alan).trim()){
     const t=String(m.alan).trim(),v=t.includes(",")?Number(t.replaceAll(".","").replace(",",".")):Number(t);
@@ -15456,7 +15488,7 @@ $('iRoadMark').addEventListener('click',()=>{if(!S().parsel)return msg('iMsg','�
   $('iRoadDetails').open=true;$('iRoadMark').textContent=IFZ_ROAD_PICK.active?'✕ İşaretlemeyi iptal et':'✎ Cephe başı / sonu işaretle';
   $('iRoadMarkStatus').textContent=IFZ_ROAD_PICK.active?'Parsel üzerinde yol cephesinin BAŞLANGIÇ ve BİTİŞ noktalarını sırayla tıkla.':'İşaretleme iptal edildi.';drawA();});
 $('iRoadReverse').addEventListener('click',()=>{if(!applyMarkedRoad(!IFZ_ROAD_PICK.opposite))msg('iMsg','Önce cephe başlangıç ve bitişini işaretle.',true);});
-$('aCv').addEventListener('pointerdown',ev=>{if(MOD!=='ifz'||!IFZ_ROAD_PICK.active)return;
+$('aCv').addEventListener('pointerdown',ev=>{if(listPicker||MOD!=='ifz'||!IFZ_ROAD_PICK.active)return;
  ev.preventDefault();ev.stopImmediatePropagation();const r=cv.getBoundingClientRect();ifzPickPoint([WX(ev.clientX-r.left),WY(ev.clientY-r.top)]);
 },true);
 $('iContextFit').addEventListener('click',()=>fitA(true));
@@ -15653,6 +15685,8 @@ function drawA() { if (!cv.width) return; const D = dpr; ACAD_PLAN.surface(cx,cv
     }
    }
   }
+  if(listPicker){cx.save();cx.fillStyle="rgba(0,151,174,.22)";cx.strokeStyle="#008da5";cx.lineWidth=2.2*D;
+    for(const ring of listPicker.rings()){path(ring,true);cx.fill();cx.stroke();}cx.restore();}
   if (PICK2) { path(PICK2.pts, true); cx.fillStyle = "rgba(208,122,16,.22)"; cx.fill(); cx.strokeStyle = ACAD_PLAN.ink("#d07a10"); cx.lineWidth = 3 * D; cx.stroke(); }
   if (MODEA === "ciz" && DR.length) { cx.strokeStyle = ACAD_PLAN.ink("#d07a10"); cx.lineWidth = 2.5 * D; path(DR); cx.stroke(); cx.fillStyle = ACAD_PLAN.ink("#d07a10"); DR.forEach(p => { cx.beginPath(); cx.arc(X(p[0]), Y(p[1]), 4.5 * D, 0, 7); cx.fill(); }); } if (MOD === "kam") kmDraw(D); if (MOD === "trk") tyDraw(D); }
 /* ===== İfraz: bölme noktasını / çizgisini sürükle, alanlar anlık değişsin ===== */
@@ -15697,9 +15731,10 @@ function ifzDragGit(sx, sy) { const D_ = DRG, a = S(), f = a.ifz; const w = [WX(
   $("aCoord").textContent = `↔ ${D_.cizgi ? "çizgi kaydırılıyor" : "nokta kaydırılıyor " + tru(uz) + " m"} · ${ks.join(" · ")}`; msg("iMsg", `↔ Canlı: ${ks.join(" · ")}`); drawA(); }
 function ifzDragBit() { const D_ = DRG; DRG = null; cv.style.cursor = ""; if (!D_.son) { QB = null; return; } const f = S().ifz; nameNew(); f.lastQ = QB ? { before: QB, after: JSON.stringify(f.parts) } : null; QB = null; save(); renderIfz(); drawA(); prevA();
   const bad = f.parts.map(q => [q.ad, kural(q.pts)]).filter(x => x[1].length); msg("iMsg", `✓ Kaydırıldı — ${f.parts.map(q => `${q.ad} ${tra(A.area(q.pts))} m²`).join(" · ")} · toplam ${tr2(f.parts.reduce((t, q) => t + A.area(q.pts), 0))} m² (ana parsel ${tra(A.area(S().parsel.pts))})${bad.length ? ` · ⚠ şart: ${bad.map(([n, e]) => n + " " + e.join(", ")).join(" · ")}` : ""}`, !!bad.length); }
+let listPicker=null;
 const ptr = new Map(); let pan = null, pin = null, mv = false;
 cv.addEventListener("contextmenu", e => { e.preventDefault(); if (MODEA === "ciz") { if (DR.length >= 2) $("aDrOk").click(); else $("aDrX").click(); } else if (MODEA === "pick") { MODEA = null; $("aPick").classList.remove("on"); drawA(); } });
-cv.addEventListener("pointerdown", e => { if (e.button === 2) return; cv.setPointerCapture(e.pointerId); ptr.set(e.pointerId, [e.offsetX, e.offsetY]); mv = false; if (ptr.size === 1 && ifzDragBas(e.offsetX, e.offsetY)) { pan = null; return; } if (DRG && ptr.size > 1) { DRG = null; } if (ptr.size === 1) pan = { x: e.offsetX, y: e.offsetY, cx: V.cx, cy: V.cy };
+cv.addEventListener("pointerdown", e => { if (e.button === 2) return; cv.setPointerCapture(e.pointerId); ptr.set(e.pointerId, [e.offsetX, e.offsetY]); mv = false; if (ptr.size === 1 && !listPicker && ifzDragBas(e.offsetX, e.offsetY)) { pan = null; return; } if (DRG && ptr.size > 1) { DRG = null; } if (ptr.size === 1) pan = { x: e.offsetX, y: e.offsetY, cx: V.cx, cy: V.cy };
   if (ptr.size === 2) { const [p, q] = [...ptr.values()]; pin = { d: Math.hypot(p[0] - q[0], p[1] - q[1]), s: V.s, w: [WX((p[0] + q[0]) / 2), WY((p[1] + q[1]) / 2)] }; pan = null; } });
 let aplCoordTimer=0, aplCoordLatest=null;
 function requestAplCoord(sx,sy){
@@ -15732,7 +15767,7 @@ function snap(sx, sy) { const g = geomNow(); let best = null, bd = 16 * 16;
   return best; }
 function onLine(sx, sy, P) { for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length]; const ax = X(a[0]) / dpr, ay = Y(a[1]) / dpr, bx = X(b[0]) / dpr, by = Y(b[1]) / dpr, vx = bx - ax, vy = by - ay, L = vx * vx + vy * vy; if (!L) continue;
     const t = Math.max(0, Math.min(1, ((sx - ax) * vx + (sy - ay) * vy) / L)); if (Math.hypot(ax + t * vx - sx, ay + t * vy - sy) < 12) return true; } return false; }
-const upA = e => { const was = ptr.has(e.pointerId); ptr.delete(e.pointerId); if (ptr.size < 2) pin = null; if (DRG && !ptr.size) { if (DRG.sx != null) ifzDragGit(DRG.sx, DRG.sy); ifzDragBit(); return; } if (!was || ptr.size) return; pan = null; if (mv) return; { const t = Date.now(), q = [e.offsetX, e.offsetY]; if (window.__dtA && t - __dtA.t < 380 && Math.hypot(q[0] - __dtA.q[0], q[1] - __dtA.q[1]) < 30) { window.__dtA = null; fitA(); return; } window.__dtA = { t, q }; }
+const upA = e => { const was = ptr.has(e.pointerId); ptr.delete(e.pointerId); if (ptr.size < 2) pin = null; if (DRG && !ptr.size) { if (DRG.sx != null) ifzDragGit(DRG.sx, DRG.sy); ifzDragBit(); return; } if (!was || ptr.size) return; pan = null; if (mv) return; if(listPicker){listPicker.pick(WX(e.offsetX),WY(e.offsetY));return;} { const t = Date.now(), q = [e.offsetX, e.offsetY]; if (window.__dtA && t - __dtA.t < 380 && Math.hypot(q[0] - __dtA.q[0], q[1] - __dtA.q[1]) < 30) { window.__dtA = null; fitA(); return; } window.__dtA = { t, q }; }
   if (MODEA === "ciz") { const sp = snap(e.offsetX, e.offsetY); if (!sp) { $("aDrawTxt").textContent = "Boşluk tutulmaz — bir noktaya ya da çizgiye dokun"; return; } DR.push(sp); drawA(); $("aDrawTxt").textContent = `${DR.length} nokta tutuldu — parsel sınırının üstünden başla, sınırda bitir`; return; }
   if (MODEA === "pick") { // V7.1.15.31: interior OR boundary hit, prefer smallest actual parcel
     const x = WX(e.offsetX), y = WY(e.offsetY);
@@ -16819,7 +16854,12 @@ function ifzData() {const a=S(),d=ifzDataFor(a.parsel,a.ifz,a.antet);d.ifraz=tru
   { /* YOL yazısı en çok 2 yerde (aynı türden yazılar birbirinden uzak), parsele en yakın olanlar; DERE/KANAL ayrıca en çok 1 */ const pc = A.label(par.pts), sz = Math.max(bb[2] - bb[0], bb[3] - bb[1]); const dP = t => { let m = Infinity; for (let i = 0; i < par.pts.length; i++) m = Math.min(m, A.segDist(t.p, par.pts[i], par.pts[(i + 1) % par.pts.length])); return m; };
     const pick = (L, n) => { const out = []; for (const t of L.slice().sort((x, y) => (x.a ? -1 : 0) - (y.a ? -1 : 0) || dP(x) - dP(y))) { if (out.length >= n) break; if (out.some(o => Math.hypot(o.p[0] - t.p[0], o.p[1] - t.p[1]) < sz * 0.6)) continue; out.push(t); } return out; };
     const Y_ = yolYazi.filter(t => /YOL|CADDE|SOKAK/.test(t.s)), O_ = yolYazi.filter(t => !/YOL|CADDE|SOKAK/.test(t.s)); yolYazi.length = 0; yolYazi.push(...pick(Y_, 2), ...pick(O_, 1)); }
-  return { komsu, komsuAd, komsuP, cadCiz, cadYazi, yolYazi, yol: f.yol || [], ada: ant.ada, parselNo: ant.parselNo, parent: { pts: par.pts, names: par.names }, parts: parts_, cuts: f.cuts, points: [...pts.values()], koord: (() => { /* koordinat hanesi: kaynakta mm (3. hane) anlamlıysa 3 hane yazılır; kontrol mühendisi çizelgeden hesapladığında beyannamedeki alanı birebir bulur */ const V_ = [...pts.values()], h = Math.max(3,K.H.k); return V_.map(q => [q.n, q.p[0].toFixed(h), q.p[1].toFixed(h), par.names.includes(q.n) ? "" : String(f.mk ?? "")]); })() }; } /* MK: yeni (ifrazla oluşan) noktaların konum doğruluğu, örnek Ek-18 gibi */
+  const history=(par.kaynakParseller||[]).filter(a=>a.pts?.length>=3);
+  const iptal=history.length&&parts_.length?A.removedParcelEdges(history.map(a=>a.pts),[par.pts,...parts_.map(a=>a.pts)]):[];
+  const multiBlock=new Set(history.map(a=>a.ada)).size>1;
+  const eskiNo=parts_.length?history.map(a=>({p:A.label(a.pts),s:(multiBlock?a.ad:a.parsel)||a.ad,ring:a.pts})):[];
+  for(const old of history)old.pts.forEach((p,i)=>{if(old.names?.[i])add(p,old.names[i]);});
+  return { iptal,eskiNo,komsu, komsuAd, komsuP, cadCiz, cadYazi, yolYazi, yol: f.yol || [], ada: ant.ada, parselNo: ant.parselNo, parent: { pts: par.pts, names: par.names }, parts: parts_, cuts: f.cuts, points: [...pts.values()], koord: (() => { /* koordinat hanesi: kaynakta mm (3. hane) anlamlıysa 3 hane yazılır; kontrol mühendisi çizelgeden hesapladığında beyannamedeki alanı birebir bulur */ const V_ = [...pts.values()], h = Math.max(3,K.H.k); return V_.map(q => [q.n, q.p[0].toFixed(h), q.p[1].toFixed(h), par.names.includes(q.n) ? "" : String(f.mk ?? "")]); })() }; } /* MK: yeni (ifrazla oluşan) noktaların konum doğruluğu, örnek Ek-18 gibi */
 $("aoI").addEventListener("click", async () => { const a = S(); if (!a.parsel) return msg("aoMsg", "Önce parseli seç.", true); if (!a.ifz.parts || !a.ifz.parts.length) { if ($("iAl").value.trim() || $("iY").value === "esit") $("iGo").click(); }
   if (!a.ifz.parts || !a.ifz.parts.length) { msg("aoMsg", "Parsel henüz bölünmedi. Yukarıdaki İfraz bölümünde istenen alanı yazıp \"Böl (ifraz et)\" düğmesine bas.", true); $("iAl").scrollIntoView({ block: "center" }); return; } msg("aoMsg", "İfraz evrakı hazırlanıyor…"); await new Promise(r => setTimeout(r, 0));
   return ifzExport('pdf'); });
@@ -16919,7 +16959,7 @@ window.aplShow = m => { if(m==='ifz'&&$('ifzDocSettings').open)ifzOpenSettings()
 S(); renderAll(); { const h = location.hash.slice(1); if (h === "apl" || h === "ifz" || h === "kam" || h === "akr" || h === "trk") window.aplShow(h); }
 // CAD çiziminden aktarım: dosya geometrisi olarak yükle, seçili parsel varsa doğrudan kullan
 function fromCad(d, name, pts, no, strictCad, verifiedNames, target, exactCad=false) { window.acadConsumeDwg82=null; FD = d; FDname = name; ZTIN = null; PLACED = null; const a = S(); if(target&&pts){a.antet.ada="";a.antet.parselNo="";} if(target==="ifz"){ifzReadParcelHeader(a,d,pts,no);fillAntet();} if (no && no.no) { if (no.ada) a.antet.ada = no.ada; a.antet.parselNo = no.no; fillAntet(); }
-  if (pts) setParsel(pts, no && no.no ? `${no.ada ? no.ada + "/" : ""}${no.no}` : null, "dosya", null, !!strictCad, verifiedNames, exactCad); else { a.parsel = null; a.res = null; a.ifz.parts = null; a.ifz.cuts = []; a.ifz.yeni = []; a.ifz.yol = []; save(); renderAll(); fitA(); }
+  if (pts) setParsel(pts, no && no.no ? `${no.ada ? no.ada + "/" : ""}${no.no}` : null, "dosya", no, !!strictCad, verifiedNames, exactCad); else { a.parsel = null; a.res = null; a.ifz.parts = null; a.ifz.cuts = []; a.ifz.yeni = []; a.ifz.yol = []; save(); renderAll(); fitA(); }
   { const bc = binaCands().find(o => /^F:BINA$/i.test(o.v)); if (bc) { S().bina = bc.v; save(); renderAll(); } }
   const ctx=FD?.ifrazContext;
   if($('iContextInfo'))$('iContextInfo').textContent=ctx?`CAD yakın çevresi: ${ctx.neighbors} olası komşu parsel · ${ctx.roadObjects} yol nesnesi · ${ctx.kept} nesne aktarıldı${ctx.truncated?' (çok yoğun veri için yakın nesneler öncelikli)':''}. Kaynak çizim değiştirilmedi.`:'Parsel, komşu sınırlar ve yakındaki yol çizgilerini birlikte açabilirsin.';
@@ -17567,7 +17607,7 @@ $("kmNcn").addEventListener("click", async () => { if (!kmNeed()) return; const 
 /* ===================== APLİKASYON KROKİSİ (EK-5) ===================== */
 function AK() { const a = S(); if (!a.akr || typeof a.akr !== "object") a.akr = { tus: true, rop: true, kk: true }; return a.akr; }
 var AKF = { akBuro: "buro", akMud: "mud", akTapu: "tapu", akYan: "yan", akFt: "ft", akFn: "fn", akUt: "ut", akUn: "un", akKn: "kn", akOl: "ol", akMal: "mal", akYap: "yap", akK1: "k1", akK2: "k2", akTas: "tas", akTar: "tar", akOlc: "olc" };
-function akRender() { $("akGroupSwitch").hidden=!S().parsel?.cadGroupAkr||!$("akGroupSwitch").querySelector("select").options.length;akNamesRefresh(); const k = AK(), a = S(); for (const [id, f] of Object.entries(AKF)) { const el = $(id); if (el && document.activeElement !== el) el.value = k[f] ?? ""; } $("akTus").checked = k.tus !== false; $("akRop").checked = k.rop !== false; $("akKk").checked = k.kk !== false;
+function akRender() { $("akGroupSwitch").hidden=!S().parsel?.cadGroupAkr||!$("akGroupSwitch").querySelector("select").options.length;$("akJointPdf").hidden=$("akGroupSwitch").hidden||$("akGroupSwitch").querySelector("select").options.length<2;akNamesRefresh(); const k = AK(), a = S(); for (const [id, f] of Object.entries(AKF)) { const el = $(id); if (el && document.activeElement !== el) el.value = k[f] ?? ""; } $("akTus").checked = k.tus !== false; $("akRop").checked = k.rop !== false; $("akKk").checked = k.kk !== false;
   if (!k.mud && a.antet.il) $("akMud").placeholder = a.antet.il.toLocaleUpperCase("tr-TR") + " KADASTRO MÜDÜRLÜĞÜ"; if (!k.tapu && a.antet.tapuAlan) $("akTapu").placeholder = a.antet.tapuAlan; if (!k.mal && a.antet.malik) $("akMal").placeholder = a.antet.malik; if (!k.tar) $("akTar").placeholder = new Date().toLocaleDateString("tr-TR"); }
 Object.entries(AKF).forEach(([id, f]) => { const el = $(id); if (el) el.addEventListener("change", () => { AK()[f] = el.value.trim(); save(); akPrev(); }); });
 [["akTus", "tus"], ["akRop", "rop"], ["akKk", "kk"]].forEach(([id, f]) => $(id).addEventListener("change", () => { AK()[f] = $(id).checked; save(); akPrev(); }));
@@ -17768,13 +17808,13 @@ function tyHesapla() { const k = TY(); k.res = null; try {
     const al = p => { let best = 0, bd = Infinity, acc = 0; for (const l of k.imar) { const Q = l.kapali ? [...l.pts, l.pts[0]] : l.pts; for (let i = 0; i + 1 < Q.length; i++) { const a = Q[i], b = Q[i + 1], L_ = Math.hypot(b[0] - a[0], b[1] - a[1]); if (!L_) continue; const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * (b[0] - a[0]) + (p[1] - a[1]) * (b[1] - a[1])) / (L_ * L_))); const d = A.segDist(p, a, b); if (d < bd) { bd = d; best = acc + t * L_; } acc += L_; } } return best; };
     yeni.sort((a, b) => al(a) - al(b)); let pre = String(k.on || ""), n = Math.max(1, parseInt(k.n0) || 1); if (!pre && !(parseInt(k.n0) > 1)) { const nx = adaSonraki(String((k.pars[0] || {}).ada || S().antet.ada || "").trim(), [...k.pars.flatMap(p => p.names || []), ...(FD ? FD.points.map(q => q.n) : [])]); if (nx) { const m_ = /^(.*?)(\d+)$/.exec(nx); if (m_) { pre = m_[1]; n = +m_[2]; } } } const yN = adli.concat(yeni.map(p => { const s = pre + (n++); nm.set(tyKey(p), s); return { p, n: s }; })).sort((a_, b_) => al(a_.p) - al(b_.p));
     const names = P => P.map(p => nm.get(tyKey(p)) || ""); parts.forEach(q => q.names = names(q.pts));
-    /* birleştirmede kalkan iç sınırlar */ const iptal = []; if (k.pars.length > 1) { const cnt = new Map(); for (const p of k.pars) for (let i = 0; i < p.pts.length; i++) { const a = p.pts[i], b = p.pts[(i + 1) % p.pts.length], kk = [tyKey(a), tyKey(b)].sort().join("|"); cnt.set(kk, (cnt.get(kk) || { n: 0, a, b })); cnt.get(kk).n++; } for (const v of cnt.values()) if (v.n > 1) iptal.push([v.a, v.b]); }
+    const iptal=A.removedParcelEdges(k.pars.map(p=>p.pts),[T,...parts.map(p=>p.pts)]);
     k.res = { T: { pts: T, names: names(T) }, parts: [...terk, ...kal], yeni: yN, iptal, err: R.err }; }
   else { if (!k.ihdas) return tyMsg("İhdas edilecek alanın içine dokun.", true); const I = k.ihdas.pts; let T = I, par = null; if (k.tevhid) { par = k.pars[0]; if (!par) return tyMsg("Birleştirilecek komşu parsele dokun.", true); T = A.union([I, par.pts]); if (!T) return tyMsg("İhdas alanı seçilen parselle ortak sınır paylaşmıyor.", true); }
     const nm = new Map(); if (par) par.pts.forEach((q, i) => { if (par.names[i]) nm.set(tyKey(q), par.names[i]); }); const yeni = []; for (const p of I) { const kk = tyKey(p); if (nm.has(kk)) continue; const n0 = nameOf(p, 0.02); if (n0) nm.set(kk, n0); else yeni.push(p); }
     const c0 = A.centroid(I); yeni.sort((a, b) => Math.atan2(a[1] - c0[1], a[0] - c0[0]) - Math.atan2(b[1] - c0[1], b[0] - c0[0])); let pre = String(k.on || ""), n = Math.max(1, parseInt(k.n0) || 1); if (!pre && !(parseInt(k.n0) > 1)) { const nx = adaSonraki(String((k.pars[0] || {}).ada || S().antet.ada || "").trim(), [...k.pars.flatMap(p => p.names || []), ...(FD ? FD.points.map(q => q.n) : [])]); if (nx) { const m_ = /^(.*?)(\d+)$/.exec(nx); if (m_) { pre = m_[1]; n = +m_[2]; } } } const yN = yeni.map(p => { const s = pre + (n++); nm.set(tyKey(p), s); return { p, n: s }; });
     const names = P => P.map(p => nm.get(tyKey(p)) || ""); const iad = k.ihdasNo || "A"; const parts = [{ ad: iad, pts: I, names: names(I), ihdas: true }]; if (par) parts.push({ ad: par.no, pts: par.pts, names: names(par.pts) });
-    const iptal = []; if (par) { const ks = new Set(I.map((p, i) => [tyKey(p), tyKey(I[(i + 1) % I.length])].sort().join("|"))); par.pts.forEach((a, i) => { const b = par.pts[(i + 1) % par.pts.length]; if (ks.has([tyKey(a), tyKey(b)].sort().join("|"))) iptal.push([a, b]); }); }
+    const iptal=par?A.removedParcelEdges([I,par.pts],[T]):[];
     k.res = { T: { pts: T, names: names(T) }, parts, yeni: yN, iptal, ihdas: true, par }; }
   save(); tyRender(); drawA(); tyPrev(); const r = k.res; tyMsg(k.mod === "terk" ? `Yola terk: ${r.parts.filter(q => q.terk).map(q => `${q.ad} ${tra(A.area(q.pts))} m²`).join(", ")} · kalan: ${r.parts.filter(q => !q.terk).map(q => `${q.ad} ${tra(A.area(q.pts))} m²`).join(", ")} · ${r.yeni.length} yeni nokta.` : `Yoldan ihdas: ${r.parts[0].ad} ${tra(A.area(r.parts[0].pts))} m²${r.par ? ` · ${r.par.no} parselle birleşince ${tra(A.area(r.T.pts))} m²` : ""} · ${r.yeni.length} yeni nokta.`);
   } catch (e) { console.error(e); tyMsg("Hesap yapılamadı: " + e.message, true); } }
@@ -17795,7 +17835,9 @@ function tyRender() { const k = TY(); const box = $("tyPars"); if (!box) return;
 function tyDocs() { const k = TY(), r = k.res, an = S().antet; if (!r) return null; const ada = (k.pars[0] && k.pars[0].ada) || an.ada || ""; const tev = k.mod === "terk" ? k.pars.length > 1 : !!r.par;
   const num = v => { const x = K.num(v); return isFinite(x) && x > 0 ? x : null; }; const pno = k.mod === "terk" ? k.pars.map(p => p.no).join("-") : (r.par ? r.par.no : k.ihdasNo || "A");
   const ant = Object.assign({}, an, { ada, parselNo: pno }); const par = { pts: r.T.pts, names: r.T.names }; const f = { parts: r.parts.map(q => ({ ad: q.ad, pts: q.pts, names: q.names })), cuts: [], yeni: r.yeni, yol: [], yolGap: [] }; const D = ifzDataFor(par, f, ant);
-  D.imar = k.imar; D.iptal = r.iptal; D.eskiNo = tev ? (k.mod === "terk" ? k.pars.map(p => ({ p: A.label(p.pts), s: p.no })).concat([{ p: (() => { const c = A.label(r.T.pts), b = A.bbox(r.T.pts); for (const f of [0.12, -0.12, 0.2, -0.2]) { const q = [c[0], c[1] + (b[3] - b[1]) * f]; if (A.inPoly(r.T.pts, q[0], q[1]) && !r.parts.some(x => { const l = A.label(x.pts); return Math.hypot(l[0] - q[0], l[1] - q[1]) < (b[3] - b[1]) * 0.08; })) return q; } return c; })(), s: "T" }]) : []) : []; const ys = new Set(r.yeni.map(y => y.n)); D.koord = D.koord.map(q => [q[0], q[1], q[2], ys.has(q[0]) ? k.mk || "" : ""]);
+  D.imar = k.imar;
+  D.iptal = k.mod==="terk"?A.removedParcelEdges(k.pars.map(p=>p.pts),[r.T.pts,...r.parts.map(p=>p.pts)]):r.par?A.removedParcelEdges([k.ihdas.pts,r.par.pts],[r.T.pts]):[];
+  if(k.mod!=="terk"&&r.par)D.parts.forEach(q=>q.cancelledParcel=true); D.eskiNo = tev ? (k.mod === "terk" ? k.pars.map(p => ({ p: A.label(p.pts), s: p.no,ring:p.pts })).concat([{ p: (() => { const c = A.label(r.T.pts), b = A.bbox(r.T.pts); for (const f of [0.12, -0.12, 0.2, -0.2]) { const q = [c[0], c[1] + (b[3] - b[1]) * f]; if (A.inPoly(r.T.pts, q[0], q[1]) && !r.parts.some(x => { const l = A.label(x.pts); return Math.hypot(l[0] - q[0], l[1] - q[1]) < (b[3] - b[1]) * 0.08; })) return q; } return c; })(), s: "T" }]) : []) : []; const ys = new Set(r.yeni.map(y => y.n)); D.koord = D.koord.map(q => [q[0], q[1], q[2], ys.has(q[0]) ? k.mk || "" : ""]);
   const tapuT = k.mod === "terk" ? k.pars.reduce((t, p) => t + (num(p.tapu) ?? A.area(p.pts)), 0) : A.area(r.T.pts); const pc = p => (p.cins || an.cins || "").toLocaleUpperCase("tr-TR"), pm = p => p.malik || an.malik || "";
   const P = Object.assign({}, ant, { baslik: "RÖLÖVE ÖLÇÜ KROKİSİ", cizEski: true, tapuAlan: k.mod === "terk" && !tev ? (num(k.pars[0].tapu) ?? "") : K.fa(tapuT) }); const rows = []; const deng = q => (q.deng ?? A.area(q.pts));
   try { A.dengele(D, P); } catch (e) {}
@@ -17827,7 +17869,7 @@ $("tyPdf").addEventListener("click", async () => { const k = TY(); if (!k.res) r
 $("tyNcn").addEventListener("click", async () => { const o = tyDocs(); if (!o) return tyMsg("Önce Hesapla.", true); const txt = o.D.koord.map(q => `${q[0]} ${q[1]} ${q[2]}`).join("\r\n") + "\r\n"; await saveFile(fnm("TERK.ncn"), new TextEncoder().encode(txt), $("tyMsg")); });
 $("tyDxf").addEventListener("click", async () => { const o = tyDocs(); if (!o) return tyMsg("Önce Hesapla.", true); try { const Dx = O.dxf(); for (const p of TY().pars) Dx.poly("KAD_PARSEL", p.pts, true); for (const q of TY().res.parts) Dx.poly(q.terk ? "TERK_ALAN" : q.ihdas ? "IHDAS_ALAN" : "KALAN_ALAN", q.pts, true); for (const l of TY().imar) Dx.poly("IMAR_ADA_KENARI", l.pts, !!l.kapali); for (const q of o.D.points) { Dx.point("NOKTA", q.p[0], q.p[1]); Dx.text("NOKTANO", q.p[0] + 0.3, q.p[1] + 0.3, 0.6, q.n); } for (const q of TY().res.parts) { const c = A.label(q.pts); Dx.text("PARCA", c[0], c[1], 1.5, q.ad, 0, "c"); } const files=[{name:fnm("TERK.dxf"),data:Dx.build()}];for(const [i,page] of tyPages().slice(0,2).entries()){const d=O.dxf();O.sheetToDxf(d,page.G,0,0,1);files.push({name:fnm(i?"DURUM_HARITASI.dxf":"OLCU_KROKISI.dxf"),data:d.build()});}await saveFile(fnm("TERK_DXF.zip"),O.zip(files),$("tyMsg")); } catch (e) { tyMsg("DXF oluşturulamadı: " + e.message, true); } });
 
-window.APLT = { akSheetBW,akSheet,reviewShape82, reviewedLayout83, saveData:()=>save(), refreshResults:()=>renderRes(), refreshPreview:()=>prevA(), getBinaCandidates:()=>binaCands(),
+window.APLT = { setListPicker(picker){listPicker=picker;window.__dtA=null;scheduleAplDraw();},akSheetBW,akSheet,reviewShape82, reviewedLayout83, saveData:()=>save(), refreshResults:()=>renderRes(), refreshPreview:()=>prevA(), getBinaCandidates:()=>binaCands(),
   approveBina:(value)=>{const list=binaCands(); const c=list.find(x=>x.v===value);
     if(!c)throw Error('Seçilen bina dış hattı artık mevcut değil. Dosyayı yeniden kontrol et.');
     const a=S();a.bina=c.v;a.binaElle=true;a.aplFootApproved=c.v;
@@ -17844,7 +17886,7 @@ window.APLT = { akSheetBW,akSheet,reviewShape82, reviewedLayout83, saveData:()=>
     }catch(e){a.manuelFootprint=old.manual;a.bina=old.bina;a.binaElle=old.elle;a.aplFootApproved=old.approved;a.yer=old.yer;a.dY=old.dY;a.dX=old.dX;a.res=old.res;
       $("aYer").value=prevUI.yer;$("aDY").value=prevUI.dy;$("aDX").value=prevUI.dx;renderBina(false); save();throw e;}
   },
-  toScr: p => [X(p[0]) / dpr, Y(p[1]) / dpr], cvEl: () => cv, TY: () => TY(), tyHesapla: () => tyHesapla(), tyPages: () => tyPages(), tyDocs: () => tyDocs(), tyIMD: d => { IMD = d; }, kmKgmRows: () => kmKgmRows(), kmKgmFiles: () => kmKgmFiles(), kmAxis: () => kmAxis(), akData: () => akData(), ifzData: () => ifzData(), gapYol: p => gapYol(p), KM: () => KM(), kmAday: s => kmParselAday(s), kmHesapla: () => kmHesapla(), kmSetSinir: (p, s) => kmSetSinir(p, s), kmPlanData: () => kmPlanData(), kmParcelPages: r => kmParcelPages(r), fileCands: () => fileCands(), get parcelFileName(){return FDname}, parFromMim: () => parFromMim(), pagesNow, get PV() { return PV; }, vazCands, vazTexts, get PK() { return PK; }, pkZ, closeAll, fromCad, setParsel, scr: p => [X(p[0]) / dpr, Y(p[1]) / dpr], S, get FD() { return FD; }, get MD() { return MD; }, place, fitA, drawA, ifzData, aplData, parts, readAny, setFD: (d, n) => { FD = d; FDname = n; } };
+  toScr: p => [X(p[0]) / dpr, Y(p[1]) / dpr], cvEl: () => cv, TY: () => TY(), tyHesapla: () => tyHesapla(), tyPages: () => tyPages(), tyDocs: () => tyDocs(), tyIMD: d => { IMD = d; }, kmKgmRows: () => kmKgmRows(), kmKgmFiles: () => kmKgmFiles(), kmAxis: () => kmAxis(), akData: () => akData(),akAudit, ifzData: () => ifzData(), gapYol: p => gapYol(p), KM: () => KM(), kmAday: s => kmParselAday(s), kmHesapla: () => kmHesapla(), kmSetSinir: (p, s) => kmSetSinir(p, s), kmPlanData: () => kmPlanData(), kmParcelPages: r => kmParcelPages(r), fileCands: () => fileCands(), get parcelFileName(){return FDname}, parFromMim: () => parFromMim(), pagesNow, get PV() { return PV; }, vazCands, vazTexts, get PK() { return PK; }, pkZ, closeAll, fromCad, setParsel, scr: p => [X(p[0]) / dpr, Y(p[1]) / dpr], S, get FD() { return FD; }, get MD() { return MD; }, place, fitA, drawA, ifzData, aplData, parts, readAny, setFD: (d, n) => { FD = d; FDname = n; } };
 })();
 
 </script>
@@ -21755,7 +21797,7 @@ const roadLayerName = name => {
 const roadParcel = e => e.closed && /^(?:(?:KAD|ALAN)[_ -])?(?:PARSEL|KADASTRO)(?:$|[_ -])/.test(roadLayerName(e.lay));
 const roadRemainder = e => e.closed && /^(?:KALAN|TERK)[_ -](?:ALN|ALAN)(?:$|[_ -])/.test(roadLayerName(e.lay));
 const roadBlock = e => e.closed && /^(?:ALAN[_ -])?ADA(?:$|[_ -])/.test(roadLayerName(e.lay));
-const roadIsland = e => e.closed && /(?:^|[_ -])(?:REFUJ|KALDIRIM|BINA|TESCILSIZ|PARK)(?:$|[_ -])/.test(roadLayerName(e.lay));
+const roadIsland = e => e.closed && /(?:^|[_ -])(?:REFUJ|KALDIRIM|BINA|YAPI|TESCILSIZ|PARK)(?:$|[_ -])/.test(roadLayerName(e.lay));
 function roadSource(e) {
   const l=roadLayerName(e.lay);
   return l!==ROAD_NETWORK_LAYER && /(?:^|[_ -])(?:YOL|ROAD|ASFALT|CADDE|SOKAK)(?:$|[_ -])/.test(l) &&
@@ -22100,7 +22142,7 @@ function roadNetworkStore(networks, input, unused, combine, refresh=false) {
     for (const n of prepared) {
       const partitioned=n.rings.length>1;
       for (const ring of n.parts) add({t:"pline",closed:true,pts:ring.map(q=>[q[0],q[1],null]),lay,
-        roadArea:true,roadNetworkVersion:input.cadastral?6:4,roadInterior:partitioned,roadGroup:first||n.key,roadKey:n.key,
+        roadArea:true,roadNetworkVersion:input.cadastral?7:4,roadInterior:partitioned,roadGroup:first||n.key,roadKey:n.key,
         areaQuality:n.inferred?"review-required":"closed-source-geometry"});
       if (partitioned) for (const ring of n.rings) add({t:"pline",closed:true,pts:ring.map(q=>[q[0],q[1],null]),
         lay,roadBorder:true,roadGroup:first||n.key,roadKey:n.key});
@@ -22133,7 +22175,7 @@ function roadNetworkCommand() {
     const sameSource=!refresh&&roadNetworkCache?.revision===revision&&roadNetworkCache.ents===current&&roadNetworkCache.visible===visible;
     const cached=sameSource&&(roadNetworkCache.pointKey===pointKey||roadNetworkCache.input.cadastral&&ents.length>=16000)?roadNetworkCache:null;
     const input=cached?.input||roadNetworkInput(customLayers,boundaryLayers,closedRoads,p);
-    if(!refresh&&input.cadastral&&ents.some(e=>e.roadArea&&[4,5].includes(e.roadNetworkVersion)&&e.lay===ROAD_NETWORK_LAYER)){
+    if(!refresh&&input.cadastral&&ents.some(e=>e.roadArea&&[4,5,6].includes(e.roadNetworkVersion)&&e.lay===ROAD_NETWORK_LAYER)){
       if(p)return say("Eski yol alanları çizimde. Boşlukları güncellemek için Yenile’ye dokun.",true);
       refresh=true;
     }
@@ -23389,8 +23431,9 @@ const ACAD_CEPHE = (() => {
     if(!len.every(v=>v>0.0001&&Number.isFinite(v)))throw Error('Sıfır uzunluklu kenar: kaynak alan kontrol edilmeli.');
     const signed2=signed(P),outSign=signed2>=0?1:-1,peri=len.reduce((a,b)=>a+b,0),bb=[Math.min(...P.map(q=>q[0])),Math.min(...P.map(q=>q[1])),Math.max(...P.map(q=>q[0])),Math.max(...P.map(q=>q[1]))];
     if(!(area>0)&&Number.isFinite(area))throw Error('Alan geçersiz.');
-    const names=P.map((p,i)=>{if(moduleSource)return textSafe(moduleSource.names[i]||('P'+(i+1)));let n='';try{const matches=near(p,0.025,true).filter(o=>o.t==='point'&&o.n&&Math.hypot(o.pts[0][0]-p[0],o.pts[0][1]-p[1])<=0.025);n=matches.length===1?textSafe(matches[0].n):'';}catch(_){}return n||'P'+(i+1);});
-    const meta=moduleSource||window.ACAD_PARCEL_META?.forEntity(e)||null;return {e,P,len,names,area,peri,bb,sign:outSign,ada:meta?.ada||'',parsel:meta?.parsel||'',origin:meta?.origin||'',source:JSON.stringify(src),sourceName:textSafe(moduleSource?.name||CDOC?.name||'Çizim'),label:textSafe(e.areaName||e.lay||'ALAN')};
+    const sourceNames=P.map((p,i)=>{if(moduleSource)return textSafe(moduleSource.names?.[i]||'');let n='';try{const matches=near(p,0.025,true).filter(o=>o.t==='point'&&o.n&&Math.hypot(o.pts[0][0]-p[0],o.pts[0][1]-p[1])<=0.025);n=matches.length===1?textSafe(matches[0].n):'';}catch(_){}return n;});
+    const names=sourceNames.map((n,i)=>n||'P'+(i+1));
+    const meta=moduleSource||window.ACAD_PARCEL_META?.forEntity(e)||null;return {e,P,len,names,sourceNames,area,peri,bb,sign:outSign,ada:meta?.ada||'',parsel:meta?.parsel||'',origin:meta?.origin||'',source:JSON.stringify(src),sourceName:textSafe(moduleSource?.name||CDOC?.name||'Çizim'),label:textSafe(e.areaName||e.lay||'ALAN')};
   }
   const exists = a => ents.some(o=>o===a.e);
   let pickCacheList=null,pickCacheRef=null,pickCacheLength=-1;
@@ -23553,12 +23596,13 @@ const ACAD_CEPHE = (() => {
     const start=page*rows,end=Math.min(a.P.length,start+rows);
     for(let i=start;i<end;i++){
       const yy=headY+32+(i-start)*24;if((i-start)%2===0){ctx.fillStyle='#f1f6f8';ctx.fillRect(table.x+8,yy-19,table.w-16,24);}
-      ctx.font='16px Arial';ctx.fillStyle='#24465e';ctx.fillText(a.names[i].slice(0,9),cols[0],yy);ctx.fillText(fmt(a.len[i],2),cols[1],yy);ctx.fillText(fmt(a.P[i][0],3),cols[2],yy);ctx.fillText(fmt(a.P[i][1],3),cols[3],yy);
+      ctx.font='16px Arial';ctx.fillStyle='#24465e';ctx.fillText(a.names[i],cols[0],yy,cols[1]-cols[0]-7);ctx.fillText(fmt(a.len[i],2),cols[1],yy);ctx.fillText(fmt(a.P[i][0],3),cols[2],yy);ctx.fillText(fmt(a.P[i][1],3),cols[3],yy);
     }
     ctx.fillStyle='#e9f0f4';ctx.fillRect(63,995,1481,73);ctx.fillStyle='#183e59';ctx.font='bold 21px Arial';ctx.fillText(`Alan: ${fmt(a.area,2)} m²`,84,1035);ctx.fillText(`Çevre: ${fmt(a.peri,2)} m`,490,1035);ctx.fillText(`${a.n||a.P.length} köşe`,920,1035);
     ctx.font='16px Arial';ctx.fillStyle='#496576';ctx.fillText(`Kaynak: ${a.sourceName} · Tabaka: ${a.e.lay} · Nesne: ${a.e.id} · Koordinatlar değiştirilmemiştir.`,68,1096);
   }
   async function pdf(a){if(!exists(a)||JSON.stringify(a.e.pts)!==a.source)throw Error('Alan değişti. Yeniden seç.');
+    if(a.parsel)[a]=sketchPointRows([a]);
     const pages=a.parsel?[...groupSketchPages([a])]:[];const count=view(a).totalPages,dpr=(window.matchMedia?.('(pointer:coarse)')?.matches)?1.55:2.45;
     for(let i=0;i<count;i++){
       const canvas=document.createElement('canvas');canvas.width=Math.round(1600*dpr);canvas.height=Math.round(1131*dpr);
@@ -29345,7 +29389,59 @@ function groupCaption(rows){
  return [...byBlock].sort(([a],[b])=>a.localeCompare(b,"tr",{numeric:true})).map(([block,items])=>block+"/"+items.sort((a,b)=>String(a).localeCompare(String(b),"tr",{numeric:true})).join("-")).concat(other).join(" · ");
 }
 const validGroup=rows=>{const current=new Set(ents);return rows.every(a=>current.has(a.e)&&isGroupArea(a.e)&&JSON.stringify(a.e.pts)===a.source)};
-function* groupSketchPages(rows,external){
+function sketchPointRows(rows){
+ const ids=new Map(),used=new Set(),sources=new Map();
+ for(const a of rows)a.P.forEach((p,i)=>{const key=p.slice(0,2).join(),name=a.sourceNames[i];if(!ids.has(key))ids.set(key,new Set());if(name){ids.get(key).add(name);used.add(name);if(!sources.has(name))sources.set(name,key);else if(sources.get(name)!==key)sources.set(name,null);}});
+ const names=new Map(),generated=new Set();let k=0;
+ for(const [key,values] of ids){let id;if(values.size===1&&sources.get([...values][0])===key)id=[...values][0];else{do{id="K"+(++k)}while(used.has(id));generated.add(id);}names.set(key,id);}
+ return rows.map(a=>({...a,generated,names:a.P.map(p=>names.get(p.slice(0,2).join()))}));
+}
+function sketchIdentity(external){
+ const texts=external?(window.APLT?.FD?.texts||[]):ents.filter(e=>e.t==="text"&&e.pts?.[0]).map(e=>({s:e.s,e:e.pts[0][0],y:e.pts[0][1],h:e.h}));
+ const info=A.kunye(texts);
+ for(const t of texts){
+  const match=/^([\p{L} -]+?)\s+İLİ\s+([\p{L} -]+?)\s+İLÇESİ\s+([\p{L} -]+?\s+(?:KÖYÜ|MAHALLESİ))\s*$/u.exec(String(t.s||"").trim().toLocaleUpperCase("tr"));
+  if(match){[info.il,info.ilce,info.mahalle]=match.slice(1);break;}
+ }
+ const sheets=[...new Set(texts.map(t=>String(t.s||"").trim().toLocaleUpperCase("tr")).filter(s=>/^[A-Z]\d{2}(?:-[A-Z0-9]{1,3}){2,5}$/.test(s)))];
+ const pafta=sheets.length>1?"Proje paftaları "+sheets.join(" / "):info.pafta?"Pafta "+info.pafta:"";
+ return {info,pafta,sheets};
+}
+function sketchHeader(external){
+ const {info,pafta}=sketchIdentity(external);
+ return [info.il,info.ilce,info.mahalle,pafta].filter(Boolean).join("   ·   ");
+}
+function sketchMeasures(entries,placed,w,h){
+ const nodes=new Map(),edges=new Map(),labels=[],missing=[];
+ const key=p=>p.slice(0,2).join();
+ for(const {a,Q,chosen} of entries){if(!chosen)continue;
+  a.P.forEach((p,i)=>{const j=(i+1)%Q.length,k=key(p),other=key(a.P[j]),pair=[k,other].sort().join("|");
+   nodes.set(k,{q:Q[i],s:a.names[i]});
+   if(!edges.has(pair))edges.set(pair,{a:Q[i],b:Q[j],s:tr2_(a.len[i]),from:a.names[i],to:a.names[j]});
+  });
+ }
+ for(const {q:[x,y]} of nodes.values())placed.push([x-.64,y-.64,x+.64,y+.64]);
+ function place(s,x,y,angle,font){
+  const u=Math.abs(Math.cos(angle)),v=Math.abs(Math.sin(angle)),half=A.tw(s,font)*.54+.23;
+  const dx=u*half+v*font*.55,dy=v*half+u*font*.55,box=[x-dx,y-dy,x+dx,y+dy];
+  if(box[0]<10.2||box[1]<24.2||box[2]>w-10.2||box[3]>h-14.2||placed.some(b=>b[0]<box[2]&&b[2]>box[0]&&b[1]<box[3]&&b[3]>box[1]))return false;
+  placed.push(box);labels.push({s,x,y,angle,font});return true;
+ }
+ for(const e of edges.values()){
+  const [x,y]=e.a,dx=e.b[0]-x,dy=e.b[1]-y,l=Math.hypot(dx,dy);let ang=Math.atan2(dy,dx);
+  if(ang>Math.PI/2)ang-=Math.PI;if(ang< -Math.PI/2)ang+=Math.PI;
+  let ok=false;for(const gap of [1.65,-1.65,2.8,-2.8]){for(const f of [.5,.4,.6])if(place(e.s,x+dx*f-dy/l*gap,y+dy*f+dx/l*gap,ang,1.95)){ok=true;break;}if(ok)break;}
+  if(!ok)missing.push(e.from+" – "+e.to+"     "+e.s+" m");
+ }
+ for(const {s,q:[x,y]} of nodes.values()){
+  let ok=false;for(const gap of [1.9,3.15,4.4]){for(const [u,v] of [[1,-1],[-1,-1],[1,1],[-1,1],[0,-1],[0,1],[1,0],[-1,0]])if(place(s,x+u*(gap+A.tw(s,2)*.38),y+v*gap,0,2)){ok=true;break;}if(ok)break;}
+  if(!ok)missing.push(s);
+ }
+ return {nodes,labels,missing};
+}
+function* groupSketchPages(rows,external,jointOwner=""){
+ const header=sketchHeader(external);
+
  const selected=new Set(rows.map(a=>a.e)),context=external||ents.filter(e=>isGroupArea(e)&&(roadParcel(e)||/^KAD_ALN$/i.test(e.lay)||/^\d+[/_]\d+$/.test(e.areaName||""))&&!selected.has(e)).map(e=>({e,P:e.pts,bb:ebb(e)}));
  const extent=list=>list.reduce((b,a)=>[Math.min(b[0],a.bb[0]),Math.min(b[1],a.bb[1]),Math.max(b[2],a.bb[2]),Math.max(b[3],a.bb[3])],[Infinity,Infinity,-Infinity,-Infinity]);
  function layout(list,b,size){
@@ -29361,46 +29457,51 @@ function* groupSketchPages(rows,external){
    if(!r.no)continue;
    const Q=r.Q,bb=extent([{bb:A.bbox(Q)}]),left=Math.max(10,bb[0]),right=Math.min(w-10,bb[2]),top=Math.max(24,bb[1]),bottom=Math.min(h-14,bb[3]);if(right<=left||bottom<=top)continue;
    const block=r.ada&&!blocks.has(r.ada)?r.ada:"",font=r.chosen?3.3:2.8;
-   const half=Math.max(String(r.no).length*font*.34,block.length*font*.34)+.45,height=block?font*2.45:font*1.25;
+   const areaLabel=r.chosen?tr2_(r.a.area)+" m²":"";
+   const half=Math.max(String(r.no).length*font*.34,block.length*font*.34,areaLabel?A.tw(areaLabel,2.2)*.55:0)+.45;
+   const areaHeight=areaLabel?3.2:0,height=(block?font*2.45:font*1.25)+areaHeight;
    const anchor=map(APLGEO.label(r.a.P)),candidates=[anchor];for(let i=1;i<=9;i++)for(let j=1;j<=9;j++)candidates.push([left+(right-left)*i/10,top+(bottom-top)*j/10]);
    candidates.sort((p,q)=>Math.hypot(p[0]-anchor[0],p[1]-anchor[1])-Math.hypot(q[0]-anchor[0],q[1]-anchor[1]));
    for(const [x,y] of candidates){const box=[x-half,y-height/2,x+half,y+height/2];if(box[0]<left||box[2]>right||box[1]<top||box[3]>bottom)continue;
     if(placed.some(b=>b[0]<box[2]&&b[2]>box[0]&&b[1]<box[3]&&b[3]>box[1]))continue;
     if(![[box[0],box[1]],[box[2],box[1]],[box[2],box[3]],[box[0],box[3]],[x,y]].every(p=>inPolyC(Q,...p)))continue;
-    r.text={x,y,block,font};if(block)blocks.add(block);placed.push(box);break;
+    r.text={x,y:y-areaHeight/2,block,font,areaLabel};if(block)blocks.add(block);placed.push(box);break;
    }
    if(!r.text&&r.chosen){
     fit=false;
-    if(list.length===1){r.text={x:anchor[0],y:anchor[1],block,font:2.4};if(block)blocks.add(block);}
+    if(list.length===1){r.text={x:anchor[0],y:anchor[1],block,font:2.4,areaLabel};if(block)blocks.add(block);}
    }
   }
-  return {w,h,entries,fit};
+  const measures=sketchMeasures(entries,placed,w,h);return {w,h,entries,fit,measures,s};
  }
  function* make(list){
-  const b=extent(list);let plan=layout(list,b,[297,210]);if(!plan.fit)plan=layout(list,b,[420,297]);
+  const b=extent(list);let plan=layout(list,b,[297,210]);if(!plan.fit||plan.measures.missing.length)plan=layout(list,b,[420,297]);
   if(!plan.fit&&list.length>1){
    const axis=b[2]-b[0]>b[3]-b[1]?0:1,sorted=list.slice().sort((a,c)=>(a.bb[axis]+a.bb[axis+2])-(c.bb[axis]+c.bb[axis+2])),mid=Math.ceil(sorted.length/2);
    yield* make(sorted.slice(0,mid));yield* make(sorted.slice(mid));return;
   }
   const {w,h,entries}=plan,cv=document.createElement("canvas"),px=6;cv.width=w*px;cv.height=h*px;cv.pw=w*72/25.4;cv.ph=h*72/25.4;
-  const c=cv.getContext("2d");c.scale(px,px);c.fillStyle="white";c.fillRect(0,0,w,h);c.fillStyle="#111";c.font="bold 5.3px Arial";c.fillText(groupCaption(list),10,13,w-20);
-  c.font="3px Arial";c.fillText("Parsel krokisi",10,19);c.save();c.beginPath();c.rect(10,24,w-20,h-38);c.clip();
+  const c=cv.getContext("2d");c.scale(px,px);c.fillStyle="white";c.fillRect(0,0,w,h);c.fillStyle="#111";c.font="bold 5.3px Arial";c.fillText(groupCaption(list),10,9,w-20);
+  c.font="3px Arial";c.fillText(header||list[0].sourceName,10,15,w-22);c.fillText(jointOwner?"Ortak aplikasyon krokisi   ·   Malik: "+jointOwner+"   ·   Cepheler metre":"Parsel krokisi   ·   Cepheler metre",10,21,w-61);c.textAlign="right";c.fillText("1 / "+Number((1000/plan.s).toFixed(2)).toLocaleString("tr-TR",{useGrouping:false,maximumFractionDigits:2}),w-10,21);c.textAlign="left";c.save();c.beginPath();c.rect(10,24,w-20,h-38);c.clip();
   for(const chosen of [false,true])for(const r of entries){if(!!r.chosen!==chosen)continue;c.beginPath();r.Q.forEach((p,i)=>i?c.lineTo(...p):c.moveTo(...p));c.closePath();c.strokeStyle=chosen?"#171717":"#828282";c.lineWidth=chosen?.48:.16;c.lineJoin="round";c.stroke();}
-  c.textAlign="center";c.textBaseline="middle";for(const r of entries){if(!r.text)continue;const {x,y,block,font}=r.text;c.fillStyle=r.chosen?"#111":"#4b4b4b";c.font=(r.chosen?"bold ":"")+font+"px Arial";if(block){c.fillText(block,x,y-font*.56);c.fillRect(x-Math.max(1.3,block.length*font*.24),y-.12,Math.max(2.6,block.length*font*.48),.18);}c.fillText(r.no,x,y+(block?font*.58:0));}
-  c.restore();c.strokeStyle="#444";c.lineWidth=.18;c.strokeRect(10,24,w-20,h-38);c.font="2.8px Arial";c.fillStyle="#333";c.fillText(list[0].sourceName,10,h-8,w-84);c.textAlign="right";c.fillText("Kalın çizgi: seçili parsel     İnce çizgi: komşu",w-10,h-8);
+  c.textAlign="center";c.textBaseline="middle";for(const r of entries){if(!r.text)continue;const {x,y,block,font}=r.text;c.fillStyle=r.chosen?"#111":"#4b4b4b";c.font=(r.chosen?"bold ":"")+font+"px Arial";if(block){c.fillText(block,x,y-font*.56);c.fillRect(x-Math.max(1.3,block.length*font*.24),y-.12,Math.max(2.6,block.length*font*.48),.18);}const noY=y+(block?font*.58:0);c.fillText(r.no,x,noY);if(r.text.areaLabel){c.font="2.2px Arial";c.fillText(r.text.areaLabel,x,noY+3.2);}}
+  for(const {q} of plan.measures.nodes.values()){c.beginPath();c.arc(...q,.56,0,Math.PI*2);c.fillStyle="#fff";c.fill();c.strokeStyle="#111";c.lineWidth=.15;c.stroke();}
+  for(const {s,x,y,angle,font} of plan.measures.labels){c.save();c.translate(x,y);c.rotate(angle);c.font=font+"px Arial";c.strokeStyle="#fff";c.lineWidth=.58;c.lineJoin="round";c.strokeText(s,0,0);c.fillStyle="#171717";c.fillText(s,0,0);c.restore();}
+  c.restore();c.strokeStyle="#444";c.lineWidth=.18;c.strokeRect(10,24,w-20,h-38);c.font="2.8px Arial";c.fillStyle="#333";c.fillText(list[0].generated.size?"K ile verilen geçici numaralar çizim köşelerini gösterir.":list[0].sourceName,10,h-8,w-102);c.textAlign="right";c.fillText("Kalın çizgi: seçili parsel     İnce çizgi: komşu",w-10,h-8);
   yield cv;
+
  }
  yield* make(rows);
 }
 async function groupSketchPdf(rows){
  if(!validGroup(rows))throw Error("Seçim değişti. Parselleri yeniden seçin.");
- const blob=await O.pdf(groupSketchPages(rows));const name=groupCaption(rows).replace(/[^0-9A-Za-z_-]+/g,"_").slice(0,100);
- if(await save_(name+"_Kroki.pdf",blob)!==false)say("Parsel krokisi kaydedildi.");
+ return groupPdf(rows,undefined,groupCaption(rows).replace(/[^0-9A-Za-z_-]+/g,"_").slice(0,100)+"_Kroki.pdf");
 }
 
-async function groupPdf(rows,external){
+async function groupPdf(rows,external,filename="Secili_Parseller_Ozet_ve_Cephe.pdf",joint=null){
+ rows=sketchPointRows(rows);
  function* pages(){
-  if(rows.length>1)yield* groupSketchPages(rows,external);
+  yield* groupSketchPages(rows,external,joint?.owner);
   const cv=document.createElement("canvas");cv.width=2000;cv.height=1414;cv.pw=420/25.4*72;cv.ph=297/25.4*72;
   const c=cv.getContext("2d");c.scale(cv.width/1600,cv.height/1131);
   for(let first=0;first<rows.length;first+=18){
@@ -29413,9 +29514,15 @@ async function groupPdf(rows,external){
    yield cv;
   }
   for(const a of rows)for(let page=0;page<ACAD_CEPHE.pageCount(a);page++){c.save();ACAD_CEPHE.paintPage(c,a,page);c.restore();yield cv;}
+  for(const sheet of joint?.sheets||[]){
+   const page=document.createElement("canvas"),px=7;
+   page.width=Math.round(sheet.W*px);page.height=Math.round(sheet.H*px);
+   page.pw=sheet.W*72/25.4;page.ph=sheet.H*72/25.4;
+   O.paint(page.getContext("2d"),APLT.akSheetBW(sheet),px,sheet.W,sheet.H);yield page;
+  }
  }
  const blob=await O.pdf(pages());
- if(await save_("Secili_Parseller_Ozet_ve_Cephe.pdf",blob)!==false)say(rows.length+" alanın koordinat, cephe ve alan özeti kaydedildi.");
+ if(await save_(filename,blob)!==false)say(rows.length+" alanın koordinat, cephe ve alan özeti kaydedildi.");
 }
 let groupAkrSession=null;
 async function groupAkr(rows,index=0,newSession=true){
@@ -29429,7 +29536,7 @@ async function groupAkr(rows,index=0,newSession=true){
  if(newSession)groupAkrSession={rows,forms:new Map(),current:null};
  const session=groupAkrSession;
  if(session.current&&state.parsel?.cadParcelKey===session.current)
-   session.forms.set(session.current,{akr:structuredClone(state.akr||{}),ant:structuredClone(state.antet),names:state.parsel.names.slice(),auto:state.parsel.autoNames.slice()});
+   session.forms.set(session.current,{output:jointParcelOutput(),akr:structuredClone(state.akr||{}),ant:structuredClone(state.antet),names:state.parsel.names.slice(),auto:state.parsel.autoNames.slice()});
  const saved=session.forms.get(key);
  const baseForm={};for(const k of ["buro","mud","yap","k1","k2","tas","tus","rop","kk","olc"])if(state.akr?.[k]!=null)baseForm[k]=state.akr[k];
  const fd=toFD(ifzLocalCadContext(coords,a.e).entities);
@@ -29439,27 +29546,82 @@ async function groupAkr(rows,index=0,newSession=true){
  APLT.fromCad(fd,projName(),coords,{ada:a.ada,no:a.parsel},true,names,"akr",true);
  if(saved){Object.assign(state.antet,saved.ant);state.parsel.names=saved.names;state.parsel.autoNames=saved.auto}
  state.parsel.cadParcelKey=key;state.parsel.cadGroupAkr=true;session.current=key;APLT.saveData();
- bar.hidden=false;bar.querySelector("select").replaceChildren(...rows.map((q,i)=>new Option(groupName(q),i,i===index,i===index)));
+ bar.hidden=false;$("akJointPdf").hidden=rows.length<2;bar.querySelector("select").replaceChildren(...rows.map((q,i)=>new Option(groupName(q),i,i===index,i===index)));
  bar.querySelector("select").onchange=async function(){this.disabled=true;try{await groupAkr(rows,+this.value,false)}catch(ex){this.value=String(index);alert(ex.message)}finally{this.disabled=false}};
  APLT.fitA();
 }
-async function groupIfz(rows){
+function jointParcelOutput(){
+ const data=APLT.akData(),audit=APLT.akAudit(data);
+ return {data,audit,sheet:data&&!audit.errors.length&&!data.autoNames.some(Boolean)?APLT.akSheet(data):null};
+}
+$("akJointPdf").onclick=async function(){
+ const session=groupAkrSession,state=APLT.S(),ownerKey=v=>String(v||"").trim().replace(/\s+/g," ").toLocaleUpperCase("tr-TR");
+ const message=$("akMsg");
+ this.disabled=true;
+ try{
+  if(!session||!state.parsel?.cadGroupAkr||state.parsel.cadParcelKey!==session.current||!validGroup(session.rows))
+   throw Error("Çizim değişti. Parselleri yeniden seçin.");
+  const reports=session.rows.map(a=>{
+   const key=parcelTransferKey(a.e),report=key===session.current?jointParcelOutput():session.forms.get(key)?.output;
+   if(!report)throw Error(groupName(a)+" için aplikasyon formunu açıp malik ve köşe bilgilerini tamamlayın.");
+   if(report.audit.errors.length)throw Error(groupName(a)+" · "+report.audit.errors.join(" · "));
+   if(!report.sheet)throw Error(groupName(a)+" için geçici köşe adlarını doğrulayın.");
+   if(!ownerKey(report.data.imza.malik))throw Error(groupName(a)+" için taşınmaz malikini girin.");
+   return report;
+  });
+  const owner=reports[0].data.imza.malik;
+  if(reports.some(r=>ownerKey(r.data.imza.malik)!==ownerKey(owner)))throw Error("Ortak kroki için parsellerin malik bilgileri aynı olmalı.");
+  await roadNetworkWork({unionParcels:session.rows.map(a=>a.P)},cmd,()=>{});
+  if(!validGroup(session.rows))throw Error("Parsel geometrisi değişti. Yeniden seçin.");
+  const ids=new Map(),coords=new Map();
+  const rows=session.rows.map((a,i)=>{
+   const names=new Map();
+   for(const [id,y,x] of reports[i].data.koord){
+    const key=[y,x].join();
+    if((ids.has(id)&&ids.get(id)!==key)||(coords.has(key)&&coords.get(key)!==id))
+     throw Error("Ortak kroki için nokta no ve koordinat eşleşmesini kontrol edin: "+id);
+    ids.set(id,key);coords.set(key,id);names.set(key,id);
+   }
+   const sourceNames=a.P.map(p=>names.get(p.slice(0,2).join()));
+   if(sourceNames.some(n=>!n))throw Error(groupName(a)+" köşe koordinatları kaynak çizimle eşleşmedi.");
+   return {...a,sourceNames};
+  });
+  const warnings=reports.flatMap((r,i)=>[...r.audit.warnings,...(r.sheet.labelIssues?["Etiket yerleşimini kontrol edin."]:[])].map(v=>groupName(rows[i])+" · "+v));
+  if(warnings.length&&!confirm(warnings.slice(0,12).join("\n")+"\nOrtak kroki hazırlansın mı?"))return;
+  await groupPdf(rows,undefined,"Ortak_Aplikasyon_Krokisi.pdf",{owner,sheets:reports.map(r=>r.sheet)});
+ }catch(e){message.textContent=e.message;}finally{this.disabled=false;}
+};
+async function groupIfz(rows,sourceFd=null){
  if(rows.length<2)throw Error("En az iki komşu alan seçin.");
  const result=await roadNetworkWork({unionParcels:rows.map(a=>a.P.map(p=>p.slice(0,2)))},cmd,()=>{});
- if(!validGroup(rows))throw Error("Kaynak parseller değişti. Yeniden seçin.");
+ if(sourceFd?sourceFd!==APLT.FD:!validGroup(rows))throw Error("Kaynak parseller değişti. Yeniden seçin.");
  if(APLT.S().ifz.parts?.length&&!confirm("Mevcut ifraz sonucunun yerine seçili parsellerle devam edilsin mi?"))return false;
- const chosen=new Set(rows.map(a=>a.e)),P=result.ring,ctx=ifzLocalCadContext(P,null);
- const fd=toFD(ctx.entities.filter(e=>!chosen.has(e)));
- fd.ifrazContext={...ctx.info,kept:ctx.entities.filter(e=>!chosen.has(e)).length};
- const boundary={pts:P,closed:true,lay:"PARSEL",nativeName:"Birleşik işlem sınırı"};
- fd.polys.unshift(boundary);fd.meta=[{pts:P}];
- fd.ifzNetwork=ents.filter(e=>e.closed&&lays[e.lay]?.on&&(e.roadBorder||e.roadArea&&!e.roadInterior)).map(e=>({pts:e.pts,bb:A.bbox(e.pts),side:e.roadBorder?1:Math.sign(A.sArea(e.pts)),key:e.roadKey||e.id}));
- const names=P.map(()=>""),audit=window.ACAD_CAD_AUDIT(P,ctx.entities,.002);
- if(audit.errors.length)throw Error(audit.errors.join(" · "));
- for(const m of audit.matched)names[m.corner-1]=m.name;
+ const P=result.ring,names=P.map(()=>"");let fd;
+ if(sourceFd){
+  // Keep the original file for other modules. Derived indices belong to its original geometry.
+  fd=Object.fromEntries(Object.entries(sourceFd).filter(([k])=>!k.startsWith("_")));
+  const sourceIds=new Set(rows.map(r=>r.e.id));
+  fd.polys=sourceFd.polys.filter((p,i)=>!sourceIds.has("f"+i));
+  const pointNames=new Map();
+  for(const row of rows)row.P.forEach((p,i)=>{const name=row.sourceNames[i],k=p.slice(0,2).join();
+   if(name){if(pointNames.has(k)&&pointNames.get(k)!==name)throw Error("Ortak köşede farklı nokta numaraları var: "+k);pointNames.set(k,name);}});
+  P.forEach((p,i)=>names[i]=pointNames.get(p.slice(0,2).join())||"");
+ }else{
+  const chosen=new Set(rows.map(a=>a.e)),ctx=ifzLocalCadContext(P,null),kept=ctx.entities.filter(e=>!chosen.has(e));
+  fd=toFD(kept);fd.ifrazContext={...ctx.info,kept:kept.length};
+  fd.ifzNetwork=ents.filter(e=>e.closed&&lays[e.lay]?.on&&(e.roadBorder||e.roadArea&&!e.roadInterior)).map(e=>({pts:e.pts,bb:A.bbox(e.pts),side:e.roadBorder?1:Math.sign(A.sArea(e.pts)),key:e.roadKey||e.id}));
+  const audit=window.ACAD_CAD_AUDIT(P,ctx.entities,.002);if(audit.errors.length)throw Error(audit.errors.join(" · "));
+  for(const m of audit.matched)names[m.corner-1]=m.name;
+ }
+ const fileName=sourceFd?APLT.parcelFileName:projName(),{info,sheets}=sketchIdentity(sourceFd);
+ const datum=/(?:^|[^a-z0-9])ED[-_ ]?50(?:[^a-z0-9]|$)/i.test(fileName)?"ED50":
+   /(?:^|[^a-z0-9])ITRF[-_ ]?96(?:[^a-z0-9]|$)/i.test(fileName)?"ITRF96":"";
+ fd.polys.unshift({pts:P,closed:true,lay:"PARSEL",nativeName:"Birleşik işlem sınırı"});
+ fd.meta=[{pts:P,il:info.il,ilce:info.ilce,mahalle:info.mahalle,pafta:sheets.length===1?sheets[0]:"",groupDatum:datum}];
  await showTab("ifz");if(document.querySelector('.tabs button[aria-selected=true]')?.dataset.tab!=="ifz")return false;
- APLT.fromCad(fd,projName(),P,null,true,names,"ifz",true);
- const st=APLT.S();st.parsel.ad="Birleşik işlem sınırı";st.parsel.kaynakParseller=rows.map(a=>({ada:a.ada,parsel:a.parsel,ad:groupName(a),id:a.e.id}));APLT.saveData();APLT.fitA();
+ const sameBlock=rows.every(r=>r.ada===rows[0].ada);
+ APLT.fromCad(fd,fileName,P,{ada:sameBlock?rows[0].ada:"",no:"T"},true,names,"ifz",true);
+ const st=APLT.S();st.parsel.ad="Birleşik işlem sınırı";st.parsel.kaynakParseller=rows.map(a=>({ada:a.ada,parsel:a.parsel,ad:groupName(a),id:a.e.id,pts:a.P.map(p=>p.slice(0,2)),names:a.sourceNames.slice()}));APLT.saveData();APLT.fitA();
  $("aParInfo").textContent="Birleşik işlem sınırı · "+groupCaption(rows)+" · "+tr2_(result.area)+" m²";return true;
 }
 function parcelGroupPanel(preferred){
@@ -29482,8 +29644,9 @@ function parcelGroupPanel(preferred){
  document.body.append(dlg);dlg.showModal();dlg.querySelector('[data-action="'+(preferred||"pdf")+'"]')?.focus();
 }
 
-const moduleLists=new WeakMap();
+const moduleLists=new WeakMap();let listPosition=null;
 $("aParcelList").onclick=()=>{
+ const opened=document.querySelector("dialog.parcel-list-panel[open]");if(opened){opened.focus();return;}
  const fd=APLT.FD;
  if(!fd){$("aParInfo").textContent="Listeye parsel eklemek için önce bir parsel dosyası açın.";return;}
  const mode=document.querySelector('.tabs [aria-selected=true]')?.dataset.tab;
@@ -29500,29 +29663,64 @@ $("aParcelList").onclick=()=>{
  const current=items.find(o=>same(o.P,active?.raw)||same(o.P,active?.pts));
  const saved=lists.get(mode);
  const checked=new Set(items.filter(o=>saved?saved.has(o.id):o===current||cad&&(mode==="akr"&&active?.cadGroupAkr&&groupAkrSession?.rows.some(r=>r.e===o.e)||mode==="ifz"&&active?.kaynakParseller?.some(r=>r.id===o.id))).map(o=>o.id));
- const dlg=document.createElement("dialog");dlg.className="cad-group-dialog";dlg.setAttribute("aria-label","Parsel listesi");
- dlg.innerHTML='<h2>Parsel listesi<button data-close>Kapat</button></h2><p data-active></p><input type="search" aria-label="Ada veya parsel ara" placeholder="Ada veya parsel ara" style="width:100%;padding:8px"><div class="cad-group-scroll" data-items></div><p role="status"></p><div class="cad-group-actions"><button data-save>Listeyi uygula</button><button data-pdf>Özet ve kroki PDF</button><button data-work></button></div>';
+ const dlg=document.createElement("dialog");dlg.className="cad-group-dialog parcel-list-panel";dlg.setAttribute("aria-label","Parsel listesi");
+ dlg.innerHTML='<h2 data-grip title="Başlıktan tutup taşı">Parsel listesi<button data-close>Kapat</button></h2><p data-active></p><input type="search" aria-label="Ada veya parsel ara" placeholder="Ada veya parsel ara" style="width:100%;padding:8px"><div class="cad-group-scroll" data-items></div><p role="status"></p><div class="cad-group-actions"><button data-map aria-expanded="true">Ekrandan seç</button><button data-save>Listeyi uygula</button><button data-pdf>Özet ve kroki PDF</button><button data-work></button></div>';
  const status=dlg.querySelector('[role=status]'),search=dlg.querySelector("input"),box=dlg.querySelector('[data-items]'),work=dlg.querySelector('[data-work]'),pdf=dlg.querySelector('[data-pdf]');
  dlg.querySelector('[data-active]').textContent=current?"Aktif parsel · "+current.label:"Açık dosyanın parselleri";
- const merge=mode==="ifz";work.hidden=!cad||(!merge&&mode!=="akr");work.textContent=merge?"Birleştir ve ifraza aç":"Aplikasyona aç";
+ const merge=mode==="ifz";work.hidden=!merge&&(!cad||mode!=="akr");work.textContent=merge?"Birleştir ve ifraza aç":"Aplikasyona aç";
  function update(){pdf.disabled=!checked.size;work.disabled=checked.size<(merge?2:1);status.textContent=checked.size+" parsel seçili";}
  function render(){const query=search.value.trim().toLocaleLowerCase("tr"),f=document.createDocumentFragment();for(const o of items){
-   if(!o.label.toLocaleLowerCase("tr").includes(query))continue;const label=document.createElement("label"),input=document.createElement("input");label.style.cssText="display:flex;align-items:center;gap:8px;padding:5px";input.type="checkbox";input.checked=checked.has(o.id);input.onchange=()=>{if(input.checked)checked.add(o.id);else checked.delete(o.id);update();};label.append(input,document.createTextNode(o.label));f.append(label);
+   if(!o.label.toLocaleLowerCase("tr").includes(query))continue;const label=document.createElement("label"),input=document.createElement("input");label.style.cssText="display:flex;align-items:center;gap:8px;padding:5px";input.type="checkbox";input.checked=checked.has(o.id);input.onchange=()=>{if(input.checked)checked.add(o.id);else checked.delete(o.id);update();APLT.drawA();};label.append(input,document.createTextNode(o.label));f.append(label);
  }box.replaceChildren(f);if(!box.childElementCount)box.textContent="Parsel bulunamadı.";update();}
- function commit(){lists.set(mode,new Set(checked));dlg.remove();}
- dlg.querySelector('[data-save]').onclick=commit;dlg.querySelector('[data-close]').onclick=dlg.oncancel=()=>dlg.remove();search.oninput=render;
+ const abort=new AbortController(),events={signal:abort.signal};
+ const mapButton=dlg.querySelector("[data-map]"),grip=dlg.querySelector("[data-grip]");
+ const byId=new Map(items.map(o=>[o.id,o]));
+ const bounds=items.map(o=>({o,bb:A.bbox(o.P),area:A.area(o.P)}));
+ const validView=()=>APLT.FD===fd&&document.querySelector('.tabs [aria-selected=true]')?.dataset.tab===mode;
+ function close(){abort.abort();APLT.setListPicker(null);dlg.remove();}
+ function commit(){lists.set(mode,new Set(checked));close();}
+ function move(x,y){
+  const r=dlg.getBoundingClientRect();
+  x=Math.max(4,Math.min(x,innerWidth-r.width-4));y=Math.max(4,Math.min(y,innerHeight-r.height-4));
+  dlg.style.left=x+"px";dlg.style.top=y+"px";return {x,y};
+ }
+ let drag=null;
+ grip.onpointerdown=e=>{if(e.button!==0||e.target.closest("button"))return;const r=dlg.getBoundingClientRect();
+   drag={id:e.pointerId,dx:e.clientX-r.left,dy:e.clientY-r.top};grip.setPointerCapture(e.pointerId);e.preventDefault();};
+ grip.onpointermove=e=>{if(drag?.id===e.pointerId)listPosition=move(e.clientX-drag.dx,e.clientY-drag.dy);};
+ grip.onlostpointercapture=()=>{drag=null;};
+ const adjust=()=>{const r=dlg.getBoundingClientRect();move(r.left,r.top);};
+ window.addEventListener("resize",adjust,events);
+ window.addEventListener("hashchange",()=>{if(!validView())close();},events);
+ window.addEventListener("keydown",e=>{if(e.key==="Escape"&&!mapButton.disabled){e.preventDefault();close();}},events);
+ mapButton.onclick=()=>{const compact=dlg.classList.toggle("map-compact");mapButton.textContent=compact?"Listeyi göster":"Ekrandan seç";mapButton.setAttribute("aria-expanded",String(!compact));adjust();};
+ dlg.querySelector('[data-save]').onclick=commit;dlg.querySelector('[data-close]').onclick=close;search.oninput=render;
+ const picker={*rings(){if(validView())for(const id of checked)yield byId.get(id).P;},
+  pick(x,y){
+   if(!validView()){close();return;}
+   if(mapButton.disabled)return;
+   let best=null;
+   for(const r of bounds){const b=r.bb;if(x<b[0]||x>b[2]||y<b[1]||y>b[3]||best&&r.area>=best.area)continue;
+     if(A.inPoly(r.o.P,x,y))best=r;}
+   if(!best){status.textContent="Parselin içine dokunun · "+checked.size+" parsel seçili";return;}
+   const o=best.o,add=!checked.has(o.id);
+   if(add)checked.add(o.id);else checked.delete(o.id);
+   render();status.textContent=o.label+(add?" eklendi":" çıkarıldı")+" · "+checked.size+" parsel seçili";APLT.drawA();
+  }};
  async function process(exportPdf){
   dlg.querySelectorAll('button,input').forEach(b=>b.disabled=true);try{
    if(fd!==APLT.FD||cad&&source!==ents)throw Error("Çizim değişti. Listeyi yeniden açın.");
    const rows=items.filter(o=>checked.has(o.id)).map(item=>{if(cad)return ACAD_CEPHE.get(item.e);
-    const {o,P}=item;const names=P.map((q,i)=>{if(item===current&&same(P,active.raw))return active.names[i];const m=fd.points.filter(t=>t.n&&Math.hypot(t.e-q[0],t.y-q[1])<=.002);return m.length===1?m[0].n:"";});
+    const {o,P}=item;const names=P.map((q,i)=>{if(item===current&&same(P,active.raw)&&!active.autoNames?.[i])return active.names[i];const m=fd.points.filter(t=>t.n&&Math.hypot(t.e-q[0],t.y-q[1])<=.002);return m.length===1?m[0].n:"";});
     return ACAD_CEPHE.get({t:"pline",closed:true,id:o.v,lay:o.lay,areaName:o.ad,pts:P},{ada:o.no?.ada,parsel:o.no?.no,names,name:APLT.parcelFileName});
    });
-   if(exportPdf){const nearby=cad?undefined:items.filter(it=>!checked.has(it.id)&&it.o.no?.no).map(it=>({P:it.P,bb:A.bbox(it.P),meta:{ada:it.o.no.ada,parsel:it.o.no.no}}));await groupPdf(rows,nearby);}else if(merge){if(!await groupIfz(rows))return;}else{const keep=active?.cadGroupAkr&&groupAkrSession?.current===active.cadParcelKey;await groupAkr(rows,Math.max(0,rows.findIndex(r=>r.e.id===current?.id)),!keep);groupAkrSession.rows=rows;}
+   if(exportPdf){const nearby=cad?undefined:items.filter(it=>!checked.has(it.id)&&it.o.no?.no).map(it=>({P:it.P,bb:A.bbox(it.P),meta:{ada:it.o.no.ada,parsel:it.o.no.no}}));await groupPdf(rows,nearby);}else if(merge){if(!await groupIfz(rows,cad?null:fd))return;}else{const keep=active?.cadGroupAkr&&groupAkrSession?.current===active.cadParcelKey;await groupAkr(rows,Math.max(0,rows.findIndex(r=>r.e.id===current?.id)),!keep);groupAkrSession.rows=rows;}
    commit();
   }catch(err){status.textContent=err.message;}finally{dlg.querySelectorAll('button,input').forEach(b=>b.disabled=false);pdf.disabled=!checked.size;work.disabled=checked.size<(merge?2:1);}
  }
- pdf.onclick=()=>process(true);work.onclick=()=>process(false);render();document.body.append(dlg);dlg.showModal();
+ pdf.onclick=()=>process(true);work.onclick=()=>process(false);render();document.body.append(dlg);dlg.show();
+ const r=dlg.getBoundingClientRect();move(listPosition?.x??(innerWidth-r.width-10),listPosition?.y??Math.max(6,(innerHeight-r.height)/2));
+ APLT.setListPicker(picker);
 };
 
 function parcelTransferKey(e){return JSON.stringify([CDOC?.name||'',e.lay,e.id,e.pts]);}
@@ -48404,11 +48602,16 @@ function buildRoadNetwork(input, phase=()=>{}) {
       }
       return false;
     }
-    function joinsRoads(ring){
+    function joinsRoads(ring,span){
       const edges=ring.map((a,i)=>{
         const b=ring[(i+1)%ring.length],x=(a.X+b.X)/2,y=(a.Y+b.Y)/2;
         return {road:onRoad(x,y),len:Math.hypot(a.X-b.X,a.Y-b.Y)/scale,x:x/scale,y:y/scale};
       });
+      // A compact opening can touch a parcel along one short side. Its road
+      // contact then forms a single run around the other sides of the opening.
+      const perimeter=edges.reduce((sum,e)=>sum+e.len,0);
+      const frontage=edges.reduce((sum,e)=>sum+(e.road?0:e.len),0);
+      if(span<=maxWidth*1.4 && perimeter>0 && frontage<=Math.min(maxWidth*.5,perimeter*.18))return true;
       const start=edges.findIndex(e=>!e.road);if(start<0)return false;
       const mouths=[];let len=0,x=0,y=0;
       for(let i=1;i<=edges.length;i++){
@@ -48425,7 +48628,7 @@ function buildRoadNetwork(input, phase=()=>{}) {
     for(const ring of clip([...roadPaths,...mask],[],C.ClipType.ctUnion,false)){
       if(C.Clipper.Orientation(ring))continue;
       const b=C.Clipper.GetBounds([ring]),width=(b.right-b.left)/scale,height=(b.bottom-b.top)/scale;
-      if(Math.abs(C.Clipper.Area(ring))<.5*scale*scale||!joinsRoads(ring))continue;
+      if(Math.abs(C.Clipper.Area(ring))<.5*scale*scale||!joinsRoads(ring,Math.hypot(width,height)))continue;
       const face=ring.slice().reverse();
       // Long flared corridors can exceed the junction diameter. Only admit
       // an enclosed passage if its widest inscribed circle still fits.
@@ -48529,13 +48732,20 @@ self.onmessage=event=>{
       const rings=event.data.unionParcels,origin=rings[0][0],scale=1e6,C=ClipperLib,vertices=new Map();
       const poly=rings.map(r=>{const p=r.map(q=>{const v={X:Math.round((q[0]-origin[0])*scale),Y:Math.round((q[1]-origin[1])*scale)};vertices.set(v.X+","+v.Y,q);return v});
         if(!C.Clipper.Orientation(p))p.reverse();return p;});
-      const c=new C.Clipper();c.StrictlySimple=true;c.PreserveCollinear=true;c.AddPaths(poly,C.PolyType.ptSubject,true);
+      // Preserve shared runs with several vertices. StrictlySimple may split
+      // such a run back into two contours even when the inputs share it exactly.
+      const c=new C.Clipper();c.PreserveCollinear=true;c.AddPaths(poly,C.PolyType.ptSubject,true);
       const result=new C.PolyTree();c.Execute(C.ClipType.ctUnion,result,C.PolyFillType.pftNonZero,C.PolyFillType.pftNonZero);
-      if(result.Total()!==1)throw Error("Birleştirme için ortak kenarlı, içeride boşluk bırakmayan parseller seçin. Ayrı parsellerden PDF alabilirsiniz.");
-      const edge=result.GetFirst().Contour(),area=Math.abs(C.Clipper.Area(edge))/scale**2;
+      const outside=result.Childs();
+      if(outside.length!==1)throw Error("Parseller arasında kesintisiz bir ortak kenar bulunamadı. Seçili parselleri ve aradaki boşluğu kontrol edin.");
+      if(outside[0].ChildCount())throw Error("Birleşik sınırın içinde kapalı bir boşluk kalıyor. İçteki parseli veya seçim sınırını kontrol edin.");
+      const edge=outside[0].Contour(),keys=edge.map(v=>v.X+","+v.Y);
+      if(new Set(keys).size!==edge.length)throw Error("Parseller yalnız köşede temas ediyor veya birleşik sınır kendi üzerine kapanıyor.");
+      const area=Math.abs(C.Clipper.Area(edge))/scale**2;
       const sum=poly.reduce((n,p)=>n+Math.abs(C.Clipper.Area(p))/scale**2,0);
       if(Math.abs(area-sum)>Math.max(.00001,sum*1e-10))throw Error("Seçili alanlar üst üste geliyor. Parsel sınırlarını kontrol edin.");
-      self.postMessage({area,ring:edge.map(v=>vertices.get(v.X+","+v.Y)||[origin[0]+v.X/scale,origin[1]+v.Y/scale])});
+      if(keys.some(k=>!vertices.has(k)))throw Error("Sınırda kaynak köşesiyle eşleşmeyen kesişim var. Parsel sınırlarını kontrol edin.");
+      self.postMessage({area,ring:keys.map(k=>vertices.get(k))});
     }catch(ex){self.postMessage({error:ex.message})}return;
   }
   try{self.postMessage(buildRoadNetwork(event.data,phase=>self.postMessage({phase})));}
@@ -49231,7 +49441,7 @@ window.ACAD_SKETCH_DETAIL.manual=manual;
 </script>
 <style id="cad-layer-panel-layout">
 .cad-group-dialog{width:min(460px,94vw);box-sizing:border-box;max-height:88dvh;overflow:auto;border:1px solid #77909f;border-radius:12px;background:#f9fbfc;color:#183342;padding:16px;font:14px system-ui}
-.cad-group-dialog::backdrop{background:#15263465}.cad-group-dialog h2{display:flex;justify-content:space-between;align-items:center;margin:0;font-size:19px}
+.parcel-list-panel[open]{position:fixed;inset:auto;margin:0;z-index:10000;max-width:calc(100vw - 8px);box-shadow:0 8px 32px #10283b45}.parcel-list-panel [data-grip]{cursor:grab;touch-action:none;user-select:none}.parcel-list-panel [data-grip]:active{cursor:grabbing}.parcel-list-panel [data-items] label{flex-direction:row;justify-content:flex-start;cursor:pointer}.parcel-list-panel [data-items] input{width:auto;margin:0}.parcel-list-panel.map-compact{width:min(310px,86vw);padding:10px}.parcel-list-panel.map-compact :is([data-active],input[type=search],[data-items],[data-pdf]){display:none}.parcel-list-panel.map-compact [role=status]{margin:5px 0}.parcel-list-panel.map-compact .cad-group-actions{display:flex;flex-wrap:wrap}.cad-group-dialog::backdrop{background:#15263465}.cad-group-dialog h2{display:flex;justify-content:space-between;align-items:center;margin:0;font-size:19px}
 .cad-group-scroll{max-height:34dvh;overflow:auto}.cad-group-dialog table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
 .cad-group-dialog td,.cad-group-dialog th{padding:7px;border-bottom:1px solid #d7e1e5;text-align:right}.cad-group-dialog th:first-child,.cad-group-dialog td:first-child{text-align:left}
 .cad-group-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.cad-group-dialog button{background:#e8eff2;border:1px solid #acbec8;border-radius:6px;padding:7px;color:#1a3949}.cad-group-dialog [data-action=pdf]{background:#155970;color:white}
