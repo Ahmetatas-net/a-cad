@@ -1542,11 +1542,11 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     <button type="button" id="acadSafeImport">📂 Yedekten aç</button></div>
   </div>
   <nav class="tabs subtabs" id="kubSub" role="tablist" hidden>
-    <button role="tab" data-tab="veri">1 · Veri</button>
-    <button role="tab" data-tab="plan">2 · Plan</button>
-    <button role="tab" data-tab="kesit">3 · Hesap</button>
+    <button role="tab" data-tab="veri">1 · Veri / Yüzeyler</button>
+    <button role="tab" data-tab="plan">2 · Plan ve sınır</button>
+    <button role="tab" data-tab="kesit">3 · Kübaj hesabı</button>
     <button role="tab" data-tab="bk">4 · Temel Kazısı ve Dolgusu</button>
-    <button role="tab" data-tab="cikti">5 · Çıktılar</button>
+    <button role="tab" data-tab="cikti">5 · Raporlar</button>
   </nav>
 
   <div id="acadFlowBar" role="region" aria-label="CAD modül veri akışı" style="display:none !important">
@@ -1613,17 +1613,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   </section>
 
   <!-- VERİ -->
-  <section id="v-veri" class="view" style="display:flex;flex-direction:column;gap:14px">
-    <div class="card">
-      <h2>Yeni proje</h2>
-      <div class="grid">
-        <label>Güzergah başlangıç km'si (örn. 0+380)<input id="vKm0"></label>
-        <label>Kesit şablon ölçeği 1/ (Maslak: 150)<input id="vOl" inputmode="decimal"></label>
-      </div>
-      <p class="note" style="margin-top:8px">Kesit km'leri bu değerden devam eder. Netcad'deki kesitlerle üst üste gelmesi için aynı başlangıç km'sini ve ölçeği (1/150) kullan. Çizimde km yazısı olan kesit çizgileri varsa km'ler yazılardan okunur.</p>
-    </div>
-    <div class="card">
-      <h2>Siyah kot · İLK HÂL</h2>
+  <section id="v-veri" class="view kub-modern" style="display:flex;flex-direction:column;gap:14px">
+    <div class="kub-guide"><b>Başlangıç</b><span>İlk ve son yüzeyi yükle → Plan ve sınır → Kübaj hesabı. Sabit proje kotunu da kullanabilirsin.</span></div>
+    <div class="card kub-surface kub-first">
+      <h2><span class="kub-surface-dot first"></span> Mevcut arazi <small class="kub-sub">Siyah kot · ilk hâl</small></h2>
       <div class="grid">
         <div class="full"><div class="note" style="margin-bottom:6px">İlk hâl dosyası (NCN, NCZ, DXF, XLS, XLSX, PDF, TXT)</div>
           <label class="filebtn"><input type="file" id="fS"><span>📂 Dosya seç</span></label>
@@ -1636,8 +1629,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       <p class="note" id="sInfo" style="margin-top:10px"></p>
       <div id="dxfBoxS"></div>
     </div>
-    <div class="card">
-      <h2>Kırmızı kot · SON HÂL</h2>
+    <div class="card kub-surface kub-last">
+      <h2><span class="kub-surface-dot last"></span> Proje / son arazi <small class="kub-sub">Kırmızı kot · son hâl</small></h2>
       <div class="row" role="radiogroup" style="margin-bottom:10px">
         <label style="flex-direction:row;align-items:center;gap:6px;color:var(--ink)"><input type="radio" name="kmode" value="model"> Dosyadan (son hâl noktaları / üçgen model)</label>
         <label style="flex-direction:row;align-items:center;gap:6px;color:var(--ink)"><input type="radio" name="kmode" value="sabit"> Sabit kot (düz son hâl)</label>
@@ -1657,11 +1650,19 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       <div id="dxfBoxK"></div>
     </div>
     <div class="card" id="vResCard" style="border-left:5px solid var(--accent)">
-      <h2>Kırmızı − Siyah farkı</h2>
+      <h2>Yüzey farkı · Hacim özeti</h2>
       <div class="stat" id="vRes"></div>
       <p class="note" id="vResNote" style="margin-top:8px"></p>
     </div>
-    <div class="card">
+    <div class="card kub-project-settings">
+      <h2>Güzergah ve ölçek</h2>
+      <div class="grid">
+        <label>Güzergah başlangıç km'si (örn. 0+380)<input id="vKm0"></label>
+        <label>Kesit şablon ölçeği 1/ (Maslak: 150)<input id="vOl" inputmode="decimal"></label>
+      </div>
+      <p class="note" style="margin-top:8px">Kesit km'leri bu değerden devam eder. Netcad'deki kesitlerle üst üste gelmesi için aynı başlangıç km'sini ve ölçeği (1/150) kullan. Çizimde km yazısı olan kesit çizgileri varsa km'ler yazılardan okunur.</p>
+    </div>
+    <div class="card kub-project-file">
       <h2>Proje dosyası</h2>
       <p class="note" style="margin-bottom:10px">Tüm veriyi (noktalar, alanlar, eksen, ayarlar) tek dosyada sakla; telefonla bilgisayar arasında taşı.</p>
       <div class="row">
@@ -1674,7 +1675,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   </section>
 
   <!-- PLAN -->
-  <section id="v-plan" class="view" hidden style="flex-direction:column;gap:14px">
+  <section id="v-plan" class="view kub-modern" hidden style="flex-direction:column;gap:14px">
     <div id="planBox">
       <canvas id="planCv" aria-label="Plan görünümü"></canvas>
       <div id="pKub" hidden style="position:absolute;left:8px;bottom:38px;z-index:5;background:rgba(255,255,255,.93);border:1px solid #ccc;border-radius:8px;padding:5px 9px;font:600 13px Arial;line-height:1.35;pointer-events:none;box-shadow:0 1px 4px rgba(0,0,0,.15)"></div>
@@ -1773,12 +1774,17 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   </section>
 
   <!-- KESİTLER -->
-  <section id="v-kesit" class="view" hidden style="flex-direction:column;gap:14px">
+  <section id="v-kesit" class="view kub-modern" hidden style="flex-direction:column;gap:14px">
+    <div class="kub-methods" aria-label="Kübaj hesap yöntemleri">
+      <button type="button" data-kub-jump="sdCard"><span>01 · İki yüzey</span><small>İlk ve son kotun farkı</small></button>
+      <button type="button" data-kub-jump="bazCard"><span>02 · Sabit kot</span><small>Tek model + proje kotu</small></button>
+      <button type="button" data-kub-jump="kAyar"><span>03 · En kesit</span><small>Aralık, eksen ve kesit ayarları</small></button>
+    </div>
     <details class="card" id="krCard" open><summary><b>Rapor bilgileri</b> <span class="note">(PDF ve Excel raporun başına yazılır)</span></summary>
       <div class="grid"><label>İl<input id="krIl" autocomplete="off"></label><label>İlçe<input id="krIlce" autocomplete="off"></label><label>Mahalle<input id="krMah" autocomplete="off"></label><label>Ada<input id="krAda" inputmode="numeric" autocomplete="off"></label><label>Parsel<input id="krPar" autocomplete="off"></label></div>
     </details>
     <div class="card" id="sdCard">
-      <h2>Kübaj · ilk kot (siyah) → son kot (kırmızı)</h2>
+      <h2>İki yüzey arasında kübaj <small class="kub-sub">İlk hâl → son hâl · üçgen model</small></h2>
       <div class="grid" style="margin-bottom:8px"><div><div class="filebtn"><span>⬛ İlk kot (siyah üçgen) yükle</span><input type="file" id="hS" accept=".ncz,.NCZ,.dxf,.DXF,.ncn,.NCN,.txt,.csv,.xls,.xlsx"></div><div class="note" id="hSi"></div></div>
         <div><div class="filebtn"><span>🟥 Son kot (kırmızı üçgen) yükle</span><input type="file" id="hK" accept=".ncz,.NCZ,.dxf,.DXF,.ncn,.NCN,.txt,.csv,.xls,.xlsx"></div><div class="note" id="hKi"></div></div></div>
       <div id="ready" style="margin:2px 0 8px;display:flex;gap:6px;flex-wrap:wrap"></div><div id="hUyar"></div>
@@ -1789,7 +1795,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       <div class="stat" id="sdTot"></div>
       <p class="note" id="sdNote" style="margin-top:8px"></p>
       <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px"><button type="button" id="sdPdf">📄 PDF rapor (plan + hesap)</button><button type="button" id="sdDxf">📐 Çizim kaydet (rapor + plan)</button><button type="button" id="sdXls">📊 Excel rapor</button></div><p class="msg" id="sdMsg"></p>
-      <div class="row" style="margin-top:8px;gap:6px;flex-wrap:wrap;align-items:center"><div class="seg" role="group" hidden><button type="button" id="hV2" class="primary">2B harita</button><button type="button" id="hV3">3B görünüm</button></div>
+      <div class="row" style="margin-top:8px;gap:6px;flex-wrap:wrap;align-items:center"><div class="seg" role="group" aria-label="Kübaj görünümü"><button type="button" id="hV2" class="primary">2B harita</button><button type="button" id="hV3">3B görünüm</button></div>
 </div>
       <div id="h2Box" style="position:relative;margin-top:8px"><canvas id="hMap" width="1000" height="520" style="width:100%;height:auto;border:1px solid var(--line);border-radius:8px;background:#fff;touch-action:manipulation"></canvas></div>
       <p class="note" id="hMapNote" style="margin-top:4px" data-v2>Kırmızı tonlar kazı, mavi tonlar dolgu; yeşil çizgi kübaj alanı, siyah çizgi eksen, turuncu çizgi seçili kesit. Haritada bir kesite dokununca kesiti aşağıda açar.</p>
@@ -1797,7 +1803,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
         <select id="h3E" style="width:auto" title="Düşey abartı"><option value="1">Düşey 1×</option><option value="2">Düşey 2×</option><option value="3" selected>Düşey 3×</option><option value="5">Düşey 5×</option><option value="10">Düşey 10×</option></select><button type="button" id="h3R">Görünümü sıfırla</button></span></div><canvas id="h3d" style="width:100%;height:min(70vh,560px);display:block;border:1px solid var(--line);border-radius:8px;touch-action:none;cursor:grab"></canvas>
         <p class="note" id="h3Note" style="margin-top:4px">Tek parmak / sol tuş: döndür · iki parmak / sağ tuş: kaydır · kıstır / tekerlek: yakınlaş · çift tık: sıfırla. Kırmızı tonlar kazı, mavi tonlar dolgu, toprak rengi değişmeyen yer; yeşil çizgi kübaj alanı, siyah çizgi eksen.</p></div>
     </div>
-    <details class="card" id="bazCard" style="border-left:5px solid #1f5fbf"><summary><b>Tek yüzey varsa: baz kotu (proje kotu) ile kübaj</b></summary>
+    <details class="card" id="bazCard" style="border-left:5px solid #1f5fbf"><summary><b>Tek yüzey + sabit proje kotu</b></summary>
       <p class="note" style="margin:2px 0 8px">Siyah ya da kırmızıdan yalnız biri yeterli: seçilen yüzey ile verdiğin baz kotu (düz proje kotu) arasındaki kazı ve dolgu hesaplanır. Yüzey baz kotunun üstündeyse kazı, altındaysa dolgu.</p>
       <div class="grid"><label>Baz kotu (m)<input id="bzK" inputmode="decimal" placeholder="örn. 915.50"></label>
         <label>Yüzey<select id="bzM"><option value="auto">Otomatik (yüklü olan)</option><option value="S">Siyah (ilk hâl)</option><option value="R">Kırmızı (son hâl)</option></select></label>
@@ -1827,25 +1833,25 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       </div>
       <p class="note" style="margin-top:10px">Kesitler kübaj alanının sınırına kadar uzanır. Kübaj alanı seçili değilse eksenden sol ve sağ genişlik kadar alınır. Kurplarda, kurp noktasının bir kesit aralığı önü ve arkası kurp aralığıyla sıklaştırılır. Fark dolgu eşiğini aşmayan kesitlerde dolgu ve sıyırma, kazı eşiğini aşmayan kesitlerde kazı 0 sayılır (örn. dolgu sahasında 2–3 cm'lik kazı izleri).</p>
     </details>
-    <div class="card">
-      <h2>En kesitle kübaj</h2>
-      <div class="row" style="margin-bottom:8px"><button id="calc" class="primary" type="button">Kesitleri yeniden hesapla</button><span class="msg" id="kMsg"></span></div>
+    <div class="card kub-section-result">
+      <h2>En kesit yöntemi</h2>
+      <div class="row" style="margin-bottom:8px"><button id="calc" class="primary" type="button">Kesitleri hesapla</button><span class="msg" id="kMsg"></span></div>
       <div class="stat" id="tot"></div>
     </div>
-    <div class="card">
-      <h2>Kesit çizimi</h2>
+    <div class="card kub-section-preview">
+      <h2>Kesit önizleme</h2>
       <div class="row" style="margin-bottom:8px;gap:8px;flex-wrap:wrap;align-items:center;background:#fff7e6;border:1px solid #e8c98a;border-radius:8px;padding:8px"><b>Kesitteki kot yazıları:</b><label style="flex-direction:row;align-items:center;gap:6px"><select id="hKm" style="width:auto"><option value="degisim">Kot değişimi</option><option value="aralik">Sabit aralık</option></select></label><label id="hKsL" style="flex-direction:row;align-items:center;gap:6px">Aralık (m)<input id="hKs" inputmode="decimal" style="width:60px"></label></div>
       <div class="row" style="margin-bottom:8px"><button id="pv" type="button">‹ Önceki</button><span id="pvTxt" class="pill"></span><button id="nx" type="button">Sonraki ›</button></div>
       <canvas id="sheetPrev" width="1188" height="840"></canvas>
     </div>
-    <div class="card">
+    <div class="card kub-section-list">
       <h2>Kesit listesi</h2>
       <div class="scroll"><table class="t" id="kTable"></table></div>
     </div>
   </section>
 
   <!-- ÇIKTILAR -->
-  <section id="v-cikti" class="view" hidden style="flex-direction:column;gap:14px">
+  <section id="v-cikti" class="view kub-modern" hidden style="flex-direction:column;gap:14px">
     <div class="card">
       <h2>Dosyalar</h2>
       <div class="row">
@@ -34659,10 +34665,10 @@ D.style.display="none";ciz();})();
 /* Visual grouping only; actions delegate to the original module commands. */
 (()=>{'use strict';const $=id=>document.getElementById(id), KEYS=['veri','plan','kesit','cikti','bk','kad'];
 const modules={
- veri:{name:'Arazi Kübaj · Veri',desc:'Siyah ve kırmızı arazi yüzeyleri · Dosya ve model',icon:'◬',quick:[['📂 Siyah dosya','fS','file'],['📂 Kırmızı dosya','fK','file'],['◬ Siyah üçgen','reTin'],['◬ Kırmızı üçgen','reTinK'],['💾 Proje kaydet','saveJ',null,1]]},
+ veri:{name:'Arazi Kübaj · Yüzeyler',desc:'Mevcut arazi ve proje yüzeylerini tanımla',icon:'◬',quick:[['💾 Proje kaydet','saveJ',null,1]]},
  plan:{name:'Arazi Kübaj · Plan',desc:'Üçgenler · Kot sorgusu · Alan · Eksen',icon:'▱',quick:[['📂 Dosya','tOpen','file'],['⤢ Tümünü göster','tFit'],['⌖ Sorgula','tSorgu'],['▤ Alan çevir','tAlan'],['✏ Düzenle','tEdit'],['💾 Kaydet','tKay',null,1]]},
- kesit:{name:'Arazi Kübaj · Kesit ve Hesap',desc:'Kazı / dolgu · Kesitler · Hacim kontrolü',icon:'▥',quick:[['◬ 2B görünüm','hV2'],['▣ 3B görünüm','hV3'],['▤ Kesit hesabı','calc',null,1],['📄 PDF','sdPdf'],['📊 Excel','sdXls']]},
- cikti:{name:'Arazi Kübaj · Çıktılar',desc:'Kesitler · DXF / PDF / Excel · Hakediş',icon:'⇩',quick:[['📊 Excel','oX',null,1],['📄 Kesit PDF','oP'],['▱ DXF','oD']]},
+ kesit:{name:'Arazi Kübaj · Hesap',desc:'Yöntemi seç · hacimleri ve modeli kontrol et',icon:'▥',quick:[]},
+ cikti:{name:'Arazi Kübaj · Raporlar',desc:'Kesitler · Çizim · PDF · Excel hakediş',icon:'⇩',quick:[]},
  bk:{name:'Temel Kazısı / Dolgusu',desc:'Kübaj yüzeyleri ve tip kesitler',icon:'▰',quick:[['↙ CAD’den al','kdFromCad'],['▣ Hesapla','kdCalculate',null,1],['📊 Excel','kdExcel'],['⤢ Sığdır','kdFit']]},
  kad:{name:'3B Kadastro',desc:'Mimari sadeleştirme · Kat planı · Ön kontrol · GML',icon:'▦',quick:[['📂 YAP DXF','k3sYF','file'],['📂 Mimari DXF','k3sF','file'],['📂 3B kontrol','k3F','file'],['⌖ Kontrol listesi','k3Csv'],['📄 Kontrol PDF','k3Pdf'],['▤ GML','k3gGo']]}
 };
@@ -50418,3 +50424,92 @@ body:not(.cadmasa) .wrap>header #acadSafeBar{min-height:29px!important;max-heigh
 body:not(.cadmasa) .wrap>nav.tabs{margin-top:0!important;min-height:34px!important;padding:3px!important}
 @media(max-width:680px){body:not(.cadmasa) .wrap>header>div:last-child{justify-content:flex-start!important;flex:1 1 100%;gap:4px!important}body:not(.cadmasa) .wrap>header>div:last-child>div:not(#acadSafeBar){flex-wrap:wrap!important}body:not(.cadmasa) .wrap>header h1{font-size:17px!important}}
 </style>
+
+<style id="acad-kubaj-modern-20261125">
+.kub-modern.acad-engineer {
+ --bg:#111e2a;--card:#1b2b3a;--ink:#eff6fc;--muted:#b5c9d9;--line:#3a5269;--accent:#79c2ee;--soft:#263f54;--ok:#85dbb4;--bad:#ff9f9f;
+ background:#14212d!important;border:1px solid #33495b!important;border-radius:15px!important;padding:12px!important;gap:12px!important;
+}
+.kub-modern.acad-engineer > .card {background:var(--card)!important;border:1px solid var(--line)!important;border-radius:12px!important;padding:15px!important;min-width:0}
+.kub-modern.acad-engineer > .card h2 {font-size:1.04rem;letter-spacing:.005em;color:var(--ink);font-weight:750;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.kub-modern .kub-sub{font-size:.76rem;color:var(--muted);font-weight:500;flex:1 1 auto}
+.kub-modern .acad-specialbar{background:#203548;border-color:#415e74;border-radius:12px;padding:12px 14px}
+.kub-modern .acad-special-name strong{font-size:1.04rem}
+.kub-modern .acad-special-name small{font-size:.78rem}
+.kub-modern .acad-special-icon{background:#1b4c67;border-radius:10px}
+.kub-modern .acad-special-actions:empty{display:none}
+.kub-modern .kub-guide{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 15px;background:#18374a;border:1px solid #405d70;border-radius:10px;color:#d9eaf4;font-size:.88rem}
+.kub-guide b{color:#a8dfff}
+.kub-modern .kub-surface-dot{width:13px;height:13px;display:inline-block;border-radius:50%;flex:none}
+.kub-modern .kub-surface-dot.first{background:#151a20;border:2px solid #a9b7c5}
+.kub-modern .kub-surface-dot.last{background:#e45c62;border:2px solid #ffb3b5}
+.kub-modern.acad-engineer .kub-first{border-top:3px solid #899bad!important}
+.kub-modern.acad-engineer .kub-last{border-top:3px solid #e66b71!important}
+.kub-modern .filebtn:not(.mini){min-height:48px;border:1px dashed #7195ac;border-radius:10px;background:#20374a;color:#edf7ff;font-size:.88rem}
+.kub-modern .filebtn.has:not(.mini){border-color:#81c8a4;background:#213f3d}
+.kub-modern .card input:not([type=checkbox]):not([type=radio]):not([type=file]),.kub-modern .card select{min-height:38px;border-radius:8px;font-size:.9rem}
+.kub-modern .card button{min-height:36px;border-radius:8px;font-size:.84rem;padding:7px 11px}
+.kub-modern .card button.primary{background:#126c9b;border-color:#65b5db}
+.kub-modern .card button.danger{color:#ffb6b6}
+.kub-modern .card details summary,.kub-modern details.card>summary{cursor:pointer;color:#e9f3fa;padding:4px 0}
+.kub-modern details.card[open]>summary{margin-bottom:12px;padding-bottom:9px;border-bottom:1px solid var(--line)}
+.kub-modern .note{color:#bbcedd;line-height:1.5;font-size:.81rem}
+.kub-modern .msg.err{color:var(--bad)}
+.kub-modern .stat{gap:8px;align-items:stretch}
+.kub-modern .stat:empty{display:none}
+.kub-modern .stat>div:has(>.k):has(>.v){min-width:0;flex:1 1 145px;background:#132333;border:1px solid #3e586f;border-radius:10px;padding:12px 13px}
+.kub-modern .stat .k{font-size:.75rem;color:#b4ccdf;letter-spacing:.03em}
+.kub-modern .stat .v{font-size:clamp(1.15rem,2.2vw,1.6rem);color:#f2f9ff;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;margin-top:5px}
+.kub-modern .stat>div:not(:has(>.k)) {color:#243746}
+.kub-modern #ready .pill {border:1px solid color-mix(in srgb,currentColor 26%,transparent);padding:5px 8px;white-space:normal}
+.kub-modern #hUyar>div {color:#702d2d}
+.kub-modern #hfBox{background:#eff5fa;color:#203746}
+.kub-modern #hfBox label{color:#3b5468}
+.kub-modern .kub-methods{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;min-width:0}
+.kub-modern .kub-methods button{min-width:0;text-align:left;display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:12px 14px;border:1px solid #47667d;background:#203c52;color:#f0f8ff;border-radius:11px;white-space:normal}
+.kub-modern .kub-methods button small{font-weight:500;color:#b8d0e1;font-size:.75rem}
+#v-kesit.kub-modern #sdCard,#v-kesit.kub-modern #bazCard,#v-kesit.kub-modern #kAyar{scroll-margin-top:110px}
+.kub-modern .kub-methods button:hover{background:#2b5270;border-color:#83bfdc}
+.kub-modern #hMap,.kub-modern #h3d,.kub-modern #sheetPrev{border-radius:10px!important;max-width:100%}
+.kub-modern #h3Ctl{min-width:0;max-width:100%}
+.kub-modern #h3Ctl select{max-width:100%}
+.kub-modern #planBox>.tool{gap:4px;padding:6px;background:#182b3aee;border:1px solid #4b657a;border-radius:10px;max-width:calc(100% - 16px);overflow:auto;max-height:34%;touch-action:pan-y;align-content:flex-start}
+.kub-modern #planBox>.tool button,.kub-modern #planBox>.tool .filebtn{background:#294459;color:#f2f8fd;border:1px solid #5c788e;border-radius:7px;min-height:32px;font-size:.76rem;padding:5px 8px;flex:0 0 auto}
+.kub-modern #planBox>.tool button.on,.kub-modern #planBox>.tool button.primary{background:#176d9a;color:white;border-color:#85cbed}
+.kub-modern #planBox>.tool button.danger{color:#ffb8b8}
+.kub-modern #planBox>.pop{background:var(--card);color:var(--ink);border-color:var(--line)}
+.kub-modern #pKub{color:#182b3a}
+.kub-modern .layers .row{gap:8px 12px}
+.kub-modern .layers label:has(input[type=checkbox]){padding:5px 7px;border-radius:7px;border:1px solid #3c556b;background:#213648}
+.kub-modern .layers input[type=checkbox],.kub-modern input[type=radio]{accent-color:#58b9e8}
+.kub-modern .scroll{overflow-x:auto;max-width:100%}
+.kub-modern #kTable{font-variant-numeric:tabular-nums}
+.kub-modern #kTable th{background:#29455b;color:#f0f8ff}
+.kub-modern #kTable td{border-bottom-color:#395166}
+#kubSub:not([hidden]){gap:5px;border:1px solid var(--line);border-radius:10px;padding:6px}
+#kubSub button{font-size:.82rem;min-height:35px;border-radius:7px;white-space:normal}
+@media(min-width:1200px){
+ #v-veri.kub-modern .kub-guide,#v-veri.kub-modern .kub-project-settings,#v-veri.kub-modern #vResCard,#v-veri.kub-modern .kub-project-file,
+ #v-kesit.kub-modern .kub-methods,#v-kesit.kub-modern #krCard,#v-kesit.kub-modern .kub-section-result,#v-kesit.kub-modern .kub-section-preview,#v-kesit.kub-modern .kub-section-list{grid-column:1/-1}
+}
+@media(max-width:650px){
+ .kub-modern.acad-engineer{padding:7px!important;gap:8px!important}
+ .kub-modern.acad-engineer>.card{padding:11px!important}
+ .kub-modern .kub-methods{grid-template-columns:1fr}
+ .kub-modern .kub-methods button{padding:9px 11px}
+ .kub-modern .stat>div:has(>.k):has(>.v){flex-basis:120px;padding:10px}
+ .kub-modern #planBox>.tool{max-height:43%;gap:3px}
+ .kub-modern #planBox>.tool button,.kub-modern #planBox>.tool .filebtn{min-height:34px;font-size:.75rem}
+}
+@media(prefers-reduced-motion:reduce){.kub-modern *{scroll-behavior:auto!important}}
+</style>
+<script id="acad-kubaj-method-navigation">
+(()=>{const root=document.getElementById('v-kesit');if(!root)return;
+root.querySelectorAll('[data-kub-jump]').forEach(b=>b.addEventListener('click',()=>{
+ const target=document.getElementById(b.dataset.kubJump);if(!target)return;
+ if(target.tagName==='DETAILS')target.open=true;
+ if(target.classList.contains('acad-eng-collapsed'))target.querySelector('.acad-eng-toggle')?.click();
+ target.scrollIntoView({block:'start',behavior:'auto'});
+}));
+})();
+</script>
