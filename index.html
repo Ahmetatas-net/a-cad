@@ -16670,7 +16670,7 @@ function storedSheet(p,key,source=sheetFingerprint(p.G)){
     if(p.G.coz!==false&&!p.G.__coz)A.cakisma(p.G);
     return p;
   }
-  const G=saved.G.filter(g=>g.t!=="i").concat(p.G.filter(g=>g.t==="i"));
+  const G=saved.G.filter(g=>g.t!=="i" && !(g.detail && g.t==="x" && /^(?:1\/\d+(?:[.,]\d+)?|\d+(?:[.,]\d+)?×)$/.test(String(g.s).trim()))).concat(p.G.filter(g=>g.t==="i"));
   G.coz=false;G.__coz=1;
   return {...p,G,edited:true};
 }
@@ -49213,11 +49213,11 @@ function inset(source,src,r,dst,R,n,opts={}){
   }
   const first=out.length;out.push(...candidates);A.declutter(out,first,out.length,[dst[0]-R,dst[1]-R,dst[0]+R,dst[1]+R],{pad:.25});
  }
- out.push(...texts,line(circle(dst,R),.32),label([dst[0],dst[1]-R-3.2],'AYRINTI '+n,2.3,{bold:true}),label([dst[0],dst[1]-R-6.2],opts.scale?'1/'+Number((opts.scale/k).toFixed(2)):k.toFixed(1)+'×',1.9));
+ out.push(...texts,line(circle(dst,R),.32),label([dst[0],dst[1]-R-3.2],'AYRINTI '+n,2.3,{bold:true}));
  return out.filter(g=>g.t!=='x'||g.s).map(g=>({...g,detail:true,sabit:true,fix:true,detailGroup:n}));
 }
-// The inset keeps its source's paper Y coordinate. Its footprint includes both captions.
-const footprint=(c,r)=>[c[0]-r-1,c[1]-r-8,c[0]+r+1,c[1]+r+1];
+// The inset keeps its source's paper Y coordinate, with room for its title.
+const footprint=(c,r)=>[c[0]-r-1,c[1]-r-5,c[0]+r+1,c[1]+r+1];
 const intersects=(a,b)=>a[0]<b[2]&&a[2]>b[0]&&a[1]<b[3]&&a[3]>b[1];
 function clearFootprint(g,r){
  if(g.t==='x'&&g.s&&!g._acadOmit){
