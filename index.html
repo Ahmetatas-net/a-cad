@@ -23878,7 +23878,7 @@ function polygonSelectionIds(P,crossing){
 }
 
 function run(name, rep) { const k = name.toUpperCase().replace(/[İI]/g, "I").replace(/Ç/g, "C").replace(/Ğ/g, "G").replace(/Ö/g, "O").replace(/Ş/g, "S").replace(/Ü/g, "U").replace(/\s+/g, ""); const c = CMDS[k] || CMDS[ALIAS[k]];
-  if (!c) return false; if(c===selectByPolygon){selectByPolygon();return true;} if (AREA_EDIT_SESSION && k!=="ALANDUZELT") document.getElementById("acadAreaEdit")?.__close?.(); if (!rep && !/^(TUMU|GERI|ILERI|ARZTIN|ARZEGRI|PENCERE)$/.test(CMDS[k] ? k : ALIAS[k])) ANN = []; if (cmd && cmd.done && cmd.pts && cmd.pts.length >= 2 && !cmd.pick && cmd.name !== "Pencere") { const old = cmd; RUNKEY = null; CXL = true; try { old.done(); } catch (e) { } CXL = false; } cmd = null; rub = null; last = null; RUNKEY = null; if (!rep) { const bx = document.getElementById("arzBox"); if (bx) bx.hidden = true; /* yeni komut: bilgi kutusu tuvali örtmesin (bilgi durum satırında kalır) */ } c(); if (cmd && (cmd.pt || cmd.ent || cmd.pick)) RUNKEY = CMDS[k] ? k : ALIAS[k]; markTools(); draw(); return true; }
+  if (!c) return false; if (c!==CMDS.TOPLUSORGU && c!==CMDS.GERI && c!==CMDS.ILERI && c!==CMDS.PENCERE) { const panel=$("tsDeg"); if(panel){panel.hidden=true;panel.style.display="none";} } if(c===selectByPolygon){selectByPolygon();return true;} if (AREA_EDIT_SESSION && k!=="ALANDUZELT") document.getElementById("acadAreaEdit")?.__close?.(); if (!rep && !/^(TUMU|GERI|ILERI|ARZTIN|ARZEGRI|PENCERE)$/.test(CMDS[k] ? k : ALIAS[k])) ANN = []; if (cmd && cmd.done && cmd.pts && cmd.pts.length >= 2 && !cmd.pick && cmd.name !== "Pencere") { const old = cmd; RUNKEY = null; CXL = true; try { old.done(); } catch (e) { } CXL = false; } cmd = null; rub = null; last = null; RUNKEY = null; if (!rep) { const bx = document.getElementById("arzBox"); if (bx) bx.hidden = true; /* yeni komut: bilgi kutusu tuvali örtmesin (bilgi durum satırında kalır) */ } c(); if (cmd && (cmd.pt || cmd.ent || cmd.pick)) RUNKEY = CMDS[k] ? k : ALIAS[k]; markTools(); draw(); return true; }
 /* komut tekrarı: biten çizim/düzenleme komutu, başka komut seçilene ya da Esc / boşta sağ tuşa basılana kadar kendiliğinden yeniden başlar */
 function markTools() { setTimeout(ctxBar, 0); pvMark(); document.querySelectorAll("#cadTools [data-c]").forEach(b => /^NG(SYM|AD|KOT)$/.test(b.dataset.c) || b.classList.toggle("on", (cmd && b.dataset.n === cmd.name) || (b.dataset.c === "PENCERE" && winSel) || (b.dataset.c === "ARZTIN" && !!CARZ.tin) || (b.dataset.c === "ARZEGRI" && !!CARZ.egri))); $("cadOrtho").classList.toggle("on", ortho); $("cadGrad").textContent = grad ? "Açı: grad" : "Açı: derece"; }
 $("cadIn").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); enter(); } else if (e.key === "Escape") { esc(); } });
@@ -26047,8 +26047,8 @@ CMDS.UZAT = () => { cmd = { name: "Uzat", ent(e, p) { if (!(e.t === "line" || (e
 
 /* ---------- ölçme hesapları ---------- */
 let OUT = { title: "", head: [], rows: [] };
-function outShow(title, head, rows) { OUT = { title, head, rows }; const el = $("cadOutT"); $("cadOutH").textContent = title;
-  el.innerHTML = `<thead><tr>${head.map(h => `<th>${esc_(h)}</th>`).join("")}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(v => `<td>${esc_(v)}</td>`).join("")}</tr>`).join("")}</tbody>`; $("cadOut").hidden = !rows.length; }
+function outShow(title, head, rows, displayLimit=Infinity) { OUT = { title, head, rows }; const el = $("cadOutT"); $("cadOutH").textContent = title;
+  el.innerHTML = `<thead><tr>${head.map(h => `<th>${esc_(h)}</th>`).join("")}</tr></thead><tbody>${rows.slice(0,displayLimit).map(r => `<tr>${r.map(v => `<td>${esc_(v)}</td>`).join("")}</tr>`).join("")}</tbody>`; $("cadOut").hidden = !rows.length; }
 const nextP = (pre = "P") => { const names = new Set(ents.filter(e => e.t === "point").map(e => String(e.n))); let n = 1; while (names.has(pre + n)) n++; return pre + n; };
 const addPt = (p, n) => { const z = typeof kotAt === "function" ? kotAt(p[0], p[1]).s : null; return add({ t: "point", n: n || nextP(), pts: [[p[0], p[1], z != null && isFinite(z) ? z : 0]] }); };
 CMDS.DIK = () => { const rows = []; cmd = { name: "Dik in", pt(p) { if (!this.a) { this.a = p; last = p; rub = true; prompt_("Dik in: doğrunun 2. noktası"); return; } if (!this.b) { this.b = p; rub = null; prompt_("Dik inilecek noktaya dokun ya da adını yaz (Esc bitir)"); return; }
@@ -26431,9 +26431,9 @@ CMDS.TOPLUSORGU = () => { const yaz = () => { const L = ents.filter(e => sel.has
       return [i + 1, (tur[e.t] || e.t) + (e.t === "pline" && e.closed ? " (kapalı)" : ""), e.lay, e.t === "text" ? e.s : e.t === "point" ? (e.n || "") : "", fmt(q[0]), fmt(q[1]), e.t === "point" && Math.abs(q[2] || 0) > 1e-6 ? (+q[2]).toFixed(3) : "", Ln != null ? fmt(Ln) : "", A_ != null ? tr2_(A_) : ""]; });
     const tA = L.reduce((t, e) => t + (e.t === "pline" && e.closed ? Math.abs(areaOf(e.pts)) : 0), 0), tL = L.reduce((t, e) => t + (e.t === "line" || e.t === "pline" ? lenOf(e) : 0), 0);
     if (rows.length) rows.push(["", "TOPLAM", "", `${L.length} nesne`, "", "", "", fmt(tL), tr2_(tA)]);
-    outShow(`Toplu sorgu — ${L.length} nesne`, ["#", "Tür", "Tabaka", "Ad / yazı", "Y", "X", "Z", "Uzunluk (m)", "Alan (m²)"], rows); topluDeg(L.length, yaz); say(`${L.length} nesne listelendi · toplam uzunluk ${fmt(tL)} m · toplam alan ${tr2_(tA)} m²`); };
+    outShow(`Toplu sorgu — ${L.length} nesne`, ["#", "Tür", "Tabaka", "Ad / yazı", "Y", "X", "Z", "Uzunluk (m)", "Alan (m²)"], rows, 250); topluDeg(L.length, yaz); say(`${L.length} nesne listelendi · toplam uzunluk ${fmt(tL)} m · toplam alan ${tr2_(tA)} m²`); };
   cmd = { name: "Toplu sorgu", rcExit: true, win() { yaz(); prompt_("Toplu sorgu: pencere çiz ya da nesnelere dokun (ekle/çıkar) · Esc bitir"); }, ent(e) { if (sel.has(e.id)) sel.delete(e.id); else sel.add(e.id); yaz(); } };
-  if (sel.size) yaz(); prompt_("Toplu sorgu: pencere çiz (soldan sağa: içindekiler, sağdan sola: değenler) ya da nesnelere dokun · Esc bitir"); };
+  yaz(); prompt_("Toplu sorgu: pencere çiz (soldan sağa: içindekiler, sağdan sola: değenler) ya da nesnelere dokun · Esc bitir"); };
 
 /* ===== Mimari projeyi parsele oturt · 2 noktadan dönüşüm · dik çiz · dik döndür ===== */
 const benz = (k, th, tx, ty) => { const c = Math.cos(th) * k, s_ = Math.sin(th) * k; const f = p => [p[0] * c - p[1] * s_ + tx, p[0] * s_ + p[1] * c + ty]; f.k = k; f.rot = th; return f; };
@@ -27070,33 +27070,48 @@ function cizgiKot(x, y, R) { const S = kotluSeg(); if (!S.length) return null; l
 function projeKot(x, y) { const P = projeModel(); const k = P ? K.zAt(P, x, y) : null; if (k != null && isFinite(k)) return { k, d: 0, src: "yüzey" }; const c = cizgiKot(x, y); return c ? { k: c.k, d: c.d, lay: c.lay, src: "çizgi" } : null; }
 function kdHtml(f) { if (f == null || !isFinite(f)) return ""; const a = Math.abs(f); if (a < 0.005) return `<span style="background:#2e7d32;color:#fff;padding:1px 6px;border-radius:5px;font-weight:700">✓ KOTUNDA</span>`; return `<span style="background:${f < 0 ? "#c62828" : "#1565c0"};color:#fff;padding:1px 6px;border-radius:5px;font-weight:700;font-size:1.15em">${f < 0 ? "⬇ KAZI" : "⬆ DOLGU"} ${a.toFixed(2)} m</span>`; }
 function kotAt(x, y) { const M = kotModel(), P = projeModel(); const z = M ? K.zAt(M, x, y) : null, k = P ? K.zAt(P, x, y) : null; return { s: z == null ? null : z, k: k == null ? null : k }; }
-function topluDeg(n, yen) { const box = $("cadOut"); if (!box) return; let d = $("tsDeg"); if (!d) { d = document.createElement("div"); d.id = "tsDeg"; d.style.cssText = "display:flex;gap:6px;flex-wrap:wrap;align-items:end;margin:8px 0;padding:8px;border:1px solid var(--line);border-radius:8px;background:rgba(54,195,255,.07)"; const t = box.querySelector(".scroll"); box.insertBefore(d, t); }
-  if (!n) { d.hidden = true; return; } d.hidden = false; const ly = Object.keys(lays).sort((a, b) => a.localeCompare(b, "tr"));
+function topluDeg(n, yen) {
+  let d = $("tsDeg");
+  if (!d) {
+    d = document.createElement("div"); d.id = "tsDeg"; d.className = "card acad-floating";
+    d.style.cssText = "position:fixed;right:18px;top:170px;left:auto;z-index:10010;width:min(430px,calc(100vw - 24px));max-height:65vh;overflow:auto;padding:12px;background:var(--panel,#203445);color:var(--text,#eaf5ff);box-shadow:0 6px 24px #0006;display:flex;gap:8px;flex-wrap:wrap;align-items:end";
+    $("cadBox").append(d);
+    d.addEventListener("keydown",ev=>{if(ev.target.matches("input,select,textarea"))ev.stopPropagation();});
+  }
+  const previous = Object.fromEntries([...d.querySelectorAll("input[id],select[id]")].map(el=>[el.id,el.type==="checkbox"?el.checked:el.value]));
+  d.hidden = false; d.style.display="flex";
+  const ly = Object.keys(lays).sort((a,b)=>a.localeCompare(b,"tr"));
   const NP_ = ents.filter(e => sel.has(e.id) && e.t === "point").length;
   const TXT_ = ents.filter(e => sel.has(e.id) && e.t === "text");
   const singleText_ = TXT_.length === 1 && sel.size === 1 ? TXT_[0] : null;
 
-  d.innerHTML = `<b style="width:100%;font-size:.85rem">Toplu obje değiştir · seçili ${n} nesne</b><label style="font-size:.78rem">Tabaka<select id="tdLay"><option value="">— aynı kalsın —</option>${ly.map(l => `<option>${esc_(l)}</option>`).join("")}<option value="*yeni">+ yeni tabaka…</option></select></label><label style="font-size:.78rem">Yazı boyu (m)<input id="tdH" inputmode="decimal" style="width:70px" placeholder="aynı"></label><label style="font-size:.78rem">Çizgi tipi<input id="tdLt" list="tdLtL" style="width:120px" placeholder="aynı"><datalist id="tdLtL">${window.LTX && LTX.LIB ? Object.keys(LTX.LIB).slice(0, 300).map(k => `<option value="${esc_(k)}">`).join("") : ""}</datalist></label><label style="font-size:.78rem">Yazı metni<input id="tdS" style="width:110px" placeholder="aynı"></label><button type="button" id="tdGo" class="primary">Uygula</button>${NP_ ? `<div style="width:100%;display:flex;gap:6px;flex-wrap:wrap;align-items:end;border-top:1px dashed rgba(128,128,128,.5);padding-top:6px"><b style="width:100%;font-size:.8rem">Noktalar (${NP_}): kot ve ad</b><label style="font-size:.78rem">Kot (Z)<select id="tdZm"><option value="">— aynı kalsın —</option><option value="sabit">Hepsini bu kota getir</option><option value="ekle">Kota ekle / çıkar (±)</option><option value="model">Arazi modelinden kot getir</option><option value="sifir">Kotu sil (0)</option></select></label><label style="font-size:.78rem">Değer (m)<input id="tdZv" inputmode="decimal" style="width:80px" placeholder="örn. 125.40"></label><label style="font-size:.78rem">Yeni ad: başlangıç<input id="tdNn" style="width:80px" placeholder="örn. 100"></label><button type="button" id="tdNk" class="primary">Noktalara uygula</button></div>` : ""}<button type="button" id="tdDel" class="dangerb">🗑 Seçilileri sil</button>`;
+  d.innerHTML = `<div id="tsGrip" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px"><b>Toplu sorgu / değiştir · ${n} nesne</b><button id="tsClose" type="button">Kapat</button></div><div style="width:100%;display:flex;flex-wrap:wrap;gap:5px"><button id="tsAll" type="button">Görünür tümünü seç</button><button id="tsClear" type="button">Seçimi temizle</button><button id="tsExcel" type="button">Excel</button><label><input id="tsWindow" type="checkbox"> Pencere seç (telefon)</label></div><label>Tür<select id="tsType"><option value="">Tümü</option><option value="text">Yazı</option><option value="point">Nokta</option><option value="line">Çizgi</option><option value="pline">Çoklu çizgi</option><option value="circle">Daire</option></select></label><label>Kaynak tabaka<select id="tsSource"><option value="">Tümü</option>${ly.map(l=>`<option>${esc_(l)}</option>`).join("")}</select></label><button id="tsFilter" type="button">Seçimi süz</button><label style="font-size:.78rem">Tabaka<select id="tdLay"><option value="">— aynı kalsın —</option>${ly.map(l => `<option>${esc_(l)}</option>`).join("")}<option value="*yeni">+ yeni tabaka…</option></select></label><label style="font-size:.78rem">Yazı boyu (m)<input id="tdH" inputmode="decimal" style="width:70px" placeholder="aynı"></label><label style="font-size:.78rem">Çizgi tipi<input id="tdLt" list="tdLtL" style="width:120px" placeholder="aynı"><datalist id="tdLtL">${window.LTX && LTX.LIB ? Object.keys(LTX.LIB).slice(0, 300).map(k => `<option value="${esc_(k)}">`).join("") : ""}</datalist></label><label style="font-size:.78rem">Yazı metni<input id="tdS" style="width:110px" placeholder="aynı"></label><button type="button" id="tdGo" class="primary">Uygula</button>${NP_ ? `<div style="width:100%;display:flex;gap:6px;flex-wrap:wrap;align-items:end;border-top:1px dashed rgba(128,128,128,.5);padding-top:6px"><b style="width:100%;font-size:.8rem">Noktalar (${NP_}): kot ve ad</b><label style="font-size:.78rem">Kot (Z)<select id="tdZm"><option value="">— aynı kalsın —</option><option value="sabit">Hepsini bu kota getir</option><option value="ekle">Kota ekle / çıkar (±)</option><option value="model">Arazi modelinden kot getir</option><option value="sifir">Kotu sil (0)</option></select></label><label style="font-size:.78rem">Değer (m)<input id="tdZv" inputmode="decimal" style="width:80px" placeholder="örn. 125.40"></label><label style="font-size:.78rem">Yeni ad: başlangıç<input id="tdNn" style="width:80px" placeholder="örn. 100"></label><button type="button" id="tdNk" class="primary">Noktalara uygula</button></div>` : ""}<button type="button" id="tdDel" class="dangerb">🗑 Seçilileri sil</button>`;
   // Pafta genelinde ad / açıklama düzeltme: yalnız CAD metinleri değişir.
   // Kullanıcı seçimi varsa kapsam yalnız seçili metinlerdir; aksi halde tüm görünür CAD yazıları.
   let replBox = $("cadPaftaBulDeg");
   if (!replBox) { replBox = document.createElement("div"); replBox.id = "cadPaftaBulDeg"; }
   replBox.style.cssText = "display:flex;gap:6px;flex-wrap:wrap;align-items:end;width:100%;padding:7px;border-top:1px dashed #888";
-  replBox.innerHTML = `<b style="width:100%">Pafta yazılarında bul / değiştir</b><label>Aranan<input id="cadFindText" placeholder="Eski isim" style="width:130px"></label><label>Yeni metin<input id="cadReplaceText" placeholder="Yeni isim" style="width:130px"></label><label><input id="cadReplaceAll" type="checkbox"> Tüm eşleşmeler (metin içinde)</label><button id="cadReplacePreview" type="button">Eşleşmeleri say</button><button id="cadReplaceApply" type="button" class="primary">Değiştir</button><span id="cadReplaceInfo" style="font-size:.78rem"></span>`;
+  replBox.innerHTML = `<b style="width:100%">İçeriği bul / değiştir</b><label>Aranan<input id="cadFindText" placeholder="Eski isim" style="width:130px"></label><label>Yeni metin<input id="cadReplaceText" placeholder="Yeni isim" style="width:130px"></label><label><input id="cadReplaceAll" type="checkbox"> Metin içinde de ara</label><label>İçerik türü<select id="tsContent"><option value="text">Yazı</option><option value="point">Nokta adı</option><option value="area">Alan adı</option></select></label><button id="cadReplacePreview" type="button">Eşleşmeleri say</button><button id="cadReplaceApply" type="button" class="primary">Değiştir</button><span id="cadReplaceInfo" style="font-size:.78rem"></span>`;
   d.appendChild(replBox);
-  const findTargets_ = () => ents.filter(e => e.t === "text" && typeof e.s === "string" && (!sel.size ? (!lays[e.lay] || lays[e.lay].on !== false) : sel.has(e.id)));
-  const matches_ = () => { const q = $("cadFindText").value; if (!q) return []; const all = $("cadReplaceAll").checked; return findTargets_().filter(e => all ? e.s.includes(q) : e.s === q); };
+  const contentKey = e => {const type=$("tsContent").value;return type==="text"&&e.t==="text"?"s":type==="point"&&e.t==="point"?"n":type==="area"&&e.t==="pline"&&e.closed?"areaName":null;};
+  const findTargets_ = () => ents.filter(e => sel.has(e.id) && contentKey(e) && typeof e[contentKey(e)] === "string");
+  const matches_ = () => { const q = $("cadFindText").value; if (!q) return []; const all = $("cadReplaceAll").checked; return findTargets_().filter(e => all ? e[contentKey(e)].includes(q) : e[contentKey(e)] === q); };
   ["cadFindText","cadReplaceText"].forEach(id => $(id).addEventListener("keydown", ev => ev.stopPropagation()));
-  $("cadReplacePreview").onclick = () => { const n = matches_().length; $("cadReplaceInfo").textContent = `${n} eşleşen yazı · ${sel.size ? "yalnız seçim" : "görünür tabakalar"}`; };
+  $("cadReplacePreview").onclick = () => { const n = matches_().length; $("cadReplaceInfo").textContent = `${n} eşleşen nesne · seçili nesneler`; };
   $("cadReplaceApply").onclick = () => {
     const q = $("cadFindText").value, to = $("cadReplaceText").value;
     if (!q) return say("Aranacak yazıyı girin", true);
     const M = matches_(); if (!M.length) return say("Eşleşen CAD yazısı yok", true);
     const all = $("cadReplaceAll").checked;
-    const updates = M.map(e => [e, all ? e.s.split(q).join(to) : to]).filter(([e,t]) => e.s !== t);
+    const updates = M.map(e => {const key=contentKey(e),v=e[key];return [e,key,all?v.split(q).join(to):to];}).filter(([e,key,t])=>e[key]!==t);
     if (!updates.length) return say("Yazı zaten aynı; değişiklik yapılmadı");
-    snap0(); updates.forEach(([e,t]) => { e.s = t; }); IDX = null; persist(); draw(); yen();
-    say(`${updates.length} CAD yazısı güncellendi — Geri al: U`);
+    if($("tsContent").value==="point"){
+      const changed=new Map(updates.map(([e,key,t])=>[e.id,t]));
+      const used=new Set(ents.filter(e=>e.t==="point"&&!changed.has(e.id)).map(e=>String(e.n||"")));
+      for(const name of changed.values()){if(!name.trim()||used.has(name))return say("Nokta adı boş veya tekrarlı olamaz: "+name,true);used.add(name);}
+    }
+    snap0(); updates.forEach(([e,key,t]) => { e[key] = t; }); IDX = null; persist(); draw(); yen();
+    $("cadReplaceInfo").textContent=`${updates.length} nesne güncellendi`;say(`${updates.length} nesne güncellendi — Geri al: U`);
   };
   // Pafta yazıları için doğrudan düzenleme: ifraz adı, aplikasyon ölçüsü, kot ve antet.
   // Değişiklik sadece CAD çıktısına uygulanır; kaynak hesaplama verisini değiştirmez.
@@ -27118,17 +27133,25 @@ function topluDeg(n, yen) { const box = $("cadOut"); if (!box) return; let d = $
       IDX = null; persist(); draw(); yen(); say("CAD yazısı değiştirildi — Geri al: U");
     };
   }
-  $("tdGo").onclick = () => { let L_ = $("tdLay").value; if (L_ === "*yeni") { L_ = (prompt("Yeni tabaka adı") || "").trim(); if (!L_) return; } const h = +String($("tdH").value).replace(",", "."), lt = $("tdLt").value.trim(), tx = $("tdS").value; snap0(); let k = 0;
+  $("tdGo").onclick = () => { if(!sel.size)return say("Önce nesne seçin",true); let L_ = $("tdLay").value; if (L_ === "*yeni") { L_ = (prompt("Yeni tabaka adı") || "").trim(); if (!L_) return; } const h = +String($("tdH").value).replace(",", "."), lt = $("tdLt").value.trim(), tx = $("tdS").value; snap0(); let k = 0;
     for (const e of ents) { if (!sel.has(e.id)) continue; let c = false; if (L_) { e.lay = layer(L_); c = true; } if (h > 0 && e.t === "text") { e.h = h; c = true; } if (tx && e.t === "text") { e.s = tx; c = true; } if (lt && (e.t === "line" || e.t === "pline" || e.t === "circle")) { e.lt = /^s[üu]rekli$/i.test(lt) ? undefined : lt; c = true; } if (c) k++; }
     IDX = null; persist(); renderLays(); draw(); say(`${k} nesne değiştirildi — Geri al: U`); yen(); };
   if ($("tdNk")) { [$("tdZv"), $("tdNn")].forEach(i => i.addEventListener("keydown", ev => ev.stopPropagation())); $("tdNk").onclick = () => { const m = $("tdZm").value, v = +String($("tdZv").value).replace(",", "."), bas = $("tdNn").value.trim();
-      if ((m === "sabit" || m === "ekle") && !isFinite(v)) return say("Kot değerini yaz", true); if (!m && !bas) return say("Kot işlemi seç ya da başlangıç adı yaz", true);
+      if ((m === "sabit" || m === "ekle") && (!$("tdZv").value.trim() || !isFinite(v))) return say("Kot değerini yaz", true); if (!m && !bas) return say("Kot işlemi seç ya da başlangıç adı yaz", true);
       const P = ents.filter(e => sel.has(e.id) && e.t === "point"); if (m === "model") { KOTHARIC = new Set(P.map(e => e.id)); KMOD.n = -1; if (!kotModel()) { KOTHARIC = new Set(); return say("Arazi modeli yok: çizimde üçgen ya da seçili olmayan kotlu nokta (en az 3) gerekir", true); } }
       snap0(); let nz = 0, dis = 0;
       if (m) for (const e of P) { const q = e.pts[0]; let z = q[2] || 0; if (m === "sabit") z = v; else if (m === "ekle") z = (+z || 0) + v; else if (m === "sifir") z = 0; else { const k = kotAt(q[0], q[1]).s; if (k == null) { dis++; continue; } z = +k.toFixed(3); } q[2] = z; nz++; }
       let nn = 0; if (bas) { const sira = P.slice().sort((a, b) => { const na = parseFloat(String(a.n).replace(/^\D+/, "")), nb = parseFloat(String(b.n).replace(/^\D+/, "")); return isFinite(na) && isFinite(nb) ? na - nb : String(a.n).localeCompare(String(b.n), "tr", { numeric: true }); }); const dig = new Set(ents.filter(e => e.t === "point" && !sel.has(e.id)).map(e => String(e.n))); let ad = bas; for (const e of sira) { let g = 0; while (dig.has(ad) && g++ < 1e5) ad = nkArt(ad); e.n = ad; dig.add(ad); ad = nkArt(ad); nn++; } NKNO = ad; nkKay(); }
       KOTHARIC = new Set(); UVER++; IDX = null; persist(); draw(); yen(); say(`${nz ? `${nz} noktanın kotu ${m === "sabit" ? v.toFixed(3) + " yapıldı" : m === "ekle" ? (v >= 0 ? "+" : "") + v + " m değişti" : m === "sifir" ? "silindi" : "arazi modelinden getirildi"}` : ""}${dis ? ` · ${dis} nokta modelin dışında, kotu değişmedi` : ""}${nn ? `${nz ? " · " : ""}${nn} nokta yeniden adlandırıldı (${bas}…)` : ""} — Geri al: U`); }; }
-  $("tdDel").onclick = () => { snap0(); const k = sel.size; ents = ents.filter(e => !sel.has(e.id)); sel.clear(); IDX = null; persist(); renderLays(); draw(); say(`${k} nesne silindi — Geri al: U`); yen(); }; }
+  for(const [id,value] of Object.entries(previous)){const el=$(id);if(el){if(el.type==="checkbox")el.checked=value;else el.value=value;}}
+  enablePanelMove(d,$("tsGrip"));
+  $("tsClose").onclick=()=>{d.hidden=true;d.style.display="none";winSel=false;if(cmd?.name==="Toplu sorgu")esc();};
+  $("tsWindow").checked=winSel;$("tsWindow").onchange=()=>{winSel=$("tsWindow").checked;markTools();};
+  $("tsClear").onclick=()=>{sel.clear();yen();draw();};
+  $("tsExcel").onclick=()=>$("cadOutX").click();
+  $("tsAll").onclick=()=>{for(const e of ents)if(lays[e.lay]?.on)sel.add(e.id);yen();draw();};
+  $("tsFilter").onclick=()=>{const type=$("tsType").value,source=$("tsSource").value;for(const e of ents)if(sel.has(e.id)&&((type&&e.t!==type)||(source&&e.lay!==source)))sel.delete(e.id);yen();draw();};
+  $("tdDel").onclick = () => { if(!sel.size)return; snap0(); const k = sel.size; ents = ents.filter(e => !sel.has(e.id)); sel.clear(); IDX = null; persist(); renderLays(); draw(); say(`${k} nesne silindi — Geri al: U`); yen(); }; }
 /* ---------- Detaylar: XYZ yaz, uzunluk yazdır, alan yazdır, paralel ölçülendir, karelaj ---------- */
 const yazH = () => { const v = +String($("cadTh").value || "").replace(",", "."); if (v > 0) return v; const raw = 12 / V.s, p = Math.pow(10, Math.floor(Math.log10(raw))); return [1, 2, 2.5, 5, 10].map(m => m * p).find(v_ => v_ >= raw) || raw; };
 CMDS.XYZYAZ = () => { cmd = { name: "XYZ yaz", rcExit: true, pt(p) { const z = typeof kotAt === "function" ? kotAt(p[0], p[1]).s : null; const pe = ents.find(e => e.t === "point" && dist(e.pts[0], p) < 1e-4); const zz = pe && Math.abs(pe.pts[0][2] || 0) > 1e-6 ? pe.pts[0][2] : z; const h = yazH(); snap0();
