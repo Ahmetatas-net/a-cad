@@ -9785,10 +9785,33 @@ function exampleProject() {
 function load() { try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.S) return s; } catch (e) {} const x = exampleProject(); x._t = 0; return x; }
 let saveT = null;
 /* Kayıt: büyük üçgen modeller localStorage'a sığmaz (≈5 MB); asıl kayıt IndexedDB'de, localStorage yalnız sığarsa yedek */
-const IDB = (() => { let dbp = null; const db = () => dbp || (dbp = new Promise((res, rej) => { try { const r = indexedDB.open("acad", 1); r.onupgradeneeded = () => r.result.createObjectStore("kv"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch (e) { rej(e); } }));
-  return { get: k => db().then(d => new Promise((res, rej) => { const q = d.transaction("kv").objectStore("kv").get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); })),
-    set: (k, v) => db().then(d => new Promise((res, rej) => { const t = d.transaction("kv", "readwrite"); t.objectStore("kv").put(v, k); t.oncomplete = () => res(); t.onerror = () => rej(t.error); })) }; })();
+const IDB = (() => {
+  let dbp = null;
+  const db = () => {
+    if (!dbp) dbp = new Promise((resolve, reject) => {
+      const request = indexedDB.open("acad", 1);
+      request.onupgradeneeded = () => request.result.createObjectStore("kv");
+      request.onerror = () => { dbp = null; reject(request.error); };
+      request.onsuccess = () => {
+        const connection = request.result;
+        connection.onversionchange = () => { connection.close(); dbp = null; };
+        connection.onclose = () => { dbp = null; };
+        resolve(connection);
+      };
+    });
+    return dbp;
+  };
+  const run = (key, value, write) => db().then(connection => new Promise((resolve, reject) => {
+    const transaction = connection.transaction("kv", write ? "readwrite" : "readonly");
+    const store = transaction.objectStore("kv");
+    const request = write ? store.put(value, key) : store.get(key);
+    transaction.oncomplete = () => resolve(write ? undefined : request.result);
+    transaction.onabort = transaction.onerror = () => reject(transaction.error || request.error || new Error("Veritabanı işlemi iptal edildi"));
+  }));
+  return { get: key => run(key, undefined, false), set: (key, value) => run(key, value, true) };
+})();
 let IDBOK = false, IDBPEND = false;
+let coreSavePending = Promise.resolve(true);
 function save() { if (!IDBOK) { IDBPEND = true; return; } clearTimeout(saveT); saveT = setTimeout(()=>{saveNow().catch(()=>{});}, 300); }
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden" && saveT) { clearTimeout(saveT); saveNow().catch(()=>{}); } }); window.addEventListener("pagehide", () => { if (saveT) { clearTimeout(saveT); saveNow().catch(()=>{}); } });
 function saveNow() { saveT = null; if (!IDBOK) return Promise.resolve(false); { ST._t = Date.now(); let j; try { j = JSON.stringify(ST, (k, v) => k === "katmanlar" && Array.isArray(v) ? v.filter(x => !x.ref) : v); } catch (e) { return Promise.reject(e); }
@@ -9796,7 +9819,7 @@ function saveNow() { saveT = null; if (!IDBOK) return Promise.resolve(false); { 
     console.error('A-CAD kübaj/veri otomatik kaydı başarısız',e);
     window.dispatchEvent(new CustomEvent('acad:storage-error',{detail:{module:'Kübaj/Veri',message:String(e?.message||e)}}));
     throw e;
-  }); try { localStorage.setItem(KEY, j); } catch (e) { try { localStorage.setItem(KEY, JSON.stringify({ _t: ST._t, _idb: 1 })); } catch (e2) {} } return pending; } }
+  }); try { localStorage.setItem(KEY, j); } catch (e) { try { localStorage.setItem(KEY, JSON.stringify({ _t: ST._t, _idb: 1 })); } catch (e2) {} } coreSavePending = pending; return pending; } }
 
 /* V70: read-only engineering core snapshot. Keep zero/negative elevation logic untouched. */
 window.ACAD_TRANSITION_CORE=Object.freeze({
@@ -9804,7 +9827,7 @@ window.ACAD_TRANSITION_CORE=Object.freeze({
  restore:data=>{if(!data||!data.S||!data.R||!data.set||!data.proj||!Array.isArray(data.alanlar))throw Error('Eksik arazi/kübaj projesi');
    ST=JSON.parse(JSON.stringify(data));ST.proj=Object.assign({},DEF_PROJ,ST.proj);ST.set=Object.assign({},DEF_SET,ST.set);
    boot();return true;},
- flush:()=>{if(saveT){clearTimeout(saveT);return Promise.resolve(saveNow());}return Promise.resolve(true);}
+ flush:()=>{if(saveT){clearTimeout(saveT);return Promise.resolve(saveNow());}return coreSavePending;}
 });
 let MVER = 0;
 /* Kot kümeleri ayrık ve belirsizse yüzey kurulmaz; ekran donmaz, kullanıcıya nedeni söylenir. Noktalar silinmez. */
