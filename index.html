@@ -8741,7 +8741,7 @@ A.krokiPlan = (g, D, box, list) => { const i0 = g.G.length; const all = [...D.pa
     for(let i=0;i<count;i++){const f=(i+.5)/count,x=p[0]+f*(q[0]-p[0]),y=p[1]+f*(q[1]-p[1]);if(!inB([x,y]))continue;
       L([[x-r,y-r],[x+r,y+r]],.24,"#b00000");L([[x-r,y+r],[x+r,y-r]],.24,"#b00000");}
   }
-  for(const e of D.eskiNo||[]){const q=M(e.p);if(inB(q)&&e.s)T(q[0],q[1],e.s,2.6,{al:"c",cancelledParcel:true,pr:3,...(e.ring?{inP:e.ring.map(M)}:{})});}
+  for(const e of D.eskiNo||[]){const q=M(e.p);if(inB(q)&&e.s)T(q[0],q[1],e.s,2.6,{al:"c",cancelledParcel:true,intermediateParcel:e.s==="T",pr:3,...(e.ring?{inP:e.ring.map(M)}:{})});}
   { const P = D.parent.pts; L([...P, P[0]].map(M), 0.8); } /* ana parsel kalın */
   { /* balastro: ana parselin ve parçaların bütün köşelerinde */ const bs = new Set(); for (const P of [D.parent.pts, ...polys.map(pr => pr.pts)]) for (const p of P) { const k = p[0].toFixed(3) + "," + p[1].toFixed(3); if (bs.has(k)) continue; bs.add(k); const m = M(p); if (inB(m)) A.balastro(g.G, m[0], m[1], D.points && D.points.length ? 0.6 : 0.45, 0.2); } }
   const LBL = []; for (const pr of polys) { const P = pr.pts; L([...P, P[0]].map(M), D.parts.length ? 0.3 : 0.6); if (!D.noLen) for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length], k = ek(a, b); if (seen.has(k)) continue; seen.add(k);
@@ -8789,7 +8789,8 @@ A.krokiPlan = (g, D, box, list) => { const i0 = g.G.length; const all = [...D.pa
     else L([[old.x-r,old.y],[old.x+r,old.y]],.25,"#000");
   }
   for(const o of g.G.slice(i0).filter(o=>o.cancelledParcel&&o.s)){const r=A.tw(o.s,o.size)/2+.25;
-    L([[o.x-r,o.y-.85],[o.x+r,o.y+.85]],.22,"#b00000");L([[o.x-r,o.y+.85],[o.x+r,o.y-.85]],.22,"#b00000");}
+    if(o.intermediateParcel)L([[o.x-r,o.y],[o.x+r,o.y]],.25,"#d00000");
+    else {L([[o.x-r,o.y-.85],[o.x+r,o.y+.85]],.22,"#b00000");L([[o.x-r,o.y+.85],[o.x+r,o.y-.85]],.22,"#b00000");}}
   A.krokiKomsuLabels(g,D,F,box,D.frame||KW);
   for(const o of g.G.slice(i0))if(o.t==="x"&&(D.nearSketch||o.grp==="parentId"||o.cancelledParcel))o.sabit=true;
   return F; };
@@ -16362,7 +16363,7 @@ function ifzReverse(D,P){
   const g=A.pg(210,297);ifzHeading(g,P,'TESCİL BİLDİRİMİ · KROKİ','EK-11B');
   g.R(10,151,200,263,.3);A.krokiPlan(g,D,[13,154,197,260],null);
   const Z=A.dengele(D,P);
-  const rows=[[P.parselNo,K.fa(Z.hesP),K.fa(Z.dag?Z.fark:0),K.fa(Z.dag?Z.tapu:Z.hesP)],...D.parts.map((q,i)=>[q.ad,K.fa(Z.hs[i]),K.fa(Z.d[i]),K.fa(q.deng)])];
+  const rows=[[D.merged?'T':P.parselNo,K.fa(Z.hesP),K.fa(Z.dag?Z.fark:0),K.fa(Z.dag?Z.tapu:Z.hesP)],...D.parts.map((q,i)=>[q.ad,K.fa(Z.hs[i]),K.fa(Z.d[i]),K.fa(q.deng)])];
   const pages=[];let i=0,j=0,current=g;
   do{
     const first=pages.length===0,top=first?142:257,limit=first?26:34;
@@ -16379,7 +16380,7 @@ function ifzBook(D,P,f) {
   const a=S(),key=ifzAttachmentKey(a),out=[],settings=ifzFields(a,key),obs=settings.gnssKey===key?ifzObservations(settings.gnss):[];
   const settlement=ifzSettlement(settings,P);
   const inferredIdare=settings.idare||(settings.yerTuru?(settlement==="koy"?"ÖZEL İDARE":"BELEDİYE"):idareOto(true))||"";
-  P={...P,tarih:settings.belgeTarih||ifzToday(),ifzDoc:true,ifzIdareKind:ifzAuthority({...settings,idare:inferredIdare},P),ifzSettlement:ifzSettlement(settings,P),ifzControlMuh:settings.kontrolMuh||""};
+  P={...P,...(D.merged?{alanAna:"T",alanParca:q=>"T/"+q.ad}:{}),tarih:settings.belgeTarih||ifzToday(),ifzDoc:true,ifzIdareKind:ifzAuthority({...settings,idare:inferredIdare},P),ifzSettlement:ifzSettlement(settings,P),ifzControlMuh:settings.kontrolMuh||""};
   const control=ifzGnssControl(D,obs,settings.gnssRefs),source=settings.gnssKey===key?settings.gnssSource||"":"";
   const add=(code,gs,W=210,H=297)=>{for(const G of gs){const k=out.filter(p=>p.code===code).length+1;
     out.push({code,G,W,H,ifraz:true,ad:ifzDocTitles[code]+(k>1?' · '+k:'')});}};
@@ -16858,8 +16859,14 @@ function ifzData() {const a=S(),d=ifzDataFor(a.parsel,a.ifz,a.antet);d.ifraz=tru
   const iptal=history.length&&parts_.length?A.removedParcelEdges(history.map(a=>a.pts),[par.pts,...parts_.map(a=>a.pts)]):[];
   const multiBlock=new Set(history.map(a=>a.ada)).size>1;
   const eskiNo=parts_.length?history.map(a=>({p:A.label(a.pts),s:(multiBlock?a.ad:a.parsel)||a.ad,ring:a.pts})):[];
+  const merged=history.length>1;
+  if(merged&&parts_.length){
+    const center=A.label(par.pts),bounds=A.bbox(par.pts);
+    const above=[center[0],center[1]+(bounds[3]-bounds[1])*.12];
+    eskiNo.unshift({p:A.inPoly(par.pts,...above)?above:center,s:"T",ring:par.pts});
+  }
   for(const old of history)old.pts.forEach((p,i)=>{if(old.names?.[i])add(p,old.names[i]);});
-  return { iptal,eskiNo,komsu, komsuAd, komsuP, cadCiz, cadYazi, yolYazi, yol: f.yol || [], ada: ant.ada, parselNo: ant.parselNo, parent: { pts: par.pts, names: par.names }, parts: parts_, cuts: f.cuts, points: [...pts.values()], koord: (() => { /* koordinat hanesi: kaynakta mm (3. hane) anlamlıysa 3 hane yazılır; kontrol mühendisi çizelgeden hesapladığında beyannamedeki alanı birebir bulur */ const V_ = [...pts.values()], h = Math.max(3,K.H.k); return V_.map(q => [q.n, q.p[0].toFixed(h), q.p[1].toFixed(h), par.names.includes(q.n) ? "" : String(f.mk ?? "")]); })() }; } /* MK: yeni (ifrazla oluşan) noktaların konum doğruluğu, örnek Ek-18 gibi */
+  return { iptal,eskiNo,merged,komsu, komsuAd, komsuP, cadCiz, cadYazi, yolYazi, yol: f.yol || [], ada: ant.ada, parselNo: ant.parselNo, parent: { pts: par.pts, names: par.names }, parts: parts_, cuts: f.cuts, points: [...pts.values()], koord: (() => { /* koordinat hanesi: kaynakta mm (3. hane) anlamlıysa 3 hane yazılır; kontrol mühendisi çizelgeden hesapladığında beyannamedeki alanı birebir bulur */ const V_ = [...pts.values()], h = Math.max(3,K.H.k); return V_.map(q => [q.n, q.p[0].toFixed(h), q.p[1].toFixed(h), par.names.includes(q.n) ? "" : String(f.mk ?? "")]); })() }; } /* MK: yeni (ifrazla oluşan) noktaların konum doğruluğu, örnek Ek-18 gibi */
 $("aoI").addEventListener("click", async () => { const a = S(); if (!a.parsel) return msg("aoMsg", "Önce parseli seç.", true); if (!a.ifz.parts || !a.ifz.parts.length) { if ($("iAl").value.trim() || $("iY").value === "esit") $("iGo").click(); }
   if (!a.ifz.parts || !a.ifz.parts.length) { msg("aoMsg", "Parsel henüz bölünmedi. Yukarıdaki İfraz bölümünde istenen alanı yazıp \"Böl (ifraz et)\" düğmesine bas.", true); $("iAl").scrollIntoView({ block: "center" }); return; } msg("aoMsg", "İfraz evrakı hazırlanıyor…"); await new Promise(r => setTimeout(r, 0));
   return ifzExport('pdf'); });
