@@ -1136,6 +1136,13 @@ body{font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif;letter-spac
 </style>
 
 <style id="acad-v106-query-ux">
+#arzBox.acad-query-v106{touch-action:pan-x pan-y!important;scroll-behavior:auto!important;scrollbar-gutter:stable}
+#arzBox.acad-query-v106 :is(div,section,details)[style*="overflow:auto"],#arzBox.acad-query-v106 .acad-area-elev-scroll{overscroll-behavior-y:auto!important;overscroll-behavior-x:contain!important;touch-action:pan-x pan-y!important;scroll-behavior:auto!important}
+#arzBox.acad-query-v106 .acad-v106-head-actions button.acad-jump{min-width:30px;padding:4px 7px!important}
+#cadInfo.acad-floating,#cadProp.acad-floating{overscroll-behavior:contain;touch-action:pan-x pan-y;scrollbar-gutter:stable}
+#cadInfo .scroll,#cadProp .scroll{overscroll-behavior-y:auto;touch-action:pan-x pan-y}
+@media(max-width:700px){#arzBox.acad-query-v106 .acad-v106-head{flex-wrap:wrap}#arzBox.acad-query-v106 .acad-v106-head-actions{flex-wrap:wrap;max-width:100%}}
+
 /* V106 - visual query controls only. Does not touch entities, coordinates or math. */
 #arzBox.acad-query-v106{scrollbar-color:#98b0c2 transparent;scrollbar-width:thin;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 #arzBox.acad-query-v106 .acad-v106-head{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:8px;background:#f8fafc;box-shadow:0 1px 0 #d7e0e8;padding:5px 2px 10px;margin-bottom:11px}
@@ -21007,12 +21014,14 @@ function arzBox(html) {
   b.style.setProperty('left',(availableWidth/2)+'px','important');
   // iOS/Android may report a taller layout viewport than the actual visible window.
   b.style.setProperty('bottom',(Math.max(0,window.innerHeight-(window.visualViewport?.height||document.documentElement.clientHeight||window.innerHeight))+12)+'px','important');
-  b.innerHTML=`<style>#arzBox>b,#arzBox p,#arzBox p b,#arzBox .note{color:#24384a!important;opacity:1!important;text-shadow:none!important}#arzBox p.road-gap-warning{color:#7a3c00!important;background:#fff1d6!important;border:1px solid #d7ad61;padding:7px 9px;border-radius:6px;font-weight:700!important}#arzBox button{opacity:1!important}</style><div class="acad-v106-head"><div class="acad-v106-head-title"><strong>CAD · Sorgu / İşlem</strong><small>Kaynak koordinatlar korunur</small></div><div class="acad-v106-head-actions"><button type="button" id="arzCopy" title="Ekrandaki sorgu bilgilerini kopyala">Kopyala</button><button type="button" id="arzExpand" aria-pressed="false" title="Sorgu penceresini genişlet / daralt">Genişlet</button><button type="button" id="arzX" title="Sorgu penceresini kapat" aria-label="Sorgu penceresini kapat">✕</button></div></div>`+html;
-  b.classList.add('acad-query-v106');b.classList.remove('acadAreaPreviewCompact','acad-query-expanded');b.dataset.acadQueryExpanded='0';b.hidden=false;b.scrollTop=0; try { window.ACAD_UI_FLOAT?.setup(b); } catch(_e){}
+  b.innerHTML=`<style>#arzBox>b,#arzBox p,#arzBox p b,#arzBox .note{color:#24384a!important;opacity:1!important;text-shadow:none!important}#arzBox p.road-gap-warning{color:#7a3c00!important;background:#fff1d6!important;border:1px solid #d7ad61;padding:7px 9px;border-radius:6px;font-weight:700!important}#arzBox button{opacity:1!important}</style><div class="acad-v106-head"><div class="acad-v106-head-title"><strong>CAD · Sorgu / İşlem</strong><small>Kaynak koordinatlar korunur</small></div><div class="acad-v106-head-actions"><button type="button" class="acad-jump" id="arzTop" title="Panelin başına git" aria-label="Panelin başına git">↑</button><button type="button" class="acad-jump" id="arzBottom" title="Panelin sonuna git" aria-label="Panelin sonuna git">↓</button><button type="button" id="arzCopy" title="Ekrandaki sorgu bilgilerini kopyala">Kopyala</button><button type="button" id="arzExpand" aria-pressed="false" title="Sorgu penceresini genişlet / daralt">Genişlet</button><button type="button" id="arzX" title="Sorgu penceresini kapat" aria-label="Sorgu penceresini kapat">✕</button></div></div>`+html;
+  clearTimeout(b._pe);b.style.pointerEvents='';b.classList.add('acad-query-v106');b.classList.remove('acadAreaPreviewCompact','acad-query-expanded');b.dataset.acadQueryExpanded='0';b.hidden=false;b.scrollTop=0; try { window.ACAD_UI_FLOAT?.setup(b); } catch(_e){}
   document.getElementById("arzX").onclick=()=>{b.hidden=true;};
+  b.querySelector('#arzTop').onclick=()=>{b.scrollTop=0;};
+  b.querySelector('#arzBottom').onclick=()=>{b.scrollTop=b.scrollHeight;};
   const exp=b.querySelector('#arzExpand');
   exp.onclick=()=>{
-    const wide=b.dataset.acadQueryExpanded!=='1';b.dataset.acadQueryExpanded=wide?'1':'0';
+    const wide=b.dataset.acadQueryExpanded!=='1',before=b.getBoundingClientRect(),oldScroll=b.scrollTop;b.dataset.acadQueryExpanded=wide?'1':'0';
     b.classList.toggle('acad-query-expanded',wide);
     const vw=Math.max(280,Math.min(document.documentElement.clientWidth||Infinity,window.visualViewport?.width||Infinity,window.innerWidth));
     const w=Math.max(260,Math.min(wide?880:560,vw-16));
@@ -21022,14 +21031,14 @@ function arzBox(html) {
     // Re-anchor to the visible bottom edge when resizing; do not mutate the CAD canvas or geometry.
     const bottomGap=Math.max(12,window.innerHeight-(window.visualViewport?.height||window.innerHeight)+12);
     b.style.setProperty('top','auto','important');b.style.setProperty('bottom',bottomGap+'px','important');
-    b.style.setProperty('left','auto','important');b.style.setProperty('right','12px','important');b.style.setProperty('transform','none','important');
+    b.style.setProperty('left',Math.max(8,Math.min(before.left,vw-w-8))+'px','important');b.style.setProperty('right','auto','important');b.style.setProperty('transform','none','important');
     if(vw<=650){
       // Mobile viewport can reserve a vertical scrollbar; anchor from the left to avoid any clipped column.
       const safeWidth=Math.max(260,Math.min(wide?880:560,(document.documentElement.clientWidth||vw)-16));
       b.style.setProperty('width',safeWidth+'px','important');b.style.setProperty('max-width',safeWidth+'px','important');
       b.style.setProperty('left','8px','important');b.style.setProperty('right','auto','important');
     }
-    exp.textContent=wide?'Daralt':'Genişlet';exp.setAttribute('aria-pressed',wide?'true':'false');
+    b.scrollTop=oldScroll;exp.textContent=wide?'Daralt':'Genişlet';exp.setAttribute('aria-pressed',wide?'true':'false');
   };
   b.querySelector('#arzCopy').onclick=async()=>{
     const button=b.querySelector('#arzCopy');
@@ -26443,7 +26452,7 @@ function qBox(e, p) { const lay = `<span class="note">tabaka ${esc_(e.lay)}</spa
     cadAreaRename(e,name);qBox(e,p);say('Alan adı güncellendi: '+name+' · Orijinal tabaka ve köşeler değişmedi.');
   };
   b.querySelectorAll('[data-area-hint]').forEach(btn=>btn.onclick=()=>{const i=b.querySelector('#qAreaName');if(i)i.value=btn.dataset.areaHint;});
-  document.getElementById("qEd").onclick = () => { b.hidden = true; esc(); sel.clear(); sel.add(e.id); ANN = []; if (e.t === "text" && window.ASK) { const r = cv.getBoundingClientRect(); ASK({ x: r.left + X(e.pts[0][0]) / dpr, y: r.top + Y(e.pts[0][1]) / dpr, title: "Yazıyı düzenle", value: e.s, h: e.h || 1 }, (t, hh) => { snap0(); e.s = t; if (hh > 0) e.h = hh; persist(); sel.clear(); idle(); draw(); say("Yazı güncellendi"); }); } else propOpen(); draw(); };
+  document.getElementById("qEd").onclick = () => { b.hidden = true; esc(); sel.clear(); sel.add(e.id); ANN = []; if (e.t === "text" && window.ASK) { const r = cv.getBoundingClientRect(); ASK({ x: r.left + X(e.pts[0][0]) / dpr, y: r.top + Y(e.pts[0][1]) / dpr, title: "Yazıyı düzenle", value: e.s, h: e.h || 1 }, (t, hh) => { snap0(); e.s = t; if (hh > 0) e.h = hh; persist(); sel.clear(); idle(); draw(); say("Yazı güncellendi"); }); } else if(['pline','line','circle'].includes(e.t)){ctxBar();renderInfo();cadInlineEdit(e,$('cadInfo'));}else propOpen(); draw(); };
   { const ql = document.getElementById("qLay"), qt = document.getElementById("qLt");
     if (ql) ql.onchange = () => { let L_ = ql.value; if (L_ === "*yeni") { L_ = (prompt("Yeni tabaka adı") || "").trim(); if (!L_) { ql.value = e.lay; return; } } snap0(); e.lay = layer(L_); persist(); renderLays(); draw(); say(`Tabaka → ${e.lay} — Geri al: U`); if (![...ql.options].some(o => o.value === e.lay)) { const o = document.createElement("option"); o.textContent = e.lay; ql.insertBefore(o, ql.lastElementChild); } ql.value = e.lay; };
     if (qt) qt.onchange = () => { let v = qt.value; if (v === "*hepsi") { v = (prompt("Çizgi tipi adı (Tabakalar → Çizgi tipleri listesindeki ad)", e.lt || "") || "").trim(); if (!v || !(LTIP[v] || (window.LTX && LTX.has(v)))) { say("Böyle bir çizgi tipi yok", true); qt.value = ""; return; } } snap0(); if (v) e.lt = v; else delete e.lt; BBK.m.delete(e); persist(); draw(); say(`Çizgi tipi → ${v || "tabakadan"} — Geri al: U`); }; }
@@ -29557,14 +29566,14 @@ function cadInlineEdit(e,el){
     const pts=src.map(q=>q.slice());
     for(let i=0;i<count;i++)for(let j=0;j<3;j++){const r=read(i+'_'+j);if(r===(Number.isFinite(src[i][j])?String(src[i][j]):''))continue;pts[i][j]=parse(r,j===2);}
     if(dup&&[0,1,2].some(j=>!Object.is(pts[0][j],src[0][j])))for(let j=0;j<3;j++)if(!Object.is(pts[0][j],src[0][j]))pts[pts.length-1][j]=pts[0][j];
-    if(closed&&!(Math.abs(areaOf(pts))>1e-8))throw Error('Kapalı alan sıfır olamaz.');
+    if(closed&&JSON.stringify(pts)!==JSON.stringify(src)){if(!(Math.abs(areaOf(pts))>1e-8))throw Error('Kapalı alan sıfır olamaz.');if(pts.some((q,i)=>q[0]!==src[i][0]||q[1]!==src[i][1]))window.ACAD_AREA_EDIT?.validate(dup?pts.slice(0,-1):pts);}
     const lay=$('ciEditLayer').value;if(!lays[lay])throw Error('Tabaka bulunamadı.');
     const nm=$('ciEditName')?.value.trim()??name;
     const checked=closed&&nm!==name?alanAdiDenetle(nm,e.id):nm;
     if(closed&&nm!==name&&!checked)throw Error('Alan adı boş, geçersiz veya kullanılıyor.');
     const rad=e.t==='circle'?parse(read('radius')):null;if(rad!==null&&rad<=0)throw Error('Yarıçap pozitif olmalı.');
     const changed=JSON.stringify(pts)!==JSON.stringify(src)||lay!==e.lay||nm!==(closed?name:e.t==='point'?e.n||'':name)||(rad!==null&&rad!==e.r);
-    if(changed){snap0();e.lay=lay;if(closed&&nm!==name)e.areaName=checked;if(e.t==='point')e.n=nm;if(e.t==='circle'){e.c=pts[0];e.r=rad;}else e.pts=pts;IDX=null;persist();say('Nesne güncellendi');}
+    if(changed){snap0();e.lay=lay;if(closed&&nm!==name)e.areaName=checked;if(e.t==='point')e.n=nm;if(e.t==='circle'){e.c=pts[0];e.r=rad;}else e.pts=pts;IDX=null;BBK.m.delete(e);persist();say('Nesne güncellendi');}
     el.dispatchEvent(new Event('cad-close-info'));
   }catch(err){$('ciEditStatus').textContent=err.message;}};
   $('ciEditApply').onclick=apply;$('ciEditCancel').onclick=()=>{delete el.dataset.inlineEdit;renderInfo();};
@@ -33910,8 +33919,8 @@ D.style.display="none";ciz();})();
      if(!arz)sz.addEventListener('click',ev=>{
        ev.stopPropagation();const r=el.getBoundingClientRect();undock(el,r);
        const big=el.classList.toggle('acad65-panel-max');
-       if(big){el.style.width=Math.min(innerWidth-24,Math.max(640,Math.round(innerWidth*.62)))+'px';el.style.height=Math.min(innerHeight-48,Math.round(innerHeight*.75))+'px';sz.textContent='⤡ Küçült';}
-       else{el.style.width=Math.min(innerWidth-24,Math.max(300,Math.min(580,r.width)))+'px';el.style.removeProperty('height');sz.textContent='⤢ Büyüt';}
+       if(big){el.dataset.acadNormalWidth=String(r.width);el.style.width=Math.min(innerWidth-24,Math.max(640,Math.round(innerWidth*.62)))+'px';el.style.height=Math.min(innerHeight-48,Math.round(innerHeight*.75))+'px';sz.textContent='⤡ Küçült';}
+       else{el.style.width=Math.min(innerWidth-24,Math.max(260,Math.min(580,Number(el.dataset.acadNormalWidth)||r.width)))+'px';el.style.removeProperty('height');sz.textContent='⤢ Büyüt';}
        setXY(el,r.left,r.top);btn.textContent='↙ Sabitle';
      });
      bar.append(name,btn);if(!arz){bar.append(sz);if(el.id==='cadInfo'){const close=document.createElement('button');close.textContent='Kapat';close.onclick=()=>el.dispatchEvent(new Event('cad-close-info'));bar.append(close);}}el.insertBefore(bar,el.firstChild);
