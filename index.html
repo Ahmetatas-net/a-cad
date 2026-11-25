@@ -1630,23 +1630,23 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       <div id="dxfBoxS"></div>
     </div>
     <div class="card kub-surface kub-last">
-      <h2><span class="kub-surface-dot last"></span> Proje / son arazi <small class="kub-sub">Kırmızı kot · son hâl</small></h2>
+      <h2><span class="kub-surface-dot last"></span> Proje yüzeyi <small class="kub-sub">Kırmızı kot / Baz kotu</small></h2>
       <div class="row" role="radiogroup" style="margin-bottom:10px">
-        <label style="flex-direction:row;align-items:center;gap:6px;color:var(--ink)"><input type="radio" name="kmode" value="model"> Dosyadan (son hâl noktaları / üçgen model)</label>
-        <label style="flex-direction:row;align-items:center;gap:6px;color:var(--ink)"><input type="radio" name="kmode" value="sabit"> Sabit kot (düz son hâl)</label>
+        <label style="flex-direction:row;align-items:center;gap:6px;color:var(--ink)"><input type="radio" name="kmode" value="model"> Dosyadan (proje noktaları / üçgen model)</label>
+        <label style="flex-direction:row;align-items:center;gap:6px;color:var(--ink)"><input type="radio" name="kmode" value="sabit"> Sabit kot / Baz kotu</label>
       </div>
       <div class="grid">
-        <div class="full" id="kFileL"><div class="note" style="margin-bottom:6px">Son hâl dosyası (NCN, NCZ, DXF, XLS, XLSX, PDF, TXT)</div>
+        <div class="full" id="kFileL"><div class="note" style="margin-bottom:6px">Proje yüzeyi dosyası (NCN, NCZ, DXF, XLS, XLSX, PDF, TXT)</div>
           <label class="filebtn"><input type="file" id="fK"><span>📂 Dosya seç</span></label>
           <details style="margin-top:8px"><summary class="note" style="cursor:pointer">Dosya seçilemiyorsa: listeyi yapıştır</summary>
             <textarea id="tK" rows="5" placeholder="1 563400.25 4586120.50 919.60" style="width:100%;margin-top:6px;font:13px monospace;padding:8px;border-radius:7px;border:1px solid var(--line);background:var(--bg);color:var(--ink)"></textarea>
             <button type="button" id="tKb" style="margin-top:6px">Yapıştırılanı yükle</button></details></div>
-        <label id="kSabitL">Son hâl kotu (m)<input id="kSabit" inputmode="decimal"></label>
+        <label id="kSabitL" class="full">Baz kotu (m)<input id="kSabit" inputmode="decimal" placeholder="örn. 915.50"></label>
         <label id="kMaxL">Kırmızı üçgen kenarı en fazla (m)<input id="maxEK" inputmode="decimal"></label>
         <div class="row" id="kReL" style="align-items:flex-end"><button id="reTinK" type="button">Kırmızıyı yeniden üçgenle</button><button id="teR" type="button">✏️ Üçgenleri gör / düzenle</button></div>
       </div>
       <p class="note" id="kInfo" style="margin-top:10px"></p>
-      <div class="row" style="margin-top:8px"><button id="swap" type="button">Siyah ↔ Kırmızı yer değiştir</button><span class="note">İlk hâl ile son hâl ters yüklendiyse kullan: kazı dolguya, dolgu kazıya döner.</span></div>
+      <div class="row" id="kSwapL" style="margin-top:8px"><button id="swap" type="button">Siyah ↔ Kırmızı yer değiştir</button><span class="note">Mevcut arazi ile proje yüzeyi ters yüklendiyse kullan.</span></div>
       <div id="dxfBoxK"></div>
     </div>
     <div class="card" id="vResCard" style="border-left:5px solid var(--accent)">
@@ -9976,7 +9976,7 @@ function buildModels() {
     if (ST.S.tri && ST.S.triV !== 2 && !ST.S.triElle && !/\.(dxf|ncz)/i.test(ST.S.src || "")) ST.S.tri = null; if (!ST.S.tri) { let d; try { d = K.dedupe(ST.S.pts); ST.S.kotHata = ""; } catch (er) { ST.S.kotHata = er.message; kotHataGoster("Siyah (arazi)", er.message); d = null; } if (d) { ST.S.pts = d.pts; if (d.kotsuz.length || !ST.S.kotsuz) ST.S.kotsuz = d.kotsuz.map(p => ({ n: p.n, e: p.e, y: p.y })); if (d.dup || !ST.S.dup) ST.S.dup = d.dup; ST.S.triV = 2; ST.S.tri = Array.from(K.tinIyi(d.pts, +ST.set.maxE || 0)); } }
     if (ST.S.tri) MS = K.index({ pts: ST.S.pts, tri: Int32Array.from(ST.S.tri) });
   }
-  if (ST.R.mode === "sabit") MR = { flat: +ST.R.flat, pts: [], tri: new Int32Array(0) };
+  if (ST.R.mode === "sabit") { const z=K.num(ST.R.flat); if(Number.isFinite(z))MR = { flat: z, pts: [], tri: new Int32Array(0) }; }
   else if (ST.R.pts && ST.R.pts.length >= 3) {
     if (ST.R.tri && ST.R.triV !== 2 && !ST.R.triElle && !/\.(dxf|ncz)/i.test(ST.R.src || "")) ST.R.tri = null; if (!ST.R.tri) { let d; try { d = K.dedupe(ST.R.pts); ST.R.kotHata = ""; } catch (er) { ST.R.kotHata = er.message; kotHataGoster("Kırmızı (proje)", er.message); d = null; } if (d) { ST.R.pts = d.pts; if (d.kotsuz.length || !ST.R.kotsuz) ST.R.kotsuz = d.kotsuz.map(p => ({ n: p.n, e: p.e, y: p.y })); if (d.dup || !ST.R.dup) ST.R.dup = d.dup; ST.R.triV = 2; ST.R.tri = Array.from(K.tinIyi(d.pts, +ST.set.maxEK || 0)); } }
     if (ST.R.tri) MR = K.index({ pts: ST.R.pts, tri: Int32Array.from(ST.R.tri) });
@@ -10027,8 +10027,8 @@ const kzNote = M => { const k = (M.kotsuz || []).length, d = M.dup || 0; return 
 function info() {
   $("sInfo").innerHTML = ST.S.pts ? `<span class="pill ok">${fmtN(ST.S.pts.length)} nokta · ${fmtN((ST.S.tri || []).length / 3)} üçgen</span> ${esc(ST.S.src || "")}${kzNote(ST.S)}` : "Henüz dosya yok.";
   const m = ST.R.mode; document.querySelectorAll("input[name=kmode]").forEach(r => r.checked = r.value === m);
-  $("kSabitL").hidden = m !== "sabit"; $("kMaxL").hidden = $("kReL").hidden = m !== "model";
-  $("kInfo").innerHTML = m === "sabit" ? `Kırmızı kot her yerde <b>${K.tr(+ST.R.flat, 3)}</b> m alınır.` : ST.R.pts ? `<span class="pill ok">${fmtN(ST.R.pts.length)} nokta · ${fmtN((ST.R.tri || []).length / 3)} üçgen</span> ${esc(ST.R.src || "")}${kzNote(ST.R)}` : "Henüz dosya yok.";
+  $("kSabitL").hidden = m !== "sabit"; for(const id of ["kFileL","kMaxL","kReL","kSwapL","dxfBoxK"])$(id).hidden=m!=="model";
+  $("kInfo").innerHTML = m === "sabit" ? (Number.isFinite(K.num(ST.R.flat)) ? `Baz kotu: <b>${K.tr(K.num(ST.R.flat), 3)}</b> m · tüm hesap bölgesinde sabit.` : "Hesap için baz kotunu gir.") : ST.R.pts ? `<span class="pill ok">${fmtN(ST.R.pts.length)} nokta · ${fmtN((ST.R.tri || []).length / 3)} üçgen</span> ${esc(ST.R.src || "")}${kzNote(ST.R)}` : "Henüz dosya yok.";
 }
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 function readBuf(file) { return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(new Uint8Array(r.result)); r.onerror = rej; r.readAsArrayBuffer(file); }); }
@@ -10166,7 +10166,7 @@ $("tSb").addEventListener("click", () => pasteLoad("S")); $("tKb").addEventListe
 $("copyUrl").addEventListener("click", async e => { try { await navigator.clipboard.writeText($("appUrl").textContent); e.target.textContent = "Kopyalandı ✓"; } catch (er) { e.target.textContent = "Kopyalanamadı, elle seç"; } });
 $("fK").addEventListener("change", e => { if (e.target.files[0]) { e.target.closest(".filebtn").classList.add("has"); onFile("K", e.target.files[0]); } });
 document.querySelectorAll("input[name=kmode]").forEach(r => r.addEventListener("change", () => { ST.R.mode = r.value; buildModels(); SECS = []; save(); info(); recalcIfReady(); }));
-$("kSabit").addEventListener("change", e => { ST.R.flat = K.num(e.target.value); buildModels(); save(); info(); recalcIfReady(); });
+$("kSabit").addEventListener("change", e => { const z=K.num(e.target.value); ST.R.flat=Number.isFinite(z)?z:null; buildModels(); save(); info(); recalcIfReady(); });
 $("maxE").addEventListener("change", e => { ST.set.maxE = K.num(e.target.value); save(); });
 function teAc(k) { const Sx = k === "S" ? ST.S : ST.R; if (!Sx || !Sx.pts || Sx.pts.length < 3 || !Sx.tri) { buildModels(); } if (!Sx || !Sx.tri || !Sx.tri.length) return alert((k === "S" ? "Siyah" : "Kırmızı") + " yüzeyde üçgen yok. Önce nokta yükle.");
   TINED.ac({ ad: k === "S" ? "siyah (ilk hâl)" : "kırmızı (son hâl)", pts: Sx.pts, tri: Sx.tri, maxE: k === "S" ? +ST.set.maxE || 0 : +ST.set.maxEK || 0, kaydet(tri, pts) { psnap(); Sx.pts = pts; Sx.tri = Array.from(tri); Sx.triElle = true; Sx.triV = 2; yuzeyDegisti(); } }); }
@@ -11047,7 +11047,7 @@ function profLiveBind(){
  $("prApply").onclick=()=>{const raw=$("prZ").value.trim();if(raw)profLiveApply(K.num(raw));};
  $("prZ").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();$("prApply").click();}};
  $("prUndo").onclick=()=>{const d=PROF.pts[PROF.pick||0]?.d;pUndo();profLiveRefresh(d);$("prLiveMsg").textContent="Son plan işlemi geri alındı.";};
- $("prMakeR").onclick=()=>{if(!ST.S.tri?.length||ST.R.mode==="model"&&ST.R.tri?.length)return;const flat=ST.R.mode==="sabit"&&String(ST.R.flat).trim()!==""?Number(ST.R.flat):null;
+ $("prMakeR").onclick=()=>{if(!ST.S.tri?.length||ST.R.mode==="model"&&ST.R.tri?.length)return;const flat=ST.R.mode==="sabit"?K.num(ST.R.flat):null;
    if(flat!==null&&!Number.isFinite(flat)){$("prLiveMsg").textContent="Sabit kot geçerli değil.";return;}
    psnap();ST.R={mode:"model",flat:"",src:"Profil tasarım modeli",pts:ST.S.pts.map(p=>({...p,z:flat??p.z})),tri:Array.from(ST.S.tri),triElle:true,triV:2};
    yuzeyDegisti();$("prTarget").value="R";profLiveRefresh();$("prLiveMsg").textContent="Kırmızı tasarım modeli oluşturuldu; siyah arazi değişmedi.";};
@@ -11170,7 +11170,7 @@ $("sKay").addEventListener("change", e => { ST.set.kaynak = e.target.value; SECS
 function readiness() {
   const kub = ST.alanlar.find(a => a.kubaj);
   const items = [[!!(MS && MS.tri.length), MS ? `İlk hâl (siyah): ${fmtN(MS.tri.length / 3)} üçgen` : "İlk hâl (siyah) yüklenmedi → 1 · Veri"],
-    [!!(MR && (MR.flat !== undefined || MR.tri.length)), MR ? (MR.flat !== undefined ? `Son hâl (kırmızı): sabit ${K.tr(MR.flat, 3)}` : `Son hâl (kırmızı): ${fmtN(MR.tri.length / 3)} üçgen`) : "Son hâl (kırmızı) yüklenmedi → 1 · Veri"],
+    [!!(MR && (MR.flat !== undefined || MR.tri.length)), MR ? (MR.flat !== undefined ? `Baz kotu: ${K.tr(MR.flat, 3)} m` : `Son hâl (kırmızı): ${fmtN(MR.tri.length / 3)} üçgen`) : "Son hâl (kırmızı) yüklenmedi → 1 · Veri"],
     [true, ST.eksen && ST.eksen.length > 1 ? `Eksen: ${K.tr(K.perim(ST.eksen, false))} m` : "Eksen çizilmedi: otomatik eksen (alanın uzun doğrultusu) kullanılacak"],
     [true, kub ? `Kübaj alanı: ${esc(kub.ad)}` : `Kübaj alanı yok: eksenden sol ${ST.set.wL} m / sağ ${ST.set.wR} m alınacak`]];
   if (ST.set.kaynak === "cizgi" && ST.kesitLay) items.push([true, `Kesitler: ${esc(ST.kesitLay)} tabakasındaki çizilmiş en kesitler (aralık ayarı kullanılmaz)`]);
@@ -11237,7 +11237,7 @@ function showRes(html, note) { $("sdTot").innerHTML = html; $("sdNote").innerHTM
 function surfDiff() {
   ST.set.sdb=$("sdB_alan").checked?"alan":"ortak";
   const el = $("sdTot"); if (!el) return;
-  if (!(MS && MS.tri.length && MR && (MR.flat !== undefined || MR.tri.length))) { SD = null;
+  if (!(MS && MS.tri.length && MR && (MR.flat !== undefined || MR.tri.length))) { SD = null; if(ST.R.mode==="sabit"&&!Number.isFinite(K.num(ST.R.flat))){showRes("","Baz kotunu gir. Boş kot hesaba katılmaz.");return;}
     showRes("", !(MS && MS.tri.length) && !(MR && (MR.flat !== undefined || MR.tri.length)) ? "Siyah kot (ilk hâl) ve kırmızı kot (son hâl) dosyalarını yükle; fark burada kendiliğinden çıkar." :
       !(MS && MS.tri.length) ? `<span class="pill bad">Siyah kot (ilk hâl) eksik</span> Kırmızı yüklü; siyah kot dosyasını üstteki karta yükle.` : `<span class="pill bad">Kırmızı kot (son hâl) eksik</span> Siyah yüklü; kırmızı kot dosyasını üstteki karta yükle.`); return; }
   if (MR.flat === undefined) { const a = MS.grid, b = MR.grid; if (a.maxx < b.minx || b.maxx < a.minx || a.maxy < b.miny || b.maxy < a.miny) { SD = null;
@@ -11554,7 +11554,7 @@ $("oD").addEventListener("click", async () => { if (!needSecs()) return; oMsg("D
 function boot() {
   PUNDO.length=0;$("tUndoP").hidden=true;if($("profBox")){$("profBox").remove();PROF=null;}if($("kub3Panel")?.open)$("kub3Panel").close();
   $("sdB_alan").checked=ST.set.sdb==="alan";document.querySelector("input[name=sdb][value=ortak]").checked=!$("sdB_alan").checked;
-  $("maxE").value = ST.set.maxE; $("maxEK").value = ST.set.maxEK; $("kSabit").value = isFinite(+ST.R.flat) ? ST.R.flat : "";
+  $("maxE").value = ST.set.maxE; $("maxEK").value = ST.set.maxEK; $("kSabit").value = Number.isFinite(K.num(ST.R.flat)) ? ST.R.flat : "";
   $("sSiyM").value = ST.set.siyMod || "dolgu"; Object.entries(SETF).forEach(([id, k]) => $(id).value = k === "km0" ? K.kmtxt(+ST.set.km0 || 0) : (ST.set[k] ?? "")); $("eKm0").value = K.kmtxt(+ST.set.km0 || 0); $("vKm0").value = K.kmtxt(+ST.set.km0 || 0); $("vOl").value = ST.set.olcek || 150; $("sKay").value = ST.set.kaynak || "aralik"; $("sEsit").checked = ST.set.esit !== false;
   PF.forEach(k => $("p_" + k).value = ST.proj[k] || (k === "yerTur" ? "oto" : "")); renderPoz();
   buildModels(); info(); renderAlanlar(); renderKat(); renderNp(); VIEW.s = 0; SECS = []; SEL = 0; recalcIfReady(); save();
@@ -50758,4 +50758,9 @@ body.wide #v-plan.kub-modern>#planBox{order:-1;grid-row:2/span 80}
 #kub3Panel .kub3-modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(106px,1fr));gap:6px;margin:7px 0}#kub3Panel .kub3-view{position:relative;overflow:hidden;border:1px solid #7894a8;border-radius:11px;background:#f6f8fb}#kub3Cv{width:100%;height:clamp(240px,46dvh,530px);display:block;touch-action:none}#kub3Count{position:absolute;bottom:7px;left:7px;padding:5px 8px;font-size:.75rem;background:#142b3ddf;color:#eef8fe;border-radius:7px;pointer-events:none}
 #kub3Panel .kub3-edit{margin-top:8px}#kub3Panel .kub3-edit label{flex:1 1 125px}.kub3-results{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:8px 0}.kub3-results>div{background:#203d52;border:1px solid #416b83;padding:9px;border-radius:9px;color:#bad3e5;font-size:.75rem}.kub3-results b{display:block;font-size:1rem;margin-top:4px;color:#f4f9ff;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}#kub3Status{font-size:.82rem;line-height:1.4;color:#e4f3fc;min-height:1.2em}#kub3Scope{color:#b6d2e1}
 @media(max-width:650px){#kub3Panel{width:98vw;max-height:95dvh;padding:8px}#kub3Panel .kub3-modes{grid-template-columns:repeat(3,minmax(0,1fr))}#kub3Panel .kub3-modes button{font-size:.74rem;padding:6px 3px}#kub3Cv{height:37dvh;min-height:210px}.kub3-results b{font-size:.82rem}#kub3Panel .kub3-controls label:not(.kub3-check){flex:1 1 95px}}
+</style>
+
+<style id="acad-baz-kotu-visibility">
+#v-veri #kFileL[hidden],#v-veri #kSabitL[hidden],#v-veri #kMaxL[hidden],#v-veri #kReL[hidden],#v-veri #kSwapL[hidden],#v-veri #dxfBoxK[hidden]{display:none!important}
+#v-veri #kSabitL:not([hidden]){max-width:320px;width:100%}
 </style>
