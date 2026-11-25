@@ -8595,9 +8595,8 @@ A.ifzImzaTablo=(g,x0,y0,x1,y1,P,kind)=>{
 };
 /* EK-18 ölçü krokisi (A4 yatay) */
 A.kroki = (D, P) => { const g = A.pg(297, 210); const { L, T, R } = g; R(10, 12, 287, 200, 0.45);
-  T(148, 204, P.baslik || (P.kgm ? "ÖLÇÜ KROKİSİ" : `${P.ada || ""} ADA ÖLÇÜ KROKİSİ`), 3.2, { al: "c" }); T(287, 204, P.kgm ? "EK-18" : "Ek-18", 2.6, { al: "r" }); if (String(P.formKod || "").trim() !== "-") T(10, 8, String(P.formKod || "").trim() || "32381507 FR. 521 Rev.No/ Tarihi:01/06.06.2024", 1.6); /* TKGM form seri kodu (örnek Ek-18 sol alt) */
-  const titleInfo=[P.il,P.ilce,P.mahalle,P.pafta&&"Pafta "+P.pafta,[P.ada,P.parselNo].filter(Boolean).join("/")].filter(Boolean).join("   ·   ");
-  if(titleInfo)T(148,201.4,titleInfo,1.9,{al:"c",sabit:true});
+  T(148, 204, P.kgm ? (P.baslik || "ÖLÇÜ KROKİSİ") : (String(P.ada ?? "").trim() ? `${String(P.ada).trim()} ADA ÖLÇÜ KROKİSİ` : "ÖLÇÜ KROKİSİ"), 3.2, { al: "c" }); T(287, 204, P.kgm ? "EK-18" : "Ek-18", 2.6, { al: "r" }); if (String(P.formKod || "").trim() !== "-") T(10, 8, String(P.formKod || "").trim() || "32381507 FR. 521 Rev.No/ Tarihi:01/06.06.2024", 1.6); /* TKGM form seri kodu (örnek Ek-18 sol alt) */
+  // Ek-18: üst başlık tek satır; ada/parsel ve yer bilgileri alt antette kalır.
   if (P.sira) { R(204, 182, 218, 196, 0.3); T(211, 187.5, String(P.sira), 3.2, { al: "c" }); }
   const cx = 222; L([[cx, 12], [cx, 200]], 0.35); // sağ sütun: kuzey, datum, koordinat çizelgesi
   /* örnek Ek-18 düzeni: üstte N oku + KROKİ, altında Datum / Projeksiyon */ { const nx = 254.5; T(nx, 197.6, "N", 2.2, { al: "c", bold: true }); g.G.push({ t: "f", p: [[nx, 196.2], [nx + 1.3, 190.4], [nx, 191.3]], color: "#000" }, { t: "l", p: [[nx, 196.2], [nx - 1.3, 190.4], [nx, 191.3], [nx, 196.2]], w: 0.2, color: "#000" }); L([[nx, 191.3], [nx, 188.6]], 0.25); T(nx, 186.6, "KROKİ", 2, { al: "c", bold: true }); L([[cx, 184.4], [287, 184.4]], 0.3); }
