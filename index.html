@@ -9790,10 +9790,15 @@ const IDB = (() => {
   const db = () => {
     if (!dbp) dbp = new Promise((resolve, reject) => {
       const request = indexedDB.open("acad", 1);
-      request.onupgradeneeded = () => request.result.createObjectStore("kv");
-      request.onerror = () => { dbp = null; reject(request.error); };
+      let finished=false;
+      const timer=setTimeout(()=>fail(new Error("Yerel depolama yanıt vermiyor")),12000);
+      function fail(error){if(finished)return;finished=true;clearTimeout(timer);dbp=null;reject(error);}
+      request.onupgradeneeded = () => {if(!request.result.objectStoreNames.contains("kv"))request.result.createObjectStore("kv");};
+      request.onerror = () => fail(request.error);
+      request.onblocked = () => fail(new Error("Yerel depolama başka bir sekmede kilitli"));
       request.onsuccess = () => {
         const connection = request.result;
+        if(finished){connection.close();return;}finished=true;clearTimeout(timer);
         connection.onversionchange = () => { connection.close(); dbp = null; };
         connection.onclose = () => { dbp = null; };
         resolve(connection);
@@ -9805,8 +9810,9 @@ const IDB = (() => {
     const transaction = connection.transaction("kv", write ? "readwrite" : "readonly");
     const store = transaction.objectStore("kv");
     const request = write ? store.put(value, key) : store.get(key);
-    transaction.oncomplete = () => resolve(write ? undefined : request.result);
-    transaction.onabort = transaction.onerror = () => reject(transaction.error || request.error || new Error("Veritabanı işlemi iptal edildi"));
+    const timer=setTimeout(()=>{try{transaction.abort();}catch(_){}reject(new Error("Yerel kayıt veya okuma zaman aşımına uğradı"));},30000);
+    transaction.oncomplete = () => {clearTimeout(timer);resolve(write ? undefined : request.result);};
+    transaction.onabort = transaction.onerror = () => {clearTimeout(timer);reject(transaction.error || request.error || new Error("Veritabanı işlemi iptal edildi"));};
   }));
   return { get: key => run(key, undefined, false), set: (key, value) => run(key, value, true) };
 })();
@@ -20920,7 +20926,7 @@ const cadApply = d => { if (d && d.ofd) OFD = d.ofd; if (d && d.ents) { ents = d
     try{const vw=JSON.parse(localStorage.getItem(KEYC+":view")||"null");if(vw&&vw.name===CDOC.name&&vw.at>=CT&&vw.V)Object.assign(V,vw.V);}catch(e){}
   } };
 /* V102: legacy CAD drawings remain available only through explicit recent-session selection. */
-try { CAD_RECOVERY_READY.then(ok=>{CIDB=!!ok;if(ok&&CPEND){CPEND=false;persist();}}); } catch (e) { CIDB=false; }
+
 const klonE = e => { const o = Object.assign({}, e); for (const k in o) { const v = o[k]; if (v && typeof v === "object") o[k] = k === "pts" ? v.map(q => q.slice()) : Array.isArray(v) && typeof v[0] !== "object" ? v.slice() : JSON.parse(JSON.stringify(v)); } return o; };
 const klon = () => ({ ents: ents.map(klonE), lays: JSON.parse(JSON.stringify(lays)), faces: FACES.slice() });
 const snap0 = () => { UVER++; U.push(klon()); const mx = ents.length > 60000 ? 6 : ents.length > 20000 ? 15 : 40; while (U.length > mx) U.shift(); RD = []; if (!DIRTY) { DIRTY = true; setTimeout(() => { try { docInfo(); } catch (e) {} }, 0); } };
@@ -23961,6 +23967,7 @@ const CAD_RECOVERY_READY = (async()=>{
   }
 })();
 let cadSheets = [], cadSheetIndex = 0, cadClip = null, cadMenu = null;
+try { CAD_RECOVERY_READY.then(ok=>{CIDB=!!ok;if(ok&&CPEND){CPEND=false;persist();}}); } catch (e) { CIDB=false; }
 let CAD_RASTER=null, CAD_RASTER_IMAGE=null, CAD_RASTER_PICK=0, CAD_RASTER_TRACE="", CAD_RASTER_VERT=[], CAD_RASTER_BLOCK_CLICK=false;
 const cadRasterForSave=()=>CAD_RASTER?{...CAD_RASTER,pts:(CAD_RASTER.pts||[null,null]).map(p=>p?[...p]:null),controlPoints:cadRasterControls(CAD_RASTER).map(c=>({...c,pixel:c.pixel?[...c.pixel]:null})),pose:{...CAD_RASTER.pose}}:null;
 
@@ -24065,7 +24072,6 @@ window.ACAD_TRANSITION_CAD=Object.freeze({
 /* V102: do not auto-load IndexedDB pages. Saved sessions are opened only on tap. */
 window.ACAD_SESSION_LIBRARY = Object.freeze({
  async list(){
-  await CAD_RECOVERY_READY;
   const result=[];
   for(const [key,label] of [[CAD_RECOVERY_KEY,'Önceki çalışma'],[CAD_SHEETS_KEY,'Son çalışma'],[CAD_LEGACY_SHEETS_KEY,'V101 ve öncesi']]){
    let raw=null;try{raw=await IDB.get(key)}catch(_){ }
@@ -24085,20 +24091,18 @@ window.ACAD_SESSION_LIBRARY = Object.freeze({
  },
  async open(key,index){
   if(![CAD_RECOVERY_KEY,CAD_SHEETS_KEY,CAD_LEGACY_SHEETS_KEY,CAD_SINGLE_RECOVERY_KEY].includes(key))throw Error('Bilinmeyen çalışma kaynağı');
-  await CAD_RECOVERY_READY;
-  let raw=await IDB.get(key);
+  let raw=null;try{raw=await IDB.get(key)}catch(_){}
   if(!raw){try{raw=localStorage.getItem(key)}catch(_){}}
-  if(!raw && key===CAD_SINGLE_RECOVERY_KEY){raw=await IDB.get(KEYC);if(!raw)try{raw=localStorage.getItem(KEYC)}catch(_){}}
+  if(!raw && key===CAD_SINGLE_RECOVERY_KEY){try{raw=await IDB.get(KEYC)}catch(_){}if(!raw)try{raw=localStorage.getItem(KEYC)}catch(_){}}
   if(!raw)throw Error('Seçilen çalışma bu cihazda bulunamadı');
   const p=JSON.parse(raw);let sh;
   if(key===CAD_SINGLE_RECOVERY_KEY){if(!Array.isArray(p.ents))throw Error('Eski çizim geometrisi eksik');
    sh={name:p.doc?.name||'Eski çizim',data:{ents:p.ents,lays:p.lays||{'0':{c:'#ffffff',on:true}},cur:p.cur||'0',nid:p.nid||p.ents.length+1,V:p.V||{cx:0,cy:0,s:1},faces:p.faces||[],doc:p.doc||{name:'',fmt:''}},crs:'TUREF_TM33',crsConfirmed:false};
   }else{if(!Array.isArray(p.sheets)||!p.sheets[index]?.data)throw Error('Çalışma sekmesi bulunamadı');sh=p.sheets[index];}
-  if(cadSheets.some(sh=>(sh.data?.ents?.length||0)+(sh.data?.faces?.length||0)>0) || ents.length || FACES.length){
-   if(!confirm('Açık çizim değiştirilecek. Açık çalışmayı kaydedip önceki çizimi yüklemek istiyor musun?'))return false;
-   await cadSheetsFlush();
-  }
-  const q={schema:'acad-cad-pages-v1',active:0,sheets:[sh]};
+  const current=window.ACAD_TRANSITION_CAD.snapshot();
+  const hasCurrent=cadHasData(current);
+  const sheets=hasCurrent?[...current.sheets,sh]:[sh];
+  const q={schema:'acad-cad-pages-v1',active:sheets.length-1,sheets};
   window.ACAD_TRANSITION_CAD.restore(q);
   return true;
  }
@@ -29286,12 +29290,26 @@ function bgPlan(D) { if (!PLAN || PLAN.ad !== PLAN_AD) return; const W = cv.widt
 /* ---------- kademeli iş akışı: çizim → ① ifraz → ② yapı apl → ③ kübaj ---------- */
 $("cadF2").addEventListener("change", async e=>{const f=e.target.files?.[0];if(f&&/\.(pdf|png|jpe?g|webp)$/i.test(f.name)){e.preventDefault();e.stopImmediatePropagation();e.target.value='';try{await cadRasterImport(f,true);}catch(err){cadRasterMsg('Açma başarısız: '+err.message,true);}}},true);
 $("cadF3").addEventListener("change", async e=>{const fs=[...(e.target.files||[])];if(fs.some(f=>/\.(pdf|png|jpe?g|webp)$/i.test(f.name))){e.preventDefault();e.stopImmediatePropagation();e.target.value='';for(const f of fs){try{if(/\.(pdf|png|jpe?g|webp)$/i.test(f.name))await cadRasterImport(f,false);else await loadFile(f,true);}catch(err){cadRasterMsg(f.name+': '+err.message,true);}}}},true);
-$("cadF2").addEventListener("change", async e => { const f = e.target.files[0]; e.target.value = ""; if (!f) return; if (PLAN) editExit(); $("cadKub").hidden=true;propClose();
-  if(await loadFile(f,false)!==true)return;
+let cadOpenInProgress=false;
+async function cadOpenDrawing(f){
+  if(!f||cadOpenInProgress)return false;
+  cadOpenInProgress=true;
+  try{
+  if(/\.(pdf|png|jpe?g|webp)$/i.test(f.name)){await cadRasterImport(f,true);return true;}
+  if (PLAN) editExit(); $("cadKub").hidden=true;propClose();
+  if(await loadFile(f,false)!==true)return false;
   if(/\.dwg$/i.test(f.name)){
     const source=ents, name=f.name.replace(/\.[^.]+$/,"");
     window.acadConsumeDwg82=()=>{window.acadConsumeDwg82=null;if(ents===source && !window.APLT.FD)window.APLT.fromCad(toFD(ents),name,null,null);};
-  }else{window.acadConsumeDwg82=null;window.APLT.fromCad(toFD(ents),f.name.replace(/\.[^.]+$/,""),null,null);} });
+  }else{window.acadConsumeDwg82=null;try{window.APLT.fromCad(toFD(ents),f.name.replace(/\.[^.]+$/,""),null,null);}catch(e){say("CAD açıldı; aplikasyon aktarımı tamamlanamadı: "+e.message,true);}}
+  return true;
+  }finally{cadOpenInProgress=false;}
+}
+$("cadF2").addEventListener("change", async e=>{const f=e.target.files?.[0];e.target.value="";if(f)await cadOpenDrawing(f);});
+window.ACAD_OPEN_RECENT_CAD=async f=>{
+  if((ents.length||FACES.length)&&!confirm("Mevcut çizim yeni bir dosyayla değiştirilecek. Devam edilsin mi?"))return false;
+  await showTab("cad");return cadOpenDrawing(f);
+};
 const cadParcelSource=new WeakMap();
 const toFD = L => { L = L.filter(e => !(typeof e.lay === 'string' && e.lay.startsWith('MIM_KOORDINATSIZ:'))); /* koordinatsız mimari paftaları (projenin yanına dizilmiş) koordinatlı modüllere gönderilmez */ const d = { lines: [], polys: [], points: [], texts: [], circles: [] };
   L.forEach(e => { if (!lays[e.lay] || lays[e.lay].on === false) return; const q = e.pts;
@@ -32070,11 +32088,24 @@ ciz();
     LIST = LIST.filter(x => x.id !== id); LIST.unshift({ id, name: f.name, size: f.size, t: Date.now(), type: f.type || "" }); try { await db.set("rf:" + id, buf); } catch (e) { return; }
     let tot = 0; const keep = []; for (const x of LIST) { tot += x.size; if (keep.length < MAX && tot < MAXB) keep.push(x); else try { await db.set("rf:" + x.id, null); } catch (e) {} } LIST = keep; await store(); }
   document.addEventListener("change", e => { const t = e.target; if (busy || !t || t.type !== "file" || t.classList.contains("kaseIn") || !t.files || !t.files.length) return; for (const f of t.files) remember(f).catch(() => {}); }, true);
-  async function openTo(inp, x) { const buf = db && await db.get("rf:" + x.id); if (!buf) { alert("Bu dosya artık kayıtlı değil, yeniden seç."); return; } const f = new File([buf], x.name, { type: x.type || "application/octet-stream" });
-    const dt = new DataTransfer(); dt.items.add(f); busy = true; try { inp.files = dt.files; inp.dispatchEvent(new Event("change", { bubbles: true })); } finally { setTimeout(() => busy = false, 0); }
-    x.t = Date.now(); LIST = [x, ...LIST.filter(y => y.id !== x.id)]; store(); }
-  async function show(inp) { await load(); let b = $("rfBox"); if (!b) { b = document.createElement("div"); b.id = "rfBox"; b.style.cssText = "position:fixed;z-index:10002;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center"; document.body.appendChild(b); b.addEventListener("click", e => { if (e.target === b) b.hidden = true; }); }
-    b.hidden = false; const tm = t => { const d = new Date(t); return d.toLocaleDateString("tr-TR") + " " + d.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }); };
+  async function openTo(inp, x) {
+    if(busy)return;busy=true;const box=$("rfBox");
+    box?.querySelector("[data-recent-progress]")?.remove();const status=document.createElement("div");status.dataset.recentProgress="1";status.style.cssText="padding:8px;color:#173b50;font-weight:600;background:#e6f4ff;border-radius:7px";status.setAttribute("role","status");status.textContent=x.name+" okunuyor…";
+    box?.firstElementChild?.prepend(status);
+    try{
+      if(!inp)throw Error("Dosya açma hedefi bulunamadı");
+      const buf=db&&await db.get("rf:"+x.id);if(!buf)throw Error("Dosya kopyası bu cihazda bulunamadı. Aç düğmesiyle özgün dosyayı seçin.");
+      const f=new File([buf],x.name,{type:x.type||"application/octet-stream"});
+      if(inp.id==="cadF2"&&window.ACAD_OPEN_RECENT_CAD){
+        status.textContent=x.name+" CAD çizimine aktarılıyor…";await new Promise(r=>setTimeout(r,0));
+        if(!await window.ACAD_OPEN_RECENT_CAD(f))throw Error("Çizim açılamadı veya işlem iptal edildi. CAD alt bildirimini kontrol edin.");
+      }else{const dt=new DataTransfer();dt.items.add(f);inp.files=dt.files;inp.dispatchEvent(new Event("change",{bubbles:true}));}
+      x.t=Date.now();LIST=[x,...LIST.filter(y=>y.id!==x.id)];store();if(box)box.hidden=true;status.remove();
+    }catch(e){status.textContent=String(e.message||e);status.style.color="#a32018";if(box)box.hidden=false;}
+    finally{busy=false;}
+  }
+  async function show(inp) { let b = $("rfBox"); if (!b) { b = document.createElement("div"); b.id = "rfBox"; b.style.cssText = "position:fixed;z-index:10002;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center"; document.body.appendChild(b); b.addEventListener("click", e => { if (e.target === b) b.hidden = true; }); }
+    b.hidden=false;b.innerHTML='<div style="background:#fff;color:#172839;width:min(560px,100vw);padding:14px;border-radius:12px"><b>Son dosyalar okunuyor…</b> <button id="rfWaitClose" type="button">Kapat</button></div>';$("rfWaitClose").onclick=()=>b.hidden=true;await load();if(b.hidden)return;const tm = t => { const d = new Date(t); return d.toLocaleDateString("tr-TR") + " " + d.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }); };
     b.innerHTML = `<div style="background:#fff;color:#1b2430;width:min(560px,100vw);max-height:75vh;overflow:auto;border-radius:14px 14px 0 0;padding:12px 14px;font-size:15px"><div style="display:flex;align-items:center;gap:8px"><b style="flex:1">🕘 Son açılan dosyalar</b><button type="button" id="rfX">Kapat</button></div>
       <div class="note" style="margin:4px 0 8px">Bir kez açtığın dosya burada saklanır (bu cihazda). Dokununca ${inp ? "buraya" : "seçtiğin yere"} açılır; dosyayı telefonda aramana gerek kalmaz.</div>
       ${LIST.length ? LIST.map((x, i) => `<div style="display:flex;align-items:center;gap:8px;border-top:1px solid #eee;padding:8px 0"><button type="button" data-o="${i}" style="flex:1;text-align:left;padding:8px;border-radius:8px"><b>${x.name.replace(/[&<>]/g, "")}</b><br><span class="note">${sz(x.size)} · ${tm(x.t)}</span></button><button type="button" data-d="${i}" title="Listeden çıkar">✕</button></div>`).join("") : `<div class="note">Henüz dosya yok. Bir dosyayı bir kez "Dosya seç" ile açınca burada görünür.</div>`}
@@ -32082,7 +32113,7 @@ ciz();
       <div style="border-top:1px solid #cbd5e1;margin-top:12px;padding-top:10px"><button type="button" id="rfSavedSheets" style="width:100%;text-align:left;padding:12px;background:#dff3ff;color:#18354c;border-radius:9px">📁 Kayıtlı çalışma sekmelerinden aç</button><div style="font-size:12px;margin-top:5px;color:#475569">Önceki CAD projeleri açılışta kendiliğinden yüklenmez; buradan seçerek açılır.</div></div></div>`;
     $("rfX").onclick = () => b.hidden = true;
     const savedBtn=$("rfSavedSheets");if(savedBtn)savedBtn.onclick=showSavedSheets;
-    b.querySelectorAll("[data-o]").forEach(x => x.onclick = () => { const it = LIST[+x.dataset.o]; b.hidden = true; if (inp) openTo(inp, it); else pick(it); });
+    b.querySelectorAll("[data-o]").forEach(x => x.onclick = () => { const it = LIST[+x.dataset.o]; if (inp) openTo(inp, it); else pick(it); });
     b.querySelectorAll("[data-d]").forEach(x => x.onclick = async () => { const it = LIST[+x.dataset.d]; LIST = LIST.filter(y => y !== it); try { await db.set("rf:" + it.id, null); } catch (e) {} await store(); show(inp); });
     const c = $("rfClr"); if (c) c.onclick = async () => { for (const it of LIST) try { await db.set("rf:" + it.id, null); } catch (e) {} LIST = []; await store(); show(inp); }; }
   async function showSavedSheets(){
@@ -32114,7 +32145,7 @@ ciz();
   /* üstteki genel düğme: önce dosya, sonra nereye açılacağı */
   const TGT = [["cadF2", "✏️ CAD'de aç", "cad"], ["hubF", "🏁 Sahadan İş (saha ölçüsü)", "is"], ["hS", "⛰ Kübaj · siyah (ilk hâl)", "kesit"], ["hK", "⛰ Kübaj · kırmızı (son hâl)", "kesit"], ["tOpen", "🗺 Plan'da aç (kontrol)", "plan"], ["aF", "🏠 Yapı APL · parsel / plankote", "apl"], ["aM", "🏠 Yapı APL · mimari", "apl"], ["aPK", "🏠 Yapı APL · ayrı plankote", "apl"]];
   function pick(it) { let b = $("rfBox"); b.hidden = false; b.innerHTML = `<div style="background:#fff;color:#1b2430;width:min(560px,100vw);border-radius:14px 14px 0 0;padding:12px 14px;font-size:15px"><b>${it.name.replace(/[&<>]/g, "")}</b> nereye açılsın?<div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">${TGT.filter(([id]) => $(id)).map(([id, t], i) => `<button type="button" data-t="${i}" style="text-align:left;padding:10px">${t}</button>`).join("")}<button type="button" id="rfX2">Vazgeç</button></div></div>`;
-    $("rfX2").onclick = () => b.hidden = true; b.querySelectorAll("[data-t]").forEach(x => x.onclick = () => { const [id, , tab] = TGT[+x.dataset.t]; b.hidden = true; try { if (typeof showTab === "function") showTab(tab); } catch (e) {} setTimeout(() => openTo($(id), it), 60); }); }
+    $("rfX2").onclick = () => b.hidden = true; b.querySelectorAll("[data-t]").forEach(x => x.onclick = () => { const [id, , tab] = TGT[+x.dataset.t]; try { if (typeof showTab === "function") showTab(tab); } catch (e) {} openTo($(id), it); }); }
   /* her "dosya seç" düğmesinin yanına küçük 🕘 */
   document.querySelectorAll('input[type=file]:not(.kaseIn)').forEach(inp => { const host = inp.closest(".filebtn") || inp.parentElement; if (inp.closest('#v-cad') && !inp.closest('.filebtn'))return;
     if (!host || host.nextElementSibling && host.nextElementSibling.classList && host.nextElementSibling.classList.contains("rfBtn")) return;
@@ -34103,7 +34134,7 @@ const refresh=ensureResize();
  if(!recent){recent=document.createElement('button');recent.type='button';recent.className='rfBtn';recent.addEventListener('click',()=>window.RECENT?.show?.($('cadF2')));}
  recent.id='acadRecentBesideOpen';recent.textContent='◷ Son açılan';recent.setAttribute('aria-label','Son açılan dosyaları göster');
  recent.title='Bu cihazda daha önce açılan dosyalar';recent.setAttribute('aria-label','Son açılan dosyaları göster');
- recent.classList.add('acad-recent-visible');bar.append(recent,close,save,saveAs,print,append);
+ recent.classList.add('acad-recent-visible');recent.onclick=null;recent.addEventListener('click',e=>{e.stopImmediatePropagation();window.RECENT?.show?.($('cadF2'));},{capture:true});bar.append(recent,close,save,saveAs,print,append);
  actions.prepend(bar);
  // Birincil beş komut tek basamakta ve yan yana. Eski iki asamali kapatma uyarisini ust butona yansit.
  close.addEventListener('click',()=>{
@@ -36263,7 +36294,7 @@ body.acad65-panel-adjusting #cadCv{image-rendering:auto}
  },45000);
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState!=='hidden')return;
   const a=document.querySelector('.tabs button[data-tab][aria-selected="true"]')?.dataset.tab,kind=fromTab(a);
-  if(kind&&!writing)storeKind(kind).catch(e=>{lastError=e.message;sticky=true;status('Sekme kapanırken yedekleme doğrulanamadı',true)});
+  if(kind&&!writing&&!document.querySelector('#rfBox:not([hidden])'))storeKind(kind).catch(e=>{lastError=e.message;sticky=true;status('Sekme kapanırken yedekleme doğrulanamadı',true)});
  });
  window.ACAD_SAFEPOINT=Object.freeze({beforeSwitch,exportAll,recovery,read,decode,record,storeKind,get busy(){return writing},get lastCheckpoint(){return lastCheckpoint}});
  status('Güvenli modül geçişi etkin · CAD ve Alt Yapı ayrı tutulur');
