@@ -1461,7 +1461,44 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", function () { setTimeout(hazir, 0); }); else setTimeout(hazir, 0);
 })();
 </script>
-<script>if("serviceWorker" in navigator && location.protocol==="https:"){addEventListener("load",function(){navigator.serviceWorker.register("sw.js").then(function(r){r.addEventListener("updatefound",function(){var w=r.installing;w&&w.addEventListener("statechange",function(){if(w.state==="installed"&&navigator.serviceWorker.controller){var b=document.createElement("div");b.style.cssText="position:fixed;left:10px;right:10px;bottom:10px;z-index:2147482000;background:#0f2a4a;color:#fff;padding:12px 14px;border-radius:10px;font:600 14px system-ui;text-align:center";b.textContent="A-CAD güncellendi — yenilemek için dokun";b.onclick=function(){location.reload()};document.body.appendChild(b)}})})}).catch(function(){})})}</script>
+<script id="acad-safe-update-ui">
+(()=>{'use strict';
+ if(!('serviceWorker' in navigator)||location.protocol!=='https:')return;
+ let busy=false,banner=null;
+ const show=(registration)=>{
+  if(banner||!navigator.serviceWorker.controller)return;
+  banner=document.createElement('button');banner.type='button';banner.id='acadUpdateButton';
+  banner.style.cssText='position:fixed;left:10px;right:10px;bottom:10px;z-index:2147482000;background:#0f2a4a;color:#fff;padding:12px 14px;border:1px solid #6793b8;border-radius:10px;font:600 14px system-ui;text-align:center';
+  banner.textContent='A-CAD güncellemesi hazır · Güncelle';
+  banner.onclick=async()=>{
+   if(busy)return;busy=true;banner.disabled=true;banner.textContent='Çalışma güvenle kaydediliyor…';
+   let lock=null;
+   try{
+    if(!window.ACAD_UPDATE_CAD)throw Error('Çizim henüz hazır değil; tekrar dene.');
+    // Freeze user edits during the short durable write, without clearing selection or the current workspace.
+    lock=document.createElement('div');lock.style.cssText='position:fixed;inset:0;z-index:2147483646;background:#08172545;cursor:wait;display:grid;place-items:center';
+    const msg=document.createElement('div');msg.style.cssText='padding:14px 20px;border-radius:10px;background:#18334a;color:white;font:600 14px system-ui';msg.textContent='Proje ve ekran konumu korunuyor…';lock.append(msg);document.body.append(lock);
+    const active=document.activeElement;if(active instanceof HTMLElement)active.blur();
+    const guard=e=>{e.preventDefault();e.stopImmediatePropagation()};window.addEventListener('keydown',guard,true);lock._unguard=()=>window.removeEventListener('keydown',guard,true);
+    await window.ACAD_TRANSITION_CORE?.flush?.();
+    if(window.ACAD_INFRA?.loaded)await window.ACAD_SAFEPOINT?.storeKind?.('infra');
+    await window.ACAD_UPDATE_CAD.prepare();
+    msg.textContent='Yeni sürüm açılıyor…';
+    const waiting=registration.waiting;
+    if(waiting){
+      await new Promise(resolve=>{let done=false;const finish=()=>{if(done)return;done=true;clearTimeout(timer);navigator.serviceWorker.removeEventListener('controllerchange',finish);resolve()};const timer=setTimeout(finish,6000);navigator.serviceWorker.addEventListener('controllerchange',finish);waiting.postMessage({type:'ACAD_SKIP_WAITING'});});
+    }
+    location.reload();
+   }catch(e){lock?._unguard?.();lock?.remove();busy=false;banner.disabled=false;banner.textContent='Güncelleme durduruldu · '+(e?.message||e)+' · Tekrar dene';}
+  };
+  document.body.append(banner);
+ };
+ addEventListener('load',()=>navigator.serviceWorker.register('sw.js').then(r=>{
+  if(r.waiting)show(r);
+  r.addEventListener('updatefound',()=>{const w=r.installing;if(w)w.addEventListener('statechange',()=>{if(w.state==='installed')show(r)});});
+ }).catch(()=>{}));
+})();
+</script>
 
 <div class="wrap">
   <header style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap">
@@ -24005,11 +24042,12 @@ const CAD_SINGLE_RECOVERY_KEY = "acad-v102-previous-single";
 const cadHasData = payload => !!(payload?.sheets?.some(s => (s?.data?.ents?.length||0)+(s?.data?.faces?.length||0)>0 || (s?.data?.doc?.name||'').trim()));
 /* Snapshot the last session BEFORE a new session can overwrite it. If quota prevents
    the snapshot, block destructive session writes rather than risking the old work. */
+let CAD_STARTUP_PREVIOUS=null;
 const CAD_RECOVERY_READY = (async()=>{
   try{
     const old = await IDB.get(CAD_SHEETS_KEY);
     if(old){let p;try{p=JSON.parse(old)}catch(_){}
-      if(cadHasData(p)) await IDB.set(CAD_RECOVERY_KEY,old);
+      if(cadHasData(p)){CAD_STARTUP_PREVIOUS=old;await IDB.set(CAD_RECOVERY_KEY,old);}
     }
     // Compatibility with pre-V102 single-page recoveries, without reopening them.
     let single=await IDB.get(KEYC);
@@ -24890,6 +24928,71 @@ window.ACAD_NCZ_SOURCES={
   objectCount:cadSheets.reduce((sum,sh,i)=>sum+(i===cadSheetIndex?ents.length+FACES.length:(sh.data?.ents?.length||0)+(sh.data?.faces?.length||0)),0)}),
  download:(name,blob)=>save_(name,blob)
 };
+
+/* Same-tab update handoff. Source Files are structured-cloned in IndexedDB, not JSON/base64.
+   A failed write leaves the running CAD project untouched and prevents the reload. */
+const CAD_UPDATE_TOKEN='acad:update-resume:v1',CAD_UPDATE_PREFIX='acad:update-session:';
+window.ACAD_UPDATE_CAD=Object.freeze({
+ async prepare(){
+   if(PLAN||AREA_EDIT_SESSION)throw Error('Açık düzenlemeyi Uygula veya Vazgeç ile bitir.');
+   if(cmd&&!/sorgu/i.test(cmd.name||''))throw Error('Aktif CAD komutunu bitir, sonra güncelle.');
+   const token=globalThis.crypto?.randomUUID?.()||Date.now()+'-'+Math.random().toString(36).slice(2);
+   const key=CAD_UPDATE_PREFIX+token;
+   const pages=window.ACAD_TRANSITION_CAD.snapshot();
+   const sources=[...NCZ_ORIGINAL_FILES.entries()];
+   const payload={schema:'acad-update-resume-v1',token,at:Date.now(),tab:location.hash.slice(1)||'cad',pages,
+     sources,seq:NCZ_ORIGINAL_SEQ,dirty:DIRTY,fver:FVER,uver:UVER,undo:U,redo:RD,selection:[...sel],
+     activeParcel:window.ACAD_ACTIVE_PARCEL?.current?.id??null};
+   // Complete the ordinary autosave as well, but use a unique handoff record untouched by startup autosaves.
+   if(!await cadSheetsFlush())throw Error('CAD sayfaları kaydedilemedi.');
+   await IDB.set(key,payload);
+   const check=await IDB.get(key);
+   if(check?.token!==token||check.pages?.sheets?.length!==pages.sheets.length||check.pages.active!==pages.active||
+      check.sources?.length!==sources.length||check.sources.some(([k,f],i)=>k!==sources[i][0]||f.size!==sources[i][1].size||f.name!==sources[i][1].name))
+     throw Error('Güncelleme kaydı doğrulanamadı.');
+   sessionStorage.setItem(CAD_UPDATE_TOKEN,token);
+   return true;
+ },
+ async resume(){
+   let token=null,seen=false;
+   try{token=sessionStorage.getItem(CAD_UPDATE_TOKEN);seen=sessionStorage.getItem('acad:update-capable')==='1';}catch(_){}
+   if(token){
+     const key=CAD_UPDATE_PREFIX+token,record=await IDB.get(key);
+     if(!record||record.schema!=='acad-update-resume-v1'||record.token!==token)throw Error('Güncelleme çalışma kaydı bulunamadı.');
+     window.ACAD_TRANSITION_CAD.restore(record.pages);
+     for(const [k,file] of record.sources||[])NCZ_ORIGINAL_FILES.set(k,file);
+     NCZ_ORIGINAL_SEQ=Math.max(NCZ_ORIGINAL_SEQ,Number(record.seq)||0);
+     DIRTY=!!record.dirty;FVER=Number(record.fver)||0;UVER=Number(record.uver)||0;U=record.undo||[];RD=record.redo||[];
+     const ids=new Set(ents.map(e=>e.id));for(const id of record.selection||[])if(ids.has(id))sel.add(id);
+     if(record.activeParcel!=null){const e=ents.find(e=>e.id===record.activeParcel);if(e)window.ACAD_ACTIVE_PARCEL?.activate(e,false);}
+     // Startup view switching may fit an empty canvas. Restore the exact saved camera after layout.
+     const view=record.pages.sheets[record.pages.active].data.V;Object.assign(V,view);
+     docInfo();ctxBar();draw();await cadSheetsFlush();
+     sessionStorage.removeItem(CAD_UPDATE_TOKEN);sessionStorage.setItem('acad:update-capable','1');
+     await IDB.set(key,null).catch(()=>{});
+     say('Güncelleme tamamlandı · Açık CAD sayfaları geri geldi');
+     return true;
+   }
+   // First upgrade from the old reload-only button: use the already protected previous session
+   // only for a reload of the CAD page, not a normal new visit.
+   const reload=performance.getEntriesByType('navigation')[0]?.type==='reload';
+   if(!seen&&reload&&location.hash==='#cad'){
+     await CAD_RECOVERY_READY;
+     if(CAD_STARTUP_PREVIOUS){
+       const old=JSON.parse(CAD_STARTUP_PREVIOUS);
+       if(cadHasData(old)){
+         const page=old.sheets[old.active||0]?.data;
+         try{const view=JSON.parse(localStorage.getItem(KEYC+':view')||'null');if(page&&view?.name===page.doc?.name&&view.at>=old.savedAt&&view.V)Object.assign(page.V,view.V);}catch(_){}
+         window.ACAD_TRANSITION_CAD.restore({schema:'acad-cad-pages-v1',active:old.active,sheets:old.sheets});
+         DIRTY=true;docInfo();ctxBar();draw();await cadSheetsFlush();say('Güncelleme öncesindeki CAD çalışma sayfaları geri geldi');
+       }
+     }
+   }
+   try{sessionStorage.setItem('acad:update-capable','1')}catch(_){}
+   return false;
+ }
+});
+
 function nczOriginalForDoc() { const ks=CDOC.nczSourceKeys || (CDOC.nczOriginalKey ? [CDOC.nczOriginalKey] : []); return ks.map(k=>NCZ_ORIGINAL_FILES.get(k)).find(Boolean) || null; }
 function nczStoredSources() { const ks=CDOC.nczSourceKeys || (CDOC.nczOriginalKey ? [CDOC.nczOriginalKey] : []); return ks.map(k=>NCZ_ORIGINAL_FILES.get(k)).filter(Boolean); }
 async function nczDownloadExact(f) {
@@ -49888,6 +49991,15 @@ body #acadBackupTools #acadSafeStatus{display:block!important;min-width:0!import
 body #acadBackupTools button{width:100%;text-align:start}
 @media(max-width:760px){body #acad57Quickfiles>#acadSafeBar#acadSafeBar{order:-1;margin-left:0!important;margin-right:2px!important}body #acadSafeBar #acadSafeGo{width:6.5rem!important}body #acad57Quickfiles #acadRecentBesideOpen{width:32px!important;font-size:0!important}body #acadRecentBesideOpen::before{content:"◷";font:20px/1 system-ui}}
 </style>
+<script id="acad-update-resume-start">
+addEventListener('load',async()=>{
+ if(!window.ACAD_UPDATE_CAD)return;
+ let pending=false;try{pending=!!sessionStorage.getItem('acad:update-resume:v1')||(!sessionStorage.getItem('acad:update-capable')&&performance.getEntriesByType('navigation')[0]?.type==='reload'&&location.hash==='#cad')}catch(_){}
+ let overlay=null;
+ if(pending){overlay=document.createElement('div');overlay.style.cssText='position:fixed;inset:0;z-index:2147483646;background:#08172555;display:grid;place-items:center;color:white;font:600 15px system-ui';overlay.innerHTML='<span style="padding:14px 20px;background:#18334a;border-radius:10px">Açık çalışma geri yükleniyor…</span>';document.body.append(overlay);}
+ try{await window.ACAD_UPDATE_CAD.resume();}catch(e){console.error('Güncelleme sonrası CAD geri yükleme',e);alert('Açık çalışma otomatik geri yüklenemedi. Güvenli kayıt silinmedi. '+(e?.message||e));}finally{overlay?.remove();}
+},{once:true});
+</script>
 <script id="acad-compact-module-placement">
 (()=>{
  const bar=document.getElementById('acadSafeBar'), filebar=document.getElementById('acad57Quickfiles');
