@@ -29550,8 +29550,19 @@ function renderInfo() { const el = $("cadInfo"); if (!el) return; const L = selE
     h += `<div class="cistat">${cl ? `<span>Alan <b>${tr2_(Math.abs(areaOf(e.pts)))} m²</b></span><span>Çevre <b>${tr2_(lenOf(e))} m</b></span>` : `<span>Uzunluk <b>${tr2_(lenOf(e))} m</b></span>`}<span>Köşe <b>${VP.length}</b></span>${zs.length ? `<span>Kot <b>${Math.min(...zs).toFixed(2)} – ${Math.max(...zs).toFixed(2)}</b></span><span>Ort. <b>${(zs.reduce((s, z) => s + z, 0) / zs.length).toFixed(2)}</b></span>` : ""}</div>
       <div class="scroll" style="max-height:260px;overflow:auto;margin-top:6px;font-size:.86rem"><table class="t"><thead><tr><th>#</th><th>Nokta</th><th>Y</th><th>X</th><th>Kot</th><th>Kenar m</th></tr></thead><tbody>${VP.map((q, i) => { const nx = VP[(i + 1) % VP.length], last = i === VP.length - 1 && !cl; return `<tr><td>${i + 1}</td><td>${esc_(K_[i].n)}</td><td>${K.fk(q[0])}</td><td>${K.fk(q[1])}</td><td>${K_[i].z != null ? K_[i].z.toFixed(2) + (K_[i].src === "model" ? "*" : "") : "—"}</td><td>${last ? "" : tr2_(dist(q, nx))}</td></tr>`; }).join("")}</tbody></table></div><p class="note">Kot: aynı yerdeki ölçü noktasından${K_.some(k => k.src === "çizgi") ? ", yoksa çizginin köşe kotundan" : ""}${K_.some(k => k.src === "model") ? "; * olanlar üçgen modelden (siyah kot)" : ""}.</p>`; }
   el.innerHTML = h; const b = $("ciEd"); if (b) b.onclick = () => { propOpen(); $("cadProp").scrollIntoView({ block: "nearest" }); };
-  if (e.t === "text" && $("ciTx")) { const ap = () => { const t = $("ciTx").value, hh = K.num($("ciTh").value), rr = K.num($("ciTr").value), ll = $("ciTl").value; if (t === e.s && hh === +e.h && rr === +(e.rot || 0) && ll === e.lay) return; snap0(); e.s = t; if (hh > 0) e.h = hh; if (isFinite(rr)) e.rot = rr; if (lays[ll]) e.lay = ll; IDX = null; persist(); draw(); say("Yazı değiştirildi"); };
-    $("ciTok").onclick = ap; ["ciTx", "ciTh", "ciTr"].forEach(id => $(id).addEventListener("keydown", ev => { if (ev.key === "Enter") { ev.preventDefault(); ap(); } })); $("ciTl").onchange = ap; } }
+  if (e.t === "text" && $("ciTx")) {
+    const initialHeight=$("ciTh").value,initialAngle=$("ciTr").value;
+    const ap=()=>{
+      const t=$("ciTx").value,ht=$("ciTh").value,rt=$("ciTr").value,ll=$("ciTl").value;
+      const hh=ht===initialHeight?e.h:K.num(ht),rr=rt===initialAngle?e.rot:K.num(rt);
+      if((ht!==initialHeight&&(!ht.trim()||!Number.isFinite(hh)||hh<=0))||(rt!==initialAngle&&(!rt.trim()||!Number.isFinite(rr)))||!lays[ll]){say("Yazı boyu, açı veya tabaka geçersiz",true);return;}
+      const changed=t!==e.s||hh!==e.h||rr!==e.rot||ll!==e.lay;
+      if(changed){snap0();e.s=t;e.h=hh;e.rot=rr;e.lay=ll;IDX=null;persist();say("Yazı değiştirildi");}
+      el.dispatchEvent(new Event("cad-close-info"));
+    };
+    $("ciTok").onclick=ap;
+    ["ciTx","ciTh","ciTr","ciTl"].forEach(id=>$(id).addEventListener("keydown",ev=>{if(ev.key==="Enter"&&id!=="ciTl"){ev.preventDefault();ev.stopPropagation();ap();}}));
+  } }
 
 // yapı aplikasyonundan: parsel dosyası/plankote + gerçek koordinata oturtulmuş vaziyet
 window.cadVaziyet = (F, V, par, info) => { if (PLAN) editExit(); snap0(); ents = []; lays = { "0": { c: "#ffffff", on: true } }; sel.clear(); IDX = null;
