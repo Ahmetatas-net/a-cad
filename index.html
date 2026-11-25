@@ -13,6 +13,49 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
 
+<script>
+// A drafting frame remains ordinary drawing geometry. Only automatic area operations skip it.
+window.acadDrawingFrame = (() => {
+ const caches=new WeakMap();
+ const norm=value=>String(value||"").toLocaleUpperCase("tr-TR").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^A-Z0-9]+/g," ").trim();
+ const frameLayer=/\b(?:ANTET|LEJANT|LEGEND|CETVEL(?:I)?|TABLO(?:SU)?|TABLE|TITLE ?BLOCK|(?:BILGI|YAZI|METIN) (?:KUTU(?:SU)?|CERCEVE(?:SI)?)|KOORDINAT (?:LISTESI|OZETI)|ALAN CIKTISI|PAFTA CERCEVESI)\b/;
+ const projectLayer=/\b(?:PARSEL|PARCEL|BINA|BUILDING|KAD ALN|ADA SINIRI|KADASTRO|OTURUM)\b/;
+ const heading=/\b(?:TOPLAM (?:INSAAT|INSAT|ALAN)|INSAAT ALANI|KAT ALANLARI|KOORDINAT (?:LISTESI|OZETI|CETVELI)|ACIKLAMALAR|LEJANT|DUZENLEYEN|KONTROL EDEN|ALAN HESABI)\b/;
+ function rect(pts){
+  if(!pts||pts.length<4||pts.length>5)return false;
+  if(pts.length===5&&Math.hypot(pts[0][0]-pts[4][0],pts[0][1]-pts[4][1])>.00001)return false;
+  for(let i=0;i<4;i++){const a=pts[(i+3)%4],b=pts[i],c=pts[(i+1)%4],u=a[0]-b[0],v=a[1]-b[1],x=c[0]-b[0],y=c[1]-b[1],scale=Math.hypot(u,v)*Math.hypot(x,y);if(!scale||Math.abs(u*x+v*y)>scale*.012)return false;}return true;
+ }
+ function cacheFor(source,rev){let c=caches.get(source);if(!c||c.rev!==rev||c.n!==source.length){
+  c={rev,n:source.length,labels:null,results:new WeakMap()};caches.set(source,c);
+ }return c;}
+ function containsLabel(P,source,c){
+  if(!c.labels){c.labels=[];for(const t of source){if(!t.s||t.t&&t.t!=="text")continue;const s=norm(t.s);
+    const marked=heading.test(s)||/^(?:BILGI|NOT|ACIKLAMA)\s*[:.]/.test(String(t.s).toLocaleUpperCase("tr-TR").normalize("NFD").replace(/[\u0300-\u036f]/g,""));
+    const text=String(t.s).trim(),note=!marked&&text.length>=12&&/\s/.test(text);
+    if(!marked&&!note)continue;
+    const p=t.pts?.[0]||[t.e,t.y];if(Number.isFinite(p[0])&&Number.isFinite(p[1]))c.labels.push([p[0],p[1],marked,text.length,Math.abs(t.h||0)]);
+
+   }c.labels.sort((a,b)=>a[0]-b[0]);}
+  const xs=P.map(q=>q[0]),left=Math.min(...xs),right=Math.max(...xs);
+  let lo=0,hi=c.labels.length;while(lo<hi){const m=(lo+hi)>>1;if(c.labels[m][0]<left)lo=m+1;else hi=m;}
+  const a=P[0],b=P[1],d=P[3],ux=b[0]-a[0],uy=b[1]-a[1],vx=d[0]-a[0],vy=d[1]-a[1],det=ux*vy-uy*vx;
+  for(let i=lo;i<c.labels.length&&c.labels[i][0]<=right;i++){
+   const x=c.labels[i][0]-a[0],y=c.labels[i][1]-a[1],u=(x*vy-y*vx)/det,v=(ux*y-uy*x)/det;
+   if(u<0||u>1||v<0||v>1)continue;
+   const [, ,marked,n,h]=c.labels[i];
+   const shorter=Math.min(Math.hypot(ux,uy),Math.hypot(vx,vy)),longer=Math.max(Math.hypot(ux,uy),Math.hypot(vx,vy));
+   if(marked||h>0&&shorter<=4*h&&longer>=3*shorter&&longer<=h*(1.5*n+7))return true;
+  }return false;
+ }
+ return function(e,source,rev=0){
+  if(!e)return false;if(e.acadAreaReportGroup||e.annotationFrame)return true;
+  const lay=norm(String(e.lay||"").split("~")[0]);if(frameLayer.test(lay))return true;
+  if(!e.closed||e.areaHatch||projectLayer.test(lay)||/^\d+\s*[/_]\s*\d+$/.test(e.areaName||e.nativeName||"")||!rect(e.pts))return false;
+  const c=cacheFor(source,rev);if(!c.results.has(e))c.results.set(e,containsLabel(e.pts,source,c));return c.results.get(e);
+ };
+})();
+</script>
 <script id="acad-canli-v2">try {
   if (!localStorage.getItem("acad48-look")) localStorage.setItem("acad48-look","day");
   if (!localStorage.getItem("acad-white-default-v1")) {
@@ -4997,7 +5040,7 @@ window.__DY=window.__DY||function(n){var v=Math.round(n*100)/100;return &#x27;1D
           <li><a href="https://parselsorgu.tkgm.gov.tr" target="_blank" rel="noopener">parselsorgu.tkgm.gov.tr</a> adresini (ya da TKGM Parsel Sorgu uygulamasını) aç, il / ilçe / mahalle / ada / parsel ile sorgula.</li>
           <li>Sonuç penceresindeki indirme düğmesinden <b>GeoJSON</b> ya da <b>KML</b> olarak indir.</li>
           <li>İndirdiğin dosyayı yukarıdaki düğmeyle seç. Coğrafi koordinatlar ITRF96 / TM3'e çevrilir (dilim boylamdan otomatik), il, ilçe, mahalle, pafta, nitelik ve tapu alanı antete yazılır.</li></ol></details>
-        <label class="full">Parsel<select id="aPar"></select></label>
+        <div class="full"><div class="row" style="justify-content:space-between;align-items:center"><label for="aPar">Aktif parsel</label><button type="button" id="aParcelList">＋ Parsel ekle</button></div><select id="aPar" style="width:100%"></select></div>
         <details class="full"><summary class="note" style="cursor:pointer">Köşe koordinatlarını yapıştır (Ad Y X, sırasıyla)</summary>
           <textarea id="aParT" rows="5" placeholder="K1 563527.119 4585994.277&#10;K2 563533.299 4586003.012&#10;…" style="width:100%;margin-top:6px;font:13px monospace;padding:8px;border-radius:7px;border:1px solid var(--line);background:var(--bg);color:var(--ink)"></textarea>
           <button type="button" id="aParTb" style="margin-top:6px">Parseli oluştur</button></details>
@@ -14337,10 +14380,11 @@ function ifzSourceIds(fd) {
 }
 
 function fileCands() { if (!FD) return []; if (FD._c) return FD._c; const out = [];
-  FD.polys.forEach((p, i) => { if (!p.closed || p.pts.length < 3) return; const q = A.clean(p.pts.map(v => [v[0], v[1]]), 0.002, true); const a = A.area(q); if (a >= 20) out.push({ v: "f" + i, lay: p.lay, pts: q, a }); });
+  FD.polys.forEach((p, i) => { if (!p.closed || p.pts.length < 3 || window.acadDrawingFrame(p,FD.texts)) return; const q = A.clean(p.pts.map(v => [v[0], v[1]]), 0.002, true); const a = A.area(q); if (a >= 20) out.push({ v: "f" + i, lay: p.lay, pts: q, a }); });
   const by = {}; FD.lines.forEach(l => (by[l.lay] = by[l.lay] || []).push(l.pts)); FD.polys.forEach(p => { if (!p.closed || p.pts.length < 3) (by[p.lay] = by[p.lay] || []).push(p.pts); });
   let k = 0; const key = P => A.area(P).toFixed(1) + "|" + A.centroid(P).map(v => v.toFixed(1)).join(",");
   const have = new Set(out.map(o => key(o.pts)));
+  for(const p of FD.polys)if(p.closed&&window.acadDrawingFrame(p,FD.texts))have.add(key(p.pts));
   for (const [l, segs] of Object.entries(by)) { // kapalı alanlarla birlikte aynı tabakanın çizgileri de ağa katılır
     const closedL = FD.polys.filter(p => p.lay === l && p.closed).map(p => [...p.pts, p.pts[0]]); for (const f of A.faces([...segs, ...closedL])) { const q = A.clean(f, 0.002, true), a = A.area(q); if (a < 20 || have.has(key(q))) continue; have.add(key(q)); out.push({ v: "l" + (k++), lay: l, pts: q, a, cizgi: true }); } }
   { /* parsel sınırı birden çok tabakaya dağılmışsa (örn. TK_PARSEL + IFRAZ + IRTIBAT) birlikte ağ kur */ const BL = Object.keys(by).filter(l => /PARSEL|[İI]FRAZ|SINIR|KADASTRO|M[ÜU]LK|TK_|IRT[İI]BAT|TAPU/i.test(l));
@@ -14354,6 +14398,7 @@ function fileCands() { if (!FD) return []; if (FD._c) return FD._c; const out = 
   const sourceId=/^f\d+$/.test(o.v)&&/^(\d+)[_/](\d+)$/.exec(FD.polys[Number(o.v.slice(1))]?.nativeName||"");
   const n = sourceId?{ada:sourceId[1],no:sourceId[2]}:parselNo(o.pts);o.no = n;
     o.ad = o.kad ? `Kadastro noktalarından (${o.pts.length} köşe, açıya göre dizildi — sıra yanlışsa adlarla yaz)` : `${n ? (n.ada ? n.ada + "/" : "") + n.no + " parsel" : "tabaka " + o.lay}${o.cizgi ? " (çizgilerden)" : ""}${o.cerceve ? " (pafta çerçevesi?)" : ""}`; });
+  for(let i=out.length-1;i>=0;i--)if(out[i].cizgi&&window.acadDrawingFrame({...out[i],closed:true},FD.texts))out.splice(i,1);
   adaYay(out);
   const surveyIds=ifzSourceIds(FD);
   if(surveyIds.blocks.length)for(const o of out){
@@ -17799,7 +17844,7 @@ window.APLT = { akSheetBW,akSheet,reviewShape82, reviewedLayout83, saveData:()=>
     }catch(e){a.manuelFootprint=old.manual;a.bina=old.bina;a.binaElle=old.elle;a.aplFootApproved=old.approved;a.yer=old.yer;a.dY=old.dY;a.dX=old.dX;a.res=old.res;
       $("aYer").value=prevUI.yer;$("aDY").value=prevUI.dy;$("aDX").value=prevUI.dx;renderBina(false); save();throw e;}
   },
-  toScr: p => [X(p[0]) / dpr, Y(p[1]) / dpr], cvEl: () => cv, TY: () => TY(), tyHesapla: () => tyHesapla(), tyPages: () => tyPages(), tyDocs: () => tyDocs(), tyIMD: d => { IMD = d; }, kmKgmRows: () => kmKgmRows(), kmKgmFiles: () => kmKgmFiles(), kmAxis: () => kmAxis(), akData: () => akData(), ifzData: () => ifzData(), gapYol: p => gapYol(p), KM: () => KM(), kmAday: s => kmParselAday(s), kmHesapla: () => kmHesapla(), kmSetSinir: (p, s) => kmSetSinir(p, s), kmPlanData: () => kmPlanData(), kmParcelPages: r => kmParcelPages(r), fileCands: () => fileCands(), parFromMim: () => parFromMim(), pagesNow, get PV() { return PV; }, vazCands, vazTexts, get PK() { return PK; }, pkZ, closeAll, fromCad, setParsel, scr: p => [X(p[0]) / dpr, Y(p[1]) / dpr], S, get FD() { return FD; }, get MD() { return MD; }, place, fitA, drawA, ifzData, aplData, parts, readAny, setFD: (d, n) => { FD = d; FDname = n; } };
+  toScr: p => [X(p[0]) / dpr, Y(p[1]) / dpr], cvEl: () => cv, TY: () => TY(), tyHesapla: () => tyHesapla(), tyPages: () => tyPages(), tyDocs: () => tyDocs(), tyIMD: d => { IMD = d; }, kmKgmRows: () => kmKgmRows(), kmKgmFiles: () => kmKgmFiles(), kmAxis: () => kmAxis(), akData: () => akData(), ifzData: () => ifzData(), gapYol: p => gapYol(p), KM: () => KM(), kmAday: s => kmParselAday(s), kmHesapla: () => kmHesapla(), kmSetSinir: (p, s) => kmSetSinir(p, s), kmPlanData: () => kmPlanData(), kmParcelPages: r => kmParcelPages(r), fileCands: () => fileCands(), get parcelFileName(){return FDname}, parFromMim: () => parFromMim(), pagesNow, get PV() { return PV; }, vazCands, vazTexts, get PK() { return PK; }, pkZ, closeAll, fromCad, setParsel, scr: p => [X(p[0]) / dpr, Y(p[1]) / dpr], S, get FD() { return FD; }, get MD() { return MD; }, place, fitA, drawA, ifzData, aplData, parts, readAny, setFD: (d, n) => { FD = d; FDname = n; } };
 })();
 
 </script>
@@ -21256,6 +21301,7 @@ const showAreaHatch=areaDisplayPreference("cadAreaHatchToggle","acad-area-hatch-
 const showAreaName=areaDisplayPreference("cadAreaNameToggle","acad-area-name-visible","Alan adı");
 const showFrontages=areaDisplayPreference("cadFrontageToggle","acad-area-frontages-visible","Alan cephesi");
 const ROAD_NETWORK_LAYER = "YOL_AGI";
+function cadFrame(e){return window.acadDrawingFrame(e,ents,FVER);}
 const ALAN_VIS = (()=>{
  let hatchD=0,hatch=null;
  const number=n=>Number(n).toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:3});
@@ -21435,7 +21481,7 @@ function draw() { liveTick(); if(CAD_RESIZE_DIRTY){
     cx.save();cx.fillStyle='rgba(48,153,228,.63)';cx.fill(roadPath);cx.fillStyle='rgba(225,170,67,.055)';cx.fill(parcelsPath);cx.fillStyle="rgba(61,161,115,.34)";cx.fill(parksPath);cx.restore();
   }
 
-  for(const e of visibleEntities){if(e.roadArea||e.roadBorder||e.t!=='pline'||!e.closed||e.pts?.length<3||!lays[e.lay]?.on)continue;const parcel=roadParcel(e);const _alanK=!!(e.areaHatch||/^ALAN_CEVIR(?:$|_)/i.test(e.lay));if(isSourceSolid(e)||e.fill)continue;
+  for(const e of visibleEntities){if(e.roadArea||e.roadBorder||e.t!=='pline'||!e.closed||e.pts?.length<3||!lays[e.lay]?.on)continue;const parcel=roadParcel(e);const _alanK=!!(e.areaHatch||/^ALAN_CEVIR(?:$|_)/i.test(e.lay));if(isSourceSolid(e)||e.fill||cadFrame(e))continue;
     const displayArea=_alanK||e.id===ALAN_AKTIF||eligible(e);
     if(!displayArea&&!(showFrontages()&&nativeArea(e)&&!feature(e)))continue;
     const b=ebb(e);if(b&&(b[2]<vx0||b[0]>vx1||b[3]<vy0||b[1]>vy1))continue;
@@ -23333,7 +23379,8 @@ const ACAD_CEPHE = (() => {
   const textSafe = v => String(v==null?'':v).replace(/[\u0000-\u001f\u007f]/g,' ').slice(0,130);
   const plain = v => String(v||'ALAN').normalize('NFKD').replace(/[^\w-]/g,'_').slice(0,50);
   const signed = P => P.reduce((s,a,i)=>{const b=P[(i+1)%P.length];const x0=P[0][0],y0=P[0][1];return s+(a[0]-x0)*(b[1]-y0)-(b[0]-x0)*(a[1]-y0);},0);
-  function get(e){
+  function get(e,moduleSource){
+    if(!moduleSource&&cadFrame(e))throw Error('Bu nesne bir bilgi çerçevesidir. Proje alanını seçin.');
     if(!e||e.t!=='pline'||!e.closed||!Array.isArray(e.pts)||e.pts.length<3)throw Error('Kapalı alan seçilmedi.');
     const src=e.pts, P=src.length>3&&Math.hypot(src[0][0]-src.at(-1)[0],src[0][1]-src.at(-1)[1])<1e-8?src.slice(0,-1):src;
     window.ACAD_AREA_EDIT.validate(P);
@@ -23342,25 +23389,26 @@ const ACAD_CEPHE = (() => {
     if(!len.every(v=>v>0.0001&&Number.isFinite(v)))throw Error('Sıfır uzunluklu kenar: kaynak alan kontrol edilmeli.');
     const signed2=signed(P),outSign=signed2>=0?1:-1,peri=len.reduce((a,b)=>a+b,0),bb=[Math.min(...P.map(q=>q[0])),Math.min(...P.map(q=>q[1])),Math.max(...P.map(q=>q[0])),Math.max(...P.map(q=>q[1]))];
     if(!(area>0)&&Number.isFinite(area))throw Error('Alan geçersiz.');
-    const names=P.map((p,i)=>{let n='';try{const matches=near(p,0.025,true).filter(o=>o.t==='point'&&o.n&&Math.hypot(o.pts[0][0]-p[0],o.pts[0][1]-p[1])<=0.025);n=matches.length===1?textSafe(matches[0].n):'';}catch(_){}return n||'P'+(i+1);});
-    const meta=window.ACAD_PARCEL_META?.forEntity(e)||null;return {e,P,len,names,area,peri,bb,sign:outSign,ada:meta?.ada||'',parsel:meta?.parsel||'',origin:meta?.origin||'',source:JSON.stringify(src),sourceName:textSafe(CDOC?.name||'Çizim'),label:textSafe(e.areaName||e.lay||'ALAN')};
+    const names=P.map((p,i)=>{if(moduleSource)return textSafe(moduleSource.names[i]||('P'+(i+1)));let n='';try{const matches=near(p,0.025,true).filter(o=>o.t==='point'&&o.n&&Math.hypot(o.pts[0][0]-p[0],o.pts[0][1]-p[1])<=0.025);n=matches.length===1?textSafe(matches[0].n):'';}catch(_){}return n||'P'+(i+1);});
+    const meta=moduleSource||window.ACAD_PARCEL_META?.forEntity(e)||null;return {e,P,len,names,area,peri,bb,sign:outSign,ada:meta?.ada||'',parsel:meta?.parsel||'',origin:meta?.origin||'',source:JSON.stringify(src),sourceName:textSafe(moduleSource?.name||CDOC?.name||'Çizim'),label:textSafe(e.areaName||e.lay||'ALAN')};
   }
   const exists = a => ents.some(o=>o===a.e);
   let pickCacheList=null,pickCacheRef=null,pickCacheLength=-1;
-  function pick(point){let best=null,ba=Infinity,preferred=null,pra=Infinity;
+  function pick(point,parcelMode=false){let best=null,ba=Infinity,preferred=null,pra=Infinity,parcel=null,pa=Infinity;
     if(pickCacheRef!==ents||pickCacheLength!==ents.length){
       pickCacheRef=ents;pickCacheLength=ents.length;
       pickCacheList=ents.filter(o=>o.t==='pline'&&o.closed&&o.pts?.length>=3&&!o.fill&&!o.sourceSolid&&sourceAreaRole(o.lay)!=='solid');
     }
     for(const o of pickCacheList){if(lays[o.lay]?.on===false)continue;
       const b=ebb(o);if(!b||point[0]<b[0]||point[0]>b[2]||point[1]<b[1]||point[1]>b[3])continue;
-      if(!inPolyC(o.pts,point[0],point[1]))continue;
+      if(!inPolyC(o.pts,point[0],point[1])||cadFrame(o)||parcelMode&&(o.roadArea||o.roadBorder))continue;
       let ar;try{ar=window.ACAD_AREA_EDIT.area(o.pts);}catch(_){continue;}
       if(!(ar>0))continue;
+      if(parcelMode&&(roadParcel(o)||/^KAD_ALN$/i.test(o.lay)||/^\d+[/_]\d+$/.test(o.areaName||""))&&ar<pa){parcel=o;pa=ar;}
       if(ar<ba){best=o;ba=ar;}
       if((sourceAreaRole(o.lay)==='area'||/^KAD_ALN$/i.test(o.lay))&&ar<pra){preferred=o;pra=ar;}
     }
-    return preferred||best;
+    return parcel||preferred||best;
   }
   function setLabels(a,showPts=true){if(!exists(a)||JSON.stringify(a.e.pts)!==a.source)throw Error('Kaynak alan değişti. Tekrar seçin.');
     // Transaction: remove only annotations created by THIS command for this polygon.
@@ -23511,7 +23559,7 @@ const ACAD_CEPHE = (() => {
     ctx.font='16px Arial';ctx.fillStyle='#496576';ctx.fillText(`Kaynak: ${a.sourceName} · Tabaka: ${a.e.lay} · Nesne: ${a.e.id} · Koordinatlar değiştirilmemiştir.`,68,1096);
   }
   async function pdf(a){if(!exists(a)||JSON.stringify(a.e.pts)!==a.source)throw Error('Alan değişti. Yeniden seç.');
-    const pages=[];const count=view(a).totalPages,dpr=(window.matchMedia?.('(pointer:coarse)')?.matches)?1.55:2.45;
+    const pages=a.parsel?[...groupSketchPages([a])]:[];const count=view(a).totalPages,dpr=(window.matchMedia?.('(pointer:coarse)')?.matches)?1.55:2.45;
     for(let i=0;i<count;i++){
       const canvas=document.createElement('canvas');canvas.width=Math.round(1600*dpr);canvas.height=Math.round(1131*dpr);
       const c=canvas.getContext('2d');c.scale(dpr,dpr);paintPage(c,a,i);
@@ -23519,7 +23567,7 @@ const ACAD_CEPHE = (() => {
       if(i%2===1)await new Promise(r=>setTimeout(r,0));
     }
     await save_(`${plain(a.label)}_CEPHE_KROKI.pdf`,await O.pdf(pages));
-    say(`${a.P.length} köşeli alanın cephe ve koordinat kroki PDF'si kaydedildi (${count} sayfa).`);
+    say(`${a.P.length} köşeli alanın cephe ve koordinat kroki PDF'si kaydedildi (${pages.length} sayfa).`);
   }
   function options(a,autoText=true){
     let rr={labels:0,overlap:0};if(autoText)rr=setLabels(a,true);
@@ -23541,7 +23589,7 @@ const ACAD_CEPHE = (() => {
   return {get,pick,setLabels,options,pdf,start,paintPage,pageCount:a=>view(a).totalPages};
 })();
 CMDS.ALANCEPHEYAZ=()=>ACAD_CEPHE.start('labels');
-CMDS.ALANCEPHEPDF=()=>ACAD_CEPHE.start('pdf');
+CMDS.ALANCEPHEPDF=()=>{if(groupSelection().length>1){try{groupSketchPdf(groupData()).catch(err=>say(err.message,true));}catch(err){say(err.message,true);}return;}ACAD_CEPHE.start('pdf');};
 ALIAS.ACY='ALANCEPHEYAZ';ALIAS.ACP='ALANCEPHEPDF';
 window.ACAD_CEPHE_TEST={
  geom:e=>{const a=ACAD_CEPHE.get(e);return {area:a.area,perimeter:a.peri,lengths:a.len,names:a.names,source:a.sourceName,pts:a.P};},
@@ -29017,14 +29065,15 @@ $("cadF2").addEventListener("change", async e => { const f = e.target.files[0]; 
     const source=ents, name=f.name.replace(/\.[^.]+$/,"");
     window.acadConsumeDwg82=()=>{window.acadConsumeDwg82=null;if(ents===source && !window.APLT.FD)window.APLT.fromCad(toFD(ents),name,null,null);};
   }else{window.acadConsumeDwg82=null;window.APLT.fromCad(toFD(ents),f.name.replace(/\.[^.]+$/,""),null,null);} });
+const cadParcelSource=new WeakMap();
 const toFD = L => { L = L.filter(e => !(typeof e.lay === 'string' && e.lay.startsWith('MIM_KOORDINATSIZ:'))); /* koordinatsız mimari paftaları (projenin yanına dizilmiş) koordinatlı modüllere gönderilmez */ const d = { lines: [], polys: [], points: [], texts: [], circles: [] };
   L.forEach(e => { if (!lays[e.lay] || lays[e.lay].on === false) return; const q = e.pts;
     if (e.t === "line") d.lines.push({ lay: e.lay, pts: q.map(p => [p[0], p[1], p[2] || 0]) });
-    else if (e.t === "pline") d.polys.push({ lay: e.lay, nativeName:e.areaName||e.n||"", sourceSolid:e.sourceSolid, closed: !!e.closed, pts: q.map(p => [p[0], p[1], p[2] || 0]) });
+    else if (e.t === "pline") d.polys.push({ lay: e.lay, nativeName:e.areaName||e.n||"", sourceSolid:e.sourceSolid, annotationFrame:cadFrame(e)||undefined, closed: !!e.closed, pts: q.map(p => [p[0], p[1], p[2] || 0]) });
     else if (e.t === "point") d.points.push({ lay: e.lay, n: e.n || "", e: q[0][0], y: q[0][1], z: q[0][2] || 0 });
     else if (e.t === "text") d.texts.push({ lay: e.lay, s: e.s, e: q[0][0], y: q[0][1], h: e.h || 1, rot: e.rot || 0, al: e.al, c: lays[e.lay] && lays[e.lay].c });
     else if (e.t === "circle") { const P = []; for (let k = 0; k < 36; k++) { const a = k / 36 * 2 * Math.PI; P.push([e.c[0] + e.r * Math.cos(a), e.c[1] + e.r * Math.sin(a), 0]); } d.polys.push({ lay: e.lay, closed: true, pts: P }); } });
-  return d; };
+  cadParcelSource.set(d,ents);return d; };
 
 function ifzLocalCadContext(P,selectedEntity){
  const pbb=A.bbox(P),w=pbb[2]-pbb[0],h=pbb[3]-pbb[1],R=Math.max(45,Math.min(120,Math.max(w,h)*.8));
@@ -29274,13 +29323,13 @@ try{const box=$("cadBox");if(box&&typeof ResizeObserver!=='undefined'){
  const observer=new ResizeObserver(()=>{if(!$("v-cad").hidden)acad65SizeRequest(false);});observer.observe(box);
 }}catch(e){console.warn('CAD panel boyutu gözlenemedi',e)}
 try { arzSave(); } catch (e) {}
-const isGroupArea=e=>e.t==="pline"&&e.closed&&e.pts?.length>=3&&!e.roadArea&&!e.roadBorder&&!e.fill&&!e.sourceSolid&&sourceAreaRole(e.lay)!=="solid"&&lays[e.lay]?.on!==false;
+const isGroupArea=e=>!cadFrame(e)&&e.t==="pline"&&e.closed&&e.pts?.length>=3&&!e.roadArea&&!e.roadBorder&&!e.fill&&!e.sourceSolid&&sourceAreaRole(e.lay)!=="solid"&&lays[e.lay]?.on!==false;
 const groupSelection=()=>selEnts().filter(isGroupArea);
 function chooseGroup(){
  if(!ents.length)return say("Önce çizimi açın.",true);
  const original=new Set(sel),finish=()=>{cmd=null;markTools();ctxBar();draw();if(groupSelection().length)parcelGroupPanel();};
  cmd={name:"Çoklu parsel",raw:true,onlyPoint:()=>true,groupPick:true,
-   pt(p){const e=ACAD_CEPHE.pick(p);if(!e||!isGroupArea(e))return say("Kapalı bir alanın içine dokunun.",true);
+   pt(p){const e=ACAD_CEPHE.pick(p,true);if(!e||!isGroupArea(e))return say("Kapalı bir alanın içine dokunun.",true);
      if(sel.has(e.id))sel.delete(e.id);else sel.add(e.id);ctxBar();draw();},
    done:finish,cancel(){sel.clear();for(const id of original)sel.add(id);}
  };
@@ -29293,11 +29342,65 @@ function groupData(){
 function groupCaption(rows){
  const byBlock=new Map(),other=[];
  for(const a of rows){if(!a.ada||!a.parsel){other.push(groupName(a));continue;}if(!byBlock.has(a.ada))byBlock.set(a.ada,[]);byBlock.get(a.ada).push(a.parsel)}
- return [...byBlock].map(([block,items])=>block+"/"+items.join("-")).concat(other).join(" · ");
+ return [...byBlock].sort(([a],[b])=>a.localeCompare(b,"tr",{numeric:true})).map(([block,items])=>block+"/"+items.sort((a,b)=>String(a).localeCompare(String(b),"tr",{numeric:true})).join("-")).concat(other).join(" · ");
 }
 const validGroup=rows=>{const current=new Set(ents);return rows.every(a=>current.has(a.e)&&isGroupArea(a.e)&&JSON.stringify(a.e.pts)===a.source)};
-async function groupPdf(rows){
+function* groupSketchPages(rows,external){
+ const selected=new Set(rows.map(a=>a.e)),context=external||ents.filter(e=>isGroupArea(e)&&(roadParcel(e)||/^KAD_ALN$/i.test(e.lay)||/^\d+[/_]\d+$/.test(e.areaName||""))&&!selected.has(e)).map(e=>({e,P:e.pts,bb:ebb(e)}));
+ const extent=list=>list.reduce((b,a)=>[Math.min(b[0],a.bb[0]),Math.min(b[1],a.bb[1]),Math.max(b[2],a.bb[2]),Math.max(b[3],a.bb[3])],[Infinity,Infinity,-Infinity,-Infinity]);
+ function layout(list,b,size){
+  let [w,h]=size;if(b[3]-b[1]>1.18*(b[2]-b[0]))[w,h]=[h,w];
+  const W=w-20,H=h-38,s=.81*Math.min(W/Math.max(.001,b[2]-b[0]),H/Math.max(.001,b[3]-b[1]));
+  const mx=(b[0]+b[2])/2,my=(b[1]+b[3])/2;
+  const map=p=>[10+W/2+(p[0]-mx)*s,24+H/2-(p[1]-my)*s];
+  const visible=a=>a.bb[2]>=mx-W/(2*s)&&a.bb[0]<=mx+W/(2*s)&&a.bb[3]>=my-H/(2*s)&&a.bb[1]<=my+H/(2*s);
+  const entries=list.map(a=>({a,Q:a.P.map(map),chosen:true,ada:a.ada,no:a.parsel||groupName(a)}));
+  for(const a of context){if(!visible(a))continue;const meta=a.meta||window.ACAD_PARCEL_META.forEntity(a.e)||{};entries.push({a,Q:a.P.map(map),ada:meta.ada,no:meta.parsel||""});}
+  const placed=[],blocks=new Set();let fit=true;
+  for(const r of entries){
+   if(!r.no)continue;
+   const Q=r.Q,bb=extent([{bb:A.bbox(Q)}]),left=Math.max(10,bb[0]),right=Math.min(w-10,bb[2]),top=Math.max(24,bb[1]),bottom=Math.min(h-14,bb[3]);if(right<=left||bottom<=top)continue;
+   const block=r.ada&&!blocks.has(r.ada)?r.ada:"",font=r.chosen?3.3:2.8;
+   const half=Math.max(String(r.no).length*font*.34,block.length*font*.34)+.45,height=block?font*2.45:font*1.25;
+   const anchor=map(APLGEO.label(r.a.P)),candidates=[anchor];for(let i=1;i<=9;i++)for(let j=1;j<=9;j++)candidates.push([left+(right-left)*i/10,top+(bottom-top)*j/10]);
+   candidates.sort((p,q)=>Math.hypot(p[0]-anchor[0],p[1]-anchor[1])-Math.hypot(q[0]-anchor[0],q[1]-anchor[1]));
+   for(const [x,y] of candidates){const box=[x-half,y-height/2,x+half,y+height/2];if(box[0]<left||box[2]>right||box[1]<top||box[3]>bottom)continue;
+    if(placed.some(b=>b[0]<box[2]&&b[2]>box[0]&&b[1]<box[3]&&b[3]>box[1]))continue;
+    if(![[box[0],box[1]],[box[2],box[1]],[box[2],box[3]],[box[0],box[3]],[x,y]].every(p=>inPolyC(Q,...p)))continue;
+    r.text={x,y,block,font};if(block)blocks.add(block);placed.push(box);break;
+   }
+   if(!r.text&&r.chosen){
+    fit=false;
+    if(list.length===1){r.text={x:anchor[0],y:anchor[1],block,font:2.4};if(block)blocks.add(block);}
+   }
+  }
+  return {w,h,entries,fit};
+ }
+ function* make(list){
+  const b=extent(list);let plan=layout(list,b,[297,210]);if(!plan.fit)plan=layout(list,b,[420,297]);
+  if(!plan.fit&&list.length>1){
+   const axis=b[2]-b[0]>b[3]-b[1]?0:1,sorted=list.slice().sort((a,c)=>(a.bb[axis]+a.bb[axis+2])-(c.bb[axis]+c.bb[axis+2])),mid=Math.ceil(sorted.length/2);
+   yield* make(sorted.slice(0,mid));yield* make(sorted.slice(mid));return;
+  }
+  const {w,h,entries}=plan,cv=document.createElement("canvas"),px=6;cv.width=w*px;cv.height=h*px;cv.pw=w*72/25.4;cv.ph=h*72/25.4;
+  const c=cv.getContext("2d");c.scale(px,px);c.fillStyle="white";c.fillRect(0,0,w,h);c.fillStyle="#111";c.font="bold 5.3px Arial";c.fillText(groupCaption(list),10,13,w-20);
+  c.font="3px Arial";c.fillText("Parsel krokisi",10,19);c.save();c.beginPath();c.rect(10,24,w-20,h-38);c.clip();
+  for(const chosen of [false,true])for(const r of entries){if(!!r.chosen!==chosen)continue;c.beginPath();r.Q.forEach((p,i)=>i?c.lineTo(...p):c.moveTo(...p));c.closePath();c.strokeStyle=chosen?"#171717":"#828282";c.lineWidth=chosen?.48:.16;c.lineJoin="round";c.stroke();}
+  c.textAlign="center";c.textBaseline="middle";for(const r of entries){if(!r.text)continue;const {x,y,block,font}=r.text;c.fillStyle=r.chosen?"#111":"#4b4b4b";c.font=(r.chosen?"bold ":"")+font+"px Arial";if(block){c.fillText(block,x,y-font*.56);c.fillRect(x-Math.max(1.3,block.length*font*.24),y-.12,Math.max(2.6,block.length*font*.48),.18);}c.fillText(r.no,x,y+(block?font*.58:0));}
+  c.restore();c.strokeStyle="#444";c.lineWidth=.18;c.strokeRect(10,24,w-20,h-38);c.font="2.8px Arial";c.fillStyle="#333";c.fillText(list[0].sourceName,10,h-8,w-84);c.textAlign="right";c.fillText("Kalın çizgi: seçili parsel     İnce çizgi: komşu",w-10,h-8);
+  yield cv;
+ }
+ yield* make(rows);
+}
+async function groupSketchPdf(rows){
+ if(!validGroup(rows))throw Error("Seçim değişti. Parselleri yeniden seçin.");
+ const blob=await O.pdf(groupSketchPages(rows));const name=groupCaption(rows).replace(/[^0-9A-Za-z_-]+/g,"_").slice(0,100);
+ if(await save_(name+"_Kroki.pdf",blob)!==false)say("Parsel krokisi kaydedildi.");
+}
+
+async function groupPdf(rows,external){
  function* pages(){
+  if(rows.length>1)yield* groupSketchPages(rows,external);
   const cv=document.createElement("canvas");cv.width=2000;cv.height=1414;cv.pw=420/25.4*72;cv.ph=297/25.4*72;
   const c=cv.getContext("2d");c.scale(cv.width/1600,cv.height/1131);
   for(let first=0;first<rows.length;first+=18){
@@ -29332,9 +29435,9 @@ async function groupAkr(rows,index=0,newSession=true){
  const fd=toFD(ifzLocalCadContext(coords,a.e).entities);
  await showTab("akr");if(document.querySelector('.tabs button[aria-selected=true]')?.dataset.tab!=="akr")return;
  state.akr=saved?.akr||baseForm;
- if(saved)Object.assign(state.antet,saved.ant);else for(const field of ["malik","tapuAlan","tecviz","pafta","cins"])state.antet[field]="";
+ if(!saved)for(const field of ["malik","tapuAlan","tecviz","pafta","cins"])state.antet[field]="";
  APLT.fromCad(fd,projName(),coords,{ada:a.ada,no:a.parsel},true,names,"akr",true);
- if(saved){state.parsel.names=saved.names;state.parsel.autoNames=saved.auto}
+ if(saved){Object.assign(state.antet,saved.ant);state.parsel.names=saved.names;state.parsel.autoNames=saved.auto}
  state.parsel.cadParcelKey=key;state.parsel.cadGroupAkr=true;session.current=key;APLT.saveData();
  bar.hidden=false;bar.querySelector("select").replaceChildren(...rows.map((q,i)=>new Option(groupName(q),i,i===index,i===index)));
  bar.querySelector("select").onchange=async function(){this.disabled=true;try{await groupAkr(rows,+this.value,false)}catch(ex){this.value=String(index);alert(ex.message)}finally{this.disabled=false}};
@@ -29363,7 +29466,7 @@ function parcelGroupPanel(preferred){
  let rows;try{rows=groupData()}catch(ex){say(ex.message,true);return}
  if(!rows.length){say("Kapalı bir alan seçin.",true);return;}
  const dlg=document.createElement("dialog");dlg.className="cad-group-dialog";
- dlg.innerHTML='<h2>Seçili alanlar <button type="button" data-close>Kapat</button></h2><p data-caption></p><div class="cad-group-scroll"><table><thead><tr><th>Parsel / alan</th><th>Alan (m²)</th><th>Çevre (m)</th></tr></thead><tbody></tbody></table></div><p role="status"></p><div class="cad-group-actions"><button data-more>Seçime devam et</button><button data-action="pdf">Özet ve kroki PDF</button><button data-action="akr">Aplikasyona aç</button><button data-action="ifz">Birleştir ve ifraza aç</button></div>';
+ dlg.innerHTML='<h2>Seçili alanlar <button type="button" data-close>Kapat</button></h2><p data-caption></p><div class="cad-group-scroll"><table><thead><tr><th>Parsel / alan</th><th>Alan (m²)</th><th>Çevre (m)</th></tr></thead><tbody></tbody></table></div><p role="status"></p><div class="cad-group-actions"><button data-more>Seçime devam et</button><button data-action="sketch">Kroki PDF Yap</button><button data-action="pdf">Koordinat ve cephe özeti PDF</button><button data-action="akr">Aplikasyona aç</button><button data-action="ifz">Birleştir ve ifraza aç</button></div>';
  const close=()=>dlg.remove();dlg.oncancel=close;dlg.querySelector("[data-close]").onclick=close;
  dlg.querySelector("[data-caption]").textContent=groupCaption(rows);
  dlg.querySelector("tbody").innerHTML=rows.map(a=>'<tr><td>'+esc_(groupName(a))+'</td><td>'+tr2_(a.area)+'</td><td>'+tr2_(a.peri)+'</td></tr>').join("");
@@ -29373,11 +29476,54 @@ function parcelGroupPanel(preferred){
  for(const b of dlg.querySelectorAll('[data-action]'))b.onclick=async()=>{
   const op=b.dataset.action;dlg.querySelectorAll('button').forEach(x=>x.disabled=true);status.textContent=op==="pdf"?"PDF hazırlanıyor…":"Parseller kontrol ediliyor…";
   try{if(!validGroup(rows))throw Error("Çizim değişti. Parselleri tekrar seçin.");
-   if(op==="pdf")await groupPdf(rows);else if(op==="akr")await groupAkr(rows);else if(!await groupIfz(rows)){status.textContent="İşlem iptal edildi.";return;}close();
+   if(op==="sketch")await groupSketchPdf(rows);else if(op==="pdf")await groupPdf(rows);else if(op==="akr")await groupAkr(rows);else if(!await groupIfz(rows)){status.textContent="İşlem iptal edildi.";return;}close();
   }catch(ex){status.textContent=ex.message}finally{dlg.querySelectorAll('button').forEach(x=>x.disabled=false);dlg.querySelector('[data-action=ifz]').disabled=rows.length<2}
  };
  document.body.append(dlg);dlg.showModal();dlg.querySelector('[data-action="'+(preferred||"pdf")+'"]')?.focus();
 }
+
+const moduleLists=new WeakMap();
+$("aParcelList").onclick=()=>{
+ const fd=APLT.FD;
+ if(!fd){$("aParInfo").textContent="Listeye parsel eklemek için önce bir parsel dosyası açın.";return;}
+ const mode=document.querySelector('.tabs [aria-selected=true]')?.dataset.tab;
+ const cad=cadParcelSource.get(fd)===ents,source=cad?ents:fd;
+ if(!moduleLists.has(source))moduleLists.set(source,new Map());
+ const lists=moduleLists.get(source),active=APLT.S().parsel;
+ let items;
+ if(cad){
+  const areas=ents.filter(isGroupArea),lots=areas.filter(e=>roadParcel(e)||/^KAD_ALN$/i.test(e.lay)||/^\d+[/_]\d+$/.test(e.areaName||""));
+  items=(lots.length?lots:areas).map(e=>{const m=e.areaName?null:window.ACAD_PARCEL_META.forEntity(e);return {id:e.id,e,P:e.pts,label:e.areaName||(m?.parsel?[m.ada,m.parsel].filter(Boolean).join("/"):e.lay+" · "+e.id)};});
+ }else items=APLT.fileCands().filter(o=>!o.cerceve&&!o.kad).map(o=>({id:o.v,o,P:/^f\d+$/.test(o.v)?fd.polys[+o.v.slice(1)].pts:o.pts,label:o.ad}));
+ const openRing=p=>p&&p.length>3&&Math.hypot(p[0][0]-p.at(-1)[0],p[0][1]-p.at(-1)[1])<1e-7?p.slice(0,-1):p;
+ const same=(a,b)=>{a=openRing(a);b=openRing(b);return !!a&&!!b&&a.length===b.length&&a.every((p,i)=>p[0]===b[i][0]&&p[1]===b[i][1]);};
+ const current=items.find(o=>same(o.P,active?.raw)||same(o.P,active?.pts));
+ const saved=lists.get(mode);
+ const checked=new Set(items.filter(o=>saved?saved.has(o.id):o===current||cad&&(mode==="akr"&&active?.cadGroupAkr&&groupAkrSession?.rows.some(r=>r.e===o.e)||mode==="ifz"&&active?.kaynakParseller?.some(r=>r.id===o.id))).map(o=>o.id));
+ const dlg=document.createElement("dialog");dlg.className="cad-group-dialog";dlg.setAttribute("aria-label","Parsel listesi");
+ dlg.innerHTML='<h2>Parsel listesi<button data-close>Kapat</button></h2><p data-active></p><input type="search" aria-label="Ada veya parsel ara" placeholder="Ada veya parsel ara" style="width:100%;padding:8px"><div class="cad-group-scroll" data-items></div><p role="status"></p><div class="cad-group-actions"><button data-save>Listeyi uygula</button><button data-pdf>Özet ve kroki PDF</button><button data-work></button></div>';
+ const status=dlg.querySelector('[role=status]'),search=dlg.querySelector("input"),box=dlg.querySelector('[data-items]'),work=dlg.querySelector('[data-work]'),pdf=dlg.querySelector('[data-pdf]');
+ dlg.querySelector('[data-active]').textContent=current?"Aktif parsel · "+current.label:"Açık dosyanın parselleri";
+ const merge=mode==="ifz";work.hidden=!cad||(!merge&&mode!=="akr");work.textContent=merge?"Birleştir ve ifraza aç":"Aplikasyona aç";
+ function update(){pdf.disabled=!checked.size;work.disabled=checked.size<(merge?2:1);status.textContent=checked.size+" parsel seçili";}
+ function render(){const query=search.value.trim().toLocaleLowerCase("tr"),f=document.createDocumentFragment();for(const o of items){
+   if(!o.label.toLocaleLowerCase("tr").includes(query))continue;const label=document.createElement("label"),input=document.createElement("input");label.style.cssText="display:flex;align-items:center;gap:8px;padding:5px";input.type="checkbox";input.checked=checked.has(o.id);input.onchange=()=>{if(input.checked)checked.add(o.id);else checked.delete(o.id);update();};label.append(input,document.createTextNode(o.label));f.append(label);
+ }box.replaceChildren(f);if(!box.childElementCount)box.textContent="Parsel bulunamadı.";update();}
+ function commit(){lists.set(mode,new Set(checked));dlg.remove();}
+ dlg.querySelector('[data-save]').onclick=commit;dlg.querySelector('[data-close]').onclick=dlg.oncancel=()=>dlg.remove();search.oninput=render;
+ async function process(exportPdf){
+  dlg.querySelectorAll('button,input').forEach(b=>b.disabled=true);try{
+   if(fd!==APLT.FD||cad&&source!==ents)throw Error("Çizim değişti. Listeyi yeniden açın.");
+   const rows=items.filter(o=>checked.has(o.id)).map(item=>{if(cad)return ACAD_CEPHE.get(item.e);
+    const {o,P}=item;const names=P.map((q,i)=>{if(item===current&&same(P,active.raw))return active.names[i];const m=fd.points.filter(t=>t.n&&Math.hypot(t.e-q[0],t.y-q[1])<=.002);return m.length===1?m[0].n:"";});
+    return ACAD_CEPHE.get({t:"pline",closed:true,id:o.v,lay:o.lay,areaName:o.ad,pts:P},{ada:o.no?.ada,parsel:o.no?.no,names,name:APLT.parcelFileName});
+   });
+   if(exportPdf){const nearby=cad?undefined:items.filter(it=>!checked.has(it.id)&&it.o.no?.no).map(it=>({P:it.P,bb:A.bbox(it.P),meta:{ada:it.o.no.ada,parsel:it.o.no.no}}));await groupPdf(rows,nearby);}else if(merge){if(!await groupIfz(rows))return;}else{const keep=active?.cadGroupAkr&&groupAkrSession?.current===active.cadParcelKey;await groupAkr(rows,Math.max(0,rows.findIndex(r=>r.e.id===current?.id)),!keep);groupAkrSession.rows=rows;}
+   commit();
+  }catch(err){status.textContent=err.message;}finally{dlg.querySelectorAll('button,input').forEach(b=>b.disabled=false);pdf.disabled=!checked.size;work.disabled=checked.size<(merge?2:1);}
+ }
+ pdf.onclick=()=>process(true);work.onclick=()=>process(false);render();document.body.append(dlg);dlg.showModal();
+};
 
 function parcelTransferKey(e){return JSON.stringify([CDOC?.name||'',e.lay,e.id,e.pts]);}
  /* A-CAD 7.1.15.56 - Active parcel, no destructive changes to source coordinates. */
@@ -29418,7 +29564,8 @@ function parcelTransferKey(e){return JSON.stringify([CDOC?.name||'',e.lay,e.id,e
     if(selectOnly){sel.clear();sel.add(e.id);}draw();announce();say(`${current.P.length} köşeli parsel seçildi · ${fmt(a.area)} m² · ${e.lay}`);return true;
   }
   function choose(){if(!ents.length)return say('Önce proje dosyasını aç.',true);
-    cmd={name:'Parsel Seç',raw:true,rcExit:true,pt(p){const e=ACAD_CEPHE.pick(p);if(!e){say('Kapalı parselin içine tıkla. Alan bulunamadı.',true);return;}activate(e);cmd=null;markTools();draw();}};
+    grip=null;drag=null;winBox=null;
+    cmd={name:'Parsel Seç',raw:true,rcExit:true,pt(p){const e=ACAD_CEPHE.pick(p,true)||pickCandidates(X(p[0])/dpr,Y(p[1])/dpr).find(hit=>isGroupArea(hit.e))?.e;if(!e){say('Kapalı parselin içine tıkla. Alan bulunamadı.',true);return;}if(activate(e)){cmd=null;markTools();ctxBar();}draw();}};
     prompt_('PARSEL SEÇ: kapalı parsel alanının içine tıkla · Esc ile çık');
   }
   function update(ada,parsel){if(!valid())return false;ada=clean(ada);parsel=clean(parsel);
@@ -29439,7 +29586,7 @@ function parcelTransferKey(e){return JSON.stringify([CDOC?.name||'',e.lay,e.id,e
   let navigating=false;
   function navigate(dest){
     if($('v-cad').hidden||!['ifz','apl','akr','trk','kam'].includes(dest))return false;
-    const areas=selEnts().filter(e=>e.t==='pline'&&e.closed&&e.pts.length>=3&&!e.fill&&!e.sourceSolid&&lays[e.lay]?.on!==false);
+    const areas=groupSelection();
     if(areas.length>1&&["ifz","akr"].includes(dest)){parcelGroupPanel(dest);return true;}
     if(!areas.length){if(!sel.size&&valid()){send(dest);return true;}return false;}
     const e=areas.length===1?areas[0]:areas.find(item=>valid()&&item===current.e);
@@ -29476,7 +29623,7 @@ function parcelTransferKey(e){return JSON.stringify([CDOC?.name||'',e.lay,e.id,e
       else {const b=document.querySelector(`#cadFlow [data-cad-dest="${dest}"]`);if(!b){say('Bu modül için güvenli aktarım bulunamadı.',true);return;}b.click();}
     }catch(ex){say('Parsel aktarımı durduruldu: '+ex.message,true);}
   }
-  const syncSelection=()=>{if(cmd||sel.size!==1)return;const e=selEnts()[0];if(e&&e.t==='pline'&&e.closed&&e.pts?.length>=3&&current?.e!==e)activate(e)};
+  const syncSelection=()=>{if(cmd||sel.size!==1)return;const e=selEnts()[0];if(e&&isGroupArea(e)&&current?.e!==e)activate(e)};
   cv.addEventListener('pointerup',()=>requestAnimationFrame(syncSelection));
   // Only refresh on changes; do not add a polling timer to the CAD drawing loop.
   window.addEventListener('acad:cad-changed',()=>{if(current&&!valid())announce()});
@@ -34923,7 +35070,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
    $('acad56-status').textContent=picked?`${s.ada&&s.parsel?s.ada+"/"+s.parsel+" · ":""}${s.corners} köşe · ${Number(s.area).toLocaleString('tr-TR',{maximumFractionDigits:2})} m² · ${s.layer} · ${s.origin}`:'Parsel seçili değil · “Parsel Seç” ile alanın içine tıkla';
    edit[0].value=picked?s.ada||'':'';edit[1].value=picked?s.parsel||'':'';}
  dock.addEventListener('click',e=>{const b=e.target.closest('[data-acad-p]');if(!b||b.disabled)return;const kind=b.dataset.acadP;
-   if(["pdf","akr","ifz"].includes(kind)&&window.CADT.ents.filter(e=>window.CADT.sel.has(e.id)&&e.closed&&!e.fill&&!e.sourceSolid).length>1){engine.parcelGroupPanel(kind);return;}if(kind==='select')engine.choose();else if(kind==='confirm')engine.update(edit[0].value,edit[1].value);else engine.send(kind);});
+   if(["pdf","akr","ifz"].includes(kind)&&window.CADT.ents.filter(e=>window.CADT.sel.has(e.id)&&e.closed&&!e.fill&&!e.sourceSolid).length>1){engine.parcelGroupPanel(kind==="pdf"?"sketch":kind);return;}if(kind==='select')engine.choose();else if(kind==='confirm')engine.update(edit[0].value,edit[1].value);else engine.send(kind);});
  edit.forEach(x=>x.addEventListener('keydown',ev=>{if(ev.key==='Enter'){ev.preventDefault();engine.update(edit[0].value,edit[1].value)}}));
  window.addEventListener('acad:active-parcel',e=>render(e.detail));render(engine.current);
 })();
