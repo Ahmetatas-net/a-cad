@@ -14316,7 +14316,9 @@ async function loadParcel(f, inp) { window.acadConsumeDwg82=null; S().binaElle =
     const byNo = m ? c2.filter(o => !o.cerceve && o.no && String(o.no.no) === m[2] && (!o.no.ada || String(o.no.ada) === m[1])).sort((x, y) => (!!x.cizgi - !!y.cizgi) || y.a - x.a)[0] : null; const pick = byNo ? byNo : c2.length === 1 && c2[0].kad ? c2[0] : cl.length && cl.length <= 4 ? cl.sort((x, y) => y.a - x.a)[0] : !cl.length && cz.length === 1 ? cz[0] : null; if (pick) { const p = pick; setParsel(p.pts, p.ad, "dosya", p.no); } else if (!parFromMim()) { renderAll(); fitA(); } }
   const sayi = `${FD.points.length} nokta · ${FD.lines.length} çizgi · ${FD.polys.length} çoklu çizgi (${FD.polys.filter(p => p.closed).length} kapalı) · ${FD.texts.length} yazı`;
   const nc = fileCands().filter(o => !o.cerceve).length;
-  if (!S().parsel && nc > 1) $("aParInfo").innerHTML = `<span class="pill ok">${esc(f.name)}: ${nc} parsel bulundu</span> Planda işlem yapacağın parselin içine dokun ve "Bu parseli seç"e bas, ya da listeden seç. ${sayi}`;
+  const kamParents = MOD === "kam" ? kmNativeParcels() : null;
+  if (kamParents) $("aParInfo").innerHTML = `<span class="pill ok">${esc(f.name)}: ${kamParents.length} ana parsel</span> Kamulaştırma sınırını belirleyip Hesapla’ya bas. ${sayi}`;
+  else if (!S().parsel && nc > 1) $("aParInfo").innerHTML = `<span class="pill ok">${esc(f.name)}: ${nc} parsel bulundu</span> Planda işlem yapacağın parselin içine dokun ve "Bu parseli seç"e bas, ya da listeden seç. ${sayi}`;
   else if (!S().parsel) $("aParInfo").innerHTML = `<span class="pill bad">${esc(f.name)} okundu ama içinde kapalı parsel sınırı bulunamadı</span> ${sayi}. ${FD.points.length >= 3 ? "Parseli nokta adlarıyla oluştur: aşağıdaki kutuya köşe numaralarını sırayla yaz (örn. 2776 2777 2778 …)." : "Dosyayı bana gönder, okuyucuyu ona göre düzelteyim."}`;
   else $("aParInfo").insertAdjacentHTML("beforeend", `<div class="note" style="margin-top:4px">${esc(f.name)}: ${sayi}</div>`);
   // dosyada ana parselin içinde kalan kapalı parçalar varsa ifraz önerisi
@@ -14761,6 +14763,9 @@ function zAt(x, y) { const a = S(); if (a.kot === "0") return NaN; if (a.kot ===
     const pts_ = vis => [...(FD ? FD.points.filter(p => !vis || !H.has(p.lay)) : []), ...(MD && !MD.pdf ? MD.points : [])].filter(p => K.hasZ(p.z) && Math.abs(p.z) > 0.01 && nearP(p)).map((p, i) => ({ n: p.n || String(i), e: p.e, y: p.y, z: p.z }));
     let P0 = VT.length >= 3 ? VT : pts_(true); ZSRC = VT.length >= 3 ? `plankotede görünen ${VT.length} kot yazısı (${[...new Set(VT.map(t => t.lay))].join(", ")})` : "görünen tabakalardaki kotlu noktalar"; if (P0.length < 3) { P0 = pts_(false); ZSRC = "bütün kotlu noktalar (kapalı tabakalar dahil)"; }
     const oz = K.zOutliers(P0); ZBAD = oz.bad; const P = oz.good;
+    if (P.length >= 3 && K.terrainProfile(P).mode === "belirsiz") {
+      ZTIN = "yok"; ZNP = null; return NaN;
+    }
     ZTIN = P.length >= 3 ? (() => { const d = K.dedupe(P); return K.index({ pts: d.pts, tri: Int32Array.from(K.delaunay(d.pts, 0)) }); })() : "yok"; ZNP = VT.length >= 3 ? P : null; }
   if (ZTIN !== "yok") { const z = K.zAt(ZTIN, x, y); if (z != null && isFinite(z)) return z; }
   if (ZNP) { /* kot yazılarının kapsamı dışında: en yakın görünen kot yazısı (40 m içinde) */ let b = null, bd = 40; for (const q of ZNP) { const d = Math.hypot(q.e - x, q.y - y); if (d < bd) { bd = d; b = q; } } if (b) return b.z; } return NaN; }
@@ -16815,6 +16820,10 @@ $("kmKgmImport").onchange=async e=>{
   if(seq!==input.dataset.seq)return;
   const wrapper=document.createElement("div"),summary=document.createElement("p");wrapper.append(summary);
   summary.textContent=main.size+" ana kayıt · "+[...parts.values()].reduce((t,v)=>t+v.size,0)+" parça · "+[...owners.values()].reduce((a,b)=>a+b,0)+" malik satırı";
+  if(main.size) {
+   const bTotal = [...parts.values()].reduce((sum,items)=>sum+[...items].reduce((t,[name,area])=>t+(/^B\d*$/.test(name)?area:0),0),0);
+   summary.textContent+=" · B parçaları toplamı "+tr2(bTotal)+" m²";
+  }
   if(main.size){const tbl=document.createElement("table");tbl.className="t";const add=(section,values)=>{const row=section.insertRow();for(const value of values)row.insertCell().textContent=value;};
    add(tbl.createTHead(),["Sıra","Mahalle","Ana kayıt","Tapu m²","B parçaları m²","Parça toplamı − tapu m²","Malik satırı"]);const body=tbl.createTBody();
    for(const [k,r] of [...main].sort((a,b)=>Number(a[1].no)-Number(b[1].no))){const pr=parts.get(k),bs=pr?[...pr].filter(([n])=>/^B\d*$/.test(n)):[];add(body,[r.no,r.v,r.id,tr2(r.area),bs.length?tr2(bs.reduce((t,p)=>t+p[1],0)):"—",pr?tr2([...pr.values()].reduce((a,b)=>a+b,0)-r.area):"Parça yok",kinds.has("kml")?owners.get(k)||0:"—"]);}
@@ -16954,7 +16963,20 @@ function kmRingLay(lay) { if (!FD) return null; const segOf = l => [...FD.lines.
 function kmSetSinir(pts, src, rings) { const k = KM(); const R = (rings && rings.length ? rings : [pts]).map(r => A.clean(r.map(p => [p[0], p[1]]), 0.002, true)).filter(r => r.length >= 3 && A.area(r) >= 1); if (!R.length) return kmMsg("Sınır kapalı bir alan olmalı (en az 3 köşe).", true); const P = R[0];
   k.sinir = { pts: P, rings: R.length > 1 ? R : null, names: P.map(p => nameOf(p, 0.02) || ""), src }; k.list = []; k.hariciL = []; save(); kmRender(); kmFit(); const SA = R.reduce((t, r) => t + A.area(r), 0); kmMsg(`Sınır alındı: ${R.length > 1 ? R.length + " parça, " : ""}${R.reduce((t, r) => t + r.length, 0)} köşe, ${tra(SA)} m². Şimdi "Hesapla"ya bas.`); }
 /* parsel adayları: numaralı parseller varsa onlar; yoksa sınırı en çok kesen tabakadaki kapalı alanlar (bina vb. içte kalanlar atılır) */
-function kmParselAday(S_) { const sb = A.bbox(S_); const C = fileCands().filter(o => !o.cerceve && !o.kad).filter(o => { const b = o.bb || (o.bb = A.bbox(o.pts)); return b[2] >= sb[0] && b[0] <= sb[2] && b[3] >= sb[1] && b[1] <= sb[3]; });
+function kmNativeParcels() {
+  if (!FD || !FD.polys.some(p => p.closed && /^KAD_B$/i.test(p.lay))) return null;
+  const parents = [];
+  for (const [i,p] of FD.polys.entries()) {
+    if (!p.closed || !/^KAD_ALN$/i.test(p.lay)) continue;
+    const id = /^(\d+)[_/](\d+)$/.exec((p.nativeName || "").trim());
+    if (!id) return null;
+    parents.push({v:"f"+i, lay:p.lay, pts:p.pts, a:A.area(p.pts), bb:A.bbox(p.pts), no:{ada:id[1],no:id[2]}});
+  }
+  return parents.length ? parents : null;
+}
+function kmParselAday(S_, parents) { const sb = A.bbox(S_);
+  if (parents) return parents.filter(({bb:b}) => b[2]>=sb[0] && b[0]<=sb[2] && b[3]>=sb[1] && b[1]<=sb[3]);
+  const C = fileCands().filter(o => !o.cerceve && !o.kad).filter(o => { const b = o.bb || (o.bb = A.bbox(o.pts)); return b[2] >= sb[0] && b[0] <= sb[2] && b[3] >= sb[1] && b[1] <= sb[3]; });
   const sa = A.area(S_); const notSinir = o => !(Math.abs(o.a - sa) < Math.max(0.05, sa * 1e-6) && A.inPoly(S_, ...A.label(o.pts))); let L = C.filter(notSinir);
   const num = L.filter(o => o.no && o.no.no); if (num.length >= 2) { const nl = num.map(o => A.label(o.pts)); const ada = num.map((o, i) => num.filter((q, j) => j !== i && q.a < o.a * 0.98 && A.inPoly(o.pts, nl[j][0], nl[j][1])).length >= 2); /* aynı numaralı birden çok alan: ada sınırı olmayanların en büyüğü (parselin içindeki bina da aynı numarayı alabilir) */ const by = new Map(); num.forEach((o, i) => { if (ada[i]) return; const k = (o.no.ada || "") + "/" + o.no.no; const p = by.get(k); if (!p || o.a > p.a) by.set(k, o); }); L = [...by.values()]; }
   else { const cnt = {}; for (const o of L) if (A.inPoly(S_, ...A.label(o.pts))) cnt[o.lay] = (cnt[o.lay] || 0) + 1; /* sınırın içine düşen alanların en çok olduğu tabaka */ L = L.filter(o => cnt[o.lay]); }
@@ -16962,7 +16984,7 @@ function kmParselAday(S_) { const sb = A.bbox(S_); const C = fileCands().filter(
   let lab = L.map(o => A.label(o.pts)); { const keep = L.map((o, i) => L.filter((q, j) => j !== i && q.a < o.a * 0.98 && A.inPoly(o.pts, lab[j][0], lab[j][1])).length < 2); L = L.filter((_, i) => keep[i]); lab = lab.filter((_, i) => keep[i]); } /* 2'den çok parseli içine alan: ada/köy sınırı */
   return L.filter((o, i) => !L.some((q, j) => j !== i && q.a > o.a * 1.02 && A.inPoly(q.pts, lab[i][0], lab[i][1]))); } /* başka parselin içinde kalan: bina vb. */
 function kmHesapla() { const k = KM(); if (!FD) return kmMsg("Önce köy/ada parsel dosyasını yükle (yukarıdaki Parsel bölümü).", true); if (!k.sinir) return kmMsg("Önce kamulaştırma sınırını belirle.", true);
-  const t0 = performance.now(); const RS = kmR(k), SN = RS.length > 1 ? RS : k.sinir.pts; const C = []; { const seen = new Set(); for (const r of RS) for (const o of kmParselAday(r)) if (!seen.has(o.v)) { seen.add(o.v); C.push(o); } } const rows = []; const key = p => p[0].toFixed(3) + "," + p[1].toFixed(3);
+  const t0 = performance.now(); const RS = kmR(k), SN = RS.length > 1 ? RS : k.sinir.pts; const parents = kmNativeParcels(); const C = []; { const seen = new Set(); for (const r of RS) for (const o of kmParselAday(r, parents)) if (!seen.has(o.v)) { seen.add(o.v); C.push(o); } } const rows = []; const key = p => p[0].toFixed(3) + "," + p[1].toFixed(3);
   const minK = Math.max(0, parseFloat(String(k.minK || "0").replace(",", ".")) || 0);
   for (const o of C) { const P = A.clean(o.pts.map(p => [p[0], p[1]]), 0.002, true); let parts = A.kamBol(P, SN); const g = parts.filter(q => q.in).reduce((t, q) => t + A.area(q.pts), 0); if (g < 0.05) continue;
     const r = { v: o.v, ada: o.no ? o.no.ada || "" : "", no: o.no ? o.no.no : "", adaT: !!(o.no && o.no.tahmin), pts: P, parts, hata: parts[0].hata || "" }; r.key0 = (r.ada || "") + "/" + (r.no || r.v || ""); const b = k.bilgi[r.key0] || {};
@@ -16987,7 +17009,20 @@ function kmHesapla() { const k = KM(); if (!FD) return kmMsg("Önce köy/ada par
   k.list = rows; k.yeni = yeniler.map(q => ({ n: ad.get(q.k), p: q.p }));
   /* tescil harici (yol, dere): sınırın içinde olup hiçbir parsele girmeyen yerler */
   const sa = kmSA(k), gt = rows.reduce((t, r) => t + r.parts.filter(q => q.in).reduce((u, q) => u + A.area(q.pts), 0), 0); k.harici = sa - gt > 0.5 ? sa - gt : 0; k.hariciP = [];
-  if (k.harici) { try { const segs = [...RS.map(r => [...r, r[0]]), ...rows.map(r => [...r.pts, r.pts[0]])]; const PB = rows.map(r => ({ b: A.bbox(r.pts), P: r.pts }));
+  k.hariciKalan = 0; k.disari = 0; k.kayitFarki = null;
+  const publicAreas = parents && FD.polys.filter(p => p.closed && /^KAD_(YOL|DERE)$/i.test(p.lay));
+  if (publicAreas && publicAreas.length) {
+    for (const poly of publicAreas) {
+      const pieces = A.kamBol(A.clean(poly.pts.map(p=>p.slice(0,2)),0.002,true),SN);
+      for (const piece of pieces) {
+        if (piece.hata || !piece.in || A.area(piece.pts)<0.5) continue;
+        piece.pts.tur = /^KAD_DERE$/i.test(poly.lay) ? "DERE" : "YOL";
+        k.hariciP.push(piece.pts);
+      }
+    }
+    k.harici = k.hariciP.reduce((total,pts)=>total+A.area(pts),0);
+    k.kayitFarki = sa - gt - k.harici;
+  } else if (k.harici) { try { const segs = [...RS.map(r => [...r, r[0]]), ...rows.map(r => [...r.pts, r.pts[0]])]; const PB = rows.map(r => ({ b: A.bbox(r.pts), P: r.pts }));
     /* parsellerle çevrili olmayan yer (köy dışı, sınırın kapanış parçası) tescil harici sayılmaz */ const parselKenar = (a, b) => { const m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; return PB.some(o => m[0] > o.b[0] - 0.1 && m[0] < o.b[2] + 0.1 && m[1] > o.b[1] - 0.1 && m[1] < o.b[3] + 0.1 && o.P.some((p, i) => A.segDist(m, p, o.P[(i + 1) % o.P.length]) < 0.05)); };
     /* yüz geçerli mi: içinde parsel köşesi kalmamalı (yüz bulma bazen parsellerin üstünden geçer) */ const gecerli = f => { const fb = A.bbox(f); return !PB.some(o => o.b[2] > fb[0] && o.b[0] < fb[2] && o.b[3] > fb[1] && o.b[1] < fb[3] && o.P.some(p => A.inPoly(f, p[0], p[1]) && !f.some((a, i) => A.segDist(p, a, f[(i + 1) % f.length]) < 0.05))); };
     let best = null; for (const tl of [0.005, 0.02, 0.05]) { let F = []; try { F = A.faces(segs, tl); } catch (e) {} const H = [], bad = []; let dis = 0; for (const f of F) { const c = A.label(f), a = A.area(f); if (a < 0.5 || !A.inRings(RS, c[0], c[1]) || rows.some(r => A.inPoly(r.pts, c[0], c[1]))) continue; if (!gecerli(f)) { bad.push(f); continue; }
@@ -17007,7 +17042,7 @@ function kmAxis0() { const k = KM(); let pts = k.ax && k.ax.length >= 2 ? k.ax :
     if (obs.length) { const f1 = fit(obs.map(([v, s_]) => v - s_)), f2 = fit(obs.map(([v, s_]) => v - (LL - s_))); if (f2.n > f1.n) { pts = pts.slice().reverse(); km0 = f2.km0; } else km0 = f1.km0; oto = true; } }
   if (!isFinite(km0)) km0 = 0; return { pts, km0, src, oto, L: A.ekLen(pts) }; }
 /* KGM sıra no ve kilometre: parseller ve tescil harici yerler eksen boyunca sıralanır; girmeyen parçalar eksene göre sağda/solda */
-function kmSira(k, rows) { const ax = kmAxis(); const T = FD ? FD.texts.filter(t => isFinite(t.e)) : []; k.hariciL = (k.hariciP || []).map(h => { const c = A.label(h); const dere = T.some(t => /DERE|[ÇC]AY|IRMAK|KANAL|ARK/i.test(t.s) && (A.inPoly(h, t.e, t.y) || Math.hypot(t.e - c[0], t.y - c[1]) < 25)); return { pts: h, tur: dere ? "DERE" : "YOL", alan: h.net ?? A.area(h), c }; }).filter(h => h.alan >= 0.5);
+function kmSira(k, rows) { const ax = kmAxis(); const T = FD ? FD.texts.filter(t => isFinite(t.e)) : []; k.hariciL = (k.hariciP || []).map(h => { const c = A.label(h); const dere = T.some(t => /DERE|[ÇC]AY|IRMAK|KANAL|ARK/i.test(t.s) && (A.inPoly(h, t.e, t.y) || Math.hypot(t.e - c[0], t.y - c[1]) < 25)); return { pts: h, tur: h.tur || (dere ? "DERE" : "YOL"), alan: h.net ?? A.area(h), c }; }).filter(h => h.alan >= 0.5);
   if (k.hariciKalan > 0.5) { const c = k.hariciP.length ? A.label(k.hariciP[0]) : A.label(kmR(k)[0]); k.hariciL = [{ pts: null, tur: "YOL", alan: k.hariciKalan, c, toplu: true }]; }
   const kmOf = p => { if (!ax) return NaN; const pr = A.ekProj(ax.pts, p); return pr ? ax.km0 + pr.s : NaN; };
   for (const r of rows) { const gi = r.parts.filter(q => q.in).sort((x, y) => A.area(y.pts) - A.area(x.pts)); r.km = kmOf(A.label((gi[0] || r.parts[0]).pts)); for (const q of r.parts) { q.km = kmOf(A.label(q.pts)); if (!q.in && ax) { const pr = A.ekProj(ax.pts, A.label(q.pts)); q.yan = pr && pr.off < 0 ? "sol" : "sag"; } } }
@@ -17027,7 +17062,7 @@ function kmRender() { if(kmBandResult&&!kmBandCurrent())kmBandClear();kmCksRende
       <td style="text-align:center"><input type="checkbox" data-kmt data-k="${kk}"${b.tam ? " checked" : ""}${gm.length || b.tam ? "" : " disabled"}></td><td><input data-kmb="cins" data-k="${kk}" value="${esc(b.cins || "")}" placeholder="TARLA" style="width:7em"></td><td><textarea data-kmb="malik" data-k="${kk}" rows="1" placeholder="Ad Soyad; TC; Baba adı; Hisse" style="width:15em;font:inherit">${esc(b.malik || "")}</textarea></td><td><input data-kmb="pafta" data-k="${kk}" value="${esc(b.pafta || "")}" style="width:7em"></td></tr>`; }).join("");
   const hT = (k.hariciL || []).reduce((t, h) => t + h.alan, 0) || k.harici || 0;
   box.innerHTML = `<table class="t"><thead><tr><th>${kgm ? "KGM Sıra" : "NU"}</th>${kgm ? "<th>KM</th>" : ""}<th>Ada</th><th>Parsel</th><th>Alan m²${kgm ? "<br><small>tapu</small>" : ""}</th><th>Giren m²</th><th>Girmeyen m²</th><th>Tamamı</th><th>Cinsi</th><th>Malik (her satır bir kişi)</th><th>Pafta</th></tr></thead><tbody>${tr_}${!(k.hariciL || []).length && k.harici ? `<tr><td>${k.list.length + 1}</td>${kgm ? "<td></td>" : ""}<td colspan="2">Tescil harici (yol/dere)</td><td class="r">${f2(k.harici)}</td><td class="r">${f2(k.harici)}</td><td colspan="5"></td></tr>` : ""}</tbody><tfoot><tr><th colspan="${kgm ? 5 : 4}">TOPLAM</th><th class="r">${f2(tg + hT)}</th><th class="r">${f2(tm)}</th><th colspan="4"></th></tr></tfoot></table>`;
-  $("kmSum").innerHTML = `Kamulaştırma alanı <b>${f2(kmSA(k))} m²</b> = parsellerden giren <b>${f2(tg)}</b>${hT ? ` + tescil harici <b>${f2(hT)}</b>` : ""} m² · fark ${f2(kmSA(k) - tg - hT)} m²${k.disari > 1 ? ` (${f2(k.disari)} m² parsel dosyası dışında kalan sınır içi alan)` : ""}${k.list.some(r => r.parts.some(q => !q.in && A.area(q.pts) < 100)) ? ` · <span style="background:#fff6d6">sarı satır</span>: 100 m² altında kalan parça var. 2942 m.12 kapsamında kalan kısmın kullanımını inceleyin. 100 m² yazılımın ön inceleme eşiğidir.` : ""}`;
+  $("kmSum").innerHTML = `Kamulaştırma alanı <b>${f2(kmSA(k))} m²</b> · parsellerden giren <b>${f2(tg)}</b>${hT ? ` + tescil harici <b>${f2(hT)}</b>` : ""} m² · ${k.kayitFarki != null && Math.abs(k.kayitFarki)>0.05 ? "sınır ile kaynak alanları arasındaki fark (kontrol gerekli)" : "fark"} ${f2(kmSA(k) - tg - hT)} m²${k.disari > 1 ? ` (${f2(k.disari)} m² parsel dosyası dışında kalan sınır içi alan)` : ""}${k.list.some(r => r.parts.some(q => !q.in && A.area(q.pts) < 100)) ? ` · <span style="background:#fff6d6">sarı satır</span>: 100 m² altında kalan parça var. 2942 m.12 kapsamında kalan kısmın kullanımını inceleyin. 100 m² yazılımın ön inceleme eşiğidir.` : ""}`;
   box.querySelectorAll("[data-kmb]").forEach(el => el.addEventListener("change", () => { const kk = el.dataset.k; k.bilgi[kk] = k.bilgi[kk] || {}; k.bilgi[kk][el.dataset.kmb] = el.value.trim(); if (el.dataset.kmb === "ada" || el.dataset.kmb === "no") { const r = k.list.find(r => kmKey(r) === kk); if (r) r[el.dataset.kmb] = el.value.trim(); } save(); }));
   box.querySelectorAll("[data-kmt]").forEach(el => el.addEventListener("change", () => { const kk = el.dataset.k; k.bilgi[kk] = k.bilgi[kk] || {}; k.bilgi[kk].tam = el.checked; save(); kmMsg("Yeniden hesaplanıyor…"); setTimeout(() => { try { kmHesapla(); kmPrev(); } catch (e) { kmMsg("Hesap yapılamadı: " + e.message, true); } }, 10); })); }
 function kmDraw(D) { if(kmBandCurrent()){cx.save();path(kmBandResult.band,true);cx.fillStyle="rgba(30,150,190,.15)";cx.fill();cx.strokeStyle="#168ca4";cx.setLineDash([5*D,3*D]);cx.stroke();cx.restore();}const k = KM(); if (k.sinir) { if (k.list.length) { for (const h of k.hariciP || []) { path(h, true); cx.fillStyle = "rgba(26,115,232,.40)"; cx.fill(); } for (const r of k.list) for (const q of r.parts) { path(q.pts, true); cx.fillStyle = q.in ? "rgb(255,236,90)" : "rgb(244,160,160)"; cx.fill(); cx.strokeStyle = "#666"; cx.lineWidth = 1 * D; cx.stroke(); }
@@ -48172,7 +48207,7 @@ function alignedChoices(entry,box,source){
     const dst=[x,src[1]],rect=footprint(dst,R);
     if(rect[0]<box[0]||rect[2]>box[2]||rect[1]<box[1]||rect[3]>box[3])continue;
     if(!source.every(g=>clearFootprint(g,rect)))continue;
-    choices.push({src,dst,R,r,rect,score:Math.abs(x-src[0])+3*(18-R)});
+    choices.push({src,dst,R,r,rect,letter:entry.letter,score:Math.abs(x-src[0])+3*(18-R)});
    }
   }
  }
@@ -48186,6 +48221,35 @@ function sourceMark(src,r,dst,source){
  }
  return [src[0]+dir*(r+2.1),src[1]];
 }
+// Associate a subdivision detail with its new endpoint and neighbouring original
+// boundary vertex in world coordinates before choosing its location on paper.
+function subdivisionDetails(D,edges){
+ const parent=D.parent.pts,box=A.bbox(parent),reach=Math.max(box[2]-box[0],box[3]-box[1])*.12;
+ const same=(a,b)=>distance(a,b)<.025;
+ const points=D.points.filter(q=>q.n!=null&&String(q.n).trim());
+ const ends=[];
+ for(const cut of D.cuts||[]){
+  if(!Array.isArray(cut)||cut.length<2)continue;
+  for(const end of [cut[0],cut[cut.length-1]]){
+   if(!Array.isArray(end)||parent.some(p=>same(p,end)))continue;
+   const node=points.find(q=>same(q.p,end));if(!node||ends.some(q=>same(q.node.p,node.p)))continue;
+   let best=null;
+   for(const edge of edges){
+    const other=same(edge[0],node.p)?edge[1]:same(edge[1],node.p)?edge[0]:null;
+    if(!other||!parent.some(p=>same(p,other)))continue;
+    const mid=[(other[0]+end[0])/2,(other[1]+end[1])/2];
+    if(!parent.some((p,i)=>A.segDist(mid,p,parent[(i+1)%parent.length])<.03))continue;
+    const length=distance(other,node.p);
+    if(length<=reach&&(!best||length<best.length))best={edge,length,node};
+   }
+   if(best)ends.push(best);
+  }
+ }
+ // The shortest two surveyed junctions retain their letters across paper sizes,
+ // even when only one inset fits. Point numbers break ties independently of ring order.
+ const byNumber=(a,b)=>String(a.node.n).localeCompare(String(b.node.n),"tr",{numeric:true})||a.node.p[0]-b.node.p[0]||a.node.p[1]-b.node.p[1];
+ return ends.sort((a,b)=>a.length-b.length||byNumber(a,b)).slice(0,2).sort(byNumber);
+}
 const original=A.krokiPlan;
 A.krokiPlan=function(g,D,box,list){
  if(D.noLen||!D.points?.length||box[2]-box[0]<130||box[3]-box[1]<85)return original(g,D,box,list);
@@ -48193,7 +48257,8 @@ A.krokiPlan=function(g,D,box,list){
  for(const ring of all)for(let i=0;i<ring.length;i++){const a=ring[i],b=ring[(i+1)%ring.length],key=[a,b].map(p=>p.slice(0,2).join(',')).sort().join('|');if(!keys.has(key)&&distance(a,b)>0.001){keys.add(key);edges.push([a,b]);}}
  const bw=box[2]-box[0],bh=box[3]-box[1];
  const f=A.fitPlan(all.flat(),[box[0]+bw*.1,box[1]+bh*.1,box[2]-bw*.1,box[3]-bh*.1],list);
- const dense=edges.filter(([a,b])=>distance(Fake(a),Fake(b))<12).sort((a,b)=>distance(...a)-distance(...b));
+ const junctions=subdivisionDetails(D,edges);
+ const dense=junctions.length?junctions.map(q=>q.edge):edges.filter(([a,b])=>distance(Fake(a),Fake(b))<12).sort((a,b)=>distance(...a)-distance(...b));
  function Fake(p){return f.M(p)}
  const remember=F=>{g.G.detailMeta={real:{nodes:D.points.filter(p=>p.n),edges,F},scale:1000/F.s};return F;};
  if(!dense.length)return remember(original(g,D,box,list));
@@ -48204,9 +48269,9 @@ A.krokiPlan=function(g,D,box,list){
  const main=[box[0]+(sides.has(-1)?gutter:0),box[1],box[2]-(sides.has(1)?gutter:0),box[3]];
  const F=original(g,{...D,noHidNote:true},main,list);
  const source=g.G.slice(start),centers=[];
- for(const [a,b] of dense){
+ for(const [index,[a,b]] of dense.entries()){
   const src=F.M([(a[0]+b[0])/2,(a[1]+b[1])/2]),len=distance(F.M(a),F.M(b));
-  if(centers.every(c=>distance(c.src,src)>15))centers.push({src,len,side:(f.M(a)[0]+f.M(b)[0])/2<middle?-1:1});
+  if(junctions.length||centers.every(c=>distance(c.src,src)>15))centers.push({src,len,letter:junctions.length?String.fromCharCode(65+index):null,side:(f.M(a)[0]+f.M(b)[0])/2<middle?-1:1});
   if(centers.length>=8)break;
  }
  let chosen=[],bestScore=Infinity;
@@ -48223,8 +48288,8 @@ A.krokiPlan=function(g,D,box,list){
  }
  chosen.sort((a,b)=>b.src[1]-a.src[1]);
  let placed=0;
- for(const {src,dst,R,r} of chosen){
-  const n=String.fromCharCode(65+placed);
+ for(const {src,dst,R,r,letter} of chosen){
+  const n=letter||String.fromCharCode(65+placed);
   const detail=inset(source,src,r,dst,R,n,{real:{nodes:D.points.filter(p=>p.n),edges,F},scale:F.olc||1000/F.s});
   if(!detail.some(t=>t.pointNumber))continue;
   const names=new Set(detail.filter(t=>t.pointNumber).map(t=>t.s)),edgeKeys=new Set(detail.filter(t=>t.detailEdge).map(t=>t.detailEdge));
