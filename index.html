@@ -2500,9 +2500,9 @@ X Y (en az 3 köşe)&quot;&gt;&lt;/textarea&gt;&lt;/label&gt;
   &lt;/div&gt;
   &lt;details class=&quot;rvLayerExtra&quot;&gt;&lt;summary&gt;Karşılaştırma çizgilerini göster / gizle&lt;/summary&gt;&lt;div class=&quot;rvLayerChooser&quot; id=&quot;rvLayers&quot; aria-label=&quot;Görüntülenecek yüzeyler&quot;&gt;&lt;/div&gt;&lt;/details&gt;
   &lt;section id=&quot;rvSurface&quot; hidden&gt;
- &lt;div class=&quot;rvSectionCaption&quot;&gt;3B YOL YÜZEYİ &lt;span&gt;Sürükle ve döndür · İki parmakla yakınlaştır&lt;/span&gt;&lt;/div&gt;
+ &lt;div class=&quot;rvSectionCaption&quot;&gt;3B YOL YÜZEYİ &lt;span&gt;Sürükle: döndür · Sağ tuş veya iki parmak: kaydır · Tekerlek veya kıstırma: yakınlaştır&lt;/span&gt;&lt;/div&gt;
  &lt;canvas id=&quot;rvRoadCanvas&quot; aria-label=&quot;Yolun üç boyutlu yüzeyi&quot;&gt;&lt;/canvas&gt;
- &lt;div class=&quot;rvCrossTools&quot;&gt;&lt;button type=&quot;button&quot; id=&quot;rvRoadScope&quot;&gt;Tüm yol&lt;/button&gt;&lt;button type=&quot;button&quot; id=&quot;rvRoadMinus&quot; aria-label=&quot;3B uzaklaştır&quot;&gt;−&lt;/button&gt;&lt;button type=&quot;button&quot; id=&quot;rvRoadPlus&quot; aria-label=&quot;3B yakınlaştır&quot;&gt;+&lt;/button&gt;&lt;/div&gt;
+ &lt;div class=&quot;rvCrossTools&quot;&gt;&lt;button type=&quot;button&quot; id=&quot;rvRoadPan&quot; aria-pressed=&quot;false&quot;&gt;Kaydır&lt;/button&gt;&lt;button type=&quot;button&quot; id=&quot;rvRoadReset&quot;&gt;Ortala&lt;/button&gt;&lt;button type=&quot;button&quot; id=&quot;rvRoadScope&quot;&gt;Tüm yol&lt;/button&gt;&lt;button type=&quot;button&quot; id=&quot;rvRoadMinus&quot; aria-label=&quot;3B uzaklaştır&quot;&gt;−&lt;/button&gt;&lt;button type=&quot;button&quot; id=&quot;rvRoadPlus&quot; aria-label=&quot;3B yakınlaştır&quot;&gt;+&lt;/button&gt;&lt;/div&gt;
  &lt;/section&gt;&lt;div id=&quot;rvProfilePage&quot;&gt;&lt;div class=&quot;rvSectionCaption&quot;&gt;BOYPROFİL &lt;span&gt;Siyah / kırmızı ve seçili yüzey&lt;/span&gt;&lt;/div&gt;&lt;canvas id=&quot;rvProfile&quot; class=&quot;rvCanvas rvProfile&quot; aria-label=&quot;Yol boyprofili&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;
   &lt;div id=&quot;rvCrossPage&quot;&gt;&lt;div class=&quot;rvSectionCaption&quot;&gt;ENKESİT &lt;span&gt;KM ileri / geri ile birlikte güncellenir&lt;/span&gt;&lt;/div&gt;
     &lt;div class=&quot;rvCrossTools&quot;&gt;&lt;button type=&quot;button&quot; id=&quot;rvZoomIn&quot; title=&quot;Yakınlaştır&quot;&gt;＋&lt;/button&gt;&lt;button type=&quot;button&quot; id=&quot;rvZoomOut&quot; title=&quot;Uzaklaştır&quot;&gt;－&lt;/button&gt;&lt;button type=&quot;button&quot; id=&quot;rvFit&quot;&gt;Tümünü göster&lt;/button&gt;&lt;button type=&quot;button&quot; id=&quot;rvMeasure&quot; aria-pressed=&quot;false&quot;&gt;Ölç&lt;/button&gt;&lt;span&gt;CAD ENKESİT&lt;/span&gt;&lt;/div&gt;
@@ -3765,7 +3765,7 @@ function listPoints(){let s=current(),off=offsets(s),selectedLayer=RV.selected.f
 }
 function message(m){el(&#x27;rvStatus&#x27;).textContent=m}
 // Project an XYZ surface only when the 3B tab is visible.
-const roadScene={key:null,faces:[],yaw:-.55,pitch:.72,zoom:1,frame:0,local:true};
+const roadScene={key:null,faces:[],yaw:-.55,pitch:.72,zoom:1,frame:0,local:true,panX:0,panY:0,mode:&quot;orbit&quot;};
 function buildRoadScene(){
  const model=design(),road=pRoad(),rows=model?model.sec:road.sections;
  const faces=[],bounds=[Infinity,Infinity,Infinity,-Infinity,-Infinity,-Infinity];
@@ -3794,6 +3794,12 @@ function buildRoadScene(){
      prev={x,p:pair};
    }
  }
+ const vertices=[],ids=new Map();
+ for(const face of faces){
+   face.indices=face.pts.map(p=&gt;{const key=p.join(&quot;|&quot;);if(!ids.has(key)){ids.set(key,vertices.length);vertices.push(p);}return ids.get(key);});
+   delete face.pts;
+ }
+ roadScene.vertices=vertices;roadScene.xyDepth=new Float64Array(vertices.length*3);
  Object.assign(roadScene,{faces,bounds,key:model&amp;&amp;!el(&#x27;dpDxf&#x27;).disabled?roadDesignSurface(model):model||road,stale:el(&#x27;dpDxf&#x27;).disabled});
 }
 function requestRoadFrame(){if(!roadScene.frame)roadScene.frame=requestAnimationFrame(()=&gt;{roadScene.frame=0;if(RV.tab===&#x27;surface&#x27;)drawRoadScene()})}
@@ -3810,32 +3816,57 @@ function drawRoadScene(){
  const radius=focus?46:Math.max(12,Math.hypot(b[3]-b[0],b[4]-b[1],b[5]-b[2])*.55);
  const scale=Math.min(w,h)*.46/radius*r.zoom;
  const co=Math.cos(r.yaw),si=Math.sin(r.yaw),cp=Math.cos(r.pitch),sp=Math.sin(r.pitch);
- function project(p){let x=p[0]-cx,y=p[1]-cy,z=p[2]-cz,d=x*si+y*co;return [w/2+(x*co-y*si)*scale,h/2-(d*sp+z*cp)*scale,d*cp-z*sp]}
- const list=[];
- for(const face of r.faces){const pp=face.pts.map(project);
-   if(pp.every(a=&gt;a[0]&lt;0)||pp.every(a=&gt;a[0]&gt;w)||pp.every(a=&gt;a[1]&lt;0)||pp.every(a=&gt;a[1]&gt;h))continue;
-   list.push({pp,color:face.color,depth:pp[0][2]+pp[1][2]+pp[2][2]});
+ function project(p){let x=p[0]-cx,y=p[1]-cy,z=p[2]-cz,d=x*si+y*co;return [w/2+r.panX+(x*co-y*si)*scale,h/2+r.panY-(d*sp+z*cp)*scale,d*cp-z*sp]}
+ const xyz=r.xyDepth,visible=[];
+ for(let i=0;i&lt;r.vertices.length;i++){
+   const p=r.vertices[i],x=p[0]-cx,y=p[1]-cy,z=p[2]-cz,d=x*si+y*co,k=i*3;
+   xyz[k]=w/2+r.panX+(x*co-y*si)*scale;
+   xyz[k+1]=h/2+r.panY-(d*sp+z*cp)*scale;xyz[k+2]=d*cp-z*sp;
  }
- list.sort((a,b)=&gt;b.depth-a.depth);
+ for(const face of r.faces){
+   const a=face.indices[0]*3,b=face.indices[1]*3,c=face.indices[2]*3;
+   if(Math.max(xyz[a],xyz[b],xyz[c])&lt;0||Math.min(xyz[a],xyz[b],xyz[c])&gt;w||
+      Math.max(xyz[a+1],xyz[b+1],xyz[c+1])&lt;0||Math.min(xyz[a+1],xyz[b+1],xyz[c+1])&gt;h)continue;
+   face.depth=xyz[a+2]+xyz[b+2]+xyz[c+2];visible.push(face);
+ }
+ visible.sort((a,b)=&gt;b.depth-a.depth);
  const sky=ctx.createLinearGradient(0,0,0,h);sky.addColorStop(0,&#x27;#122432&#x27;);sky.addColorStop(1,&#x27;#263e47&#x27;);ctx.fillStyle=sky;ctx.fillRect(0,0,w,h);
- for(const {pp,color} of list){ctx.beginPath();ctx.moveTo(pp[0][0],pp[0][1]);ctx.lineTo(pp[1][0],pp[1][1]);ctx.lineTo(pp[2][0],pp[2][1]);ctx.closePath();ctx.fillStyle=color;ctx.fill();ctx.strokeStyle=color;ctx.lineWidth=.6;ctx.stroke()}
+ for(const face of visible){const [a,b,c]=face.indices;ctx.beginPath();ctx.moveTo(xyz[3*a],xyz[3*a+1]);ctx.lineTo(xyz[3*b],xyz[3*b+1]);ctx.lineTo(xyz[3*c],xyz[3*c+1]);ctx.closePath();ctx.fillStyle=face.color;ctx.fill();ctx.strokeStyle=face.color;ctx.lineWidth=.6;ctx.stroke();}
+
  if(pt&amp;&amp;finite(h0)){const [x,y]=project([...pt,h0]);ctx.fillStyle=&#x27;#ffbd68&#x27;;ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill();ctx.font=&#x27;600 12px system-ui&#x27;;ctx.fillText(labelKm(s),x+8,y-7)}
  message((design()?&#x27;Tasarım yüzeyi&#x27;:&#x27;Proje yüzeyi&#x27;)+&#x27; · &#x27;+pRoad().id+&#x27; · Düşey ölçek 1:1&#x27;);
 }
 const orbitCanvas=el(&#x27;rvRoadCanvas&#x27;),pointers=new Map();
-orbitCanvas.onpointerdown=e=&gt;{orbitCanvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,[e.clientX,e.clientY])};
+const roadLocal=e=&gt;{const b=orbitCanvas.getBoundingClientRect();return [e.clientX-b.left-b.width/2,e.clientY-b.top-b.height/2];};
+function zoomRoad(f,anchor=[0,0],next=anchor){
+ const r=roadScene,old=r.zoom;r.zoom=Math.max(.1,Math.min(64,old*f));
+ r.panX=next[0]-(anchor[0]-r.panX)*r.zoom/old;r.panY=next[1]-(anchor[1]-r.panY)*r.zoom/old;requestRoadFrame();
+}
+orbitCanvas.oncontextmenu=e=&gt;e.preventDefault();
+orbitCanvas.onpointerdown=e=&gt;{
+ if(pointers.size&gt;=2)return;
+ e.preventDefault();orbitCanvas.setPointerCapture(e.pointerId);
+ pointers.set(e.pointerId,{p:roadLocal(e),pan:roadScene.mode===&quot;pan&quot;||e.shiftKey||e.button===1||e.button===2});
+};
 orbitCanvas.onpointermove=e=&gt;{
- const old=pointers.get(e.pointerId);if(!old)return;
- const other=[...pointers].find(([k])=&gt;k!==e.pointerId)?.[1];
- if(other){const d=Math.hypot(old[0]-other[0],old[1]-other[1]);if(d&gt;2)zoomRoad(Math.hypot(e.clientX-other[0],e.clientY-other[1])/d)}
- else{roadScene.yaw+=(e.clientX-old[0])*.009;roadScene.pitch=Math.max(.08,Math.min(1.53,roadScene.pitch+(e.clientY-old[1])*.009))}
- pointers.set(e.pointerId,[e.clientX,e.clientY]);requestRoadFrame();
+ const finger=pointers.get(e.pointerId);if(!finger)return;
+ const old=finger.p,p=roadLocal(e),dx=p[0]-old[0],dy=p[1]-old[1];
+ const other=[...pointers].find(([id])=&gt;id!==e.pointerId)?.[1].p;
+ if(other){
+   const d=Math.hypot(old[0]-other[0],old[1]-other[1]),n=Math.hypot(p[0]-other[0],p[1]-other[1]);
+   zoomRoad(d&gt;2&amp;&amp;n&gt;2?n/d:1,[(old[0]+other[0])/2,(old[1]+other[1])/2],[(p[0]+other[0])/2,(p[1]+other[1])/2]);
+ }else if(finger.pan){roadScene.panX+=dx;roadScene.panY+=dy;}
+ else{roadScene.yaw+=dx*.007;roadScene.pitch=Math.max(.04,Math.min(1.55,roadScene.pitch+dy*.007));}
+ finger.p=p;requestRoadFrame();
 };
 orbitCanvas.onpointerup=orbitCanvas.onpointercancel=orbitCanvas.onlostpointercapture=e=&gt;pointers.delete(e.pointerId);
-function zoomRoad(f){roadScene.zoom=Math.max(.2,Math.min(24,roadScene.zoom*f));requestRoadFrame()}
-orbitCanvas.onwheel=e=&gt;{e.preventDefault();zoomRoad(e.deltaY&lt;0?1.14:1/1.14)};
+orbitCanvas.addEventListener(&#x27;wheel&#x27;,e=&gt;{e.preventDefault();const delta=e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?orbitCanvas.clientHeight:1);
+ zoomRoad(Math.exp(-Math.max(-500,Math.min(500,delta))*.0018),roadLocal(e));},{passive:false});
 el(&#x27;rvRoadPlus&#x27;).onclick=()=&gt;zoomRoad(1.4);el(&#x27;rvRoadMinus&#x27;).onclick=()=&gt;zoomRoad(1/1.4);
-el(&#x27;rvRoadScope&#x27;).onclick=()=&gt;{roadScene.local=!roadScene.local;roadScene.zoom=1;el(&#x27;rvRoadScope&#x27;).textContent=roadScene.local?&#x27;Tüm yol&#x27;:&#x27;Seçili KM&#x27;;requestRoadFrame()};
+el(&#x27;rvRoadPan&#x27;).onclick=e=&gt;{const on=roadScene.mode!==&quot;pan&quot;;roadScene.mode=on?&quot;pan&quot;:&quot;orbit&quot;;e.currentTarget.setAttribute(&quot;aria-pressed&quot;,String(on));orbitCanvas.style.cursor=on?&quot;move&quot;:&quot;grab&quot;;};
+function resetCamera(){Object.assign(roadScene,{yaw:-.55,pitch:.72,zoom:1,panX:0,panY:0});requestRoadFrame();}
+el(&#x27;rvRoadReset&#x27;).onclick=resetCamera;
+el(&#x27;rvRoadScope&#x27;).onclick=()=&gt;{roadScene.local=!roadScene.local;el(&#x27;rvRoadScope&#x27;).textContent=roadScene.local?&#x27;Tüm yol&#x27;:&#x27;Seçili KM&#x27;;resetCamera();};
 el(&#x27;planRoad3D&#x27;).onclick=()=&gt;{if(el(&#x27;mapZone&#x27;).classList.contains(&#x27;map-expanded&#x27;))toggleMapFull(false);switchTab(&#x27;surface&#x27;)};
 
 function render(){let viewer=el(&#x27;rvViewer&#x27;);if(viewer.hidden)return;
@@ -5050,9 +5081,22 @@ window.__DY=window.__DY||function(n){var v=Math.round(n*100)/100;return &#x27;1D
 <details id="ifzDocSettings"><summary>Belge bilgileri ve ekler</summary><div class="ifz-fields">
 <label>Durum haritası ölçeği<select data-belge="haritaOlcek"><option value="1000">1 / 1000</option><option value="500">1 / 500</option><option value="2000">1 / 2000</option><option value="5000">1 / 5000</option></select><small>Parsel sığmazsa bir sonraki uygun ölçek kullanılır.</small></label><label>Fen kayıt tarihi<input data-belge="fenTarih"></label><label>Fen kayıt no<input data-belge="fenNo"></label>
 <label>Oda sicil no<input data-belge="sicil"></label><label>İş adresi ve telefon<input data-belge="adres"></label>
-<label>Başvuru mercii<input data-belge="idare"></label><label>Tapu belgesi · bu oturumdaki pakete ekle<input type="file" multiple accept="application/pdf,.pdf" id="ifzTapu"></label>
+<label>Başvuru mercii<input data-belge="idare"></label><label>Yetkili idare<select data-belge="idareTuru"><option value="">Otomatik / belirsiz</option><option value="belediye">Belediye</option><option value="ozel">İl Özel İdaresi</option></select><small>Diğer kurumun üstü kırmızı çizilir. Belirsizse iki kurum da açık kalır.</small></label><label>Yerleşim türü<select data-belge="yerTuru"><option value="">Otomatik / belirsiz</option><option value="koy">Köy</option><option value="mah">Mahalle</option></select></label><label>Belge düzenleme tarihi<input data-belge="belgeTarih" placeholder="Bugünün tarihi"></label><label>Kontrol mühendisi<input data-belge="kontrolMuh"></label><label>Encümen karar / onay no<input data-belge="kararNo"></label><label>Karar / onay tarihi<input data-belge="kararTarih"></label><label>Tapu belgesi · bu oturumdaki pakete ekle<input type="file" multiple accept="application/pdf,.pdf" id="ifzTapu"></label>
 <label><span><input type="checkbox" data-belge="dilekce"> Malik başvuru dilekçesi ekle</span></label><button type="button" id="ifzArial">Arial yazı tipini seç</button><small id="ifzFontState"></small></div>
-<label>GNSS gözlemleri · Excel’den yapıştır<textarea data-belge="gnss" rows="4" spellcheck="false"></textarea></label><small>Sütun sırası: Nokta no, UTC, epok, aralık (sn), uydu, RMS (m), PDOP, çözüm, yöntem, elipsoit yüksekliği, hesap Y, hesap X. Sekme veya noktalı virgül kullanın. Aynı noktaya ait farklı okumalar ayrı satırlarda kalır.</small></details></div>
+<details style="margin-top:8px"><summary>EK-5 arazi kontrol bilgileri</summary>
+<div class="ifz-fields">
+<label>C1 yeni tesis adedi<input data-belge="c1" inputmode="numeric"></label><label>C2 yeni tesis adedi<input data-belge="c2" inputmode="numeric"></label><label>C3 yeni tesis adedi<input data-belge="c3" inputmode="numeric"></label><label>C4 yeni tesis adedi<input data-belge="c4" inputmode="numeric"></label>
+<label>Yeni detay tesis adedi (saha)<input data-belge="detayAdet" inputmode="numeric"></label><label>Yeni pafta adedi<input data-belge="paftaYeni" inputmode="numeric"></label><label>Eskiye ilave pafta adedi<input data-belge="paftaIlave" inputmode="numeric"></label>
+<label>Cihaz marka, model, seri no<input data-belge="cihaz"></label><label>Kalibrasyon belge tarih / sayı<input data-belge="kalibrasyon"></label><label>Kontrol tarihi (gerçek)<input data-belge="kontrolTarih" placeholder="gg.aa.yyyy"></label>
+<label>C1/C2/C3 tesis ve röper tespiti<textarea data-belge="c123Tesis" rows="2"></textarea></label><label>C1/C2/C3 düzeltme sonrası<textarea data-belge="c123TesisSon" rows="2"></textarea></label>
+<label>C1/C2/C3 arazi ölçü tespiti<textarea data-belge="c123Olcu" rows="2"></textarea></label><label>C1/C2/C3 düzeltme sonrası<textarea data-belge="c123OlcuSon" rows="2"></textarea></label>
+<label>C4 tesis ve röper tespiti<textarea data-belge="c4Tesis" rows="2"></textarea></label><label>C4 düzeltme sonrası<textarea data-belge="c4TesisSon" rows="2"></textarea></label>
+<label>C4 arazi ölçü tespiti<textarea data-belge="c4Olcu" rows="2"></textarea></label><label>C4 düzeltme sonrası<textarea data-belge="c4OlcuSon" rows="2"></textarea></label>
+<label>Detay tesis kontrolü<textarea data-belge="detayTesis" rows="2"></textarea></label><label>Detay tesis düzeltme sonrası<textarea data-belge="detayTesisSon" rows="2"></textarea></label>
+<label>Detay arazi ölçü tespiti (isteğe bağlı ek not)<textarea data-belge="detayOlcu" rows="2"></textarea></label><label>Detay ölçü düzeltme sonrası<textarea data-belge="detayOlcuSon" rows="2"></textarea></label>
+</div></details>
+<div style="margin-top:10px"><b>EK-8 · Gerçek GNSS / RTK saha kayıtları</b><div class="ifz-fields"><label>Ölçüm kaydını yükle (CSV, TXT, TSV, XLSX, PDF)<input id="ifzGnssFile" type="file" accept=".csv,.txt,.tsv,.xlsx,.pdf"></label><button id="ifzGnssClear" type="button">Ölçüm kayıtlarını temizle</button></div><p id="ifzGnssStatus" class="note" role="status" style="margin:5px 0">Saha kaydı yüklenmedi.</p></div>
+<label>GNSS gözlemleri · Excel’den yapıştır<textarea data-belge="gnss" rows="4" spellcheck="false"></textarea></label><small>Sütun sırası: Nokta no, UTC, epok, aralık (sn), uydu, RMS (m), PDOP, çözüm, yöntem, elipsoit yüksekliği, hesap Y, hesap X. Sekme veya noktalı virgül kullanın. UTC tarih ve saat ile saha değerleri kaynaktan alınır. Hesap farkı ds için proje kontrol sınırı 6,7 cm; eksik veya sınırı aşan değerler ayrı belirtilir.</small></details></div>
       <div class="row" style="margin-top:8px"><button class="primary" id="aoX" type="button">Excel (koordinatlar)</button><button class="primary" id="aoD" type="button">Çizim kaydet (çizim + plankote + paftalar)</button><button id="aoG" type="button" title="Parseller ve köşe noktaları, GML 3.2 (ITRF96 / TM, EPSG)">GML (parseller)</button><button id="aoN" type="button">NCN (koordinat listesi)</button></div>
       <div class="row" data-mod="apl" style="margin-top:8px;gap:8px;align-items:flex-end;flex-wrap:wrap;border-top:1px dashed var(--line);padding-top:8px"><button class="primary" id="aoBimPdf" type="button">BIM görünüş (PDF)</button><button class="primary" id="aoIfc" type="button">BIM modeli (IFC)</button><label style="flex-direction:row;align-items:center;gap:6px">Kat yüksekliği<input id="aoKH" inputmode="decimal" style="width:5em" placeholder="3.00"></label><label style="flex-direction:row;align-items:center;gap:6px">Bodrum<input id="aoBod" inputmode="numeric" style="width:3.5em" placeholder="0"></label><span class="note" style="flex-basis:100%;margin:0">Projeden okunur: arazi yüzeyi, parsel, bina kütleleri (kat kat), istinat duvarları; gerçek koordinatlarıyla. PDF telefonda açılır; IFC'yi Revit, ArchiCAD, Tekla, BIMvision açar.</span></div>
       <div class="msg" id="aoMsg" style="margin-top:8px"></div>
@@ -6442,6 +6486,14 @@ O.dxf = () => {
     line(l, a, b, col, lt) { l = lay(l); NI.push(["line", l, P3(a), P3(b), ncL[lt] || null]); E.push(`0\nLINE\n8\n${l}\n${L6(lt)}${col ? `62\n${col}\n` : ""}10\n${f(a[0])}\n20\n${f(a[1])}\n30\n${f(a[2] || 0)}\n11\n${f(b[0])}\n21\n${f(b[1])}\n31\n${f(b[2] || 0)}`); },
     poly(l, pts, closed, col, elev, lt) { l = lay(l); NI.push(["pline", l, pts.map(p => [+p[0], +p[1], isFinite(elev) ? +elev : 0]), !!closed, ncL[lt] || null]); const ze = isFinite(elev) ? f(elev) : "0"; let s = `0\nPOLYLINE\n8\n${l}\n${L6(lt)}${col ? `62\n${col}\n` : ""}66\n1\n10\n0\n20\n0\n30\n${ze}\n70\n${closed ? 1 : 0}`; for (const p of pts) s += `\n0\nVERTEX\n8\n${l}\n10\n${f(p[0])}\n20\n${f(p[1])}\n30\n${ze}`; E.push(s + `\n0\nSEQEND\n8\n${l}`); },
     poly3(l, pts, closed, col) { l = lay(l); NI.push(["pline", l, pts.map(P3), !!closed, null]); let s = `0\nPOLYLINE\n8\n${l}\n${col ? `62\n${col}\n` : ""}66\n1\n10\n0\n20\n0\n30\n0\n70\n${8 | (closed ? 1 : 0)}`; for (const p of pts) s += `\n0\nVERTEX\n8\n${l}\n10\n${f(p[0])}\n20\n${f(p[1])}\n30\n${f(p[2] || 0)}\n70\n32`; E.push(s + `\n0\nSEQEND\n8\n${l}`); },
+    solid(l,pts,kind="SOLID",col){
+      l=lay(l);const a=pts.length===3?[...pts,pts[2]]:[pts[0],pts[1],pts[3],pts[2]];
+      NI.push(["pline",l,pts.map(P3),true,null]);
+      const tags=["0",kind==="TRACE"?"TRACE":"SOLID","8",l];
+      if(col)tags.push("62",col);
+      a.forEach((p,i)=>tags.push(10+i,f(p[0]),20+i,f(p[1]),30+i,f(p[2]||0)));
+      E.push(tags.join("\n"));
+    },
     face(l, a, b, c) { l = lay(l); NI.push(["face", l, P3(a), P3(b), P3(c)]); E.push(`0\n3DFACE\n8\n${l}\n10\n${f(a[0])}\n20\n${f(a[1])}\n30\n${f(a[2])}\n11\n${f(b[0])}\n21\n${f(b[1])}\n31\n${f(b[2])}\n12\n${f(c[0])}\n22\n${f(c[1])}\n32\n${f(c[2])}\n13\n${f(c[0])}\n23\n${f(c[1])}\n33\n${f(c[2])}`); },
     text(l, x, y, h, s, rot = 0, al = "l", col, z = 0) { l = lay(l); NI.push(["text", l, [x, y, z], String(s), h, rot, al]); const ha = al === "c" ? 1 : al === "r" ? 2 : 0;
       E.push(`0\nTEXT\n8\n${l}\n${col ? `62\n${col}\n` : ""}10\n${f(x)}\n20\n${f(y)}\n30\n${f(z)}\n40\n${f(h)}\n1\n${asc(s)}\n50\n${f(rot)}\n72\n${ha}\n11\n${f(x)}\n21\n${f(y)}\n31\n${f(z)}\n73\n2`); },
@@ -6883,6 +6935,90 @@ A.bulgePts = (vs, closed) => { const out = [], n = vs.length;
       const a0 = Math.atan2(a.y - cy, a.x - cx), rr = Math.abs(r), sag = Math.min(.0001,Math.max(.000001,rr*.000001)), da=2*Math.acos(Math.max(-1,Math.min(1,1-sag/rr))), k = Math.max(2,Math.min(16000,Math.ceil(Math.abs(th)/Math.max(da,.00002))));
       for (let j = 1; j < k; j++) { const t = a0 + th * j / k; out.push([cx + Math.abs(r) * Math.cos(t), cy + Math.abs(r) * Math.sin(t), a.z || 0]); } } }
   return out; };
+// DXF pattern definitions are in OCS. Emit planar primitives before applying
+// the enclosing INSERT transform, so mirrored and anisotropic blocks keep their geometry.
+A.hatchPrimitives = function(groups, transform, lay, out, ink){
+  const value=(list,code,fallback=0)=>Number(list.find(row=>row[0]===code)?.[1]??fallback);
+  if(value(groups,210)||value(groups,220)||value(groups,230,1)!==1)return;
+  const chunks=(rows,code)=>{
+    const result=[];let part;
+    for(const row of rows){if(row[0]===code){part=[];result.push(part);}if(part)part.push(row);}
+    return result;
+  };
+  const z=value(groups,30),style=value(groups,75),solid=value(groups,70);
+  const loops=[];
+  for(const path of chunks(groups.slice(0,groups.findIndex(row=>row[0]===75)),92)){
+    const flag=value(path,92),ring=[];
+    if(style===2&&!(flag&1)||style===1&&!(flag&17))continue;
+    if(flag&2){
+      if(!value(path,73))return;
+      const vertices=chunks(path,10).map(v=>({x:value(v,10),y:value(v,20),b:value(v,42)}));
+      for(const p of A.bulgePts(vertices,true))ring.push(p);
+    }else{
+      for(const edge of chunks(path,72)){
+        const type=value(edge,72);
+        if(type===1){ring.push([value(edge,10),value(edge,20)]);continue;}
+        if(type!==2)return;
+        const x=value(edge,10),y=value(edge,20),r=value(edge,40),deg=Math.PI/180;
+        let a=value(edge,50)*deg,b=value(edge,51)*deg;
+        const ccw=value(edge,73);
+        // DXF start/end parameters of clockwise edges are measured clockwise.
+        if(!ccw){a=-a;b=-b;}
+        const turn=2*Math.PI;
+        let span=ccw?(b-a+turn)%turn:-((a-b+turn)%turn);
+        if(!span)span=ccw?turn:-turn;
+        const count=Math.min(2048,Math.max(4,Math.ceil(Math.abs(span)/.035)));
+        for(let k=0;k<count;k++){const t=a+span*k/count;ring.push([x+r*Math.cos(t),y+r*Math.sin(t)]);}
+      }
+    }
+    if(ring.length<3||ring.some(p=>!Number.isFinite(p[0]+p[1])))return;
+    loops.push(ring);
+  }
+  if(!loops.length)return;
+  const edges=loops.flatMap(r=>r.map((a,i)=>[a,r[(i+1)%r.length]]));
+  const world=p=>transform(p[0],p[1],z);
+  const segments=(edges,h)=>edges.filter(([a,b])=>(a[1]>h)!==(b[1]>h)).map(([a,b])=>{
+    const slope=(b[0]-a[0])/(b[1]-a[1]);
+    return {x:a[0]+(h-a[1])*slope,slope};
+  }).sort((a,b)=>a.x-b.x);
+  const polygons=[],lines=[];
+  if(solid){
+    const levels=[...new Set(edges.map(e=>e[0][1]))].sort((a,b)=>a-b);
+    if(levels.length*edges.length>5e6)return;
+    for(let i=1;i<levels.length;i++){
+      const low=levels[i-1],high=levels[i],h=(low+high)/2,hits=segments(edges,h);
+      for(let j=1;j<hits.length;j+=2){
+        const a=hits[j-1],b=hits[j];if(b.x<=a.x)continue;
+        const corners=[[a,low],[b,low],[b,high],[a,high]].map(([p,y])=>world([p.x+(y-h)*p.slope,y]));
+        polygons.push({lay,pts:corners,closed:true,sourceSolid:"SOLID",sourceInk:ink});
+      }
+    }
+  }else for(const family of chunks(groups,53)){
+    const angle=value(family,53)*Math.PI/180,u=Math.cos(angle),v=Math.sin(angle);
+    const base=[value(family,43),value(family,44)],dx=value(family,45),dy=value(family,46);
+    const advance=u*dx+v*dy,spacing=-v*dx+u*dy;if(Math.abs(spacing)<1e-10)return;
+    const frame=([x,y])=>[(x-base[0])*u+(y-base[1])*v,-(x-base[0])*v+(y-base[1])*u];
+    const local=edges.map(([a,b])=>[frame(a),frame(b)]);
+    let first=Infinity,last=-Infinity;for(const [a] of local){const k=a[1]/spacing;first=Math.min(first,k);last=Math.max(last,k);}
+    if((last-first+1)*edges.length>5e6)return;
+    const dash=family.filter(r=>r[0]===49).map(r=>+r[1]),period=dash.reduce((n,x)=>n+Math.abs(x),0);
+    const emit=(a,b,h)=>{const p=t=>world([base[0]+t*u-h*v,base[1]+t*v+h*u]);lines.push({lay,pts:[p(a),p(b)],sourceHatchLine:true,sourceInk:ink});};
+    for(let k=Math.ceil(first);k<=last;k++){
+      const h=k*spacing,hits=segments(local,h);
+      for(let j=1;j<hits.length;j+=2){
+        const a=hits[j-1].x,b=hits[j].x;if(!period){emit(a,b,h);continue;}
+        const origin=k*advance;
+        const cycles=Math.ceil((b-a)/period)+2;if(cycles*dash.length+lines.length>150000)return;
+        for(let start=origin+Math.floor((a-origin)/period)*period,n=0;start<=b&&n<cycles;start+=period,n++){
+          let x=start;
+          for(const d of dash){const end=x+Math.abs(d);if(d>=0&&end>=a&&x<=b)emit(Math.max(a,x),Math.min(b,end),h);x=end;}
+        }
+      }
+    }
+  }
+  polygons.forEach(p=>out.polys.push(p));lines.forEach(l=>out.lines.push(l));
+};
+
 A.parseCAD = (src, opt = {}) => { const lite = opt.lite === true ? 1 : +opt.lite || 0; /* 1: tekrarlanan bloklar (mobilya, kapı…) hafif; 2: çok büyük dosya, blok içi çizgiler yalnız bilinen tabakalarda */ // lite: blok içindeki çizgi/yay/açık çoklu çizgi alınmaz (mobilya, kapı, tarama…) — büyük mimari projede bellek ve süre
   // akış okuyucu: metin ya da bayt dizisi; büyük DXF'ler 4 MB'lık parçalarla çözülür, tüm dosya tek dizgeye/satır dizisine çevrilmez (telefonda bellek yetsin diye)
   let text, pos = 0, N, bytes = null, bpos = 0, dec = null, eof = false;
@@ -6891,9 +7027,10 @@ A.parseCAD = (src, opt = {}) => { const lite = opt.lite === true ? 1 : +opt.lite
   const more = () => { if (eof) return false; const end = Math.min(bytes.length, bpos + (4 << 20)); const chunk = dec.decode(bytes.subarray(bpos, end), { stream: end < bytes.length }); bpos = end; if (end >= bytes.length) eof = true; text = text.slice(pos) + chunk; pos = 0; N = text.length; return true; };
   const next = () => { while (true) { let e = text.indexOf("\n", pos); if (e >= 0) { let s = text.slice(pos, e); pos = e + 1; return s.charCodeAt(s.length - 1) === 13 ? s.slice(0, -1) : s; } if (!more()) { if (pos >= N) return null; const s = text.slice(pos); pos = N; return s; } } };
   const USE = new Set(["LINE", "LWPOLYLINE", "POLYLINE", "VERTEX", "SEQEND", "ARC", "CIRCLE", "TEXT", "MTEXT", "ATTRIB", "POINT", "INSERT", "DIMENSION", "3DFACE", "SOLID", "TRACE"]), SKB = new Set(["LINE", "ARC", "CIRCLE"]), KEEP0 = /PARSEL|ADA|B[İI]NA|VAZ[İI]YET|S[İI]NIR|OTURUM|TABAN|KONTUR|S[İI]LUET|YOL|KADASTRO|IMAR|İMAR/i; // okunmayan türlerin (tarama, ölçü, spline…) verisi hiç tutulmaz
+  USE.add("HATCH");
   if(opt.aplGeometry)for(const type of ['ELLIPSE','SPLINE','HATCH'])USE.add(type);
   const KEEP=opt.aplGeometry?new RegExp(KEEP0.source+'|DUVAR|K[İI]R[İI]Ş|KOLON|STRUCTURAL.+BEARING|WALL|BEAM|ARCHICAD.+(?:WINDOW|DOOR)|PENCERE|RETAINING|[İI]ST[İI]NAT','i'):KEEP0;
-  let sec = null; const blocks = {}; let blk = null, cur = null; let ents = []; const laycol = {}, layoff = []; let lr = null, insunits = 0, wantSec = false, wantIns = false; const cadHeader = {}; let cadHeaderVar = null;
+  let sec = null; const blocks = {}; let blk = null, cur = null; let ents = []; const laycol = {}, layerRGB={}, layoff = []; let lr = null, insunits = 0, wantSec = false, wantIns = false; const cadHeader = {}; let cadHeaderVar = null;
   const paperOwners = new Set(); let blockRecord = null;
   while (true) { const cRaw = next(); if (cRaw === null) break; const vRaw = next(); if (vRaw === null) break; const c = cRaw.trim(), v = vRaw.trim();
     if (wantSec) { wantSec = false; if (c === "2") { sec = v; cur = null; continue; } }
@@ -6913,7 +7050,7 @@ A.parseCAD = (src, opt = {}) => { const lite = opt.lite === true ? 1 : +opt.lite
         if (c === "2") blockRecord.name = v;
       }
     }
-    if (sec === "TABLES") { if (c === "0") { if (lr && lr.n) { laycol[lr.n] = Math.abs(lr.c || 7); if (lr.c < 0 || (lr.f & 1)) layoff.push(lr.n); } lr = v === "LAYER" ? {} : null; } else if (lr) { if (c === "2") lr.n = v; else if (c === "62") lr.c = +v; else if (c === "70") lr.f = +v; } continue; }
+    if (sec === "TABLES") { if (c === "0") { if (lr && lr.n) { laycol[lr.n] = Math.abs(lr.c || 7);if(lr.rgb!=null)layerRGB[lr.n]="#"+(lr.rgb&0xffffff).toString(16).padStart(6,"0"); if (lr.c < 0 || (lr.f & 1)) layoff.push(lr.n); } lr = v === "LAYER" ? {} : null; } else if (lr) { if (c === "2") lr.n = v; else if (c === "62") lr.c = +v; else if(c==="420")lr.rgb=+v; else if (c === "70") lr.f = +v; } continue; }
     if (c === "0" && v === "ENDSEC") { sec = null; cur = null; continue; }
     if (sec === "BLOCKS") {
       if (c === "0") { if (v === "BLOCK") { blk = { name: "", bx: 0, by: 0, bz:0, ents: [], hdr: true }; cur = null; continue; }
@@ -6934,6 +7071,9 @@ A.parseCAD = (src, opt = {}) => { const lite = opt.lite === true ? 1 : +opt.lite
   const emit = (list, T, layIn, sc, depth, rep) => { let poly = null; const skipB = lite >= 2 ? depth > 0 : (lite && rep); /* çok kez yerleştirilen blokların (mobilya, kapı, pencere) çizgileri atlanır; tek kullanılan blok (vaziyet, parsel) tam okunur — tabaka adı ne olursa olsun */
     for (const e of list) { const g = e.g; const get = k => { const r = g.find(x => x[0] === k); return r ? r[1] : undefined; };
       let lay = String(get(8) || "0").trim(); if (layIn && lay === "0") lay = layIn; const t = e.t;
+const rgb=get(420),aci=Number(get(62));
+      const ink=rgb!=null?"#"+(Number(rgb)&0xffffff).toString(16).padStart(6,"0"):aci>0&&aci<256?K.aciHex(aci):undefined;
+      if(t==="HATCH"&&!opt.aplGeometry){A.hatchPrimitives(g,T,lay,out,ink);continue;}
 if(opt.aplGeometry&&(t==='SPLINE'||t==='ELLIPSE'||t==='HATCH')){
  const add=(ps,closed)=>{if(ps.length>=2&&ps.every(p=>p.every(Number.isFinite)))out.viewPaths85.push({lay,pts:ps.map(p=>T(p[0],p[1],0)),closed});};
  const coords=(list,xcode)=>{const q=[];for(const [k,v] of list){if(k===xcode)q.push([+v,0]);else if(k===xcode+10&&q.length)q[q.length-1][1]=+v;}return q;};
@@ -6957,9 +7097,9 @@ if(opt.aplGeometry&&(t==='SPLINE'||t==='ELLIPSE'||t==='HATCH')){
  }continue;
 }
       if (skipB && (t === "LINE" || t === "ARC" || t === "CIRCLE") && !(t==="LINE"?KEEP:KEEP0).test(lay)) continue;
-      if (t === "LINE") out.lines.push({ lay, pts: [T(+get(10), +get(20), +(get(30) || 0)), T(+get(11), +get(21), +(get(31) || 0))] });
+      if (t === "LINE") out.lines.push({ lay,sourceInk:ink, pts: [T(+get(10), +get(20), +(get(30) || 0)), T(+get(11), +get(21), +(get(31) || 0))] });
       else if (t === "LWPOLYLINE") { const vs = []; let v = null; for (const [k, val] of g) { if (k === 10) { v = { x: +val, y: 0, b: 0 }; vs.push(v); } else if (k === 20 && v) v.y = +val; else if (k === 42 && v) v.b = +val; }
-        const closed = !!(+(get(70) || 0) & 1), el = +(get(38) || 0); if (skipB && !closed && !(vs.some(v=>v.b)?KEEP0:KEEP).test(lay)) continue; if (vs.length > 1) out.polys.push({ lay, closed, pts: A.bulgePts(vs, closed).map(p => T(p[0], p[1], el)), curveApprox:vs.some(q=>Math.abs(Number(q.b)||0)>1e-10) }); }
+        const closed = !!(+(get(70) || 0) & 1), el = +(get(38) || 0); if (skipB && !closed && !(vs.some(v=>v.b)?KEEP0:KEEP).test(lay)) continue; if (vs.length > 1) out.polys.push({ lay, sourceInk:ink,closed, pts: A.bulgePts(vs, closed).map(p => T(p[0], p[1], el)), curveApprox:vs.some(q=>Math.abs(Number(q.b)||0)>1e-10) }); }
       else if (t === "POLYLINE") { const fl = +(get(70) || 0); poly = fl & (16 | 64) ? null : { lay, closed: !!(fl & 1), vs: [] }; }
       else if (t === "VERTEX" && poly) poly.vs.push({ x: +get(10), y: +get(20), z: +(get(30) || 0), b: +(get(42) || 0) });
       else if (t === "SEQEND") { if (poly && poly.vs.length > 1) out.polys.push({ lay: poly.lay, closed: poly.closed, pts: A.bulgePts(poly.vs, poly.closed).map(p => T(p[0], p[1], p[2])), curveApprox:poly.vs.some(q=>Math.abs(Number(q.b)||0)>1e-10) }); poly = null; }
@@ -6982,7 +7122,7 @@ if(opt.aplGeometry&&(t==='SPLINE'||t==='ELLIPSE'||t==='HATCH')){
         const al = +(get(72) || 0) || +(get(73) || 0); const x = al && get(11) !== undefined && t !== "MTEXT" ? +get(11) : +get(10), y = al && get(21) !== undefined && t !== "MTEXT" ? +get(21) : +get(20);
         const p = T(x, y, +(get(30)||0)), ci = +(get(62) || 256), ra = +(get(50) || 0) * Math.PI / 180, p2 = T(x + Math.cos(ra), y + Math.sin(ra), 0); const rot = ((Math.atan2(p2[1] - p[1], p2[0] - p[0]) * 180 / Math.PI) % 360 + 360) % 360;
         const hz = t === "MTEXT" ? (+(get(71) || 7)) : (+(get(72) || 0)); const ali = t === "MTEXT" ? ([2, 5, 8].includes(hz) ? "c" : [3, 6, 9].includes(hz) ? "r" : "l") : (hz === 1 || hz === 4 ? "c" : hz === 2 ? "r" : "l");
-        out.texts.push({ lay, s, e: p[0], y: p[1], z: p[2], h: +(get(40) || 0) * sc, rot: isFinite(rot) ? rot : 0, al: ali, c: ci > 0 && ci < 256 ? ci : (laycol[lay] || 7) }); }
+        out.texts.push({ lay,sourceInk:ink, s, e: p[0], y: p[1], z: p[2], h: +(get(40) || 0) * sc, rot: isFinite(rot) ? rot : 0, al: ali, c: ci > 0 && ci < 256 ? ci : (laycol[lay] || 7) }); }
       else if (t === "DIMENSION") { if (depth > 0) continue; const p1 = T(+(get(13) || 0), +(get(23) || 0), 0), p2 = T(+(get(14) || 0), +(get(24) || 0), 0); const v = +(get(42) || 0); if (isFinite(v) && v > 0) out.dims.push({ lay, p1, p2, v: v * sc, s: String(get(1) || "").replace(/\\[A-Za-z][^;]*;|[{}]/g, "").trim() }); }
       else if (t === "3DFACE" || t === "SOLID" || t === "TRACE") {
         // Preserve every 3D vertex, including negative and zero elevations.
@@ -6991,6 +7131,10 @@ if(opt.aplGeometry&&(t==='SPLINE'||t==='ELLIPSE'||t==='HATCH')){
           vv.push(T(+(get(10+k)||0),+(get(20+k)||0),+(get(30+k)||0)));
         }
         const equals=(a,b)=>a.every((v,i)=>Math.abs(v-b[i])<1e-10);
+        if(t!=="3DFACE"){
+          const pts=equals(vv[2],vv[3])?vv.slice(0,3):[vv[0],vv[1],vv[3],vv[2]];
+          out.polys.push({lay,closed:true,pts,sourceSolid:t,sourceInk:ink});continue;
+        }
         out.faces.push({lay,p:[vv[0],vv[1],vv[2]]});
         if(!equals(vv[3],vv[2])&&!equals(vv[3],vv[0]))out.faces.push({lay,p:[vv[0],vv[2],vv[3]]});
       }
@@ -7002,7 +7146,7 @@ if(opt.aplGeometry&&(t==='SPLINE'||t==='ELLIPSE'||t==='HATCH')){
   emit(ents, (x, y, z) => [x, y, z || 0], null, 1, 0);
   // V7101: DXF TABLES içindeki boş tabakalar da gerçek proje verisidir.
   // Sadece içinde nesne bulunan tabakaları açmak, kaydet-aç çevriminde tabaka kaybı oluşturur.
-  out.hidden = layoff; out.layers = Object.keys(laycol); out.layerColors = laycol; return out;
+  out.hidden = layoff;out.layerRGB=layerRGB; out.layers = Object.keys(laycol); out.layerColors = laycol; return out;
 };
 /* NCZ / DXF (K) çıktısını aynı biçime getir */
 A.fromK = D => ({ layerRGB:D.layerRGB||{}, hidden: D.hidden || [], layers: D.layers || [], layerColors: D.layerColors || {}, circles: (D.circles || []).map(c => ({ lay: String(c.lay), e:c.e, y:c.y, z:c.z??c.pts?.[0]?.[2]??0, r:c.r, pts: c.pts })), lines: D.lines.map(l => ({ lay: String(l.lay), pts: l.pts, ...(l.lt ? {lt:l.lt}: {}) })), polys: D.polys.map(p => ({ lay: String(p.lay), closed: p.closed, pts: p.pts, nativeName:p.nativeName||"", ...(p.lt ? {lt:p.lt}: {}), ...(p.curveApprox ? {curveApprox:true}: {}) })),
@@ -8121,6 +8265,43 @@ A.imzaTablo = (g, x0, y0, x1, y1, cols, P) => { // cols: başlık satırları di
   ["İMZA", "TARİH", "ADI SOYADI"].forEach((s, i) => g.T(x0 + 1.5, y0 + rh * (i + 0.5), s, 1.7));
   cols.forEach((c, i) => { const a = x0 + w0 + i * cw; if (i) g.L([[a, y0], [a, y1]], 0.25); c.h.forEach((s, j) => g.S(a, y1 - (y1 - top) * (j + 1) / (c.h.length + 1), a + cw, s, 1.7));
     if (c.ad) g.S(a, y0 + rh * 2.5, a + cw, c.ad, 1.6); if (c.tarih) g.S(a, y0 + rh * 1.5, a + cw, c.tarih, 1.6); if (i === 0 && g.G && window.O) window.O.kase(g.G, a + cw / 2, y0 + rh * 1.6, Math.min(cw - 2, 40)); }); };
+/* İfraz eklerinde belediye/özel idare, iki onay sütununun ortak başlığında yer alır.
+   Yalnız kesin olarak seçilmiş kurumun karşısı iptal edilir. */
+A.ifzYerEtiket=(g,x,y,words,kind,size=1.8)=>{
+  for(const word of words){const w=A.tw(word,size);g.T(x,y,word,size);
+    if(word.trim()==="KÖY"&&kind==="mah"||word.trim()==="MAH."&&kind==="koy")g.L([[x-.15,y],[x+w+.15,y]],.22,"#d00000");x+=w;}
+};
+A.ifzImzaTablo=(g,x0,y0,x1,y1,P,kind)=>{
+  const w0=22,a=x0+w0,cw=(x1-a)/4,edge=[a,a+cw,a+2*cw,a+3*cw,x1],
+    rh=(y1-y0)*.17,top=y0+3*rh,h=(y1-top)/3;
+  g.R(x0,y0,x1,y1,.32);g.L([[a,y0],[a,y1]],.23);
+  for(let i=1;i<=3;i++)g.L([[x0,y0+i*rh],[x1,y0+i*rh]],i===3?.24:.15);
+  g.L([[edge[1],y0],[edge[1],y1]],.23);
+  g.L([[edge[2],y0],[edge[2],top+h]],.23);
+  g.L([[edge[3],y0],[edge[3],y1]],.23);
+  for(const v of [top+h,top+2*h])g.L([[edge[1],v],[edge[3],v]],.15);
+  ["İMZA","TARİH","ADI SOYADI"].forEach((v,i)=>g.T(x0+1.5,y0+rh*(i+.5),v,1.65));
+  const center=(l,r)=> (l+r)/2,tx=(x,y,t,size=1.7)=>g.T(x,y,t,size,{al:"c"});
+  tx(center(edge[0],edge[1]),top+1.5*h,"DÜZENLEYEN");
+  tx(center(edge[1],edge[3]),top+2.5*h,"UYGUNDUR");
+  const text=["BELEDİYE"," / ","ÖZEL İDARE"],size=Math.min(1.8,(edge[3]-edge[1]-3)/28),width=text.map(v=>A.tw(v,size));
+  let q=center(edge[1],edge[3])-width.reduce((a,b)=>a+b,0)/2;
+  for(let i=0;i<text.length;i++){
+    const y=top+1.5*h,x=q+width[i]/2;tx(x,y,text[i],size);
+    if((i===0&&P.ifzIdareKind==="ozel")||(i===2&&P.ifzIdareKind==="belediye"))
+      g.L([[q-.2,y],[q+width[i]+.2,y]],.25,"#d00000");
+    q+=width[i];
+  }
+  tx(center(edge[1],edge[2]),top+.5*h,"KONTROL EDEN",1.6);
+  tx(center(edge[2],edge[3]),top+.5*h,"ONAYLAYAN",1.6);
+  if(kind==="durum")tx(center(edge[3],edge[4]),top+2.4*h,"KONTROL EDİLMİŞTİR",1.45);
+  tx(center(edge[3],edge[4]),top+1.45*h,"KADASTRO MÜDÜRLÜĞÜ",Math.min(1.55,(cw-2)/17));
+  if(kind!=="durum")tx(center(edge[3],edge[4]),top+.5*h,"KONTROL EDEN",1.5);
+  if(P.duzenleyen)g.S(edge[0],y0+2.5*rh,edge[1],P.duzenleyen,Math.min(1.6,(cw-2)/Math.max(1,P.duzenleyen.length*.78)));
+  if(P.tarih)g.S(edge[0],y0+1.5*rh,edge[1],P.tarih,1.6);
+  if(P.ifzControlMuh)g.S(edge[3],y0+2.5*rh,edge[4],P.ifzControlMuh,Math.min(1.6,(cw-2)/Math.max(1,P.ifzControlMuh.length*.78)));
+  if(window.O)window.O.kase(g.G,center(edge[0],edge[1]),y0+rh*1.6,Math.min(cw-2,40));
+};
 /* EK-18 ölçü krokisi (A4 yatay) */
 A.kroki = (D, P) => { const g = A.pg(297, 210); const { L, T, R } = g; R(10, 12, 287, 200, 0.45);
   T(148, 204, P.baslik || (P.kgm ? "ÖLÇÜ KROKİSİ" : `${P.ada || ""} ADA ÖLÇÜ KROKİSİ`), 3.2, { al: "c" }); T(287, 204, P.kgm ? "EK-18" : "Ek-18", 2.6, { al: "r" }); if (String(P.formKod || "").trim() !== "-") T(10, 8, String(P.formKod || "").trim() || "32381507 FR. 521 Rev.No/ Tarihi:01/06.06.2024", 1.6); /* TKGM form seri kodu (örnek Ek-18 sol alt) */
@@ -8135,8 +8316,8 @@ A.kroki = (D, P) => { const g = A.pg(297, 210); const { L, T, R } = g; R(10, 12,
   else if (rows.length) T(254, 100, "-EKTEDİR-", 5, { al: "c", rot: 35 });
   // alt antet
   const ay0 = 12, ay1 = 47; L([[10, ay1], [cx, ay1]], 0.35); L([[85, ay0], [85, ay1]], 0.35);
-  [["İLİ", P.il], ["İLÇESİ", P.ilce], ["MAH./KÖY", P.mahalle], ["PAFTA NO", P.pafta], ["ADA/PARSEL NO", `${P.ada || ""} / ${P.parselNo || ""}`]].forEach(([a, b], i) => { const y = ay1 - (ay1 - ay0) / 5 * (i + 0.5); T(12, y, a, 2); T(42, y, ": " + (b || ""), 2); if (i) L([[10, ay1 - (ay1 - ay0) / 5 * i], [85, ay1 - (ay1 - ay0) / 5 * i]], 0.15); });
-  A.imzaTablo(g, 85, ay0, cx, ay1, [{ h: ["DÜZENLEYEN"], ad: P.duzenleyen, tarih: P.tarih }, { h: P.kgm ? ["UYGUNDUR", "KARAYOLLARI GEN. MÜD.", "KONTROL EDEN"] : ["UYGUNDUR", "BELEDİYE/ÖZEL İDARE", "KONTROL EDEN"] }, { h: ["ONAYLAYAN"] }, { h: ["KADASTRO MÜDÜRLÜĞÜ", "KONTROL EDEN"] }], P);
+  [["İLİ", P.il], ["İLÇESİ", P.ilce], ["MAH./KÖY", P.mahalle], ["PAFTA NO", P.pafta], ["ADA/PARSEL NO", `${P.ada || ""} / ${P.parselNo || ""}`]].forEach(([a, b], i) => { const y = ay1 - (ay1 - ay0) / 5 * (i + 0.5); if(D.ifraz&&a==="MAH./KÖY")A.ifzYerEtiket(g,12,y,["MAH."," / ","KÖY"],P.ifzSettlement,2);else T(12,y,a,2); T(42, y, ": " + (b || ""), 2); if (i) L([[10, ay1 - (ay1 - ay0) / 5 * i], [85, ay1 - (ay1 - ay0) / 5 * i]], 0.15); });
+  if(D.ifraz&&!P.kgm)A.ifzImzaTablo(g,85,ay0,cx,ay1,P,"kroki");else A.imzaTablo(g, 85, ay0, cx, ay1, [{ h: ["DÜZENLEYEN"], ad: P.duzenleyen, tarih: P.tarih }, { h: P.kgm ? ["UYGUNDUR", "KARAYOLLARI GEN. MÜD.", "KONTROL EDEN"] : ["UYGUNDUR", "BELEDİYE/ÖZEL İDARE", "KONTROL EDEN"] }, { h: ["ONAYLAYAN"] }, { h: ["KADASTRO MÜDÜRLÜĞÜ", "KONTROL EDEN"] }], P);
   A.krokiPlan(g, D.ifraz ? {...D,nearSketch:true} : D, [14, 50, cx - 4, P.sira ? 180 : 196], null); if ((D.imar || []).length) { g.G.push({ t: "l", p: [[cx - 62, 52.5], [cx - 46, 52.5]], w: 0.3, color: "#0000ff" }); T(cx - 44, 51.9, "İmar Ada Kenarı", 1.8); } return g.G; };
 /* Output-space crop shared by the two ifraz sketches. Keep the open ends
    of surveyed boundaries: there is no artificial line along the crop. */
@@ -8395,9 +8576,9 @@ A.krokiPlan = (g, D, box, list) => { const i0 = g.G.length; const all = [...D.pa
   try { A.declutter(g.G, i0, g.G.length, box, { pad: D.nearSketch ? .95 : .2 }); } catch (e) { console.error(e); }
   const unplaced=g.G.slice(i0).filter(o=>o.pointNumber&&!o.s).length+D.points.length-g.G.slice(i0).filter(o=>o.pointNumber).length;
   if(unplaced&&!D.noHidNote) T(box[0]+1,box[1]+1,`Sık noktalardan ${unplaced} tanesinin numarası koordinat özetinde.`,1.5,{sabit:true});
-  // İfrazın eski parsel numarası ve üst çizgisi de siyah; çizgi gerçek yazı konumuna göre çizilir.
+  // İfraz: numara siyah kalır; iptal çizgisi kırmızı ve numaranın tam üstündedir.
   const old=g.G.slice(i0).find(o=>o.parentParcelNo&&o.s);
-  if(D.parts.length&&old){const r=A.tw(old.s,old.size)/2+.35;L([[old.x-r,old.y],[old.x+r,old.y]],.2,"#000");}
+  if(D.parts.length&&old){const r=A.tw(old.s,old.size)/2+.35;L([[old.x-r,old.y],[old.x+r,old.y]],.25,D.ifraz?"#d00000":"#000");}
   A.krokiKomsuLabels(g,D,F,box,D.frame||KW);
   for(const o of g.G.slice(i0))if(o.t==="x"&&(D.nearSketch||o.grp==="parentId"))o.sabit=true;
   return F; };
@@ -8423,7 +8604,7 @@ A.taksim = (D, P, tk) => { const g = A.pg(210, 297); const { T, R } = g; R(8, 8,
 A.durumGridVisible=(x,y)=>x>=14&&x<=283&&y>=14&&y<=192&&!(x<72&&y>154)&&!(x>150&&y<44)&&!(x>95&&x<205&&y>176)&&!(x>266&&y>95&&y<135);
 A.durum = (D, P) => { const g = A.pg(297, 210); const { L, T, R } = g; R(10, 10, 287, 196, 0.45); T(148, 186, "DURUM HARİTASI", 3.4, { al: "c" }); T(287, 199.5, "EK-15", 2.8, { al: "r" });
   const tb = [["İLİ", P.il], ["İLÇESİ", P.ilce], ["KÖY / MAH.", P.mahalle], ["PAFTA NO", P.pafta], ["ADA/PARSEL", `${P.ada || ""} / ${P.parselNo || ""}`]]; R(10, 196 - 40, 70, 196, 0.3); L([[32, 156], [32, 196]], 0.2);
-  tb.forEach(([a, b], i) => { const y = 196 - 8 * (i + 0.5); T(12, y, a, 1.7); T(34, y, b || "", 1.7); if (i) L([[10, 196 - 8 * i], [70, 196 - 8 * i]], 0.15); });
+  tb.forEach(([a, b], i) => { const y = 196 - 8 * (i + 0.5); if(D.ifraz&&a==="KÖY / MAH.")A.ifzYerEtiket(g,12,y,["KÖY"," / ","MAH."],P.ifzSettlement,1.7);else T(12,y,a,1.7); T(34, y, b || "", 1.7); if (i) L([[10, 196 - 8 * i], [70, 196 - 8 * i]], 0.15); });
   const F = A.krokiPlan(g, Object.assign({}, D, { points: [], noLen: true,nearSketch:D.ifraz,gridFrame:D.ifraz }), [74, 46, 270, 182], [500,1000,2000,2500,5000,10000,...(D.ifraz?[25000,50000,100000,250000,500000,1000000,2500000,5000000]:[])].filter(k=>!D.ifraz||k>=(D.durumOlcek||500)));
   if ((D.imar || []).length) { g.G.push({ t: "l", p: [[14, 13], [32, 13]], w: 0.3, color: "#0000ff" }); T(34, 12.4, "İmar Ada Kenarı", 1.8); }
   A.north(g.G, 281, 120); T(281, 102, `1 / ${F.olc}`, 2, { al: "c" }); L([[275, 104.5], [287, 104.5]], 0.2);
@@ -8440,7 +8621,7 @@ A.durum = (D, P) => { const g = A.pg(297, 210); const { L, T, R } = g; R(10, 10,
     const y=F.M([lo[0],n])[1];
     if(y>18&&y<189) T(6.5,y,String(n),1.65,{...style,rot:90});
   }
-  A.imzaTablo(g, 150, 10, 287, 44, [{ h: ["DÜZENLEYEN"], ad: P.duzenleyen, tarih: P.tarih }, { h: ["UYGUNDUR", "BELEDİYE / ÖZEL İDARE", "KONTROL EDEN"] }, { h: ["ONAYLAYAN"] }, { h: ["KONTROL EDİLMİŞTİR.", "KADASTRO MÜDÜRLÜĞÜ"] }], P);
+  if(D.ifraz)A.ifzImzaTablo(g,150,10,287,44,P,"durum");else A.imzaTablo(g, 150, 10, 287, 44, [{ h: ["DÜZENLEYEN"], ad: P.duzenleyen, tarih: P.tarih }, { h: ["UYGUNDUR", "BELEDİYE / ÖZEL İDARE", "KONTROL EDEN"] }, { h: ["ONAYLAYAN"] }, { h: ["KONTROL EDİLMİŞTİR.", "KADASTRO MÜDÜRLÜĞÜ"] }], P);
   return g.G; };
 /* beyanname alan hesabı eki (A4 dikey, gerekirse çok sayfa) */
 /* yüzölçümü hesabı yanılma sınırı (arşiv onaylı / kesin koordinatlı geometri, artan oranlı; Tapu Planlarında Yanılma Sınırının Belirlenmesi Hk. Yön. md. 8) */
@@ -8489,7 +8670,7 @@ A.tescil = (D, P) => { const g = A.pg(210, 297); const { L, T, R } = g; T(200, 2
     ...D.parts.map(p => ({ pn: p.ad, a: (PI[p.ad] || {}).alan ?? p.deng ?? A.area(p.pts), cins: (PI[p.ad] || {}).cins, not: (PI[p.ad] || {}).not }))];
   const rh = 8; for (let k = 0; k < 15; k++) L([[10, hy0 - rh * (k + 1)], [200, hy0 - rh * (k + 1)]], 0.15);
   rows.forEach((r, k) => { const y = hy0 - rh * (k + 0.5); const [H, m, dm] = hdm(r.a); const vals = ["", r.pafta ?? P.pafta, r.ada ?? P.ada, r.pn, H, m, dm];
-    vals.forEach((v, i) => T((cx[i] + cx[i + 1]) / 2, y, v ?? "", 1.7, { al: "c" })); if (r.eski) L([[cx[4] + 1, y], [cx[7] - 1, y]], 0.25);
+    vals.forEach((v, i) => T((cx[i] + cx[i + 1]) / 2, y, v ?? "", 1.7, { al: "c" })); if (r.eski) {L([[cx[4] + 1,y],[cx[7]-1,y]],.25,P.ifzDoc?"#d00000":"#000");if(P.ifzDoc){const mid=(cx[3]+cx[4])/2,w=A.tw(String(r.pn||""),1.7)/2+.3;L([[mid-w,y],[mid+w,y]],.25,"#d00000");}}
     A.wrapT(g, (cx[7] + cx[8]) / 2, y, r.cins ?? P.cins ?? "", 18, 1.55); if (r.eski && P.kgm) { L([[cx[1] + 1, y], [cx[9] - 1, y]], 0.2); } A.wrapT(g, (cx[8] + cx[9]) / 2, y, r.malik ?? P.malik ?? "", 26, 1.4); if (r.eski && P.cizEski) L([[cx[1] + 1, y], [cx[9] - 1, y]], 0.2); if (r.not) A.wrapT(g, (cx[9] + cx[10]) / 2, y, r.not, 32, 1.55); });
   L([[10, 60], [200, 60]], 0.3); R(122, 60, 200, 96, 0.25); L([[122, 88], [200, 88]], 0.2); T(161, 93, "ONAY", 1.7, { al: "c" }); T(161, 90, "Kadastro Müdürü", 1.5, { al: "c" });
   const sx = [10, 38, 70, 102, 128, 160, 180, 200]; L([[10, 50], [200, 50]], 0.25); L([[10, 42], [200, 42]], 0.25); [34, 26, 18].forEach(v => L([[10, v], [160, v]], 0.15)); sx.slice(1, -2).forEach(c => L([[c, 8], [c, 60]], 0.2)); L([[160, 8], [160, 60]], 0.2);
@@ -8569,10 +8750,10 @@ A.fromGeo = (text, cmFix) => { const J = JSON.parse(text); const feats = J.type 
     const m = { il: P(/^il(Ad|_?adi)?$/i), ilce: P(/^il[cç]e(Ad|_?adi)?$/i), mahalle: P(/^(mahalle|mah)(Ad|_?adi)?$/i), ada: P(/^ada(No)?$/i), parsel: P(/^parsel(No)?$/i), alan: P(/^(alan|yuzolcum|yüzölçüm)/i), nitelik: P(/^nitelik/i), pafta: P(/^pafta/i), mevki: P(/^mevki/i) };
     const lay = m.ada != null ? "TKGM_PARSEL" : (p.name || p.Name || "GEOJSON"); const lab = m.ada != null && m.parsel != null ? `${m.ada}/${m.parsel}` : (p.name || p.Name || "");
     const rings = g.type === "Polygon" ? [g.coordinates[0]] : g.type === "MultiPolygon" ? g.coordinates.map(r => r[0]) : [];
-    for (const r of rings) { const pts = r.map(T); if (pts.length > 1 && Math.hypot(pts[0][0] - pts[pts.length - 1][0], pts[0][1] - pts[pts.length - 1][1]) < 1e-6) pts.pop(); out.polys.push({ lay, closed: true, pts }); if (lab) { const c = A.label(pts); out.texts.push({ lay, s: String(lab), e: c[0], y: c[1], h: 2 }); } m.pts = pts; }
+    for (const r of rings) { const pts = r.map(T); if (pts.length > 1 && Math.hypot(pts[0][0] - pts[pts.length - 1][0], pts[0][1] - pts[pts.length - 1][1]) < 1e-6) pts.pop(); out.polys.push({ lay, closed: true, pts }); out.meta.push({...m,pts}); if (lab) { const c = A.label(pts); out.texts.push({ lay, s: String(lab), e: c[0], y: c[1], h: 2 }); } }
     if (g.type === "LineString") out.polys.push({ lay, closed: false, pts: g.coordinates.map(T) }); if (g.type === "MultiLineString") g.coordinates.forEach(l => out.polys.push({ lay, closed: false, pts: l.map(T) }));
     if (g.type === "Point") { const q = T(g.coordinates); out.points.push({ lay, n: lab || String(out.points.length + 1), e: q[0], y: q[1], z: q[2] }); }
-    if (rings.length) out.meta.push(m); }
+  }
   out.cm = cm; out.wgs = wgs; return out; };
 A.fromKML = (text, cmFix) => { const x = new DOMParser().parseFromString(text, "application/xml"); const pms = [...x.getElementsByTagName("Placemark")]; const feats = [];
   const co = el => el ? el.textContent.trim().split(/\s+/).map(s => s.split(",").map(Number)).filter(c => c.length >= 2 && isFinite(c[0])) : [];
@@ -13876,7 +14057,7 @@ const AD = { kat: "", cins: "", cinsElle: false, parsel: null, bina: "", unit: 0
   antet: { il: "KASTAMONU", ilce: "MERKEZ", mahalle: "TAŞLIK", mevki: "-", pafta: "", ada: "", parselNo: "", datum: "ITRF-96", proj: "UTM ( 3 Derece)", projK: "UTM 3°", elipsoid: "GRS80", dom: "33", dilim: "ZONE36", mk: "0.09", refH: "Ortometrik", donusum: "", megsis: "", aciklama: "",
     duzenleyen: (window.ACAD_USER && ACAD_USER.ad) || "", fenni: "", tarih: "", olcek: "", ek: "(EK-1)", cins: "", malik: "", tapuAlan: "", tecviz: "", formKod: "", islem: "Ayırma" } };
 const S = () => { if (!ST.apl) ST.apl = JSON.parse(JSON.stringify(AD)); const a = ST.apl; for (const k in AD) if (a[k] === undefined) a[k] = JSON.parse(JSON.stringify(AD[k]));
-  for (const k in AD.ifz) if (a.ifz[k] === undefined) a.ifz[k] = JSON.parse(JSON.stringify(AD.ifz[k])); for (const k in AD.antet) if (a.antet[k] === undefined) a.antet[k] = AD.antet[k]; if (a.antet.mkV !== 2) { if (!a.antet.mk) a.antet.mk = "0.09"; a.antet.mkV = 2; } return a; };
+  for (const k in AD.ifz) if (a.ifz[k] === undefined) a.ifz[k] = JSON.parse(JSON.stringify(AD.ifz[k])); for (const k in AD.antet) if (a.antet[k] === undefined) a.antet[k] = AD.antet[k]; if (a.antet.mkV !== 2) { if (!a.antet.mk) a.antet.mk = "0.09"; a.antet.mkV = 2; } if(a.parsel && a.ifz.belgeKey===undefined)ifzBindLegacy(a); return a; };
 const CEK_TOL = 0.02; /* imar çekmesi denetiminde kurumların kabul ettiği ölçü toleransı (1–2 cm) */ let MOD = "apl", PICK2 = null; let FD = null, FDname = "", MD = null, MDname = "", PLACED = null, ZTIN = null; // bellekte: dosya geometrisi
 const tr2 = v => K.tr(v, 2), tr3 = v => K.tr(v, 3), tra = v => K.ta(v), trc = v => K.tc(v), tru = v => K.tu(v), trk = v => K.tk(v), trz = v => K.tz(v);
 const msg = (id, t, bad) => { const e = $(id); e.className = "msg" + (bad ? " err" : ""); e.textContent = t; };
@@ -14040,7 +14221,37 @@ function tableNames(pts, nm) { if (!FD || !FD.texts) return; const T = FD.texts.
 function textNames(pts, nm) { if (!FD || !FD.texts) return; const T = FD.texts.filter(t => /NAD|NOKTA.?(AD|NO)|NOKTANO|N_?ADI/i.test(t.lay) && /^[A-Za-z0-9\/._-]{1,14}$/.test(String(t.s).trim()) && isFinite(t.e)); if (!T.length) return;
   const used = new Set(nm.filter(Boolean)); const pairs = []; pts.forEach((p, i) => { if (nm[i]) return; T.forEach((t, j) => { const d = Math.hypot(t.e - p[0], t.y - p[1]); if (d < 8) pairs.push([d, i, j]); }); });
   pairs.sort((a, b) => a[0] - b[0]); const ti = new Set(); for (const [, i, j] of pairs) { if (nm[i] || ti.has(j)) continue; const s_ = String(T[j].s).trim(); if (used.has(s_)) continue; nm[i] = s_; ti.add(j); used.add(s_); } }
-function setParsel(pts, ad, src, no, strictCad, verifiedNames) { const a = S(); if (no) { if (no.ada) a.antet.ada = no.ada; a.antet.parselNo = no.no; fillAntet(); } pts = A.clean(pts.map(p => [p[0], p[1]]), 0.002, true); const nm0 = strictCad ? pts.map((p,i) => verifiedNames && verifiedNames[i] ? String(verifiedNames[i]) : "") : pts.map(p => nameOf(p)); if (!strictCad) { tableNames(pts, nm0); textNames(pts, nm0); }
+function ifzReadParcelHeader(a,drawing,pts,no){
+  const P=a.antet,ky=A.kunye(drawing.texts||[]),meta=drawing.meta||[];
+  let m=meta.find(o=>o.pts===pts);
+  if(!m&&pts){
+    const ringKey=ring=>JSON.stringify(ring.map(p=>[Math.round(p[0]*100),Math.round(p[1]*100)]).sort((a,b)=>a[0]-b[0]||a[1]-b[1]));
+    const key=ringKey(pts);
+    m=meta.find(o=>o.pts?.length===pts.length&&ringKey(o.pts)===key);
+  }
+  if(!m&&no?.ada!=null&&no?.no!=null){
+    const matches=meta.filter(o=>String(o.ada)===String(no.ada)&&String(o.parsel)===String(no.no));
+    if(matches.length===1)m=matches[0];
+  }
+  if(!m&&!pts&&meta.length===1)m=meta[0];
+  const useText=meta.length<=1;
+  for(const [field,source] of [["il","il"],["ilce","ilce"],["mahalle","mahalle"],["ada","ada"],["parselNo","parsel"],["mevki","mevki"],["pafta","pafta"],["cins","nitelik"]]){
+    const value=m?.[source]??(useText?ky[source]:null);
+    P[field]=value==null?"":String(value);
+  }
+  P.tapuAlan="";
+  if(m?.alan!=null&&String(m.alan).trim()){
+    const t=String(m.alan).trim(),v=t.includes(",")?Number(t.replaceAll(".","").replace(",",".")):Number(t);
+    if(Number.isFinite(v))P.tapuAlan=String(v);
+  }
+  if(no?.ada!=null)P.ada=String(no.ada);
+  if(no?.no!=null)P.parselNo=String(no.no);
+  P.malik="";P.tecviz="";
+  a.antetSrc={};
+  for(const field of ["il","ilce","mahalle","ada","parselNo","pafta"])if(P[field])a.antetSrc[field]="parsel";
+  if(drawing.wgs&&drawing.cm)P.dom=String(drawing.cm);
+}
+function setParsel(pts, ad, src, no, strictCad, verifiedNames) { const a = S(); if(MOD==="ifz"&&src==="dosya"&&FD?.meta?.length){ifzReadParcelHeader(a,FD,pts,no);fillAntet();} if (no) { if (no.ada) a.antet.ada = no.ada; a.antet.parselNo = no.no; fillAntet(); } pts = A.clean(pts.map(p => [p[0], p[1]]), 0.002, true); const nm0 = strictCad ? pts.map((p,i) => verifiedNames && verifiedNames[i] ? String(verifiedNames[i]) : "") : pts.map(p => nameOf(p)); if (!strictCad) { tableNames(pts, nm0); textNames(pts, nm0); }
   const raw = pts.map(p => [p[0], p[1]]); if (!strictCad) { const NP = named(); pts = pts.map((p, i) => { let b = null, bd = 0.03; for (const q of NP) { const d = Math.hypot(q.e - p[0], q.y - p[1]); if (d < bd) { bd = d; b = q; } } return b ? [b.e, b.y] : p; }); } /* köşe, adlı ölçü noktasının kendi koordinatına oturur */ let k = 0; const names = nm0.map(n => n || ("K" + (++k)));
   const autoNames = nm0.map(n => !n); /* kadastro koordinatı 2 hane: köşeler cm'ye yuvarlanır, alanlar yuvarlanmış koordinattan hesaplanır (kontrol mühendisi çizelgeden aynı alanı bulur); kaynak değer raw'da kalır */ pts = pts.map(p => K.cm(p));
   a.parsel = { pts, names, autoNames, ad, src, raw }; a.kom = []; a.res = null; a.ifz.parts = null; a.ifz.cuts = []; a.ifz.yeni = []; a.ifz.yol = []; a.ifz.roadSpan=null;a.ifz.roadMarks=null; a.ifz.yolSource = "none"; PLACED = null; const usedRoad=!!FD?.ifzNetwork?.length&&useIfzRoadNetwork(); save(); renderAll(); fitA(); if (MOD === "ifz"&&!usedRoad) { const note=$("iYolNot"); if(note)note.textContent="Parsel seçildi. Yol kenarını aşağıdan işaretle veya Yol ara komutunu kullan."; } if (MOD === "akr") setTimeout(() => { try { akRender(); akPrev(); } catch (e) {} }, 0); }
@@ -14053,8 +14264,9 @@ $("aF").addEventListener("change", e => { const f = e.target.files[0]; if (!f) r
 async function loadParcel(f, inp) { window.acadConsumeDwg82=null; S().binaElle = false; S().manuelFootprint = null; S().aplFootApproved = null; inp = inp || $("aF"); inp.closest(".filebtn").classList.add("has"); $("aParInfo").textContent = "Okunuyor…"; const e = { target: inp };
   try { FD = await readAny(f); FDname = f.name; } catch (er) { $("aParInfo").innerHTML = `<span class="pill bad">${esc(f.name)} okunamadı: ${esc(er.message)}</span>`; e.target.value = ""; return; } e.target.value = "";
   { const a0 = S(); a0.kenarFix = {}; a0.parsel = null; a0.res = null; a0.ifz.parts = null; a0.ifz.cuts = []; a0.ifz.yeni = []; a0.ifz.yol = []; a0.antet.ada = ""; a0.antet.parselNo = ""; }
-  try { const ky = A.kunye(FD.texts || []), a1 = S(); a1.antetSrc = {}; [["il", "il"], ["ilce", "ilce"], ["mahalle", "mahalle"], ["pafta", "pafta"], ["ada", "ada"], ["parsel", "parselNo"]].forEach(([k, t]) => { if (ky[k]) { a1.antet[t] = ky[k]; a1.antetSrc[t] = "parsel"; } }); } catch (e) {} fillAntet();
-  if (FD.meta && FD.meta.length) { const m0 = FD.meta[0], a0 = S(); [["il", "il"], ["ilce", "ilce"], ["mahalle", "mahalle"], ["pafta", "pafta"], ["mevki", "mevki"]].forEach(([k, t]) => { if (m0[k]) a0.antet[t] = String(m0[k]); }); if (m0.nitelik) a0.antet.cins = String(m0.nitelik); if (m0.alan) { const t_ = String(m0.alan).trim(), v = typeof m0.alan === "number" ? m0.alan : /,/.test(t_) ? +t_.replace(/\./g, "").replace(",", ".") : +t_; if (isFinite(v)) a0.antet.tapuAlan = String(v); } if (FD.cm) { ST.set.cm = FD.cm; } fillAntet(); }
+  if(MOD==="ifz"){ifzReadParcelHeader(S(),FD,null,null);fillAntet();}
+  else try { const ky = A.kunye(FD.texts || []), a1 = S(); a1.antetSrc = {}; [["il", "il"], ["ilce", "ilce"], ["mahalle", "mahalle"], ["pafta", "pafta"], ["ada", "ada"], ["parsel", "parselNo"]].forEach(([k, t]) => { if (ky[k]) { a1.antet[t] = ky[k]; a1.antetSrc[t] = "parsel"; } }); } catch (e) {} fillAntet();
+  if (MOD!=="ifz" && FD.meta && FD.meta.length) { const m0 = FD.meta[0], a0 = S(); [["il", "il"], ["ilce", "ilce"], ["mahalle", "mahalle"], ["pafta", "pafta"], ["mevki", "mevki"]].forEach(([k, t]) => { if (m0[k]) a0.antet[t] = String(m0[k]); }); if (m0.nitelik) a0.antet.cins = String(m0.nitelik); if (m0.alan) { const t_ = String(m0.alan).trim(), v = typeof m0.alan === "number" ? m0.alan : /,/.test(t_) ? +t_.replace(/\./g, "").replace(",", ".") : +t_; if (isFinite(v)) a0.antet.tapuAlan = String(v); } if (FD.cm) { ST.set.cm = FD.cm; } fillAntet(); }
   ZTIN = null; const c = parcelCands().filter(o => o.v[0] === "f"); const m = f.name.replace(/^[0-9a-f]{8}-/i, "").match(/(\d{1,5})[_\-\/ .](\d{1,4})/); const a = S(); if (m) { a.antet.ada = m[1]; a.antet.parselNo = m[2]; fillAntet(); }
   { const c2 = fileCands(), cl = c2.filter(o => !o.cerceve && !o.cizgi), cz = c2.filter(o => !o.cerceve && o.cizgi);
     const byNo = m ? c2.filter(o => !o.cerceve && o.no && String(o.no.no) === m[2] && (!o.no.ada || String(o.no.ada) === m[1])).sort((x, y) => (!!x.cizgi - !!y.cizgi) || y.a - x.a)[0] : null; const pick = byNo ? byNo : c2.length === 1 && c2[0].kad ? c2[0] : cl.length && cl.length <= 4 ? cl.sort((x, y) => y.a - x.a)[0] : !cl.length && cz.length === 1 ? cz[0] : null; if (pick) { const p = pick; setParsel(p.pts, p.ad, "dosya", p.no); } else if (!parFromMim()) { renderAll(); fitA(); } }
@@ -14563,7 +14775,7 @@ function vazToCad() { const a = S(); if (!a.parsel) return msg("aMsg", "Önce pa
   const v = vazTexts() || vazCands()[0]; if (!v) return msg("aMsg", "Mimari projede gerçek parselle aynı şekilli vaziyet çizimi bulunamadı.", true);
   const C = v.C, bb = A.bbox(C), pad = Math.max(bb[2] - bb[0], bb[3] - bb[1]) * 0.08, inB = p => p[0] > bb[0] - pad && p[0] < bb[2] + pad && p[1] > bb[1] - pad && p[1] < bb[3] + pad;
   const tf = p => { const q = A.apply(v.T, p); return [q[0], q[1], p[2] || 0]; }, th = v.T.th * 180 / Math.PI;
-  const V = { lines: MD.lines.filter(l => l.pts.every(inB)).map(l => ({ lay: "VZ:" + l.lay, pts: l.pts.map(tf) })), polys: MD.polys.filter(p => p.pts.every(inB)).map(p => ({ lay: "VZ:" + p.lay, closed: p.closed, pts: p.pts.map(tf) })),
+  const V = {layerRGB:Object.fromEntries(Object.entries(MD.layerRGB||{}).map(([l,c])=>["VZ:"+l,c])),layerColors:Object.fromEntries(Object.entries(MD.layerColors||{}).map(([l,c])=>["VZ:"+l,c])), lines: MD.lines.filter(l => l.pts.every(inB)).map(l => ({ ...l,lay: "VZ:" + l.lay, pts: l.pts.map(tf) })), polys: MD.polys.filter(p => p.pts.every(inB)).map(p => ({ ...p, lay:"VZ:"+p.lay, closed: p.closed, pts: p.pts.map(tf) })),
     points: [], texts: MD.texts.filter(t => isFinite(t.e) && inB([t.e, t.y])).map(t => { const q = tf([t.e, t.y]); return { lay: "VZ:" + t.lay, s: t.s, e: q[0], y: q[1], h: (t.h || 0) * v.T.k || 1, rot: ((t.rot || 0) + th + 360) % 360 }; }) };
   const info = `Vaziyet gerçek koordinata oturtuldu (ölçek ${v.T.k}, dönüklük ${th.toFixed(3)}°, parsel uyumu ort. ${(v.T.rms * 100).toFixed(1)} cm)`;
   window.cadVaziyet && window.cadVaziyet(FD, V, a.parsel.pts, info); }
@@ -15512,12 +15724,12 @@ function ekYaz() { const a = S(); a.ek = a.ek || {}; const g = {}; EKF.forEach(k
 function ekForm() { const a = S(); a.ek = a.ek || {}; const o = ekOku(); EKF.forEach(k => { const el = $("ek_" + k); if (el && el !== document.activeElement) el.value = (k === "idare" || k === "sahip") ? (a.ek[k] ?? "") : (o[k] ?? ""); });
   try { $("ek_idare").placeholder = idareOto() || "Belediye / İl Özel İdaresi — kontrol edip seçin"; const so = sahipOto(); $("ek_sahip").placeholder = [so.genel, ...Object.values(so.blok)].filter(Boolean).join(" · ") || "mimari projeden okunur"; } catch (e) {} }
 // ilgili idare: köyde İL ÖZEL İDARESİ, mahallede (il/ilçe merkezi) belediye — Kastamonu Merkez → KASTAMONU BELEDİYESİ, İnebolu → İNEBOLU BELEDİYESİ
-function idareOto() { const a = S(), P = a.antet, up = x => String(x || "").toLocaleUpperCase("tr-TR").trim(); const il = up(P.il), ilce = up(P.ilce), mh = up(P.mahalle);
+function idareOto(onlyParcel=false) { const a = S(), P = a.antet, up = x => String(x || "").toLocaleUpperCase("tr-TR").trim(); const il = up(P.il), ilce = up(P.ilce), mh = up(P.mahalle);
   if (!il || !mh) return "";
   // Yalnız açıkça yazılmış KÖY / MAHALLE ya da projedeki eşleşen ifade güvenilir ipucudur.
   let koy = /(?:^|\s)KÖY(?:Ü|U)?(?:\s|$)/.test(mh) ? true : /(?:^|\s)MAH(?:ALLES[İI])?\.?(?:\s|$)/.test(mh) ? false : null;
   if (koy === null) {
-    const nm = mh.trim(), TX = [...(FD ? FD.texts : []), ...(MD && !MD.pdf ? MD.texts : [])].map(t => up(t.s));
+    const nm = mh.trim(), TX = [...(FD ? FD.texts : []), ...(!onlyParcel && MD && !MD.pdf ? MD.texts : [])].map(t => up(t.s));
     if (nm) {
       if (TX.some(t => t.includes(nm) && /MAHALLE|\sMAH\.|CADDE|SOKAK|BULVAR/.test(t))) koy = false;
       else if (TX.some(t => t.includes(nm) && /KÖY/.test(t))) koy = true;
@@ -15561,13 +15773,86 @@ const ifzDocTitles = {
   '09':'GNSS çizelgesi (Ek-8)', '10':'Kısa GNSS çizelgesi (Ek-8)',
   '11':'Beyanname', '12':'Taksim sözleşmesi', '00':'Malik başvuru dilekçesi'
 };
-const ifzFields = () => S().ifz.belgeler || {};
+function ifzAttachmentKey(a){
+  const P=a.antet,pts=a.parsel?.pts;
+  if(!pts?.length)return "";
+  const norm=v=>String(v??"").normalize("NFC").trim().replace(/\s+/g," ").toLocaleUpperCase("tr-TR");
+  // The first corner and the drawing direction may change on a second import.
+  const xy=pts.map(p=>[p[0],p[1]]);
+  if(xy.length>1&&xy[0][0]===xy.at(-1)[0]&&xy[0][1]===xy.at(-1)[1])xy.pop();
+  let first=0;
+  for(let i=1;i<xy.length;i++)if(xy[i][0]<xy[first][0]||xy[i][0]===xy[first][0]&&xy[i][1]<xy[first][1])first=i;
+  const ring=dir=>JSON.stringify(xy.map((_,i)=>xy[(first+i*dir+xy.length)%xy.length]));
+  const forward=ring(1),back=ring(-1);
+  return JSON.stringify([[P.il,P.ilce,P.mahalle,P.ada,P.parselNo,P.datum,P.dom,P.projK||P.proj].map(norm),forward<back?forward:back]);
+}
+function ifzBindLegacy(a){
+  const f=a.ifz;
+  if(!a.parsel||f.belgeKey!==undefined)return;
+  f.belgeKey=ifzAttachmentKey(a);
+  const b=f.belgeler;
+  if(b?.gnssKey===JSON.stringify([a.antet.ada,a.antet.parselNo,a.parsel.pts]))b.gnssKey=f.belgeKey;
+}
+function ifzFields(a=S(),key=ifzAttachmentKey(a)){
+  if(!key)return {};
+  const f=a.ifz;
+  ifzBindLegacy(a);
+  if(f.belgeKey!==key){
+    const archive=f.belgeArsiv||(f.belgeArsiv={}), previous={belgeler:f.belgeler||{}};
+    const next=archive[key]||{};
+    for(const kind of ["she","txo"]){
+      const all=a[kind]||(a[kind]={});
+      previous[kind]={};
+      for(const id of Object.keys(all))if(id.startsWith("ifz|")){previous[kind][id]=all[id];delete all[id];}
+      Object.assign(all,next[kind]||{});
+    }
+    if(Object.values(previous).some(v=>Object.keys(v).length))archive[f.belgeKey]=previous;
+    delete archive[key];
+    f.belgeler=next.belgeler||{};
+    f.belgeKey=key;
+  }
+  return f.belgeler||(f.belgeler={});
+}
 function ifzNumber(v) {
   const t=String(v??'').trim().replace(',','.');
   return /^[-+]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(t)&&Number.isFinite(Number(t))?Number(t):null;
 }
 const ifzCoord = n => Number(n).toFixed(Math.max(3,K.H.k));
-function ifzFormPage(code, P, extra) {
+// Düzenleme tarihi ile ölçüm/tescil/kontrol tarihleri birbirinden ayrı tutulur.
+const ifzToday=()=>new Intl.DateTimeFormat("tr-TR",{timeZone:"Europe/Istanbul",day:"2-digit",month:"2-digit",year:"numeric"}).format(new Date());
+function ifzAuthority(settings,P){
+  if(["belediye","ozel"].includes(settings.idareTuru))return settings.idareTuru;
+  const text=String(settings.idare||"").toLocaleUpperCase("tr-TR");
+  const ozel=/ÖZEL\s+İDARE/.test(text),belediye=/BELEDİYE/.test(text);
+  if(ozel!==belediye)return ozel?"ozel":"belediye";
+  return "";
+}
+function ifzSettlement(settings,P){
+  if(["koy","mah"].includes(settings.yerTuru))return settings.yerTuru;
+  const mah=String(P.mahalle||"").toLocaleUpperCase("tr-TR");
+  if(/(?:^|\s)KÖY(?:Ü|U)?(?:\s|$)/.test(mah))return "koy";
+  if(/(?:^|\s)MAH(?:ALLES[İI])?\.?(?:\s|$)/.test(mah))return "mah";
+  return "";
+}
+function ifzFitText(g,text,x0,y0,x1,y1,size=1.85,opts={}){
+  text=String(text??"").trim();if(!text)return;
+  const words=text.split(/\s+/);let lines=[],h=size;
+  for(;h>=1.15;h-=.12){
+    lines=[];let line="";
+    for(const word of words){
+      if(line&&A.tw(line+" "+word,h)>x1-x0-2){lines.push(line);line=word;}
+      else line=(line+" "+word).trim();
+    }
+    if(line)lines.push(line);
+    if(lines.length*h*1.5<=y1-y0-1&&lines.every(l=>A.tw(l,h)<=x1-x0-1))break;
+  }
+  if(lines.length*h*1.5>y1-y0-1||lines.some(l=>A.tw(l,h)>x1-x0-1)){
+    // Tam metni aşırı küçük basmak yerine sonraki ek sayfasına aktarılmasını açıkça belirt.
+    g.T((x0+x1)/2,(y0+y1)/2,"Ayrıntılı not ek sayfadadır.",1.45,{al:"c",...opts});return false;
+  }
+  lines.forEach((l,i)=>g.T((x0+x1)/2,(y0+y1)/2+(lines.length-1-2*i)*h*.75,l,h,{al:"c",...opts}));return true;
+}
+function ifzFormPage(code,P,extra,control) {
   const g=A.pg(210,297), [lines,labels]=ifzFormLayouts[code], ap=[P.ada,P.parselNo].filter(Boolean).join(' / ');
   const fields={...P,...extra,ap,ilceMah:[P.ilce,P.mahalle].filter(Boolean).join(' / '),
     islemYer:['İŞLEMİN CİNSİ  İFRAZ',P.ilce,P.mahalle,ap].filter(Boolean).join('   ·   '),
@@ -15576,10 +15861,47 @@ function ifzFormPage(code, P, extra) {
   for(const [x,y,z,w,pen] of lines)g.L([[x,y],[z,w]],pen);
   for(const [x,y,h,key] of labels){
     const slot=key.startsWith('$'),s=slot?String(fields[key.slice(1)]??''):key;
+    if(code==="08"&&["……… ADET","……...ADET C1","……...ADET C2","……...ADET C3","……...ADET C4","C1,C2,C3","C4","Detay"].includes(key))continue;
     if(!s)continue;
     const max=code==='07'&&key==='$duzenleyen'?44:code==='07'&&slot?57:199-x;
     const size=slot?Math.min(h,max/(Math.max(1,s.length)*.83)):h;
     g.T(x,y,s,size);
+  }
+  if(code==="06"){
+    ifzFitText(g,extra.kararNo,43,149,81,175);
+    ifzFitText(g,extra.kararTarih,81,149,119,175);
+    if(extra.kontrolMuh)ifzFitText(g,extra.kontrolMuh,119,155,157,173,1.7);
+    g.T(15,94,"Belge düzenleme tarihi: "+P.tarih,1.75);
+  }
+  if(code==="07"){
+    if(extra.kontrolMuh)ifzFitText(g,extra.kontrolMuh,73,92.8,151,106.8,1.85);
+    g.T(25,140,"Düzenleme: "+P.tarih,1.8);
+    ifzFitText(g,control.summary,25,130,185,138,1.75,{color:control.issues?"#b00000":"#000"});
+    g.T(105,284,control.issues?"TASLAK · EKSİK / UYUŞMAYAN SAHA KAYDI":"KONTROL İMZASI BEKLENİYOR",2.3,{al:"c",color:"#b00000",bold:true});
+    g.T(25,128,"Kontrol raporu · yetkili kontrol ve imza bekleniyor.",1.75,{color:"#b00000"});
+  }
+  if(code==="08"){
+    g.T(105,274,control.issues?"TASLAK · EKSİK / UYUŞMAYAN SAHA KAYDI":"KONTROL İMZASI BEKLENİYOR",2.3,{al:"c",color:"#b00000",bold:true});
+    const n=(key,label)=>extra[key]!==undefined&&extra[key]!==""?String(extra[key])+" ADET "+label:"— ADET "+label;
+    g.T(28.6,214.185,n("c1","C1"),1.742);g.T(28.6,211.08,n("c2","C2"),1.742);g.T(28.6,207.975,n("c3","C3"),1.742);g.T(62.6,211.08,n("c4","C4"),1.742);
+    g.T(105,216.7,extra.detayAdet!==undefined&&extra.detayAdet!==""?extra.detayAdet+" ADET":"Proje: "+control.projectPoints+" nokta",1.7,{al:"c"});
+    g.T(139,210.8,extra.paftaYeni||"—",1.85,{al:"c"});g.T(173,210.8,extra.paftaIlave||"—",1.85,{al:"c"});
+    ["C1","C2","C3"].forEach((t,i)=>g.T(24,180-i*3,t,1.5,{al:"c"}));
+    g.T(24,143,"C4",1.5,{al:"c"});g.T(24,108,"Detay",1.25,{al:"c"});
+    const notes=[["c123Tesis",181,194],["c123Olcu",160,181],["c4Tesis",147,160],["c4Olcu",126,147],["detayTesis",113,126],["detayOlcu",92,113]];
+    const long=[];
+    for(const [k,bot,top] of notes){
+      const v=k==="detayOlcu"?[control.detail,extra[k]].filter(Boolean).join(" · "):extra[k];
+      if(ifzFitText(g,v,55,bot,88,top,1.75)===false)long.push(["Kontrol: "+k,v]);
+      if(ifzFitText(g,extra[k+"Son"],88,bot,190,top,1.75)===false)long.push(["Düzeltme: "+k,extra[k+"Son"]]);
+    }
+    const device=[extra.cihaz,extra.kalibrasyon&&"Kalibrasyon: "+extra.kalibrasyon].filter(Boolean).join(" · ");
+    if(ifzFitText(g,device,55,66,190,92,1.8)===false)long.push(["Cihaz",device]);
+    g.T(25,53.1,"Düzenleme: "+P.tarih+(extra.kontrolTarih?" | Gerçek kontrol: "+extra.kontrolTarih:" | Kontrol tarihi: —"),1.6);
+    g.T(105,39,"Arazi kontrolü ve imza yetkili kişi tarafından tamamlanır.",1.45,{al:"c",color:"#b00000"});
+    if(extra.kontrolMuh)ifzFitText(g,extra.kontrolMuh,28,41,112,47,1.6);
+    if(P.duzenleyen)ifzFitText(g,P.duzenleyen,112,41,190,47,1.6);
+    if(long.length)g.G.controlNotes=long;
   }
   g.G.coz=false;return g.G;
 }
@@ -15628,31 +15950,141 @@ function ifzSummary(D,P){
   }while(at<D.koord.length||edge<edges.length);
   return pages;
 }
-const ifzGnssHead=['Nokta no','UTC','Epok','Aralık\n(sn)','Uydu','RMS\n(m)','PDOP','Çözüm','Yöntem','Y kesin\n(m)','X kesin\n(m)','h elipsoit\n(m)','Y hesap\n(m)','X hesap\n(m)','dy\n(cm)','dx\n(cm)','ds\n(cm)'];
-function ifzObservations(text){
-  return String(text||'').trim().split(/\r?\n/).filter(t=>t.trim()).map((line,i)=>{
-    const a=line.split(line.includes('\t')?'\t':';').map(v=>v.trim());
-    if(a.length<1||a.length>12||!a[0])throw Error('GNSS satır '+(i+1)+' için nokta numarasını ve sütun sırasını kontrol edin.');
-    for(const k of [2,3,4,5,6,9,10,11])if(a[k]&&ifzNumber(a[k])===null)throw Error('GNSS satır '+(i+1)+' sayısal değer içermeli.');
-    return a;
-  });
+const ifzGnssHead=["NOKTA NO","OKUMA ZAMANI\n(UTC)","EPOK\nSAYISI","VERİ\nTOPLAMA\nARALIĞI (sn)","UYDU\nSAYISI\n(GPS+GLO)","RMS (m)","PDOP","TAMSAYI\nBELİRSİZLİK\nÇÖZÜM\nDURUMU","Yöntem\n(VRS, FKP, MAC,\nKlasik RTK)","SAĞA DEĞER\n(y) (m)","YUKARI DEĞER\n(x) (m)","ELİPSOİT\nYÜKSEKLİĞİ (h)\n(m)","SAĞA DEĞER\n(y) (m)","YUKARI DEĞER\n(x) (m)","dy","dx","ds"];
+const IFZ_GNSS_LIMIT_CM=6.7;
+function ifzUtc(value){
+  const raw=String(value??"").trim();
+  if(!raw)return "";
+  const a=raw.match(/^(\d{1,2})[.\/\s-](\d{1,2})[.\/\s-](\d{4})[ T]+(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  const b=raw.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/i);
+  if(!a&&!b)return "";
+  const q=a?[+a[3],+a[2],+a[1],+a[4],+a[5],+(a[6]||0)]:[+b[1],+b[2],+b[3],+b[4],+b[5],+(b[6]||0)];
+  let date=new Date(Date.UTC(q[0],q[1]-1,q[2],q[3],q[4],q[5]));
+  if(date.getUTCFullYear()!==q[0]||date.getUTCMonth()+1!==q[1]||date.getUTCDate()!==q[2]||date.getUTCHours()!==q[3]||date.getUTCMinutes()!==q[4]||date.getUTCSeconds()!==q[5])return "";
+  if(b?.[7]&&b[7].toUpperCase()!=="Z"){date=new Date(raw.replace(" ","T"));if(!Number.isFinite(+date))return "";}
+  return [date.getUTCDate(),date.getUTCMonth()+1,date.getUTCFullYear()].map(v=>String(v).padStart(2,"0")).join(".")+" "+[date.getUTCHours(),date.getUTCMinutes(),date.getUTCSeconds()].map(v=>String(v).padStart(2,"0")).join(":");
 }
-function ifzGnss(D,P,obs,short){
-  const byName=new Map(D.points.map(q=>[String(q.n),q.p]));
-  const data=obs.map(a=>{
-    const ref=byName.get(a[0]),y=ifzNumber(a[10]),x=ifzNumber(a[11]);
-    const dy=ref&&y!==null?(ref[0]-y)*100:null,dx=ref&&x!==null?(ref[1]-x)*100:null;
-    return [...Array.from({length:9},(_,i)=>a[i]||''),ref?ifzCoord(ref[0]):'',ref?ifzCoord(ref[1]):'',a[9]||'',a[10]||'',a[11]||'',dy?.toFixed(1),dx?.toFixed(1),dy!==null&&dx!==null?Math.hypot(dx,dy).toFixed(1):''];
-  });
-  const pages=[];for(let i=0;i<Math.max(1,data.length);i+=20){
-    const g=A.pg(297,210);ifzHeading(g,P,short?'GNSS GZK ÖLÇÜ ÇİZELGESİ · KISA':'GNSS GZK ÖLÇÜ VE KOORDİNAT KARŞILAŞTIRMA ÇİZELGESİ','EK-8');
-    g.T(10,177,[P.datum,P.projK,P.dom&&('Dilim '+P.dom+'°')].filter(Boolean).join('   ·   '),2);
-    const n=short?12:17,ws=short?[21,41,13,17,14,19,15,20,22,34,36,25]:[17,28,10,11,10,13,11,13,15,24,25,16,24,25,11,11,13];
-    const rows=data.slice(i,i+20).map(r=>r.slice(0,n));while(rows.length<16)rows.push(Array(n).fill(''));
-    const bot=ifzTable(g,10,171,ws,ifzGnssHead.slice(0,n),rows,5.7,11,1.85);
-    g.T(12,bot-7,data.length?'':'GNSS gözlem verisi girilmedi.',2);
-    g.T(38,19,'Ölçüyü yapan',2.2);g.T(220,19,'Kontrol eden',2.2);pages.push(g.G);
-  }return pages;
+function ifzDelimited(line,sep){
+  const out=[];let field="",quote=false;
+  for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'){if(quote&&line[i+1]==='"'){field+='"';i++;}else quote=!quote;}else if(c===sep&&!quote){out.push(field.trim());field="";}else field+=c;}
+  out.push(field.trim());return out;
+}
+function ifzObservations(text,shortForm=false){
+  const lines=String(text||"").replace(/^\uFEFF/,"").split(/\r?\n/).filter(l=>l.trim()),out=[];
+  for(const [i,line] of lines.entries()){
+    const sep=line.includes("\t")?"\t":line.includes(";")?";":",";
+    let a=ifzDelimited(line,sep);
+    const heading=a.map(v=>String(v).toLocaleUpperCase("tr-TR"));
+    if(/^(NOKTA[ .]*(ADI|NO|NUMARASI)|POINT[ .]*(ID|NO|NAME))$/i.test(heading[0]||"")||a.length===12&&/EL[İI]PSO[İI]T|YÜKSEKL[İI]Ğ[İI]|^H(?:\s|$)/.test(heading[11]||"")){
+      if(a.length===12&&/EL[İI]PSO[İI]T|YÜKSEKL[İI]Ğ[İI]|^H(?:\s|$)/.test(heading[11]||""))shortForm=true;
+      continue;
+    }
+    if(a.length===17){a=[...a.slice(0,9),a[11],a[12],a[13],a[9],a[10]];}
+    else if(a.length===12&&shortForm){a=[...a.slice(0,9),a[11],"","",a[9],a[10]];}
+    if(a.length<1||a.length>14||!a[0]||!(/^[\p{L}\p{N}_.\/-]+$/u.test(a[0])))throw Error("GNSS satır "+(i+1)+": nokta numarası veya sütun sırası geçersiz.");
+    a=Array.from({length:14},(_,k)=>a[k]||"");
+    if(a[1]){const t=ifzUtc(a[1]);if(!t)throw Error("GNSS satır "+(i+1)+": okuma tarih ve saati geçersiz. Gerçek UTC tarihi ve saati bekleniyor.");a[1]=t;}
+    for(const k of [2,3,4,5,6,9,10,11,12,13])if(a[k]&&ifzNumber(a[k])===null)throw Error("GNSS satır "+(i+1)+": sayısal sütunu kontrol edin.");
+    for(const k of [2,4])if(a[k]&&(!Number.isInteger(ifzNumber(a[k]))||ifzNumber(a[k])<0))throw Error("GNSS satır "+(i+1)+": epok ve uydu adedi negatif olmayan tam sayı olmalı.");
+    for(const k of [3,5,6])if(a[k]&&ifzNumber(a[k])<0)throw Error("GNSS satır "+(i+1)+": ölçü kalite değeri negatif olamaz.");
+    out.push(a);
+  }
+  return out;
+}
+function ifzPdfObservations(text){
+  const full=[],short=[],num="([+-]?\\d+(?:[.,]\\d+)?)";
+  const rx=new RegExp("^\\s*([\\p{L}\\p{N}_.\\/-]+)\\s+(\\d{1,2}[.\\/\\s-]\\d{1,2}[.\\/\\s-]\\d{4}\\s+\\d{1,2}:\\d{2}:\\d{2})\\s+"+
+    Array(5).fill(num).join("\\s+")+"\\s+(\\S+)\\s+(\\S+)\\s+"+Array(3).fill(num).join("\\s+")+
+    "(?:\\s+"+Array(5).fill(num).join("\\s+")+")?\\s*$","u");
+  for(const line of String(text).split(/\r?\n/)){
+    const m=line.match(rx);if(!m)continue;
+    const a=[m[1],m[2],...m.slice(3,10),m[12],m[13]||"",m[14]||"",m[10],m[11]];
+    (m[13]&&m[14]?full:short).push(a);
+  }
+  // Tam EK-8 mevcutsa aynı okumaları kısa ekte ikinci kez sayma.
+  const rows=full.length?full:short;
+  return ifzObservations([...new Map(rows.map(r=>[r.join("\t"),r])).values()].map(r=>r.join("\t")).join("\n"));
+}
+function ifzGnssControl(D,obs,importRefs={}){
+  const refs=new Map(),ambiguous=new Set(),byName=new Map(),records=[],unmatched=[];
+  for(const q of D.points||[]){
+    const n=String(q.n??"").trim();if(!n||!q.p?.slice(0,2).every(Number.isFinite))continue;
+    if(refs.has(n)&&Math.hypot(refs.get(n)[0]-q.p[0],refs.get(n)[1]-q.p[1])>1e-6)ambiguous.add(n);
+    else refs.set(n,q.p);
+  }
+  const make=(a,ref)=>{
+    const sourceY=ifzNumber(a[12]),sourceX=ifzNumber(a[13]),y=ifzNumber(a[10]),x=ifzNumber(a[11]);
+    const original=importRefs[a[0]];
+    const moved=Array.isArray(original)&&ref&&Math.hypot(original[0]-ref[0],original[1]-ref[1])>.0005;
+    const mismatch=!!ref&&(moved||sourceY!==null&&Math.abs(sourceY-ref[0])>.025||sourceX!==null&&Math.abs(sourceX-ref[1])>.025);
+    const dy=ref&&!mismatch&&y!==null?(ref[0]-y)*100:null,dx=ref&&!mismatch&&x!==null?(ref[1]-x)*100:null;
+    const ds=dy!==null&&dx!==null?Math.hypot(dy,dx):null;
+    const telemetry=[1,2,3,4,5,6,7,8,9].every(k=>String(a[k]||"").trim()!=="");
+    const fixed=/^(?:FIX(?:ED)?|SABİT|SABIT|FİX(?:ED)?|RTK\s*(?:FIX|FİX))$/.test(String(a[7]||"").toLocaleUpperCase("tr-TR"));
+    const exceeds=ds!==null&&ds>IFZ_GNSS_LIMIT_CM+1e-7;
+    const status=!ref?"nokta eşleşmedi":mismatch?"referans uyuşmuyor":exceeds?"sınır aşımı":ds===null||!telemetry?"eksik ölçü":!fixed?"çözüm kontrolü":"sınır içinde";
+    const fmt=v=>v===null?"":(Math.abs(v)<.05?0:v).toFixed(1);
+    return {name:a[0],ref,a,dy,dx,ds,exceeds,status,telemetry,values:[...a.slice(0,9),ref?ifzCoord(ref[0]):"",ref?ifzCoord(ref[1]):"",a[9],a[10],a[11],fmt(dy),fmt(dx),fmt(ds)]};
+  };
+  for(const a of obs){
+    const ref=ambiguous.has(a[0])?null:refs.get(a[0]),r=make(a,ref);
+    if(!ref)unmatched.push(r);
+    else{if(!byName.has(a[0]))byName.set(a[0],[]);byName.get(a[0]).push(r);}
+  }
+  for(const [n,ref] of refs){
+    const list=byName.get(n);if(list?.length)records.push(...list);
+    else records.push(make([n,...Array(13).fill("")],ambiguous.has(n)?null:ref));
+  }
+  records.push(...unmatched);
+  const checked=records.filter(r=>r.ds!==null),exceeded=checked.filter(r=>r.exceeds),complete=records.filter(r=>r.status==="sınır içinde"),missing=records.filter(r=>r.status==="eksik ölçü"),
+    mismatch=records.filter(r=>r.status==="referans uyuşmuyor"),quality=records.filter(r=>r.status==="çözüm kontrolü"),unresolved=records.filter(r=>r.status==="nokta eşleşmedi");
+  const projectPoints=refs.size,maxDs=checked.length?Math.max(...checked.map(r=>r.ds)):null;
+  const issues=exceeded.length+missing.length+mismatch.length+unresolved.length+quality.length;
+  const summary="Karşılaştırma: "+checked.length+" | aşım: "+exceeded.length+" | eksik: "+missing.length+(mismatch.length?" | ref. uyuşmaz: "+mismatch.length:"")+(unresolved.length?" | eşleşmeyen: "+unresolved.length:"")+(quality.length?" | çözüm: "+quality.length:"");
+  const detail="Proje noktası: "+projectPoints+"; "+summary+". Sınır 6,7 cm; "+(maxDs===null?"gerçek karşılaştırma yok.":"maks. ds: "+maxDs.toFixed(1)+" cm.");
+  return {records,projectPoints,maxDs,checked,exceeded,missing,mismatch,unmatched,quality,complete,issues,summary,detail};
+}
+function ifzGnss(D,P,control,short,source){
+  const pages=[],data=control.records,n=short?12:17,cap=28;
+  for(let i=0;i<Math.max(1,data.length);i+=cap){
+    const g=A.pg(297,210),x=8,top=179,hh=19,rh=4.25,weights=short?[19,36,13,18,17,17,15,22,23,25,29,22]:[18,32,11,13,12,12,12,16,17,22,23,18,22,23,9,9,11];
+    const ws=weights.map(w=>w*(281/weights.reduce((a,b)=>a+b,0))),e=[x];ws.forEach(w=>e.push(e.at(-1)+w));
+    const title="GNSS GZK YÖNTEMİ İLE DETAY NOKTALARININ KOORDİNATLARININ BELİRLENMESİ DURUMUNDA DÜZENLENECEK ÇİZELGE";
+    const crs=[String(P.datum||"").replace(/-/g,""),P.dom||"",String(P.projK||P.proj||"").match(/([36])\s*°/)?.[1]||""].filter(Boolean).join("_");
+    g.T(148.5,197,title,2.5,{al:"c",bold:true});g.T(289,204,"EK-8",2.2,{al:"r",bold:true});
+    g.T(148.5,189,[P.il,P.ilce,P.mahalle,[P.ada,P.parselNo].filter(Boolean).join("/")].filter(Boolean).join(" · "),2.05,{al:"c"});
+    if(control.issues)g.T(148.5,183.1,"TASLAK · EKSİK / UYUŞMAYAN SAHA KAYDI VEYA SINIR AŞIMI",1.85,{al:"c",color:"#b00000",bold:true});
+    const count=Math.max(26,Math.min(cap,data.length-i)),bottom=top-hh-count*rh;
+    g.R(x,bottom,e.at(-1),top,.3);g.L([[x,top-hh],[e.at(-1),top-hh]],.25);
+    const groupEnds=short?[9,12]:[9,12,14,17];
+    const groupNames=short?["KESİN KOORDİNAT"+(crs?" ("+crs+")":"")]:["KESİN KOORDİNAT"+(crs?" ("+crs+")":""),"KOORDİNAT (HESAP SONUCU)","FARKLAR (cm)"];
+    const bar=top-5.2;
+    for(let j=1;j<n;j++)g.L([[e[j],bottom],[e[j],j<9||groupEnds.includes(j)?top:bar]],.13);
+    g.L([[e[9],bar],[e[n],bar]],.19);
+    for(let j=0;j<groupNames.length;j++)ifzFitText(g,groupNames[j],e[groupEnds[j]],bar,e[groupEnds[j+1]],top,1.7);
+    const cell=(v,j,y,size,color)=>{const t=String(v??"");if(!t)return;g.T((e[j]+e[j+1])/2,y,t,Math.max(.9,Math.min(size,(ws[j]-1)/Math.max(.01,A.tw(t,1)))),{al:"c",color});};
+    for(let j=0;j<n;j++){
+      const t=ifzGnssHead[j].split("\n"),lower=top-hh,upper=j<9?top:bar;
+      const size=Math.max(.9,Math.min(1.7,(upper-lower-1)/(t.length*1.5),...(t.map(v=>.90*(ws[j]-1)/Math.max(.01,A.tw(v,1))))));
+      for(let k=0;k<t.length;k++)g.T((e[j]+e[j+1])/2,(lower+upper)/2+(t.length-1-2*k)*size*.72,t[k],size,{al:"c"});
+    }
+    for(let j=0;j<count;j++){
+      const y=top-hh-(j+.5)*rh,row=data[i+j];g.L([[x,y-rh/2],[e[n],y-rh/2]],.12);
+      if(!row)continue;
+      for(let k=0;k<n;k++)cell(row.values[k],k,y,1.72,!short&&k>=14&&row.exceeds?"#b00000":"#000");
+    }
+    const infoY=bottom-4.5;
+    const qc=control.summary+" · sınır 6,7 cm"+(control.maxDs!==null?" · maks. ds "+control.maxDs.toFixed(1)+" cm":"");
+    g.T(8,infoY,qc,Math.min(1.65,280/Math.max(1,A.tw(qc,1))),{color:control.issues?"#b00000":"#000"});
+    g.T(8,infoY-4,control.issues?"Eksik / uyuşmayan saha kayıtları veya sınır aşımı var; ilgili değerler boş ya da işaretlidir.":"Gerçek kayıtlar karşılaştırıldı; yetkili kontrol ve imza gereklidir.",1.65,{color:control.issues?"#b00000":"#000"});
+    if(source){const t="Kaynak: "+source;g.T(8,infoY-8,t,Math.min(1.45,280/Math.max(1,A.tw(t,1))));}
+    g.T(65,23,"DÜZENLEYEN",2,{al:"c"});g.T(65,18,P.duzenleyen||"",1.75,{al:"c"});
+    g.T(231,23,"KONTROL EDEN",2,{al:"c"});g.T(231,18,P.ifzControlMuh||"",1.75,{al:"c"});
+    g.T(8,7,"32381507 FR.309 Rev.No/ Tarihi:02/06.06.2024",1.4);
+    g.T(289,7,"Düzenleme: "+P.tarih,1.45,{al:"r"});
+    g.G.coz=false;pages.push(g.G);
+  }
+  return pages;
 }
 function ifzReverse(D,P){
   const g=A.pg(210,297);ifzHeading(g,P,'TESCİL BİLDİRİMİ · KROKİ','EK-11B');
@@ -15672,7 +16104,11 @@ function ifzReverse(D,P){
   }while(i<D.koord.length||j<rows.length);return pages;
 }
 function ifzBook(D,P,f) {
-  const out=[],settings=f.belgeler||{}, obs=ifzObservations(settings.gnss);
+  const a=S(),key=ifzAttachmentKey(a),out=[],settings=ifzFields(a,key),obs=settings.gnssKey===key?ifzObservations(settings.gnss):[];
+  const settlement=ifzSettlement(settings,P);
+  const inferredIdare=settings.idare||(settings.yerTuru?(settlement==="koy"?"ÖZEL İDARE":"BELEDİYE"):idareOto(true))||"";
+  P={...P,tarih:settings.belgeTarih||ifzToday(),ifzDoc:true,ifzIdareKind:ifzAuthority({...settings,idare:inferredIdare},P),ifzSettlement:ifzSettlement(settings,P),ifzControlMuh:settings.kontrolMuh||""};
+  const control=ifzGnssControl(D,obs,settings.gnssRefs),source=settings.gnssKey===key?settings.gnssSource||"":"";
   const add=(code,gs,W=210,H=297)=>{for(const G of gs){const k=out.filter(p=>p.code===code).length+1;
     out.push({code,G,W,H,ifraz:true,ad:ifzDocTitles[code]+(k>1?' · '+k:'')});}};
   if(settings.dilekce){
@@ -15684,8 +16120,22 @@ function ifzBook(D,P,f) {
   add('01',[A.durum({...D,durumOlcek:Number(settings.haritaOlcek||1000)},P)],297,210);add('02',[A.kroki(D,P)],297,210);
   add('03a',ifzAreaSheets(D,P));
   add('03b',ifzSummary(D,P));
-  for(const code of ['06','07','08'])add(code,[ifzFormPage(code,P,settings)]);
-  for(const code of ['09','10'])add(code,ifzGnss(D,P,obs,code==='10'),297,210);
+  for(const code of ['06','07','08']){
+    const page=ifzFormPage(code,P,settings,control);add(code,[page]);
+    if(page.controlNotes?.length){
+      let g,y;const flush=()=>{if(g)add(code,[g.G]);g=A.pg(210,297);ifzHeading(g,P,"ARAZİ KONTROL FORMU · EK NOTLAR","EK-5");y=258;};
+      flush();
+      for(const [label,value] of page.controlNotes){
+        if(y<30)flush();g.T(12,y,label,2.2,{bold:true});y-=7;
+        const words=String(value).split(/\s+/),lines=[];let line="";
+        for(const w of words){if(line&&A.tw(line+" "+w,2)>180){lines.push(line);line=w;}else line=(line+" "+w).trim();}
+        if(line)lines.push(line);
+        for(const l of lines){if(y<20)flush();g.T(12,y,l,Math.min(2,180/Math.max(1,A.tw(l,1))));y-=4.5;}y-=5;
+      }
+      if(g)add(code,[g.G]);
+    }
+  }
+  for(const code of ['09','10'])add(code,ifzGnss(D,P,control,code==='10',source),297,210);
   const Z=A.dengele(D,P),allRows=[{pn:P.parselNo,a:Z.tapu,eski:true,not:'İfrazen '+D.parts.map(p=>p.ad).join(', ')+' parsel oldu.'},...D.parts.map(p=>({pn:p.ad,a:p.deng}))];
   for(let i=0;i<allRows.length;i+=15)add('11',[A.tescil(D,{...P,rows:allRows.slice(i,i+15)})]);
   add('11',ifzReverse(D,P));
@@ -15764,19 +16214,21 @@ function ifzArialDxf(raw){
 const ifzNames={'00':'00_Basvuru_Dilekcesi','01':'01_Durum_Haritasi','02':'02_Olcu_Krokisi','03a':'03_Alanlar_Cetveli','03b':'03_Koordine_Ozet_Tablosu','06':'06_EK-2','07':'07_EK-3','08':'08_EK-5','09':'09_EK-8_GNSS','10':'10_EK-8_2_GNSS','11':'11_Beyanname','12':'12_Taksim_Sozlesmesi'};
 function ifzMainPages(pages){return pages.filter(p=>p.code!=='11');}
 function ifzProjectFile(a,D){
-  const context={};
+  ifzFields(a);
+  const {belgeArsiv,...activeIfz}=a.ifz,context={};
   for(const k of ['cadCiz','cadYazi','yolYazi','komsu','komsuP','komsuAd','survey'])context[k]=D[k];
   return JSON.stringify({proj:{dosya:'IFRAZ',parsel:[a.antet.ada,a.antet.parselNo].join('/')},set:{cm:Number(a.antet.dom)||null},
     S:{pts:[],tri:null,src:''},R:{mode:'sabit',pts:[],tri:null,flat:0},alanlar:[],eksen:[],
-    apl:{antet:a.antet,parsel:a.parsel,ifz:{...a.ifz,krokiKaynak:{key:JSON.stringify(a.parsel.pts),context}},
+    apl:{antet:a.antet,parsel:a.parsel,ifz:{...activeIfz,krokiKaynak:{key:JSON.stringify(a.parsel.pts),context}},
       she:Object.fromEntries(Object.entries(a.she||{}).filter(([k])=>k.startsWith('ifz|'))),txo:Object.fromEntries(Object.entries(a.txo||{}).filter(([k])=>k.startsWith('ifz|')))}});
 }
-function ifzAttachmentKey(a){return JSON.stringify([a.antet.ada,a.antet.parselNo,a.parsel?.pts]);}
 let ifzTapuSession;
 async function ifzExport(kind){
-  const a=S(),el=$('aoMsg');if(!a.parsel||!a.ifz.parts?.length)return msg('aoMsg','Önce parseli seçip bölme işlemini tamamlayın.',true);
+  const a=S(),job=ifzAttachmentKey(a),el=$('aoMsg');if(!a.parsel||!a.ifz.parts?.length)return msg('aoMsg','Önce parseli seçip bölme işlemini tamamlayın.',true);
   try{
     msg('aoMsg','İfraz belgeleri hazırlanıyor…');await new Promise(r=>setTimeout(r,16));
+    const currentJob=()=>{if(S()!==a||ifzAttachmentKey(a)!==job)throw Error('Belge hazırlanırken parsel değişti. Yeni parsel için tekrar çıktı alın.');};
+    currentJob();
     const pages=pagesNow();
     if(kind==='pdf'||kind==='beyan'){
       const subset=kind==='beyan'?pages.filter(p=>p.code==='11'):ifzMainPages(pages);
@@ -15789,26 +16241,102 @@ async function ifzExport(kind){
       items.forEach((p,i)=>files.push({name:name+(i?'_'+(i+1):'')+'.dxf',data:ifzSheetDxf(p)}));
       await new Promise(r=>setTimeout(r,0));
     }
-    if(ifzTapuSession?.key===ifzAttachmentKey(a)){
+    currentJob();
+    if(ifzTapuSession?.key===job){
       for(const [i,f] of ifzTapuSession.files.entries())files.push({name:'Tapu_'+(i+1)+'.pdf',data:new Uint8Array(await f.arrayBuffer())});
     }
     const canNCZ=!!window.NCZW?.ready();let nc=0;
     if(canNCZ){for(const f of files.filter(f=>f.name.endsWith('.dxf'))){const obj=O.nczOf(f.data);if(obj){files.push({name:f.name.replace(/\.dxf$/,'.ncz'),data:obj});nc++;}}}
     const index=files.map(f=>f.name).sort().join('\n');files.push({name:'Icerik.txt',data:index});
+    currentJob();
     const ok=await saveFile(fnm('IFRAZ_TESLIM.zip'),O.zip(files,{nczYok:true}),el);
     if(ok&&!nc)msg('aoMsg','Teslim paketi indirildi. NCZ yazıcısı kullanılamadığından sayısal çizimler DXF biçiminde eklendi.');
   }catch(e){msg('aoMsg','Belge hazırlanamadı. '+e.message,true);}
 }
 function ifzOpenSettings(){
-  const settings=ifzFields(),form=$('ifzDocSettings');$('ifzFontState').textContent=window.acadSketchFont89?.data?'PDF yazı tipi: Arial':'PDF yazı tipi: Liberation Sans. Arial için arial.ttf seçin.';
-  form.querySelectorAll('[data-belge]').forEach(input=>{if(input.type==='checkbox')input.checked=!!settings[input.dataset.belge];else input.value=settings[input.dataset.belge]||(input.dataset.belge==='haritaOlcek'?'1000':'');});
+  const a=S(),key=ifzAttachmentKey(a),settings=ifzFields(a,key),form=$("ifzDocSettings");
+  form.dataset.job=key;
+  $("ifzFontState").textContent=window.acadSketchFont89?.data?"PDF yazı tipi: Arial":"PDF yazı tipi: Liberation Sans. Arial için arial.ttf seçin.";
+  form.querySelectorAll("[data-belge]").forEach(input=>{
+    const field=input.dataset.belge;
+    input.disabled=!key;
+    if(input.type==="checkbox")input.checked=!!settings[field];
+    else input.value=field==="gnss"&&settings.gnssKey!==key?"":settings[field]??(field==="haritaOlcek"?"1000":field==="belgeTarih"?ifzToday():"");
+  });
+  ifzGnssStatus();
 }
-$('ifzDocSettings').addEventListener('toggle',()=>{if($('ifzDocSettings').open)ifzOpenSettings();});
-$('ifzDocSettings').addEventListener('change',e=>{
-  const field=e.target.dataset.belge;if(!field)return;const f=S().ifz,data=f.belgeler||(f.belgeler={});
-  if(field==='gnss'){try{ifzObservations(e.target.value);}catch(err){e.target.setCustomValidity(err.message);e.target.reportValidity();e.target.value=data.gnss||'';e.target.setCustomValidity('');return;}}
-  data[field]=e.target.type==='checkbox'?e.target.checked:e.target.value.trim();save();prevA();
+function ifzGnssStatus(){
+  const a=S(),el=$("ifzGnssStatus");if(!el)return;
+  const key=ifzAttachmentKey(a),f=ifzFields(a,key);
+  if(!a.parsel||!a.ifz.parts?.length){el.textContent="Önce parseli seçip ifrazı tamamlayın.";return;}
+  try{
+    const rows=f.gnssKey===key?ifzObservations(f.gnss):[],control=ifzGnssControl(ifzData(),rows,f.gnssRefs);
+    el.textContent=(rows.length?control.detail:"Gerçek saha ölçümü yok. "+control.projectPoints+" proje noktası koordinatlarıyla listelenecek; ölçü sütunları boş.")+(f.gnssKey===key&&f.gnssSource?" Kaynak: "+f.gnssSource:"");
+  }catch(e){el.textContent=e.message;}
+}
+function ifzStoreGnss(rows,source){
+  const a=S();if(!a.parsel||!a.ifz.parts?.length)throw Error("Önce parseli seçip ifrazı tamamlayın.");
+  const control=ifzGnssControl(ifzData(),rows);
+  if(rows.length&&rows.length===control.unmatched.length)throw Error("Ölçüm kayıtları bu projedeki hiçbir nokta numarasıyla eşleşmiyor.");
+  if(rows.length&&control.mismatch.length&&control.checked.length===0)throw Error("Kaynak kesin koordinatları bu projeyle uyuşmuyor.");
+  const data=ifzFields(a);
+  data.gnssRefs=Object.fromEntries(control.records.filter(r=>r.ref&&r.a[1]).map(r=>[r.name,r.ref.slice(0,2)]));
+  data.gnss=rows.map(r=>r.join("\t")).join("\n");data.gnssKey=ifzAttachmentKey(a);data.gnssSource=source||"";
+  $("ifzDocSettings").querySelector('[data-belge="gnss"]').value=data.gnss;save();ifzGnssStatus();prevA();
+}
+async function ifzXlsxObservations(file){
+  const z=await K.unzip(new Uint8Array(await file.arrayBuffer())),td=new TextDecoder(),
+    parse=name=>new DOMParser().parseFromString(td.decode(z[name]),"application/xml"),ss=[];
+  if(z["xl/sharedStrings.xml"])for(const si of parse("xl/sharedStrings.xml").getElementsByTagName("si"))ss.push([...si.getElementsByTagName("t")].map(t=>t.textContent).join(""));
+  const mode1904=z["xl/workbook.xml"]&&parse("xl/workbook.xml").getElementsByTagName("workbookPr")[0]?.getAttribute("date1904");
+  const sheets=Object.keys(z).filter(k=>/^xl\/worksheets\/sheet\d+\.xml$/.test(k)),candidates=[];
+  const pointNames=new Set((ifzData().points||[]).map(q=>String(q.n)));
+  for(const name of sheets){
+    const lines=[];let shortForm=false;
+    for(const row of parse(name).getElementsByTagName("row")){
+      const cells=[];
+      for(const c of row.getElementsByTagName("c")){
+        const ref=c.getAttribute("r")||"",col=ref.match(/^[A-Z]+/)?.[0];if(!col)continue;
+        const index=[...col].reduce((n,v)=>n*26+v.charCodeAt(0)-64,0)-1;
+        if(index<0||index>40)continue;
+        const t=c.getAttribute("t"),v=c.getElementsByTagName("v")[0]?.textContent||"";
+        cells[index]=(t==="s"?ss[+v]??"":t==="inlineStr"?[...c.getElementsByTagName("t")].map(q=>q.textContent).join(""):v).replace(/\s+/g," ").trim();
+      }
+      if(cells.length===12&&/EL[İI]PSO[İI]T|YÜKSEKL[İI]Ğ[İI]|^H(?:\s|$)/.test(String(cells[11]||"").toLocaleUpperCase("tr-TR"))){shortForm=true;continue;}
+      if(!cells[0]||!cells[1]||(!ifzUtc(cells[1])&&!/^\d{5}(?:\.\d+)?$/.test(cells[1])))continue;
+      if(/^\d{5}(?:\.\d+)?$/.test(cells[1])){
+        const base=(mode1904==="1"||mode1904==="true")?Date.UTC(1904,0,1):Date.UTC(1899,11,30);
+        cells[1]=new Date(base+Math.round(+cells[1]*86400000/1000)*1000).toISOString().slice(0,19)+"Z";
+      }
+      lines.push(cells.join("\t"));
+    }
+    if(lines.length)try{const rows=ifzObservations(lines.join("\n"),shortForm);if(rows.some(r=>pointNames.has(r[0])))candidates.push(rows);}catch(e){}
+  }
+  const best=candidates.sort((a,b)=>b.filter(r=>pointNames.has(r[0])).length-a.filter(r=>pointNames.has(r[0])).length)[0];if(!best)throw Error("Excel’de uygun nokta/UTC sütunlu gözlem tablosu bulunamadı.");return best;
+}
+$("ifzDocSettings").addEventListener("toggle",()=>{if($("ifzDocSettings").open)ifzOpenSettings();});
+$("ifzDocSettings").addEventListener("change",e=>{
+  const field=e.target.dataset.belge;if(!field)return;const a=S(),key=ifzAttachmentKey(a);
+  if(!key||e.currentTarget.dataset.job!==key){ifzOpenSettings();return;}
+  const data=ifzFields(a,key);
+  try{
+    if(field==="gnss"){ifzStoreGnss(ifzObservations(e.target.value),"El ile aktarılan saha kaydı");return;}
+    if(["c1","c2","c3","c4","detayAdet","paftaYeni","paftaIlave"].includes(field)&&e.target.value&&!/^\d+$/.test(e.target.value))throw Error("Adet, negatif olmayan tam sayı olmalıdır.");
+    data[field]=e.target.type==="checkbox"?e.target.checked:e.target.value.trim();save();prevA();
+  }catch(err){msg("aoMsg",err.message,true);ifzOpenSettings();}
 });
+$("ifzGnssFile").addEventListener("change",async e=>{
+  const file=e.target.files?.[0];if(!file)return;const key=ifzAttachmentKey(S());
+  try{
+    if(!S().parsel||!S().ifz.parts?.length)throw Error("Önce ifrazı tamamlayın.");
+    $("ifzGnssStatus").textContent="Saha kayıtları okunuyor…";
+    const name=file.name,rows=/\.pdf$/i.test(name)?ifzPdfObservations(await tpPdfText(file)):/\.xlsx$/i.test(name)?await ifzXlsxObservations(file):ifzObservations(await file.text());
+    if(!rows.length)throw Error("Dosyada okunabilir GNSS gözlem satırı bulunamadı.");
+    if(key!==ifzAttachmentKey(S()))throw Error("Okuma sırasında proje değişti; dosyayı yeniden seçin.");
+    ifzStoreGnss(rows,name);msg("aoMsg",rows.length+" GNSS gözlemi okundu; proje noktalarıyla karşılaştırıldı.");
+  }catch(err){msg("aoMsg","GNSS dosyası: "+err.message,true);ifzGnssStatus();}finally{e.target.value="";}
+});
+$("ifzGnssClear").onclick=()=>{try{ifzStoreGnss([],"");}catch(err){msg("aoMsg",err.message,true);}};
 $('ifzTapu').addEventListener('change',e=>{
   const a=S(),files=[...e.target.files];if(!a.parsel||files.some(f=>!f.name.toLowerCase().endsWith('.pdf'))){e.target.value='';return msg('aoMsg','Önce parseli seçin ve tapu belgesini PDF olarak ekleyin.',true);}
   ifzTapuSession={key:ifzAttachmentKey(a),files};
@@ -15915,7 +16443,10 @@ function openSheetEditor(p,pdf,back){
   });
 }
 function prevA() { clearTimeout(PVT); PVT = setTimeout(prevNow, 120); }
-function prevNow() { const c = $("aPrev"); let pg; try { pg = pagesNow(); } catch (e) { pg = []; $("pvNote").textContent = "Önizleme çizilemedi: " + e.message; }
+function prevNow() {
+  const form=$("ifzDocSettings");
+  if(MOD==="ifz"&&form.open&&form.dataset.job!==ifzAttachmentKey(S()))ifzOpenSettings();
+  const c = $("aPrev"); let pg; try { pg = pagesNow(); } catch (e) { pg = []; $("pvNote").textContent = "Önizleme çizilemedi: " + e.message; }
   if (!pg.length) { c.width = 10; c.height = 10; $("pvBox").hidden = true; $("pvT").textContent = "—"; $("pvNote").textContent = MOD === "apl" ? "Önizleme için parseli seç ve \"Yerleştir ve hesapla\"ya bas." : "Önizleme için parseli seç ve böl."; return; }
   $("pvBox").hidden = false; PV = Math.max(0, Math.min(PV, pg.length - 1)); const p = pg[PV]; const full=MOD==='ifz'&&$('pvWrap').classList.contains('ifz-full'),box=$('pvBox');
   const fit=full?Math.max(.2,Math.min((box.clientWidth-6)/p.W,(box.clientHeight-6)/p.H)):0;
@@ -16143,7 +16674,7 @@ window.aplShow = m => { if(m==='ifz'&&$('ifzDocSettings').open)ifzOpenSettings()
   S(); renderAll(); rs(); if (!V.s || V.s === 1) fitA(); else drawA(); };
 S(); renderAll(); { const h = location.hash.slice(1); if (h === "apl" || h === "ifz" || h === "kam" || h === "akr" || h === "trk") window.aplShow(h); }
 // CAD çiziminden aktarım: dosya geometrisi olarak yükle, seçili parsel varsa doğrudan kullan
-function fromCad(d, name, pts, no, strictCad, verifiedNames) { window.acadConsumeDwg82=null; FD = d; FDname = name; ZTIN = null; PLACED = null; const a = S(); if (no && no.no) { if (no.ada) a.antet.ada = no.ada; a.antet.parselNo = no.no; fillAntet(); }
+function fromCad(d, name, pts, no, strictCad, verifiedNames, target) { window.acadConsumeDwg82=null; FD = d; FDname = name; ZTIN = null; PLACED = null; const a = S(); if(target==="ifz"){ifzReadParcelHeader(a,d,pts,no);fillAntet();} if (no && no.no) { if (no.ada) a.antet.ada = no.ada; a.antet.parselNo = no.no; fillAntet(); }
   if (pts) setParsel(pts, no && no.no ? `${no.ada ? no.ada + "/" : ""}${no.no}` : null, "dosya", null, !!strictCad, verifiedNames); else { a.parsel = null; a.res = null; a.ifz.parts = null; a.ifz.cuts = []; a.ifz.yeni = []; a.ifz.yol = []; save(); renderAll(); fitA(); }
   { const bc = binaCands().find(o => /^F:BINA$/i.test(o.v)); if (bc) { S().bina = bc.v; save(); renderAll(); } }
   const ctx=FD?.ifrazContext;
@@ -19994,9 +20525,41 @@ const yumusat = (c, bgl) => { const m = /^#?([0-9a-f]{6})$/i.exec(String(c || ""
 function queryPalette79(lightness){
  document.documentElement.dataset.cadQueryTone=lightness>.55?'light':'dark';
 }
-let BGL = lum_(BGC);queryPalette79(BGL); const RK = new Map(); const renk = c => { if(CDOC.fmt==='ncz'&&window.ACAD_NATIVE_COLOR_VIEW!==false)return c;
-  const k = c + "|" + BGL + "|" + YUM; let v = RK.get(k); if (v) return v; const l = lum_(c); v = BGL > 0.6 && l > 0.72 ? "#000000" : BGL < 0.35 && l < 0.15 ? "#ffffff" : BGL >= 0.35 && BGL <= 0.6 && Math.abs(l - BGL) < 0.12 ? (BGL > 0.45 ? "#000000" : "#ffffff") : c; if (YUM) v = yumusat(v, BGL); RK.set(k, v); return v; };
-function ekranRengi(c) { BGC = c; BGL = lum_(c);queryPalette79(BGL); try { localStorage.setItem("acad-bg", c); } catch (e) { } const b = document.getElementById("cadBox"); if (b) b.style.background = c; const x = document.getElementById("cadXY"); if (x) x.style.color = BGL > 0.6 ? "#333" : "#9fb0c0"; document.querySelectorAll("[data-bgc]").forEach(q => q.classList.toggle("on", q.dataset.bgc === c)); draw(); }
+let BGL = lum_(BGC);queryPalette79(BGL);
+const RK=new Map();
+function displayLum(rgb){
+  const v=rgb.map(c=>{const s=c/255;return s<=.04045?s/12.92:((s+.055)/1.055)**2.4;});
+  return .2126*v[0]+.7152*v[1]+.0722*v[2];
+}
+function colorChannels(value){
+  const m=/^#([\da-f]{3}|[\da-f]{6})$/i.exec(value);
+  if(!m)return null;
+  const h=m[1].length===3?m[1].replace(/./g,c=>c+c):m[1];
+  return [0,2,4].map(i=>parseInt(h.slice(i,i+2),16));
+}
+function renk(c){
+  const native=window.ACAD_NATIVE_COLOR_VIEW!==false&&CDOC.fmt==="ncz";
+  const key=[c,BGC,native,YUM].join("|");
+  if(RK.has(key))return RK.get(key);
+  const src=colorChannels(c),bg=colorChannels(BGC);
+  if(!src||!bg)return c;
+  const lum=displayLum(bg),ratio=L=>(Math.max(L,lum)+.05)/(Math.min(L,lum)+.05);
+  const to=ratio(0)>=ratio(1)?0:255;
+  const input=!native&&YUM?colorChannels(yumusat(c,BGL))||src:src;
+  let rgb=input;
+  if(ratio(displayLum(rgb))<4.5){
+    if(Math.max(...src)-Math.min(...src)<12)rgb=[to,to,to];
+    else{
+      let lo=0,hi=1;
+      for(let i=0;i<9;i++){const t=(lo+hi)/2,mix=input.map(v=>Math.round(v+(to-v)*t));
+        if(ratio(displayLum(mix))<4.5)lo=t;else hi=t;}
+      rgb=input.map(v=>Math.round(v+(to-v)*hi));
+    }
+  }
+  const result="#"+rgb.map(v=>v.toString(16).padStart(2,"0")).join("");
+  RK.set(key,result);return result;
+}
+function ekranRengi(c) { RK.clear(); BGC = c; BGL = lum_(c);queryPalette79(BGL); try { localStorage.setItem("acad-bg", c); } catch (e) { } const b = document.getElementById("cadBox"); if (b) b.style.background = c; const x = document.getElementById("cadXY"); if (x) x.style.color = BGL > 0.6 ? "#333" : "#9fb0c0"; document.querySelectorAll("[data-bgc]").forEach(q => q.classList.toggle("on", q.dataset.bgc === c)); draw(); }
 window.CAD_EKRAN = ekranRengi;
 let GRIDON = (() => { try { return localStorage.getItem("acad-grid") !== "0"; } catch (e) { return true; } })();
 function izgara(D, W, H) { if (!GRIDON) return; const raw = 28 / V.s, p10 = Math.pow(10, Math.floor(Math.log10(raw))), st = [1, 2, 5, 10].map(m => m * p10).find(v => v >= raw) || raw; const koyu = BGL < 0.5; const x0 = WX(0), x1 = WX(W / D), y1 = WY(0), y0 = WY(H / D);
@@ -20027,6 +20590,19 @@ function areaDisplayPreference(id,key,label) {
     draw();
   });
   return ()=>visible;
+}
+const sourceAreaRoles=new Map();
+function sourceAreaRole(layer){
+  if(sourceAreaRoles.has(layer))return sourceAreaRoles.get(layer);
+  const name=String(layer||"").split("~")[0].split(":").pop().toLocaleUpperCase("tr-TR").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^A-Z0-9]+/g,"_");
+  let role="";
+  if(/(?:^|_)(?:DOLGU|SOLID|FILL)(?:_|$)/.test(name))role="solid";
+  else if(/(?:^|_)(?:TARAMA|HATCH)(?:_|$)/.test(name))role="hatchLine";
+  else if(/(?:^|_)(?:NADI|NOKTA_ADI|NOKTA_NO)(?:_|$)/.test(name))role="pointName";
+  else if(/(?:^|_)(?:NKOT|NOKTA_KOTU)(?:_|$)/.test(name))role="height";
+  else if(/(?:^|_)(?:YAZI_(?:PARSEL|ADA|ALAN|BINA)|(?:PARSEL|ALAN|BINA)_(?:ADI|AD|NO|YAZI))(?:_|$)/.test(name))role="label";
+  else if(/(?:^|_)(?:ALAN|PARSEL|BINA|BUILDING|PARCEL|AREA)(?:_|$)/.test(name)&&!/(?:^|_)(?:YAZI|NADI|NKOT|KOT)(?:_|$)/.test(name))role="area";
+  sourceAreaRoles.set(layer,role);return role;
 }
 const showAreaHatch=areaDisplayPreference("cadAreaHatchToggle","acad-area-hatch-visible","Alan taraması");
 const showAreaName=areaDisplayPreference("cadAreaNameToggle","acad-area-name-visible","Alan adı");
@@ -20098,7 +20674,7 @@ const ALAN_VIS = (()=>{
  function bridges(g,FX,FY,D,L){if(!L?.length)return;g.save();g.strokeStyle='#e47819';g.lineWidth=3.2*D;g.setLineDash([]);
    for(const v of L){if(!v.from||!v.to)continue;g.beginPath();g.moveTo(FX(v.from[0]),FY(v.from[1]));g.lineTo(FX(v.to[0]),FY(v.to[1]));g.stroke();}g.restore();}
  function paint(g,FX,FY,D,P,o={}){fill(g,FX,FY,D,P,o);if(o.bridges)bridges(g,FX,FY,D,o.bridges);label(g,FX,FY,D,P,o.area??Math.abs(areaOf(P)),o);}
- return{fill,label,bridges,paint,number};
+ return{fill,label,bridges,paint,number,point};
 })();
 /* V7.1.16.01 — Büyük CAD dosyaları için salt-okunur ekran indeksleme.
    Nesnelerin koordinatları/katman sıraları/özellikleri değiştirilmez.
@@ -20150,7 +20726,15 @@ function draw() { liveTick(); if(CAD_RESIZE_DIRTY){
   const visibleEntities=cadScreenItems(vx0,vx1,vy0,vy1);
   const vis = (x, y) => x > -50 && y > -50 && x < W + 50 && y < H + 50; let nv = 0; for (const e of visibleEntities) if (e.t === "point" && vis(X(e.pts[0][0]), Y(e.pts[0][1])) && ++nv >= 600) break; const lbl = nv < 600; const occ = new Set(); if (BBK.a !== ents || BBK.n !== ents.length || BBK.rev !== FVER || !BBK.TS || !!drag) {
     BBK.m = new Map(); BBK.a = ents; BBK.n = ents.length; BBK.rev = FVER;
-    BBK.TS = new Set(); for (const e of ents) if (e.t === "text") BBK.TS.add(String(e.s).trim());
+    BBK.TS = new Set(); BBK.areaTexts=new Map();
+    for (const e of ents) if (e.t === "text"&&lays[e.lay]?.on){
+      BBK.TS.add(String(e.s).trim());
+      if(sourceAreaRole(e.lay)==="label"){
+        const name=String(e.s).trim();
+        if(!BBK.areaTexts.has(name))BBK.areaTexts.set(name,[]);
+        BBK.areaTexts.get(name).push(e);
+      }
+    }
   } const TS = BBK.TS; const rawZ = TS.size < 10;
   const BPATH = new Map();
   /* Görsel seyrekleştirme: büyük halihazırda aynı 6px hücreye düşen nokta
@@ -20174,12 +20758,17 @@ function draw() { liveTick(); if(CAD_RESIZE_DIRTY){
     return Math.min(1, 0.65 + Math.min((width-54)/150, (height-20)/58)*0.35);
   }
   const acadAreaLabels=[],acadPlainAreaNames=[];
-  const nativeArea=e=>e.nczSourceBoundary&&window.ACAD_NATIVE_COLOR_VIEW!==false&&!e.areaHatch&&!e.showFrontages;
+  const nativeArea=e=>e.nczSourceBoundary||e.importedBoundary;
+  const feature=e=>sourceAreaRole(e.lay);
+  const isSourceSolid=e=>e.sourceSolid||e.closed&&feature(e)==="solid";
+  const eligible=e=>!isSourceSolid(e)&&!e.fill&&(e.areaName||feature(e)==="area");
+  const nativeStyle=window.ACAD_NATIVE_COLOR_VIEW!==false;
+  const sourceNames=BBK.areaTexts;
   // Batch solid road coverage, then draw the survey boundary lines above it.
   if(showAreaHatch()){
     const roadPath=new Path2D(), parcelsPath=new Path2D(), parksPath=new Path2D();
     for(const item of visibleEntities){
-      if(!lays[item.lay]?.on||nativeArea(item))continue;
+      if(!lays[item.lay]?.on||item.sourceSolid||(nativeArea(item)&&nativeStyle))continue;
       const park=item.closed&&/(?:^|[_ -])PARK(?:$|[_ -])/.test(roadLayerName(item.lay));
       const target=item.roadArea?roadPath:item.t==="pline"&&roadParcel(item)?parcelsPath:park?parksPath:null;
       if(!target)continue;
@@ -20191,16 +20780,20 @@ function draw() { liveTick(); if(CAD_RESIZE_DIRTY){
     cx.save();cx.fillStyle='rgba(48,153,228,.63)';cx.fill(roadPath);cx.fillStyle='rgba(225,170,67,.26)';cx.fill(parcelsPath);cx.fillStyle="rgba(61,161,115,.34)";cx.fill(parksPath);cx.restore();
   }
 
-  for(const e of visibleEntities){if(e.roadArea||e.roadBorder||e.t!=='pline'||!e.closed||e.pts?.length<3||!lays[e.lay]?.on)continue;const parcel=roadParcel(e);const _alanK=!!(e.areaHatch||/^ALAN_CEVIR(?:$|_)/i.test(e.lay));if(!_alanK&&e.id!==ALAN_AKTIF&&(nativeArea(e)||!e.areaName))continue;
+  for(const e of visibleEntities){if(e.roadArea||e.roadBorder||e.t!=='pline'||!e.closed||e.pts?.length<3||!lays[e.lay]?.on)continue;const parcel=roadParcel(e);const _alanK=!!(e.areaHatch||/^ALAN_CEVIR(?:$|_)/i.test(e.lay));if(isSourceSolid(e)||e.fill||(!_alanK&&e.id!==ALAN_AKTIF&&!eligible(e)))continue;
     const b=ebb(e);if(b&&(b[2]<vx0||b[0]>vx1||b[3]<vy0||b[1]>vy1))continue;
     // When editing the same polygon, the moving geometry gets the visible preview instead.
     if(AREA_EDIT_SESSION?.id===e.id&&cmd?.name==='Alan Düzelt'&&(cmd.preview?.parts?.length||cmd._liveOn))continue;
     const act_=AREA_EDIT_SESSION&&AREA_EDIT_SESSION.second===e.id?'second':(sel.has(e.id)||AREA_EDIT_SESSION?.id===e.id||ALAN_AKTIF===e.id?'first':null);
-    if(showFrontages()&&(e.showFrontages||_alanK||e.areaName))drawFrontages74(cx,e.pts,v=>[X(v[0]),Y(v[1])],D,true);
-    ALAN_VIS.fill(cx,X,Y,D,e.pts,{active:act_,color:(()=>{try{return parcel?"#ca8c2e":renk(lays[e.lay].c);}catch(x){return lays[e.lay]?.c;}})(),stroke:!!act_?true:false,reviewRequired:_alanK&&(alanKaynakGuncelMi(e)===false||e.areaQuality==='review-required'||(e.areaInferredBridges||[]).some(b=>b.metres>20))});if(_alanK)acadAreaLabels.push(e);else if(showAreaName()&&e.areaName&&acadPlainAreaNames.length<120&&areaLabelScale(b)>0)acadPlainAreaNames.push(e);
+    if(showFrontages()&&(e.showFrontages||_alanK||(!nativeArea(e)&&e.areaName)))drawFrontages74(cx,e.pts,v=>[X(v[0]),Y(v[1])],D,true);
+    ALAN_VIS.fill(cx,X,Y,D,e.pts,{active:act_,color:(()=>{try{return parcel&&!nativeArea(e)?"#ca8c2e":renk(lays[e.lay].c);}catch(x){return lays[e.lay]?.c;}})(),stroke:!!act_?true:false,reviewRequired:_alanK&&(alanKaynakGuncelMi(e)===false||e.areaQuality==='review-required'||(e.areaInferredBridges||[]).some(b=>b.metres>20))});if(_alanK)acadAreaLabels.push(e);else if(showAreaName()&&e.areaName&&!sourceNames.get(String(e.areaName).trim())?.some(t=>inPolyC(e.pts,t.pts[0][0],t.pts[0][1]))&&acadPlainAreaNames.length<120&&areaLabelScale(b)>0)acadPlainAreaNames.push(e);
   }
 
-  for (const e of visibleEntities) { if((e.roadInterior||e.roadBorder||e.roadArea)&&!sel.has(e.id)&&(e.roadInterior||!showAreaHatch()))continue; const L = lays[e.lay]; if (!L || !L.on) continue; { const b = ebb(e); if (b && (b[2] < vx0 || b[0] > vx1 || b[3] < vy0 || b[1] > vy1)) continue; if (b && e.t !== "point" && e.t !== "text" && !sel.has(e.id) && (b[2] - b[0] + b[3] - b[1]) * V.s * D < 0.6) continue; } const s = sel.has(e.id); if (!s && !e.fill && (e.t === "line" || e.t === "pline") && e.pts.length > 1) { const lt_ = ltOf(e); if (!lt_ || (!ltDash(lt_, 1) && !(window.LTX && LTX.has(lt_)))) { const col = renk(L.c); let bp = BPATH.get(col); if (!bp) { bp = new Path2D(); BPATH.set(col, bp); } const P = e.pts; let px = X(P[0][0]), py = Y(P[0][1]); bp.moveTo(px, py); for (let i = 1; i < P.length; i++) { const qx = X(P[i][0]), qy = Y(P[i][1]); if (i < P.length - 1 && Math.abs(qx - px) + Math.abs(qy - py) < 0.7) continue; bp.lineTo(qx, qy); px = qx; py = qy; } if (e.closed) bp.closePath(); continue; } } cx.strokeStyle = cx.fillStyle = s ? "#36c3ff" : renk(L.c); cx.lineWidth = (s ? 2 : 1.2) * D; let dsf = false; if (s) { cx.setLineDash([6 * D, 4 * D]); dsf = true; } else if (e.t === "line" || e.t === "pline" || e.t === "circle") { const dd = ltDash(ltOf(e), 1.6 * D); if (dd) { cx.setLineDash(dd); dsf = true; } }
+  for (const e of visibleEntities) {
+    const role=e.displayRole||sourceAreaRole(e.lay);
+    if(e.t==="text"&&((role==="label"&&!showAreaName())||(role==="pointName"&&!PV.ad)||(role==="height"&&PV.kot===false)))continue;
+    if((e.sourceHatchLine||role==="hatchLine")&&!showAreaHatch())continue;
+    if((e.roadInterior||e.roadBorder||e.roadArea)&&!sel.has(e.id)&&(e.roadInterior||!showAreaHatch()))continue; const L = lays[e.lay]; if (!L || !L.on) continue; { const b = ebb(e); if (b && (b[2] < vx0 || b[0] > vx1 || b[3] < vy0 || b[1] > vy1)) continue; if (b && e.t !== "point" && e.t !== "text" && !sel.has(e.id) && (b[2] - b[0] + b[3] - b[1]) * V.s * D < 0.6) continue; } const s = sel.has(e.id); if (!s && !e.fill && !isSourceSolid(e) && (e.t === "line" || e.t === "pline") && e.pts.length > 1) { const lt_ = ltOf(e); if (!lt_ || (!ltDash(lt_, 1) && !(window.LTX && LTX.has(lt_)))) { const col = renk(e.sourceInk||L.c); let bp = BPATH.get(col); if (!bp) { bp = new Path2D(); BPATH.set(col, bp); } const P = e.pts; let px = X(P[0][0]), py = Y(P[0][1]); bp.moveTo(px, py); for (let i = 1; i < P.length; i++) { const qx = X(P[i][0]), qy = Y(P[i][1]); if (i < P.length - 1 && Math.abs(qx - px) + Math.abs(qy - py) < 0.7) continue; bp.lineTo(qx, qy); px = qx; py = qy; } if (e.closed) bp.closePath(); continue; } } cx.strokeStyle = cx.fillStyle = s ? "#36c3ff" : renk(e.sourceInk||L.c); cx.lineWidth = (s ? 2 : 1.2) * D; let dsf = false; if (s) { cx.setLineDash([6 * D, 4 * D]); dsf = true; } else if (e.t === "line" || e.t === "pline" || e.t === "circle") { const dd = ltDash(ltOf(e), 1.6 * D); if (dd) { cx.setLineDash(dd); dsf = true; } }
     if (e.t === "point") { const x = X(e.pts[0][0]), y = Y(e.pts[0][1]); if (!vis(x, y)) { cx.setLineDash([]); continue; }
       if(!ptShouldPaint(e,x,y,s)){cx.setLineDash([]);continue;}
       const sk_ = hzSymK(e.lay); if (sk_) { HHK.sym(cx, x, y, hzSymPx() * D, sk_, s ? "#36c3ff" : renk(L.c)); cx.setLineDash([]); continue; }
@@ -20211,10 +20804,16 @@ function draw() { liveTick(); if(CAD_RESIZE_DIRTY){
       const ln_ = PV.ad && e.n && !TS.has(String(e.n).trim()) ? e.n : "", lz_ = PV.kot !== false && (PV.kot === true || rawZ) && isFinite(e.pts[0][2]) && e.pts[0][2];
       if (lbl && (ln_ || lz_) && !occ.has(Math.floor(x / (70 * D)) + "," + Math.floor(y / (13 * D)))) { occ.add(Math.floor(x / (70 * D)) + "," + Math.floor(y / (13 * D))); cx.font = `${10 * D}px Arial`; cx.textAlign = "left"; cx.fillText(`${ln_}${lz_ ? " " + (+e.pts[0][2]).toFixed(2) : ""}`, x + 5 * D, y - 4 * D); } }
     else if (e.t === "text") { const hpx = (e.h || 1) * V.s * D; if (hpx < 3) { cx.setLineDash([]); if (hpx >= 0.2) { const w = hpx * 0.75 * String(e.s).length, a = -(e.rot || 0) * Math.PI / 180, x0 = X(e.pts[0][0]) - (e.al === "c" ? w / 2 : e.al === "r" ? w : 0) * Math.cos(a), y0 = Y(e.pts[0][1]) - (e.al === "c" ? w / 2 : e.al === "r" ? w : 0) * Math.sin(a); cx.globalAlpha = 0.6; cx.lineWidth = Math.max(1, hpx * 0.8); cx.beginPath(); cx.moveTo(x0, y0 - hpx * 0.4); cx.lineTo(x0 + w * Math.cos(a), y0 - hpx * 0.4 + w * Math.sin(a)); cx.stroke(); cx.globalAlpha = 1; } continue; } cx.save(); cx.translate(X(e.pts[0][0]), Y(e.pts[0][1])); cx.rotate(-(e.rot || 0) * Math.PI / 180); cx.font = `${hpx * 1.3}px Arial`; cx.textAlign = e.al === "c" ? "center" : e.al === "r" ? "right" : "left"; cx.textBaseline = e.foundationMiddle ? "middle" : "alphabetic"; cx.fillText(buildingLevelText(e), 0, 0); cx.restore(); }
+    else if(isSourceSolid(e)){
+      if(showAreaHatch()||s||!e.sourceSolid||e.sourceSolid==="layer"){
+        cx.beginPath();e.pts.forEach((q,i)=>i?cx.lineTo(X(q[0]),Y(q[1])):cx.moveTo(X(q[0]),Y(q[1])));cx.closePath();
+        if(showAreaHatch())cx.fill();if(s||!showAreaHatch())cx.stroke();
+      }
+    }
     else if (e.t === "circle") { if (!s && !cx.getLineDash().length) { const col = cx.strokeStyle; let bp = BPATH.get(col); if (!bp) { bp = new Path2D(); BPATH.set(col, bp); } const cx_ = X(e.c[0]), cy_ = Y(e.c[1]), rr = e.r * V.s * D; bp.moveTo(cx_ + rr, cy_); bp.arc(cx_, cy_, rr, 0, 7); } else { cx.beginPath(); cx.arc(X(e.c[0]), Y(e.c[1]), e.r * V.s * D, 0, 7); cx.stroke(); } }
     else { const lx = !s && !e.fill && window.LTX && LTX.has(ltOf(e)) ? ltOf(e) : null; if (lx && LTX.per(lx) * LTX.u * V.s * D > 3) { const R_ = LTX.cached(e, lx, LTX.u); cx.setLineDash([]); cx.beginPath(); for (const [a, b] of R_.L) { cx.moveTo(X(a[0]), Y(a[1])); cx.lineTo(X(b[0]), Y(b[1])); } cx.stroke(); for (const k of R_.C) { cx.beginPath(); cx.arc(X(k.c[0]), Y(k.c[1]), Math.max(0.8, k.r * V.s * D), 0, 7); k.f ? cx.fill() : cx.stroke(); } if (R_.T.length) { const hp = R_.T[0].h * V.s * D; if (hp > 4) { cx.font = `${hp * 1.3}px Arial`; cx.textAlign = "center"; for (const t of R_.T) { cx.save(); cx.translate(X(t.p[0]), Y(t.p[1])); let r_ = t.rot; if (Math.cos(r_) < 0) r_ += Math.PI; cx.rotate(-r_); cx.fillText(t.s, 0, 0); cx.restore(); } } } }
       else if (!s && !e.fill && !cx.getLineDash().length) { const col = cx.strokeStyle; let bp = BPATH.get(col); if (!bp) { bp = new Path2D(); BPATH.set(col, bp); } const P = e.pts; let px = X(P[0][0]), py = Y(P[0][1]); bp.moveTo(px, py); for (let i = 1; i < P.length; i++) { const qx = X(P[i][0]), qy = Y(P[i][1]); if (i < P.length - 1 && Math.abs(qx - px) + Math.abs(qy - py) < 0.7) continue; bp.lineTo(qx, qy); px = qx; py = qy; } if (e.closed) bp.closePath(); }
-      else { cx.beginPath(); e.pts.forEach((p, i) => i ? cx.lineTo(X(p[0]), Y(p[1])) : cx.moveTo(X(p[0]), Y(p[1]))); if (e.closed) cx.closePath(); if (e.fill && !s) cx.fill(); else cx.stroke(); } }
+      else { cx.beginPath(); e.pts.forEach((p, i) => i ? cx.lineTo(X(p[0]), Y(p[1])) : cx.moveTo(X(p[0]), Y(p[1]))); if (e.closed) cx.closePath(); if (e.fill && !s && showAreaHatch()) cx.fill(); else cx.stroke(); } }
     if (dsf) cx.setLineDash([]); }
   cx.setLineDash([]); cx.lineWidth = 1.2 * D; for (const [col, bp] of BPATH) { cx.strokeStyle = col; cx.stroke(bp); }
   /* Büyük görünümde nokta sembollerini tek Path2D/stroke ile çiz: GPU komut yükü azalır. */
@@ -20229,7 +20828,7 @@ function draw() { liveTick(); if(CAD_RESIZE_DIRTY){
       inferred:!!e.areaInferredBridges?.length});} 
   // Kaynak NCZ/DXF alanı kendi adıyla CAD'de de görünür; tabaka ve kaynak çizim değişmez.
   cx.save();cx.textBaseline='middle';cx.textAlign='center';cx.font=`600 ${Math.round(12*D)}px system-ui,Arial`;
-  for(const e of acadPlainAreaNames){const b=ebb(e);const scale=areaLabelScale(b);if(!scale)continue;const u=D*scale;cx.font=(12*u)+"px system-ui,Arial";const x=X((b[0]+b[2])/2),y=Y((b[1]+b[3])/2),label=String(e.areaName).slice(0,35);const width=Math.min(210*u,cx.measureText(label).width+14*u);if(x<-width||x>W+width||y<0||y>H)continue;cx.fillStyle='rgba(14,30,44,.87)';cx.fillRect(x-width/2,y-10*u,width,20*u);cx.fillStyle='#ecf3f8';cx.fillText(label,x,y,Math.max(20*u,width-9*u));}cx.restore();
+  for(const e of acadPlainAreaNames){const b=ebb(e);const scale=areaLabelScale(b);if(!scale)continue;const u=D*scale;cx.font=(12*u)+"px system-ui,Arial";const anchor=ALAN_VIS.point(e.pts),x=X(anchor[0]),y=Y(anchor[1]),label=String(e.areaName).slice(0,35);const width=Math.min(210*u,cx.measureText(label).width+14*u);if(x<-width||x>W+width||y<0||y>H)continue;cx.fillStyle='rgba(14,30,44,.87)';cx.fillRect(x-width/2,y-10*u,width,20*u);cx.fillStyle='#ecf3f8';cx.fillText(label,x,y,Math.max(20*u,width-9*u));}cx.restore();
   // tutamaçlar
   if (sel.size && sel.size < 300) { cx.fillStyle = "#36c3ff"; for (const e of ents) if (sel.has(e.id)) for (const p of vertsOf(e)) { const x = X(p[0]), y = Y(p[1]); if (vis(x, y)) cx.fillRect(x - 4 * D, y - 4 * D, 8 * D, 8 * D); } }
   tabanAl(); ustler(D, W, H); pvLiveInvalidate(); }
@@ -24050,8 +24649,11 @@ async function loadFile(f, append, opt) {
       CDOC.nczUnmodeledRecords = Number(CDOC.nczUnmodeledRecords||0) + Number(D.nczDiagnostics?.unmodeledRecords||0);
     }
     if (!append) { DIRTY = zeroWork.removed>0;window.ACAD_NATIVE_COLOR_VIEW=true; } else DIRTY = true;
-    D.lines.forEach(l => { add({ t: "line", pts: l.pts.map(p => [p[0], p[1], p[2] || 0]), lay: L(l.lay), ...(l.lt ? { lt: l.lt } : {}) }); n++; });
-    D.polys.forEach(p => { const P_ = p.pts, nczBoundary=!!p.closed&&/\.ncz$/i.test(f.name), kp = nczBoundary && P_.length >= 3 && (Math.abs(P_[0][0] - P_[P_.length - 1][0]) > 1e-9 || Math.abs(P_[0][1] - P_[P_.length - 1][1]) > 1e-9); add({ t: "pline", pts: P_.map(q => [q[0], q[1], q[2] || 0]), closed: !!p.closed, lay: L(p.lay), ...(p.lt ? { lt: p.lt } : {}), ...(nczBoundary?{nczSourceBoundary:true}:{}), ...(kp ? { nczKapanisYok: 1 } : {}), ...(p.nativeName ? {n:p.nativeName,...(p.closed?{areaName:p.nativeName}:{})} : {}), ...(p.curveApprox || p.arc || p.ellipseApprox ? {sourceCurveApprox:true} : {}) }); n++; });
+    D.lines.forEach(l => { add({ t: "line", pts: l.pts.map(p => [p[0], p[1], p[2] || 0]), lay: L(l.lay), ...(l.lt ? { lt: l.lt } : {}), ...(l.sourceHatchLine?{sourceHatchLine:true}:{}),...(l.sourceInk?{sourceInk:l.sourceInk}:{}) }); n++; });
+    D.polys.forEach(p => { const P_ = p.pts, nczBoundary=!!p.closed&&/\.ncz$/i.test(f.name), kp = nczBoundary && P_.length >= 3 && (Math.abs(P_[0][0] - P_[P_.length - 1][0]) > 1e-9 || Math.abs(P_[0][1] - P_[P_.length - 1][1]) > 1e-9); add({ t: "pline", pts: P_.map(q => [q[0], q[1], q[2] || 0]), closed: !!p.closed, lay: L(p.lay), ...(p.lt ? { lt: p.lt } : {}), ...(nczBoundary?{nczSourceBoundary:true}:{}),
+      ...(p.closed?{importedBoundary:true}:{}),
+      ...(p.sourceSolid||p.closed&&sourceAreaRole(p.lay)==="solid"?{sourceSolid:p.sourceSolid||"layer"}:{}),
+      ...(p.sourceInk?{sourceInk:p.sourceInk}:{}), ...(kp ? { nczKapanisYok: 1 } : {}), ...(p.nativeName ? {n:p.nativeName,...(p.closed?{areaName:p.nativeName}:{})} : {}), ...(p.curveApprox || p.arc || p.ellipseApprox ? {sourceCurveApprox:true} : {}) }); n++; });
     (D.circles || []).forEach(c => {
       if(Number.isFinite(c.e)&&Number.isFinite(c.y)&&Number.isFinite(c.r)&&c.r>0)
         add({t:'circle',c:[c.e,c.y,c.z??0],r:c.r,lay:L(c.lay)});
@@ -24080,7 +24682,7 @@ async function loadFile(f, append, opt) {
       }
     }
     D.points.forEach(p => { const e_ = add({ t: "point", n: p.n || matchedPointNames.get(p) || "", pts: [[p.e, p.y, p.z==null||p.z===''||!Number.isFinite(Number(p.z))?null:Number(p.z)]], lay: L(p.lay) }); if (p.kod) e_.kod = p.kod; n++; });
-    D.texts.filter(t => !usedNameLabels.has(t) && Number.isFinite(Number(t.e)) && Number.isFinite(Number(t.y)) && t.s).forEach(t => { const o = { t: "text", s: t.s, h: t.h || 1, pts: [[t.e, t.y, Number.isFinite(Number(t.z)) ? Number(t.z) : 0]], lay: L(t.lay) }; if (t.rot) o.rot = t.rot; if (t.al && t.al !== "l") o.al = t.al; add(o); n++; });
+    D.texts.filter(t => !usedNameLabels.has(t) && Number.isFinite(Number(t.e)) && Number.isFinite(Number(t.y)) && t.s).forEach(t => { const o = { t: "text", s: t.s, h: t.h || 1, pts: [[t.e, t.y, Number.isFinite(Number(t.z)) ? Number(t.z) : 0]], lay: L(t.lay) }; if(t.pno)o.displayRole="label";if(t.sourceInk)o.sourceInk=t.sourceInk;if (t.rot) o.rot = t.rot; if (t.al && t.al !== "l") o.al = t.al; add(o); n++; });
     const zeroRemoved=zeroWork.removed-zeroWork.faces,zeroFaces=zeroWork.faces,zeroInvalid=zeroWork.removed;
     const off=(D.hidden||[]).map(l=>importLayers.get(l)).filter(l=>lays[l]);off.forEach(l=>lays[l].on=false);
     for(const [name,c] of Object.entries(D.layerColors||{})){
@@ -24317,7 +24919,7 @@ async function saveDxf(nm, onlyBuild) {
   for (const e of ents) { const l = lmap[e.lay], elt = e.lt && e.lt !== "tabaka" ? e.lt : null, lx_ = (e.t === "line" || e.t === "pline") && window.LTX && LTX.has(ltOf(e)) && !LTIP[ltOf(e)] ? ltOf(e) : null; /* CAD uyumluluğu: linetype görsellerini parçalı çizgilere dönüştürmek kaynak geometriyi bozuyordu.
      Orijinal LINE / POLYLINE nesnesi korunmalı; özel desen başka CAD'de desteklenmiyorsa
      görsel desen kaybolabilir fakat nesnenin asıl geometrisi kaybolmaz. */
-     if (false && lx_) { const R_ = LTX.expand(e.pts, lx_, LTX.u, e.closed); for (const [a, b] of R_.L) D.line(l, a, b, 0); for (const k of R_.C) { const pts = []; for (let i = 0; i < 24; i++) pts.push([k.c[0] + k.r * Math.cos(i / 12 * Math.PI), k.c[1] + k.r * Math.sin(i / 12 * Math.PI)]); D.poly(l, pts, true); } for (const t of R_.T) { let r_ = t.rot; if (Math.cos(r_) < 0) r_ += Math.PI; D.text(l, t.p[0], t.p[1], t.h, t.s, r_ * 180 / Math.PI, "c"); } continue; } if (e.t === "line") D.line(l, e.pts[0], e.pts[1], 0, elt); else if (e.t === "pline") { if (e.pts.some(q => Math.abs(q[2] || 0) > 1e-6)) D.poly3(l, e.pts, e.closed, 0); else D.poly(l, e.pts, e.closed, 0, undefined, elt); } else if (e.t === "point") { D.point(l, e.pts[0][0], e.pts[0][1], e.pts[0][2] || 0); if (e.n) D.text(l, e.pts[0][0] + 0.3, e.pts[0][1] + 0.3, 0.6, e.n); if (e.kod) D.text(D.lay("NOKTA_KOD", 3), e.pts[0][0] + 0.3, e.pts[0][1] - 0.7, 0.5, String(e.kod)); } else if (e.t === "text") D.text(l, e.pts[0][0], e.pts[0][1], e.h || 1, e.s, e.rot || 0, e.al || "l", null, e.pts[0][2]||0); else if (e.t === "circle") D.circle(l,e.c,e.r); }
+     if (false && lx_) { const R_ = LTX.expand(e.pts, lx_, LTX.u, e.closed); for (const [a, b] of R_.L) D.line(l, a, b, 0); for (const k of R_.C) { const pts = []; for (let i = 0; i < 24; i++) pts.push([k.c[0] + k.r * Math.cos(i / 12 * Math.PI), k.c[1] + k.r * Math.sin(i / 12 * Math.PI)]); D.poly(l, pts, true); } for (const t of R_.T) { let r_ = t.rot; if (Math.cos(r_) < 0) r_ += Math.PI; D.text(l, t.p[0], t.p[1], t.h, t.s, r_ * 180 / Math.PI, "c"); } continue; } if (e.t === "line") D.line(l, e.pts[0], e.pts[1], 0, elt); else if(e.sourceSolid&&e.sourceSolid!=="layer"&&[3,4].includes(e.pts.length))D.solid(l,e.pts,e.sourceSolid,e.sourceInk?ci(e.sourceInk):0); else if (e.t === "pline") { if (e.pts.some(q => Math.abs(q[2] || 0) > 1e-6)) D.poly3(l, e.pts, e.closed, 0); else D.poly(l, e.pts, e.closed, 0, undefined, elt); } else if (e.t === "point") { D.point(l, e.pts[0][0], e.pts[0][1], e.pts[0][2] || 0); if (e.n) D.text(l, e.pts[0][0] + 0.3, e.pts[0][1] + 0.3, 0.6, e.n); if (e.kod) D.text(D.lay("NOKTA_KOD", 3), e.pts[0][0] + 0.3, e.pts[0][1] - 0.7, 0.5, String(e.kod)); } else if (e.t === "text") D.text(l, e.pts[0][0], e.pts[0][1], e.h || 1, e.s, e.rot || 0, e.al || "l", null, e.pts[0][2]||0); else if (e.t === "circle") D.circle(l,e.c,e.r); }
   for (const fc of FACES) { const L = lays[fc.lay]; if (!L) continue; D.face(lmap[fc.lay] || (lmap[fc.lay] = D.lay(fc.lay, L.on === false ? -ci(L.c) : ci(L.c))), fc.p[0], fc.p[1], fc.p[2]); }
   const ap = arzPrims(); if (ap.length) ARZX.toDxf(D, ap, +PVO.olc || 1000);
   window.ACAD_DXF_LAST_LAYER_MAP=pairs.map(p=>({source:p.src,exported:p.dxf}));
@@ -27772,7 +28374,7 @@ function flowTo(m, selectedParcelOnly=false) { if (!ents.length) return say("Ön
     }
     d.ifzNetwork=rings;
   }
-  window.APLT.fromCad(d, projName(), P, noOf(P), strictYapi, verifiedYapi); if (typeof showTab === "function") showTab(m);
+  window.APLT.fromCad(d, projName(), P, noOf(P), strictYapi, verifiedYapi,m); if (typeof showTab === "function") showTab(m);
   setTimeout(() => window.APLT.fitA(!!localIfz), 60);
   say(P ? `${sel.size ? "Seçili parsel" : "Çizimdeki kapalı alan"} ${m === "ifz" ? "ifraza" : "yapı aplikasyonuna"} gönderildi (${fmt(Math.abs(areaOf(P)))} m²)` : `Çizim gönderildi — ${m === "ifz" ? "İfraz" : "Yapı APL"} sekmesinde parselin içine dokun`); }
 // kübaj: kotlu noktalar, kotlu çizgi köşeleri ve ondalıklı kot yazıları tabaka tabaka
@@ -27870,13 +28472,20 @@ function renderInfo() { const el = $("cadInfo"); if (!el) return; const L = selE
 
 // yapı aplikasyonundan: parsel dosyası/plankote + gerçek koordinata oturtulmuş vaziyet
 window.cadVaziyet = (F, V, par, info) => { if (PLAN) editExit(); snap0(); ents = []; lays = { "0": { c: "#ffffff", on: true } }; sel.clear(); IDX = null;
-  const put = (D, pre) => { if (!D) return; D.lines.forEach(l => add({ t: "line", pts: l.pts.map(p => [p[0], p[1], p[2] || 0]), lay: layer(pre + l.lay) })); D.polys.forEach(p => add({ t: "pline", pts: p.pts.map(q => [q[0], q[1], q[2] || 0]), closed: !!p.closed, lay: layer(pre + p.lay) }));
-    (D.points || []).forEach(p => add({ t: "point", n: p.n || "", pts: [[p.e, p.y, isFinite(p.z) ? p.z : 0]], lay: layer(pre + p.lay) })); (D.texts || []).filter(t => isFinite(t.e) && t.s).forEach(t => { const o = { t: "text", s: t.s, h: t.h || 1, pts: [[t.e, t.y, 0]], lay: layer(pre + t.lay) }; if (t.rot) o.rot = t.rot; add(o); }); };
-  put(F, ""); Object.keys(lays).filter(l => l !== "0").forEach(l => { lays[l].c = "#8a96a3"; }); put(V, "");
-  Object.keys(lays).filter(l => l.startsWith("VZ:")).forEach(l => lays[l].c = "#ff9a3c");
+  const put=(D,pre)=>{
+    if(!D)return;
+    const sourceLayer=name=>layer(pre+name,D.layerRGB?.[name]||(D.layerColors?.[name]?K.aciHex(D.layerColors[name]):undefined));
+    for(const l of D.lines)add({...l,t:"line",pts:l.pts.map(p=>p.slice()),lay:sourceLayer(l.lay)});
+    for(const p of D.polys)add({...p,t:"pline",pts:p.pts.map(q=>q.slice()),lay:sourceLayer(p.lay),importedBoundary:p.closed,areaName:p.nativeName||"",sourceSolid:p.sourceSolid||(p.closed&&sourceAreaRole(p.lay)==="solid"?"layer":false)});
+    for(const p of D.points||[])add({t:"point",n:p.n||"",pts:[[p.e,p.y,p.z??0]],lay:sourceLayer(p.lay)});
+    for(const t of D.texts||[])if(isFinite(t.e)&&t.s)add({...t,t:"text",pts:[[t.e,t.y,t.z??0]],lay:sourceLayer(t.lay)});
+    for(const c of D.circles||[])if(c.r>0)add({t:"circle",c:[c.e,c.y,c.z??0],r:c.r,lay:sourceLayer(c.lay)});
+    for(const l of D.hidden||[])if(lays[pre+l])lays[pre+l].on=false;
+  };
+  put(F,"");put(V,"");
   add({ t: "pline", pts: par.map(p => [p[0], p[1], 0]), closed: true, lay: layer("PARSEL", "#40e040") }); layer("BINA", "#36c3ff"); cur = "BINA";
   if (typeof showTab === "function") showTab("cad"); renderLays(); zoomAll(); persist();
-  say(`${info}. Turuncu = vaziyet. Taban oturumunu "Çoklu" ile BINA tabakasına kapalı çiz (köşeleri yakalar), sonra parseli seçip ② Yapı APL.`); };
+  say(`${info}. Vaziyet tabakaları VZ önekiyle gösterilir. Taban oturumunu "Çoklu" ile BINA tabakasına kapalı çiz (köşeleri yakalar), sonra parseli seçip ② Yapı APL.`); };
 window.cadShow = () => { docInfo(); if (GPSS.on) { $("cadGps").classList.add("on"); $("cadFol").hidden = $("cadGpt").hidden = false; } rs();renderLays();markTools();
   if (!ents.length || !Number.isFinite(V.s) || V.s <= 0 || V.s===1 || (cadProjected() && (!Number.isFinite(V.cx) || Math.abs(V.cx)<100000 || Math.abs(V.cy)<1000000))) zoomAll(); else draw();idle();
   requestAnimationFrame(() => { if (!$('v-cad').hidden && cv.getBoundingClientRect().width>80 && cv.getBoundingClientRect().height>80 && (!Number.isFinite(V.s) || V.s<=0)) zoomAll(); });
