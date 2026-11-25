@@ -1658,9 +1658,9 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       <h2>Güzergah ve ölçek</h2>
       <div class="grid">
         <label>Güzergah başlangıç km'si (örn. 0+380)<input id="vKm0"></label>
-        <label>Kesit şablon ölçeği 1/ (Maslak: 150)<input id="vOl" inputmode="decimal"></label>
+        <label>Kesit şablon ölçeği 1/ (örn. 150)<input id="vOl" inputmode="decimal"></label>
       </div>
-      <p class="note" style="margin-top:8px">Kesit km'leri bu değerden devam eder. Netcad'deki kesitlerle üst üste gelmesi için aynı başlangıç km'sini ve ölçeği (1/150) kullan. Çizimde km yazısı olan kesit çizgileri varsa km'ler yazılardan okunur.</p>
+      <p class="note" style="margin-top:8px">Kesit kilometreleri girilen başlangıç değerinden devam eder. Mevcut kesitlerle örtüşme için başlangıç kilometresi ve ölçek aynı olmalıdır. Çizimde kilometre etiketi varsa değer etiketten okunur.</p>
     </div>
     <div class="card kub-project-file">
       <h2>Proje dosyası</h2>
@@ -1803,7 +1803,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
         <label>Dolgu eşiği (m)<input id="sEsik" inputmode="decimal"></label>
         <label>Kazı eşiği (m)<input id="sKesik" inputmode="decimal"></label>
         <label>Kesit şablon ölçeği 1/ (yatay = düşey)<input id="sOl" inputmode="decimal"></label>
-        <p class="note full" style="margin:0">Kesit şablonu sabit ölçekle (Maslak projeleri: 1/150, yatay = düşey) çizilir. Kesit A4'e sığmazsa Netcad çıktısındaki gibi çizim bütünüyle orantılı küçültülür, etiket 1/150 kalır.</p><input type="checkbox" id="sEsit" hidden>
+        <p class="note full" style="margin:0">Kesitler seçilen şablon ölçeğinde, yatay ve düşey eşit ölçekte hazırlanır. A4'e sığdır seçeneğinde çizim orantılı küçültülür. Gerçek ölçekli çıktı için Gerçek ölçek seçeneğini kullan.</p><input type="checkbox" id="sEsit" hidden>
         <label>Sol genişlik (m)<input id="sWL" inputmode="decimal"></label>
         <label>Sağ genişlik (m)<input id="sWR" inputmode="decimal"></label>
       </div>
@@ -1832,14 +1832,14 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       <h2>Dosyalar</h2>
       <div class="row">
         <button class="primary" id="oX" type="button">Excel (hakediş formatı)</button>
-        <label style="flex-direction:row;align-items:center;gap:6px">Kesit sayfası<select id="oSig" style="width:auto"><option value="gercek">Gerçek ölçek (Netcad gibi, şablon büyür)</option><option value="a4">A4'e sığdır (kesit küçülür)</option></select></label>
+        <label style="flex-direction:row;align-items:center;gap:6px">Kesit sayfası<select id="oSig" style="width:auto"><option value="gercek">Gerçek ölçek (sayfa çizime göre büyür)</option><option value="a4">A4'e sığdır (kesit küçülür)</option></select></label>
         <label style="flex-direction:row;align-items:center;gap:6px">Kot yazıları<select id="oKm" style="width:auto"><option value="degisim">Kot değişimi</option><option value="aralik">Sabit aralık</option></select></label>
         <label id="oKsL" style="flex-direction:row;align-items:center;gap:6px">Aralık (m)<input id="oKs" inputmode="decimal" style="width:60px"></label>
         <button class="primary" id="oP" type="button">PDF (kesitler)</button>
         <button class="primary" id="oD" type="button">Çizim kaydet (plan + kesitler)</button>
       </div>
       <div class="msg" id="oMsg" style="margin-top:8px"></div>
-      <p class="note" style="margin-top:6px">DXF, indirme kısıtı nedeniyle .zip içinde gelir. İçinde üç dosya var: tümü (plan + kesitler), yalnızca siyah üçgen model ve yalnızca kırmızı üçgen model. Netcad ve AutoCAD'de açılır.</p>
+      <p class="note" style="margin-top:6px">DXF, indirme kısıtı nedeniyle .zip içinde gelir. İçinde üç dosya var: tümü (plan + kesitler), yalnızca siyah üçgen model ve yalnızca kırmızı üçgen model. DXF uyumlu CAD yazılımlarında açılabilir.</p>
     </div>
     <div class="card kaseCard" style="border-left:5px solid #1f4fa8"><h2>Kaşe ve imza</h2><p class="note" style="margin:2px 0 8px">Şirket kaşe-imza dosyasını (PDF, PNG ya da JPG) bir kez yükleyin; bu cihazda saklanır. Açıkken yapı APL krokisi, plankote, taahhütname, fenni mesul, ifraz paftaları ve kübaj kesitlerinde harita mühendisi imza kutusuna basılır.</p><div class="row" style="align-items:center;gap:10px;flex-wrap:wrap"><label style="flex:1;min-width:220px">Kaşe / imza dosyası (PDF, PNG, JPG)<input type="file" class="kaseIn" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/*"></label><label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" class="kaseOn" checked> PDF'lere kaşe bas</label><label style="flex-direction:row;align-items:center;gap:6px">Yapı APL krokisinde<select class="kaseYer" style="width:auto"><option value="kutu">imza kutusunun içine</option><option value="ust">kutunun üstüne, büyük</option></select></label><button type="button" class="kaseDel" hidden>Kaşeyi sil</button></div><div class="kasePv" style="margin-top:8px"></div><div class="msg kaseMsg" style="margin-top:6px"></div></div>
     <div class="card">
@@ -6132,7 +6132,7 @@ K.pointAt = (axis, ch, s) => {
   }
   return { p, u: [ux, uy] };
 };
-// Bir kesit: sağ taraf (+), sol taraf (−) — Netcad ile aynı işaret
+// Bir kesit: sağ taraf (+), sol taraf (−) — kesit işaret yönü
 K.section = (o) => {
   const { S, R, axis, ch, s, poly, wL, wR, half } = o;
   const { p, u } = K.pointAt(axis, ch, s);
@@ -6418,7 +6418,7 @@ const O = {}; try { window.O = O; } catch (e) {}
 
 /* ---------- Kesit sayfası: mm cinsinden ilkel çizim listesi (A4 yatay 297×210, orijin sol alt) ---------- */
 O.sheet = (sec, idx, n, P, set) => {
-  // Netcad yol / parsel en kesiti düzeni (kullanıcının örnek PDF'leri): antet, kesit, kot tablosu, km başlığı, imza
+  // Yol / parsel en kesiti düzeni: antet, kesit, kot tablosu, km başlığı, imza
   const G = []; const SY = set.siy;
   const T = (x, y, s, size = 2.2, al = "l", rot = 0, bold = false, color = "#000") => G.push({ t: "x", x, y, s: String(s), size, al, rot, bold, color });
   const L = (x1, y1, x2, y2, w = 0.25, color = "#000") => G.push({ t: "l", p: [[x1, y1], [x2, y2]], w, color });
@@ -6442,7 +6442,7 @@ O.sheet = (sec, idx, n, P, set) => {
   y -= RH; L(LX, a0, LX, y); const top = y;
   // ---- kesit verisi
   const pts = sec.full.flat(); const dol = sec.dol; const TUM = !!sec.tum && SY > 0, KZM = sec.siyMod === "kazi" && SY > 0 && sec.siy > 0, SR = SY > 0 && (TUM || KZM || (dol && sec.siyMod !== "kazi"));
-  const o1 = Math.min(...pts.map(p => p[0])), o2 = Math.max(...pts.map(p => p[0])), wm = Math.max(0.5, o2 - o1), axIn = o1 <= 1e-6 && o2 >= -1e-6; /* eksen kesitin dışındaysa Netcad gibi çizilmez */
+  const o1 = Math.min(...pts.map(p => p[0])), o2 = Math.max(...pts.map(p => p[0])), wm = Math.max(0.5, o2 - o1), axIn = o1 <= 1e-6 && o2 >= -1e-6; /* eksen kesitin dışındaysa çizilmez */
   const SC = [50, 100, 150, 200, 250, 500, 1000, 2000, 2500, 5000];
   const zmin = Math.min(...pts.map(p => Math.min(p[1], p[2]))) - (SR ? SY : 0), zmax = Math.max(...pts.map(p => Math.max(p[1], p[2])));
   const kiyas = Math.floor(zmin - 0.5);
@@ -6451,15 +6451,15 @@ O.sheet = (sec, idx, n, P, set) => {
   const NR = rows.length, rh = SR ? 10.6 : 11.5, tb = 48, ttop = tb + rh * NR, X0 = 50, WX = 232;
   const availH = (top - 8) - (ttop + 6);
   const fitW = c => wm * 1000 / c <= WX, fitH = c => (zmax - kiyas) * 1000 / c <= availH;
-  // şablon ölçeği sabit (Maslak: 1/150, yatay = düşey). Sığmazsa Netcad çıktısı gibi çizim bütünüyle orantılı küçülür, etiket değişmez.
-  const want = +set.olcek || 150; const sc = want, sv = want, Gs = Math.max(1, +set.G || 1); /* Gs: şablon büyütme — kesit gerçek ölçekte (1/want) kalır, sayfa Gs kat büyür (Netcad şablonu gibi) */
+  // şablon ölçeği sabit (yatay = düşey). Sığmazsa çizim bütünüyle orantılı küçülür, etiket değişmez.
+  const want = +set.olcek || 150; const sc = want, sv = want, Gs = Math.max(1, +set.G || 1); /* Gs: şablon büyütme — kesit gerçek ölçekte (1/want) kalır, sayfa Gs kat büyür */
   const f = Math.min(1, WX / (wm * 1000 / want / Gs), availH / Math.max(0.01, (zmax - kiyas) * 1000 / want / Gs));
   const k = 1000 / want / Gs * f, kv = k;
   const xo = o => X0 + (o - o1) * k + (WX - wm * k) / 2, yz = z => ttop + 6 + (z - kiyas) * kv;
   // ---- kot tablosu
   rows.forEach(([lab, c], i) => { const yy = ttop - rh * (i + 1); L(10, yy, 287, yy, 0.25); T(12, yy + rh / 2, lab, 2.3, "l", 0, false, c); });
   L(10, ttop, 287, ttop, 0.3); L(10, tb, 10, ttop, 0.25); L(287, tb, 287, ttop, 0.25); L(46, tb, 46, ttop, 0.25);
-  // ölçek işareti ve kıyas (Netcad gibi)
+  // ölçek işareti ve kıyas
   { const bx = 13, by = ttop + 13; L(bx, by, bx, by + 7, 0.25); L(bx - 0.8, by + 5.6, bx, by + 7, 0.25); L(bx + 0.8, by + 5.6, bx, by + 7, 0.25); T(bx - 1, by + 9, `1/${sv}`, 2.1);
     L(bx, by, bx + 8, by, 0.25); L(bx + 6.6, by + 0.8, bx + 8, by, 0.25); L(bx + 6.6, by - 0.8, bx + 8, by, 0.25); T(bx + 9, by, `1/${sc}`, 2.1); T(11, ttop + 4, `Kıyas = ${kiyas}`, 2.1); }
   // tarama (şeffaf kırmızı) ve çizgiler
@@ -6482,7 +6482,7 @@ O.sheet = (sec, idx, n, P, set) => {
   // kot yazıları: düzenli aralık + uçlar
   const ST_ = set.kotStep || 5; const zAt = o => { for (const part of sec.full) for (let i = 1; i < part.length; i++) { const a = part[i - 1], b = part[i];
       if (o >= a[0] - 1e-9 && o <= b[0] + 1e-9) { const t = b[0] === a[0] ? 0 : (o - a[0]) / (b[0] - a[0]); return [a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]; } } return null; };
-  if (set.kotMod !== "aralik") { /* Netcad gibi: siyah kot satırı siyah yüzeyin kırık noktalarında; kırmızı kot ve mesafe satırları kırmızı yüzeyin kırık noktalarında */
+  if (set.kotMod !== "aralik") { /* Siyah kot satırı siyah yüzeyin kırık noktalarında; kırmızı kot ve mesafe satırları kırmızı yüzeyin kırık noktalarında */
     const P_ = sec.full.flat().filter(q => q[3]), gap = 2.4 * (set.G > 1 ? Math.min(set.G, 1.25) / set.G : 1);
     const pick = bit => { const L_ = P_.filter(q => q[3] & bit).sort((a, b) => a[0] - b[0]); const out = []; for (const q of L_) { const X = xo(q[0]); if (out.length && X - out[out.length - 1][0] < gap) { if (q[3] === 3) out[out.length - 1] = [X, q]; continue; } out.push([X, q]); } return out; };
     const SL = pick(1), RL = pick(2), rowY = i => ttop - rh * i - rh / 2;
@@ -10571,7 +10571,7 @@ try { if (localStorage.getItem("acad-wide")) setTimeout(() => setWide(true), 0);
 $("lyEl").addEventListener("change", draw); $("lyEs").addEventListener("change", draw);
 ["lyE", "lyEi", "lyEm"].forEach(id => $(id).addEventListener("change", () => { ST.set.egri = { on: $("lyE").checked, i: +$("lyEi").value || 0, m: $("lyEm").value }; save(); draw(); }));
 setTimeout(() => { try { const g = ST.set.egri || {}; $("lyE").checked = !!g.on; $("lyEi").value = String(g.i || 0); $("lyEm").value = g.m || "S"; } catch (e) {} }, 0);
-/* ---------- eş yükselti eğrileri (Netcad gibi): üçgenlerden; aralık kot farkına göre otomatik, her 5. eğri kalın ve kotlu ---------- */
+/* ---------- eş yükselti eğrileri: üçgenlerden; aralık kot farkına göre otomatik, her 5. eğri kalın ve kotlu ---------- */
 const EGC = new WeakMap();
 const egriStep = (M, want) => { if (want > 0) return want; let lo = Infinity, hi = -Infinity; for (const p of M.pts) { if (p.z < lo) lo = p.z; if (p.z > hi) hi = p.z; } const raw = (hi - lo) / 25; return [1, 2, 5, 10, 20, 50].find(v => v >= raw) || 50; };
 /* V7.1.15.67: iso-elevation intersections, with exactly-on-vertex cases
