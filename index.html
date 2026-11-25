@@ -21041,10 +21041,28 @@ function arzBox(html) {
 }
 const f3_ = v => v == null || !isFinite(v) ? "—" : (+v).toFixed(3), noModel = () => !(typeof MS !== "undefined" && MS && MS.tri && MS.tri.length);
 const inPolyC = (P, x, y) => { let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const a = P[i], b = P[j]; if ((a[1] > y) !== (b[1] > y) && x < (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]) + a[0]) c = !c; } return c; };
-function ghost(f, D) { const L = ents.filter(e => sel.has(e.id)); if (!L.length || L.length > 3000) return; cx.save(); cx.strokeStyle = "rgba(255,216,0,.85)"; cx.lineWidth = 1 * D; cx.setLineDash([5 * D, 4 * D]); cx.beginPath();
-  for (const e of L) { if (e.t === "circle") { const c = f(e.c), r = e.r * (f(e.c)[0] - f([e.c[0] - 1, e.c[1]])[0]); cx.moveTo(X(c[0]) + Math.abs(r) * V.s * D, Y(c[1])); cx.arc(X(c[0]), Y(c[1]), Math.abs(r) * V.s * D, 0, 7); } else if (e.pts) { e.pts.forEach((p, i) => { const q = f(p); i ? cx.lineTo(X(q[0]), Y(q[1])) : cx.moveTo(X(q[0]), Y(q[1])); }); if (e.closed && e.pts.length) { const q = f(e.pts[0]); cx.lineTo(X(q[0]), Y(q[1])); } } }
-  cx.stroke(); cx.restore(); }
-const xf = (e, f) => { if (e.t === "circle") { const c0 = e.c; e.c = f(c0); if (f.k) e.r *= f.k; } else if (e.pts) e.pts = e.pts.map(p => { const q = f(p); return [q[0], q[1], p[2] || 0]; }); if (e.t === "text" && f.k) e.h *= f.k; if (e.t === "text" && f.rot) e.rot = (e.rot || 0) + f.rot * 180 / Math.PI; };
+function ghost(f,D){
+  const L=selEnts();if(!L.length)return;
+  cx.save();cx.strokeStyle="rgba(54,195,255,.85)";cx.fillStyle="rgba(54,195,255,.85)";cx.lineWidth=D;cx.setLineDash([5*D,4*D]);cx.beginPath();
+  for(const e of L.slice(0,1200)){
+    if(e.t==="circle"){const c=f(e.c),r=Math.abs(e.r*(f.k||1))*V.s*D;cx.moveTo(X(c[0])+r,Y(c[1]));cx.arc(X(c[0]),Y(c[1]),r,0,Math.PI*2);}
+    else if(e.t==="text"||e.t==="point"){
+      const p=f(e.pts[0]);const x=X(p[0]),y=Y(p[1]);cx.moveTo(x-4*D,y);cx.lineTo(x+4*D,y);cx.moveTo(x,y-4*D);cx.lineTo(x,y+4*D);
+      if(e.t==="text"){const h=Math.max(0.001,Math.abs(+e.h||1)),w=cadTextWidth(e),u=e.al==="c"?-w/2:e.al==="r"?-w:0,a=(e.rot||0)*Math.PI/180,c=Math.cos(a),sn=Math.sin(a),o=e.pts[0];const corners=[[u,-.4*h],[u+w,-.4*h],[u+w,1.55*h],[u,1.55*h],[u,-.4*h]];corners.forEach((p,i)=>{const q=f([o[0]+c*p[0]-sn*p[1],o[1]+sn*p[0]+c*p[1]]);i?cx.lineTo(X(q[0]),Y(q[1])):cx.moveTo(X(q[0]),Y(q[1]));});}
+    }else if(e.pts?.length){e.pts.forEach((p,i)=>{const q=f(p);i?cx.lineTo(X(q[0]),Y(q[1])):cx.moveTo(X(q[0]),Y(q[1]));});if(e.closed){const q=f(e.pts[0]);cx.lineTo(X(q[0]),Y(q[1]));}}
+  }cx.stroke();cx.restore();
+}
+function cadTransformPoint(p,f){const q=f(p);return [q[0],q[1],...p.slice(2)];}
+const xf=(e,f)=>{
+  if(e.t==="circle"){e.c=cadTransformPoint(e.c,f);if(f.k)e.r*=f.k;}
+  else if(e.pts)e.pts=e.pts.map(p=>cadTransformPoint(p,f));
+  if(e.t==="text"){
+    if(f.k)e.h=(Number(e.h)||1)*f.k;
+    if(f.rot)e.rot=(e.rot||0)+f.rot*180/Math.PI;
+    if(Number.isFinite(f.mirror)){let angle=2*f.mirror*180/Math.PI-(e.rot||0);angle=((angle+180)%360+360)%360-180;if(angle>90||angle< -90){angle+=angle>90?-180:180;if(e.al==="r")e.al="l";else if(e.al!=="c")e.al="r";}e.rot=angle;}
+  }
+};
+function cadAddTransformed(e){const locking=window.__ACAD_IMPORT_GEOMETRY_LOCK;window.__ACAD_IMPORT_GEOMETRY_LOCK=true;try{return add(e);}finally{window.__ACAD_IMPORT_GEOMETRY_LOCK=locking;}}
 const clone = e => JSON.parse(JSON.stringify(e));
 
 /* ---------- CAD hızlı ve doğru uzaysal seçim (V7.1.15.49) ----------
@@ -21751,6 +21769,7 @@ function ctxBar() {
     el.innerHTML=`<button type="button" data-cross aria-pressed="${cmd.crossing}" title="Sınırı kesen nesneleri seçime ekle">${cmd.crossing?"İçindekiler ve kesişenler":"Yalnız içindekiler"}</button><button type="button" class="primary" data-x="ok">✓ Seçimi bitir</button><button type="button" data-x="esc">Vazgeç</button>`;
     el.querySelector("[data-cross]").onclick=()=>{cmd.crossing=!cmd.crossing;ctxBar();};
   }else if (pick) { el.hidden = false; el.innerHTML = `<button type="button" class="primary" data-x="ok">✓ Tamam</button><button type="button" data-x="esc">Esc</button>`; }
+  else if(cmd?.baseDefault&&!cmd.b){el.hidden=false;el.innerHTML=`<span style="color:#ffd800">${esc_(cmd.name)} · baz/merkez noktasını göster</span><button type="button" id="cadXfCenter">Seçim merkezi</button><button type="button" data-x="esc">İptal</button>`;$("cadXfCenter").onclick=()=>cmd.pt(selCenter());}
   else if (cmd && cmd.ask) { const a = cmd.ask; el.hidden = false; el.innerHTML = `<span style="color:#ffd800;font-weight:700;white-space:nowrap">${esc_(cmd.hint || cmd.name)}</span><input id="cxV" ${a.num ? 'inputmode="decimal"' : ""} placeholder="${esc_(a.ph || "değer")}" style="width:${a.w || 90}px;padding:6px;font-size:15px">${(a.chips || []).map(v => `<button type="button" data-v="${v}">${String(v).replace(".", ",")}</button>`).join("")}<button type="button" class="primary" data-v="">✓</button><button type="button" data-x="esc">Esc</button>`;
     const go = v => { $("cadIn").value = v; enter(); }; el.querySelectorAll("[data-v]").forEach(b => b.onclick = () => go(b.dataset.v || $("cxV").value)); $("cxV").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); go($("cxV").value); } if (e.key === "Escape") esc(); });
     el.querySelectorAll("[data-x]").forEach(b => b.onclick = () => { esc(); ctxBar(); }); if (LASTPT === "mouse") setTimeout(() => { try { $("cxV").focus(); } catch (e) {} }, 30); return; }
@@ -21767,7 +21786,7 @@ function parsePt(t) { t = t.trim().replace(/\s+/g, " "); let m;
   const nm = ents.find(e => e.t === "point" && String(e.n) === t); if (nm) return nm.pts[0].slice(0, 2); return null; }
 let PEND = null; // seçim bekleyen komut
 const needSel = n => { if (sel.size) return true; const k = Object.keys(CMDS).find(k => CMDS[k].label === n) || null; PEND = n;
-  cmd = { name: n + " · seç", pick: true, ent(e) { if (sel.has(e.id)) sel.delete(e.id); else sel.add(e.id); prompt_(`${n}: ${sel.size} nesne seçildi — dokunmaya devam et, bitince ✓ Tamam`); ctxBar(); draw(); }, done() { const c = PEND; cmd = null; PEND = null; if (!sel.size) return idle(); const f = CMDS[LABEL[c]]; f && f(); markTools(); ctxBar(); draw(); } };
+  cmd = { name: n + " · seç", pick: true, win(){prompt_(`${n}: ${sel.size} nesne seçildi · Tamam`);}, ent(e) { if (sel.has(e.id)) sel.delete(e.id); else sel.add(e.id); prompt_(`${n}: ${sel.size} nesne seçildi — dokunmaya devam et, bitince ✓ Tamam`); ctxBar(); draw(); }, done() { const c = PEND; cmd = null; PEND = null; if (!sel.size) return idle(); const f = CMDS[LABEL[c]]; f && f(); markTools(); ctxBar(); draw(); } };
   prompt_(`${n}: nesnelere dokunarak seç (Pencere de kullanılabilir), bitince ✓ Tamam`); ctxBar(); return false; };
 const LABEL = { "Taşı": "TASI", "Kopyala": "KOPYALA", "Döndür": "DONDUR", "Ölçekle": "OLCEKLE", "Ayna": "AYNA", "Sil": "SIL", "Patlat": "PATLAT", "Birleştir": "BIRLESTIR", "Tabakaya taşı": null };
 const selEnts = () => ents.filter(e => sel.has(e.id));
@@ -22842,22 +22861,30 @@ const CMDS = {
       val(t) { if (!this.p) return; snap0(); add({ t: "text", pts: [[this.p[0], this.p[1], 0]], s: t, h: this.h || hDef() }); persist(); idle(); return true; } }; prompt_("Yazı: yazının yerine tıkla"); },
   TASI: () => { if (!needSel("Taşı")) return; xform("Taşı", false); },
   KOPYALA: () => { if (!needSel("Kopyala")) return; xform("Kopyala", true); },
-  DONDUR: () => { if (!needSel("Döndür")) return; cmd = { name: "Döndür", pt(p) { if (!this.b) { this.b = p; last = p; rub = true; prompt_(`Açı yaz (${grad ? "grad" : "derece"}, + saat yönü tersi) ya da başlangıç yönü için nokta göster`); } else if (!this.a) { this.a = p; prompt_("Hedef yönü göster"); } else this.go(Math.atan2(p[1] - this.b[1], p[0] - this.b[0]) - Math.atan2(this.a[1] - this.b[1], this.a[0] - this.b[0])); },
-    val(t) { const v = +t.replace(",", "."); if (this.b && isFinite(v)) { this.go(v / AU()); return true; } },
-    go(th) { snap0(); const c = Math.cos(th), s = Math.sin(th), b = this.b; const f = p => [b[0] + (p[0] - b[0]) * c - (p[1] - b[1]) * s, b[1] + (p[0] - b[0]) * s + (p[1] - b[1]) * c]; f.rot = th; selEnts().forEach(e => xf(e, f)); IDX = null; say(`Döndürüldü: ${angTxt(th)}`); persist(); idle(); } }; prompt_("Döndür: dönme merkezi"); },
-  OLCEKLE: () => { if (!needSel("Ölçekle")) return; cmd = { name: "Ölçekle", pt(p) { if (!this.b) { this.b = p; last = p; rub = true; prompt_("Ölçekle: katsayı yaz (örn. 2 büyütür, 0.5 küçültür) + Enter — ya da nesne üzerinde bir referans noktası göster"); } else if (!this.r) { const r = dist(this.b, p); if (r < 1e-6) return; this.r = r; prompt_(`Referans ${fmt(r)} m — imleci sürükle (canlı önizleme), yeni yere tıkla ya da yeni uzunluğu yaz`); } else this.go(dist(this.b, p) / this.r); },
-    prev(g, X_, Y_, D) { if (!this.b || !this.r || !hover) return; const k = dist(this.b, hover) / this.r; if (!(k > 0)) return; const b = this.b; ghost(q => [b[0] + (q[0] - b[0]) * k, b[1] + (q[1] - b[1]) * k], D); g.fillStyle = "#ffd800"; g.font = `${12 * D}px Arial`; g.fillText(`×${k.toFixed(4)}`, X_(hover[0]) + 12 * D, Y_(hover[1]) - 10 * D); },
-    val(t) { const v = +t.replace(",", "."); if (!(v > 0) || !this.b) return; this.go(this.r ? v / this.r : v); return true; },
-    go(k) { snap0(); const b = this.b; const f = p => [b[0] + (p[0] - b[0]) * k, b[1] + (p[1] - b[1]) * k]; f.k = k; selEnts().forEach(e => xf(e, f)); IDX = null; say(`Ölçeklendi: ×${k.toFixed(4)}`); persist(); idle(); } }; prompt_("Ölçekle: baz noktası"); },
-  AYNA: () => { if (!needSel("Ayna")) return; cmd = { name: "Ayna", pt(p) { if (!this.a) { this.a = p; last = p; rub = true; prompt_("Ayna çizgisinin 2. noktası"); } else { this.b = p; prompt_("Kaynak silinsin mi? E / H (Enter = H)"); rub = null; } },
-    val(t) { if (!this.b) return; this.go(/^e/i.test(t)); return true; }, done() { if (this.b) this.go(false); else idle(); },
-    go(del) { snap0(); const a = this.a, b = this.b, dx = b[0] - a[0], dy = b[1] - a[1], l = dx * dx + dy * dy; const f = p => { const t = ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / l, q = [a[0] + t * dx, a[1] + t * dy]; return [2 * q[0] - p[0], 2 * q[1] - p[1]]; };
-      const src = selEnts(); const nw = src.map(e => { const c = clone(e); xf(c, f); return c; }); if (del) ents = ents.filter(e => !sel.has(e.id)); sel.clear(); nw.forEach(e => sel.add(add(e).id)); IDX = null; persist(); idle(); } }; prompt_("Ayna: çizginin 1. noktası"); },
-  OTELE: () => { cmd = { name: "Ötele (paralel)", d: OFD, val(t) { const v = +t.replace(",", "."); if (v > 0) { this.d = OFD = v; persist(); prompt_(`Mesafe ${v} m — ötelenecek çizgiye dokun (mesafeyi değiştirmek için yeni değer yaz)`); return true; } },
-    ent(e) { if (!this.d) return; if (!(e.t === "line" || e.t === "pline")) return say("Yalnızca çizgi ve çoklu çizgi ötelenir", true); this.e = e; this.raw = true; prompt_("Hangi yana? O tarafa dokun"); },
-    pt(p) { if (!this.e) return; const e = this.e, P = e.pts; let best = null; for (let i = 0; i + 1 < P.length + (e.closed ? 1 : 0); i++) { const a = P[i], b = P[(i + 1) % P.length], r = segD(p, a, b); if (!best || r[0] < best[0]) best = [r[0], a, b]; }
-      const [, a, b] = best, side = Math.sign((b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0])) || 1; snap0(); const np = offsetPts(P, e.closed, this.d * side); add({ t: e.t, pts: np.map(q => [q[0], q[1], 0]), closed: e.closed, lay: e.lay }); IDX = null; persist(); this.e = null; this.raw = false; prompt_(`Mesafe ${this.d} m — başka çizgi seç ya da Esc`); draw(); } };
-    prompt_(OFD ? `Ötele: mesafe ${OFD} m — çizgiye dokun, sonra yana dokun (değiştirmek için yeni mesafe yaz)` : "Ötele: mesafeyi yaz (m)"); },
+  DONDUR: () => { if (!needSel("Döndür")) return;
+    cmd={name:"Döndür",baseDefault:true,pt(p){if(!this.b){this.b=p;last=p;rub=true;this.ask={ph:grad?"Açı (grad)":"Açı (°)",w:110,chips:grad?[25,50,100,-100]:[15,45,90,-90]};prompt_("Açı gir veya referans yönünü göster");}else if(!this.a){if(dist(p,this.b)<1e-8)return say("Merkezden farklı referans noktası seç",true);this.a=p;prompt_("Hedef yönü göster veya dönüş açısı gir");}else if(dist(p,this.b)>1e-8)this.go(Math.atan2(p[1]-this.b[1],p[0]-this.b[0])-Math.atan2(this.a[1]-this.b[1],this.a[0]-this.b[0]));},
+      val(t){const n=String(t).trim().match(/^([+-]?(?:\d+(?:[.,]\d*)?|[.,]\d+))\s*(°|g|grad)?$/i);if(!n||!this.b)return false;const value=Number(n[1].replace(",",".")),div=n[2]==="°"?180/Math.PI:n[2]?200/Math.PI:AU();if(Number.isFinite(value))this.go(value/div);return true;},
+      prev(g,X_,Y_,D){if(!this.b||!this.a||!hover)return;const th=Math.atan2(hover[1]-this.b[1],hover[0]-this.b[0])-Math.atan2(this.a[1]-this.b[1],this.a[0]-this.b[0]);ghost(cadRotateTransform(this.b,th),D);},
+      go(th){if(!Number.isFinite(th))return;snap0();const f=cadRotateTransform(this.b,th);selEnts().forEach(e=>xf(e,f));IDX=null;persist();say(`Döndürüldü: ${angTxt(th)} · Geri al: U`);idle();}};prompt_("Döndür: dönme merkezi");},
+  OLCEKLE: () => { if (!needSel("Ölçekle")) return;
+    cmd={name:"Ölçekle",baseDefault:true,pt(p){if(!this.b){this.b=p;last=p;rub=true;this.ask={ph:"Katsayı",w:88,chips:[.5,1,2,10]};prompt_("Katsayı gir veya referans noktası göster");}else if(!this.r){const r=dist(this.b,p);if(r<1e-8)return say("Referans merkezden farklı olmalı",true);this.r=r;this.ask={ph:"Yeni uzunluk (m)",w:110};prompt_(`Referans ${fmt(r)} m — yeni uzunluk veya hedef noktası`);}else this.go(dist(this.b,p)/this.r);},
+      val(t){const v=Number(String(t).trim().replace(",","."));if(!this.b||!Number.isFinite(v)||v<=0)return false;this.go(this.r?v/this.r:v);return true;},
+      prev(g,X_,Y_,D){if(this.b&&this.r&&hover){const k=dist(this.b,hover)/this.r;if(k>0)ghost(cadScaleTransform(this.b,k),D);}},
+      go(k){if(!Number.isFinite(k)||k<=0)return say("Pozitif ölçek katsayısı gir",true);snap0();const f=cadScaleTransform(this.b,k);selEnts().forEach(e=>xf(e,f));IDX=null;persist();say(`Ölçeklendi: ×${k.toFixed(4)} · Geri al: U`);idle();}};prompt_("Ölçekle: baz noktası");},
+  AYNA: () => {if(!needSel("Ayna"))return;
+    cmd={name:"Ayna",pt(p){if(!this.a){this.a=p;last=p;rub=true;prompt_("Ayna çizgisinin ikinci noktası");}else{if(dist(this.a,p)<1e-8)return say("Ayna ekseni için farklı iki nokta seç",true);this.b=p;rub=false;this.ask={ph:"E: kaynak sil / H: koru",w:140,chips:["H","E"]};prompt_("Kaynak korunsun mu? H=koru, E=sil");}},
+      val(t){if(!this.b||!/^[eh]$/i.test(t.trim()))return false;this.go(/^e/i.test(t));return true;},done(){if(this.b)this.go(false);else idle();},
+      prev(g,X_,Y_,D){const p=this.b||hover;if(this.a&&p&&dist(this.a,p)>1e-8)ghost(cadMirrorTransform(this.a,p),D);},
+      go(del){const f=cadMirrorTransform(this.a,this.b);if(!f)return;const src=selEnts();snap0();const nw=src.map(e=>{const c=clone(e);xf(c,f);return c;});if(del)ents=ents.filter(e=>!sel.has(e.id));sel.clear();nw.forEach(e=>sel.add(cadAddTransformed(e).id));IDX=null;persist();say("Ayna tamamlandı · Geri al: U");idle();}};prompt_("Ayna: eksenin ilk noktası");},
+  OTELE: () => {
+    const chosen=selEnts().filter(e=>e.t==="line"||e.t==="pline");
+    cmd={name:"Ötele (paralel)",d:OFD,e:chosen.length===1?chosen[0]:null,raw:true,ask:{ph:"Mesafe (m)",w:90,chips:[.1,.5,1,5]},
+      val(t){const v=Number(String(t).trim().replace(",","."));if(!Number.isFinite(v)||v<=0)return false;this.d=OFD=v;this.ask=null;prompt_(this.e?"Ötele: hangi yana?":`Mesafe ${v} m — çizgiye dokun`);return true;},
+      ent(e){if(!(e.t==="line"||e.t==="pline"))return say("Çizgi veya çoklu doğru seç",true);this.e=e;if(!this.d){prompt_("Öteleme mesafesini gir");return;}this.ask=null;prompt_("Ötele: hangi yana? O tarafa dokun");},
+      side(p){let best=null;for(const [a,b] of segsOf(this.e)){if(dist(a,b)<1e-8)continue;const d=segD(p,a,b)[0];if(!best||d<best.d)best={d,a,b};}if(!best)return 0;const {a,b}=best;return Math.sign((b[0]-a[0])*(p[1]-a[1])-(b[1]-a[1])*(p[0]-a[0]))||1;},
+      prev(g,X_,Y_,D){if(!this.e||!this.d||!hover)return;try{const points=cadOffsetGeometry(this.e,this.d*this.side(hover));g.save();g.strokeStyle="#36c3ff";g.setLineDash([5*D,3*D]);g.beginPath();points.forEach((q,i)=>i?g.lineTo(X_(q[0]),Y_(q[1])):g.moveTo(X_(q[0]),Y_(q[1])));if(this.e.closed)g.closePath();g.stroke();g.restore();}catch(_){}},
+      pt(p){if(!this.e||!this.d)return;try{const c=clone(this.e);c.pts=cadOffsetGeometry(this.e,this.d*this.side(p));snap0();cadAddTransformed(c);IDX=null;persist();this.e=null;this.ask={ph:"Mesafe (m)",w:90,chips:[.1,.5,1,5]};prompt_(`Mesafe ${this.d} m — başka çizgi seç ya da Esc`);draw();say("Paralel çizgi oluşturuldu · Geri al: U");}catch(e){say(e.message,true);}}};
+    if(cmd.d&&cmd.e){cmd.ask=null;prompt_("Ötele: hangi yana?");}else prompt_("Ötele: mesafe gir veya çizgiyi seç");},
   SIL: () => { if (!sel.size) { cmd = { name: "Sil", ent(e) { snap0(); ents = ents.filter(x => x !== e); IDX = null; persist(); say(`Silindi (${{ line: "çizgi", pline: "çoklu çizgi", point: "nokta " + (e.n || ""), text: "yazı", circle: "daire" }[e.t]}) — Geri al: U`); draw(); } }; prompt_("Sil: nesnelere dokun ya da fareyle pencere çiz (soldan sağa: tamamen içindekiler, sağdan sola: değenler) · sağ tuş bitir"); markTools(); return; } snap0(); const n = sel.size; ents = ents.filter(e => !sel.has(e.id)); sel.clear(); IDX = null; persist(); say(`${n} nesne silindi`); idle(); },
   PATLAT: () => { if (!needSel("Patlat")) return; snap0(); const out = []; ents = ents.filter(e => { if (sel.has(e.id) && e.t === "pline") { segsOf(e).forEach(([a, b]) => out.push({ t: "line", pts: [[a[0], a[1], 0], [b[0], b[1], 0]], lay: e.lay })); return false; } return true; }); sel.clear(); out.forEach(add); persist(); say(`${out.length} çizgiye ayrıldı`); idle(); },
   BIRLESTIR: () => { if (!needSel("Birleştir")) return; const L = selEnts().filter(e => e.t === "line" || e.t === "pline"); if (L.length < 2) return say("En az iki çizgi seç", true);
@@ -23820,12 +23847,14 @@ function arzDock(e) {
   requestAnimationFrame(() => arzAlanOdak(e));
 }
 { const _aq = acadAreaQueryShow; acadAreaQueryShow = function (e, p) { const n0 = window.__cadN || 0; try { ALAN_AKTIF = e && e.id; } catch (x) {} const r = _aq(e, p); try { ALAN_AKTIF = e && e.id; arzDock(e); const bx_ = $('arzBox'); if (bx_ && !bx_._akt) { bx_._akt = 1; new MutationObserver(() => { if (bx_.hidden && ALAN_AKTIF != null) { ALAN_AKTIF = null; draw(); } }).observe(bx_, { attributes: true, attributeFilter: ['hidden'] }); } if ((window.__cadN || 0) === n0) draw(); } catch (x) {} try { const bx = $('arzBox'); if (e && e.t === 'pline' && e.closed && bx && !bx.hidden && !document.getElementById('alanKotWrap')) alanKotPanel(e); } catch (x) { console.error(x); } return r; }; }
-function xform(name, copy) { cmd = { name, prev(g, X_, Y_, D) { if (!this.b || !hover) return; const d = [hover[0] - this.b[0], hover[1] - this.b[1]]; ghost(q => [q[0] + d[0], q[1] + d[1]], D); }, pt(p) { if (!this.b) { this.b = p; last = p; rub = true; prompt_(`${name}: hedef nokta göster ya da @ΔY,ΔX / @mesafe<semt yaz${copy ? " (birden çok kopya, Esc bitir)" : ""}`); return; }
-    const d = [p[0] - this.b[0], p[1] - this.b[1]], f = q => [q[0] + d[0], q[1] + d[1]]; snap0();
-    if (copy) { const nw = selEnts().map(e => { const c = clone(e); xf(c, f); return add(c); }); say(`${nw.length} nesne kopyalandı (ΔY ${fmt(d[0])} ΔX ${fmt(d[1])})`); IDX = null; persist(); draw(); }
-    else { selEnts().forEach(e => xf(e, f)); IDX = null; persist(); say(`Taşındı: ΔY ${fmt(d[0])} ΔX ${fmt(d[1])}`); idle(); } },
-  prev(c, X, Y, D) { if (!this.b || !hover) return; const d = [hover[0] - this.b[0], hover[1] - this.b[1]]; c.strokeStyle = "rgba(54,195,255,.6)"; c.lineWidth = 1 * D; let n = 0; for (const e of ents) { if (!sel.has(e.id) || ++n > 300) continue; for (const [a, b] of segsOf(e)) { c.beginPath(); c.moveTo(X(a[0] + d[0]), Y(a[1] + d[1])); c.lineTo(X(b[0] + d[0]), Y(b[1] + d[1])); c.stroke(); } } } };
-  prompt_(`${name}: baz noktası`); }
+function cadRotateTransform(b,th){const c=Math.cos(th),s=Math.sin(th),f=p=>[b[0]+(p[0]-b[0])*c-(p[1]-b[1])*s,b[1]+(p[0]-b[0])*s+(p[1]-b[1])*c];f.rot=th;return f;}
+function cadScaleTransform(b,k){const f=p=>[b[0]+(p[0]-b[0])*k,b[1]+(p[1]-b[1])*k];f.k=k;return f;}
+function cadMirrorTransform(a,b){const dx=b[0]-a[0],dy=b[1]-a[1],ll=dx*dx+dy*dy;if(ll<1e-16)return null;const f=p=>{const t=((p[0]-a[0])*dx+(p[1]-a[1])*dy)/ll;return [2*(a[0]+t*dx)-p[0],2*(a[1]+t*dy)-p[1]];};f.mirror=Math.atan2(dy,dx);return f;}
+function xform(name,copy){cmd={name,baseDefault:true,
+  prev(g,X_,Y_,D){if(this.b&&hover){const d=[hover[0]-this.b[0],hover[1]-this.b[1]];ghost(q=>[q[0]+d[0],q[1]+d[1]],D);}},
+  pt(p){if(!this.b){this.b=p;last=p;rub=true;this.ask={ph:"@ΔY,ΔX veya hedef",w:160};prompt_(`${name}: hedef noktası ya da @ΔY,ΔX / @mesafe<semt${copy?" · çoklu kopya, Esc bitir":""}`);return;}
+    const d=[p[0]-this.b[0],p[1]-this.b[1]];if(!d.every(Number.isFinite)||Math.hypot(...d)<1e-12)return say("Baz noktasından farklı hedef göster",true);const f=q=>[q[0]+d[0],q[1]+d[1]];snap0();const src=selEnts();if(copy){for(const e of src){const c=clone(e);xf(c,f);cadAddTransformed(c);}say(`${src.length} nesne kopyalandı · ΔY ${fmt(d[0])}, ΔX ${fmt(d[1])}`);IDX=null;persist();draw();}else{src.forEach(e=>xf(e,f));IDX=null;persist();say(`Taşındı · ΔY ${fmt(d[0])}, ΔX ${fmt(d[1])}`);idle();}}};prompt_(`${name}: baz noktası`);}
+function cadOffsetGeometry(e,d){const P=e.pts;if(!Number.isFinite(d)||d===0||!P?.length||P.length<2)throw Error("Geçerli öteleme mesafesi ve çizgi gerekli");for(const [a,b] of segsOf(e))if(dist(a,b)<1e-9)throw Error("Çizgide sıfır uzunluklu kenar var");const q=offsetPts(P,!!e.closed,d);if(q.length!==P.length||q.some((p,i)=>!p.every(Number.isFinite)||dist(p,P[i])>Math.abs(d)*1000))throw Error("Öteleme bu köşelerde güvenli oluşturulamadı");if(e.closed&&q.length>=3&&window.ACAD_AREA_EDIT?.validate)window.ACAD_AREA_EDIT.validate(q);return q.map((p,i)=>[p[0],p[1],...P[i].slice(2)]);}
 function offsetPts(P, closed, d) { const n = P.length, L = []; for (let i = 0; i + 1 < n + (closed ? 1 : 0); i++) { const a = P[i], b = P[(i + 1) % n], l = dist(a, b) || 1, nx = -(b[1] - a[1]) / l * d, ny = (b[0] - a[0]) / l * d; L.push([[a[0] + nx, a[1] + ny], [b[0] + nx, b[1] + ny]]); }
   const li = (p, q) => { const r = [p[1][0] - p[0][0], p[1][1] - p[0][1]], s = [q[1][0] - q[0][0], q[1][1] - q[0][1]], den = r[0] * s[1] - r[1] * s[0]; if (Math.abs(den) < 1e-12) return p[1]; const t = ((q[0][0] - p[0][0]) * s[1] - (q[0][1] - p[0][1]) * s[0]) / den; return [p[0][0] + t * r[0], p[0][1] + t * r[1]]; };
   const out = []; if (!closed) out.push(L[0][0]); for (let i = closed ? 0 : 1; i < L.length; i++) out.push(li(L[(i - 1 + L.length) % L.length], L[i])); if (!closed) out.push(L[L.length - 1][1]); return out; }
@@ -29471,14 +29500,12 @@ document.querySelectorAll("#cadFlow [data-f]").forEach(b => b.addEventListener("
 /* ---------- hızlı düzenleme çubuğu: adım adım kaydır, kopyala, döndür, ötele ---------- */
 let PST = 0.1, PAN_ = 5, PCP = false; try { const q = JSON.parse(localStorage.getItem("acad-pad") || "{}"); if (q.s > 0) PST = q.s; if (q.a > 0) PAN_ = q.a; } catch (e) {}
 const padSave = () => { try { localStorage.setItem("acad-pad", JSON.stringify({ s: PST, a: PAN_ })); } catch (e) {} };
-function selCenter() { const P = selEnts().flatMap(e => e.t === "circle" ? [e.c] : e.pts); const b = [Math.min(...P.map(p => p[0])), Math.min(...P.map(p => p[1])), Math.max(...P.map(p => p[0])), Math.max(...P.map(p => p[1]))]; return [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2]; }
-function padDo(fn, word) { snap0(); let L = selEnts(); if (PCP) { const C = L.map(e => { const c = clone(e); delete c.id; return add(c); }); sel.clear(); C.forEach(c => sel.add(c.id)); L = C; } L.forEach(fn); IDX = null; persist(); draw(); ctxBar(); say(`${PCP ? "Kopyalandı ve " : ""}${word} · ${L.length} nesne · Geri al: U`); }
+function selCenter(){let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;for(const e of selEnts()){const b=cadEntityBox(e);if(!b)continue;x0=Math.min(x0,b[0]);y0=Math.min(y0,b[1]);x1=Math.max(x1,b[2]);y1=Math.max(y1,b[3]);}return Number.isFinite(x0)?[(x0+x1)/2,(y0+y1)/2]:[V.cx,V.cy];}
+function padDo(fn, word) { snap0(); let L = selEnts(); if (PCP) { const C = L.map(e => { const c = clone(e); delete c.id; return cadAddTransformed(c); }); sel.clear(); C.forEach(c => sel.add(c.id)); L = C; } L.forEach(fn); IDX = null; persist(); draw(); ctxBar(); say(`${PCP ? "Kopyalandı ve " : ""}${word} · ${L.length} nesne · Geri al: U`); }
 function padMove(dx, dy) { padDo(e => xf(e, q => [q[0] + dx, q[1] + dy]), `${dx ? (dx > 0 ? "doğuya" : "batıya") : (dy > 0 ? "kuzeye" : "güneye")} ${PST} m kaydırıldı`); }
 function padRot(sg) { const c = selCenter(), a = sg * PAN_ * Math.PI / 180, co = Math.cos(a), si = Math.sin(a); const f = q => [c[0] + (q[0] - c[0]) * co - (q[1] - c[1]) * si, c[1] + (q[0] - c[0]) * si + (q[1] - c[1]) * co]; f.rot = a; padDo(e => xf(e, f), `${PAN_}° ${sg > 0 ? "sola (saat tersi)" : "sağa (saat yönü)"} döndürüldü`); }
-function padOff(sg) { const L = selEnts().filter(e => e.t === "line" || e.t === "pline"); if (!L.length) return say("Ötelemek için çizgi seç", true); snap0(); const N = [];
-  L.forEach(e => { const P = offsetPts(e.pts, !!e.closed, sg * PST).map((q, i) => [q[0], q[1], (e.pts[i] || [])[2] || 0]); if (PCP) { N.push(add({ t: e.t === "line" ? "line" : "pline", pts: P, closed: !!e.closed, lay: e.lay })); } else e.pts = P; });
-  if (N.length) { sel.clear(); N.forEach(c => sel.add(c.id)); } IDX = null; persist(); draw(); ctxBar(); say(`${PCP ? "Paralel kopya" : "Paralel kaydırıldı"}: ${sg > 0 ? "sol" : "sağ"} yana ${PST} m (çizim yönüne göre)`); }
-function renderPad() { try { renderInfo(); } catch (e) {} const el = $("cadPad"); if (!el) return; const show = sel.size && !cmd && !PLAN_BUSY() && !selEnts().some(e=>e.closed); el.hidden = !show; if (!show) return;
+function padOff(sg){const L=selEnts().filter(e=>e.t==="line"||e.t==="pline");if(!L.length)return say("Ötelemek için çizgi seç",true);let plans;try{plans=L.map(e=>[e,cadOffsetGeometry(e,sg*PST)]);}catch(e){return say(e.message,true);}snap0();const N=[];for(const [e,P] of plans){if(PCP){const c=clone(e);c.pts=P;N.push(cadAddTransformed(c));}else e.pts=P;}if(N.length){sel.clear();N.forEach(c=>sel.add(c.id));}IDX=null;persist();draw();ctxBar();say(`${PCP?"Paralel kopya":"Paralel kaydırıldı"}: ${PST} m · Geri al: U`);}
+function renderPad() { try { renderInfo(); } catch (e) {} const el = $("cadPad"); if (!el) return; const show = sel.size && !cmd && !PLAN_BUSY() ; el.hidden = !show; if (!show) return;
   const st = [0.01, 0.1, 1, 5], an = [1, 5, 15, 45, 90]; const hasL = selEnts().some(e => e.t === "line" || e.t === "pline");
   el.innerHTML = `<div class="padrow"><span class="padl">Adım (m)</span>${st.map(v => `<button type="button" data-s="${v}" class="${v === PST ? "on" : ""}">${String(v).replace(".", ",")}</button>`).join("")}<input id="padS" inputmode="decimal" value="${st.includes(PST) ? "" : String(PST).replace(".", ",")}" placeholder="m" style="width:58px;padding:6px"></div>
   <div class="padrow"><button type="button" data-m="w" title="Batıya (−Y)">◀</button><button type="button" data-m="n" title="Kuzeye (+X)">▲</button><button type="button" data-m="s" title="Güneye (−X)">▼</button><button type="button" data-m="e" title="Doğuya (+Y)">▶</button>
@@ -49701,3 +49728,21 @@ body #acadBackupTools button{width:100%;text-align:start}
  place();window.addEventListener('acad:tab',place);
 })();
 </script>
+
+<style id="acad-compact-module-header">
+body:not(.cadmasa) .wrap>header{display:flex!important;align-items:center!important;justify-content:space-between!important;flex-wrap:wrap!important;gap:5px 10px!important;padding:5px 9px!important;min-height:0!important;max-height:none!important;border-radius:9px!important;box-shadow:none!important}
+body:not(.cadmasa) .wrap>header>div:first-child{display:flex!important;align-items:center!important;gap:8px;flex:0 0 auto;min-width:0}
+body:not(.cadmasa) .wrap>header h1{font-size:19px!important;margin:0!important;white-space:nowrap}
+body:not(.cadmasa) .wrap>header .sub{display:none!important}
+body:not(.cadmasa) .wrap>header>div:last-child{display:flex!important;flex-flow:row wrap!important;align-items:center!important;justify-content:flex-end!important;gap:5px!important;flex:1 1 auto;min-width:0}
+body:not(.cadmasa) .wrap>header>div:last-child>div:not(#acadSafeBar){display:flex!important;align-items:center!important;flex-wrap:wrap;gap:4px!important}
+body:not(.cadmasa) .wrap>header #acadUser{white-space:nowrap;font-size:11px}
+body:not(.cadmasa) .wrap>header button,body:not(.cadmasa) .wrap>header select{min-height:29px!important;height:29px!important;padding:3px 7px!important;font-size:11px!important;border-radius:6px!important}
+body:not(.cadmasa) .wrap>header #resetNote:empty{display:none!important}
+body:not(.cadmasa) .wrap>header #acad48-links{margin:0!important;font-size:11px;align-self:center}
+body:not(.cadmasa) .wrap>header #acad48-links[open]{position:relative;z-index:20}
+body:not(.cadmasa) .wrap>header #acad48-links[open]>.row{position:absolute;top:100%;left:0;min-width:200px;padding:8px;background:var(--card);border:1px solid var(--line);border-radius:7px;box-shadow:0 4px 14px #0003}
+body:not(.cadmasa) .wrap>header #acadSafeBar{min-height:29px!important;max-height:none!important;overflow:visible!important}
+body:not(.cadmasa) .wrap>nav.tabs{margin-top:0!important;min-height:34px!important;padding:3px!important}
+@media(max-width:680px){body:not(.cadmasa) .wrap>header>div:last-child{justify-content:flex-start!important;flex:1 1 100%;gap:4px!important}body:not(.cadmasa) .wrap>header>div:last-child>div:not(#acadSafeBar){flex-wrap:wrap!important}body:not(.cadmasa) .wrap>header h1{font-size:17px!important}}
+</style>
