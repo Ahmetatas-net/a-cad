@@ -1649,7 +1649,13 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       <h2><span class="kub-surface-dot first"></span> Mevcut arazi <small class="kub-sub">Siyah kot · ilk hâl</small></h2>
       <div class="grid">
         <div class="full"><div class="note" style="margin-bottom:6px">İlk hâl dosyası (NCN, NCZ, DXF, XLS, XLSX, PDF, TXT)</div>
-          <label class="filebtn"><input type="file" id="fS"><span>📂 Dosya seç</span></label>
+          <div class="row" style="gap:8px;flex-wrap:wrap">
+            <label class="filebtn"><input type="file" id="surveyAddS" accept=".ncn,.NCN,.dxf,.DXF,.ncz,.NCZ" multiple><span>＋ Ekle · NCN / DXF / NCZ</span></label>
+            <label class="filebtn"><input type="file" id="fS"><span>Modeli aç / değiştir</span></label>
+            <button type="button" id="surveyPlanS" hidden>Planda göster</button>
+          </div>
+          <p class="note" id="surveyStatusS" style="white-space:pre-line;margin:7px 0" role="status"></p>
+          <ul class="note" id="surveyListS" hidden></ul>
           <details style="margin-top:8px"><summary class="note" style="cursor:pointer">Dosya seçilemiyorsa: listeyi yapıştır</summary>
             <textarea id="tS" rows="5" placeholder="1 563400.25 4586120.50 918.75&#10;2 563405.10 4586121.30 918.90" style="width:100%;margin-top:6px;font:13px monospace;padding:8px;border-radius:7px;border:1px solid var(--line);background:var(--bg);color:var(--ink)"></textarea>
             <button type="button" id="tSb" style="margin-top:6px">Yapıştırılanı yükle</button></details></div>
@@ -1667,7 +1673,13 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       </div>
       <div class="grid">
         <div class="full" id="kFileL"><div class="note" style="margin-bottom:6px">Proje yüzeyi dosyası (NCN, NCZ, DXF, XLS, XLSX, PDF, TXT)</div>
-          <label class="filebtn"><input type="file" id="fK"><span>📂 Dosya seç</span></label>
+          <div class="row" style="gap:8px;flex-wrap:wrap">
+            <label class="filebtn"><input type="file" id="surveyAddK" accept=".ncn,.NCN,.dxf,.DXF,.ncz,.NCZ" multiple><span>＋ Ekle · NCN / DXF / NCZ</span></label>
+            <label class="filebtn"><input type="file" id="fK"><span>Modeli aç / değiştir</span></label>
+            <button type="button" id="surveyPlanK" hidden>Planda göster</button>
+          </div>
+          <p class="note" id="surveyStatusK" style="white-space:pre-line;margin:7px 0" role="status"></p>
+          <ul class="note" id="surveyListK" hidden></ul>
           <details style="margin-top:8px"><summary class="note" style="cursor:pointer">Dosya seçilemiyorsa: listeyi yapıştır</summary>
             <textarea id="tK" rows="5" placeholder="1 563400.25 4586120.50 919.60" style="width:100%;margin-top:6px;font:13px monospace;padding:8px;border-radius:7px;border:1px solid var(--line);background:var(--bg);color:var(--ink)"></textarea>
             <button type="button" id="tKb" style="margin-top:6px">Yapıştırılanı yükle</button></details></div>
@@ -10186,6 +10198,7 @@ tabs.forEach(b => b.addEventListener("click", ev => {
 const fmtN = n => n.toLocaleString("tr-TR");
 const kzNote = M => { const k = (M.kotsuz || []).length, d = M.dup || 0; return (k ? `<br><span class="pill bad">${fmtN(k)} Geçersiz veya kot bağlamına göre aykırı nokta üçgenlemeye alınmadı</span> <span class="note">(Kontrol edilen nokta:  ${esc(M.kotsuz.slice(0, 8).map(p => p.n || "adsız").join(", "))}${k > 8 ? "…" : ""} · planda gri × ile gösterilir)</span>` : "") + (d ? ` <span class="note">· aynı yerde ${fmtN(d)} tekrar nokta atlandı</span>` : ""); };
 function info() {
+  renderAddedSurveys("S"); renderAddedSurveys("K");
   $("sInfo").innerHTML = ST.S.pts ? `<span class="pill ok">${fmtN(ST.S.pts.length)} nokta · ${fmtN((ST.S.tri || []).length / 3)} üçgen</span> ${esc(ST.S.src || "")}${kzNote(ST.S)}` : "Henüz dosya yok.";
   const m = ST.R.mode; document.querySelectorAll("input[name=kmode]").forEach(r => r.checked = r.value === m);
   $("kSabitL").hidden = m !== "sabit"; for(const id of ["kFileL","kMaxL","kReL","kSwapL","dxfBoxK"])$(id).hidden=m!=="model";
@@ -10218,7 +10231,7 @@ async function onFile(which, file) {
     if (pts.length < 3) { infoEl.innerHTML = `<span class="pill bad">Dosyada nokta bulunamadı</span> Satırlar "Ad Y X Z" biçiminde olmalı.`; return; }
     const note = dropStale(pts.map(p => [p.e, p.y]));
     saveLayers(which, file.name, { faces: [], lines: [], polys: [], texts: {}, points: pts.map(p => ({ lay: "NCN noktaları", e: p.e, y: p.y })) });
-    const tgt = which === "S" ? ST.S : ST.R; tgt.pts = pts; tgt.tri = null; tgt.kotsuz = null; tgt.dup = 0; tgt.src = file.name + (bad.length ? ` · ${bad.length} satır okunamadı` : "");
+    const tgt = which === "S" ? ST.S : ST.R; delete tgt.surveySources; delete tgt.surveyPending; tgt.pts = pts; tgt.tri = null; tgt.kotsuz = null; tgt.dup = 0; tgt.src = file.name + (bad.length ? ` · ${bad.length} satır okunamadı` : "");
     if (which === "K") ST.R.mode = "model";
     buildModels(); SECS = []; save(); info(); infoEl.insertAdjacentHTML("afterbegin", `<span class="pill ok">✓ ${esc(file.name)} yüklendi</span> `); infoEl.insertAdjacentHTML("beforeend", note); recalcIfReady(); return;
   }
@@ -10255,6 +10268,7 @@ async function onFile(which, file) {
   let added = [];
   const apply = () => {
     const v = $("dx" + which + "_m").value, lay = v.slice(2), tgt = which === "S" ? ST.S : ST.R;
+    delete tgt.surveySources; delete tgt.surveyPending;
     if (v[0] === "f") { const M = K.facesToModel(D.faces.filter(f => f.lay === lay)); tgt.pts = M.pts; tgt.tri = Array.from(M.tri); tgt.kotsuz = null; tgt.dup = 0; }
     else if (v[0] === "v") { tgt.pts = lv[lay].map(q => ({ n: "", e: q[0], y: q[1], z: q[2] })); tgt.tri = null; tgt.kotsuz = null; tgt.dup = 0; }
     else { tgt.pts = D.points.filter(p => p.lay === lay).map((p, i) => ({ n: p.n || String(i + 1), e: p.e, y: p.y, z: p.z })); tgt.tri = null; tgt.kotsuz = null; tgt.dup = 0; }
@@ -10294,7 +10308,12 @@ function renderKat() {
       <span class="ct">${k.ref ? "Açılan dosya" : k.which === "S" ? "İlk hâl dosyası" : "Son hâl dosyası"} · ${esc(k.file)} · ${parts.join(" · ") || "boş"}${(k.which === "S" ? ST.S.src : ST.R.src || "").endsWith("· " + k.lay) ? ` · <b style="color:var(--ok)">${k.which === "S" ? "ilk hâl" : "son hâl"} modeli olarak kullanılıyor</b>` : ""}${ST.eksenSrc === k.lay ? ` · <b style="color:var(--blue)">eksen</b>` : ""}${ST.kesitLay === k.lay ? ` · <b style="color:#d07a10">en kesit çizgileri${(k.kmt || []).length ? ` (${k.kmt.length} km yazısı)` : ""}</b>` : ""}${ST.alanlar.some(a => a.kubaj && a.ad === k.lay) ? ` · <b style="color:var(--ok)">kübaj alanı</b>` : ""}</span>
       <span class="ac">${k.ref ? `<button type="button" data-kd="${i}" class="danger">Kaldır</button>` : ""}${k.cl ? `<button type="button" data-kk="${i}">Kübaj alanı yap</button><button type="button" data-ka="${i}">Alanlara ekle</button>` : ""}${(k.ln || k.op) ? `<button type="button" data-ke="${i}">Eksen yap</button>` : ""}${(k.ln || k.op) ? (ST.kesitLay === k.lay ? `<button type="button" data-kx="-1" class="on">En kesit çizgileri ✓ (bırak)</button>` : `<button type="button" data-kx="${i}">En kesit çizgileri olarak kullan</button>`) : ""}</span></div>`; }).join("");
   L.querySelectorAll("[data-ks]").forEach(x => x.addEventListener("change", () => { K_[+x.dataset.ks].show = x.checked; save(); draw(); }));
-  L.querySelectorAll("[data-kd]").forEach(x => x.addEventListener("click", () => { const f = K_[+x.dataset.kd].file; ST.katmanlar = K_.filter(k => !(k.ref && k.file === f)); save(); renderKat(); draw(); }));
+  L.querySelectorAll("[data-kd]").forEach(x => x.addEventListener("click", () => { const target = K_[+x.dataset.kd]; ST.katmanlar = K_.filter(k => !(k.ref && (target.surveyId ? k.surveyId === target.surveyId : !k.surveyId && k.file === target.file)));
+    if (target.surveyId) {
+      for (const surface of [ST.S, ST.R]) surface.surveySources = (surface.surveySources || []).filter(source => source.id !== target.surveyId || source.added);
+      info();
+    }
+    save(); renderKat(); draw(); }));
   const addAreas = (k, kub) => { const have = new Set(ST.alanlar.map(a => JSON.stringify(a.pts[0]))); const news = k.polys.filter(p => p.c).map(p => ({ ad: k.lay, kubaj: false, pts: p.p })).filter(a => !have.has(JSON.stringify(a.pts[0])));
     ST.alanlar.push(...news); if (kub) { const tgt = ST.alanlar.find(a => a.ad === k.lay && k.polys.some(p => p.c && JSON.stringify(p.p[0]) === JSON.stringify(a.pts[0]))); if (tgt) ST.alanlar.forEach(a => a.kubaj = a === tgt); } };
   L.querySelectorAll("[data-kk]").forEach(x => x.addEventListener("click", () => { addAreas(K_[+x.dataset.kk], true); SECS = []; save(); renderAlanlar(); draw(); recalcIfReady(); }));
@@ -10321,6 +10340,194 @@ function chainLines(ls) { // birbirine eklenen çizgileri tek eksene dizer
   while (true) { const nx = (adj.get(key(cur)) || []).filter(q => !prev || key(q) !== key(prev)); if (!nx.length || out.length > segs.length + 1) break; prev = cur; cur = nx[0]; out.push(cur); }
   return out;
 }
+const surveyExtensions = /\.(ncn|dxf|ncz)$/i;
+const surveyXY = p => Math.round(p.e * 1000) + "_" + Math.round(p.y * 1000);
+function mergeSurveyPoints(existing, surveys) {
+  const seen = new Map((existing || []).map(p => [surveyXY(p), p]));
+  const names = new Set((existing || []).map(p => String(p.n ?? "")));
+  const added = [];
+  for (const survey of surveys) {
+    for (const p of survey.points) {
+      if (![p.e, p.y, p.z].every(Number.isFinite)) { survey.rejected++; continue; }
+      const key = surveyXY(p), old = seen.get(key);
+      if (old) {
+        if (Math.abs(old.z - p.z) > .001) survey.conflicts++;
+        else survey.duplicates++;
+        continue;
+      }
+      const originalName = String(p.n ?? "");
+      const label = originalName || "N";
+      let uniqueName = label;
+      for (let suffix = 2; names.has(uniqueName); suffix++) uniqueName = label + "_" + suffix;
+      const point = { ...p, n: uniqueName, surveyPointName: originalName, surveyFile: survey.name };
+      names.add(uniqueName);
+      seen.set(key, point);
+      added.push({ point, survey });
+    }
+  }
+  return added;
+}
+async function readSurveyToAdd(file) {
+  if (!surveyExtensions.test(file.name)) throw Error("NCN, DXF veya NCZ seç.");
+  const result = { name: file.name, points: [], rejected: 0, duplicates: 0, conflicts: 0, added: 0, layers: [] };
+  const bytes = await readBuf(file);
+  if (/\.ncn$/i.test(file.name)) {
+    const { pts, bad } = K.parsePoints(toText(bytes));
+    if (!pts.length) throw Error("NCN içinde ölçüm noktası bulunamadı.");
+    result.points = pts;
+    result.rejected = bad.length;
+    return result;
+  }
+  const data = /\.ncz$/i.test(file.name) ? K.parseNCZ(bytes) : K.parseDXF(toText(bytes));
+  const points = data.points || [], faces = data.faces || [];
+  const pointLayers = new Set(points.map(p => p.lay || "0"));
+  const layerMap = new Map();
+  const layer = name => {
+    name = name || "0";
+    if (!layerMap.has(name)) layerMap.set(name, {
+      lay: name, file: file.name, which: "ref:" + file.name, ref: true, show: true,
+      tri: 0, pt: 0, ln: 0, cl: 0, op: 0, tx: 0, lines: [], polys: [], points: [], txt: [], kmt: []
+    });
+    return layerMap.get(name);
+  };
+  for (const p of points) {
+    const l = layer(p.lay);
+    l.points.push([p.e, p.y, p.n || "", Number.isFinite(p.z) ? p.z : null]);
+    l.pt++;
+  }
+  for (const ln of data.lines || []) {
+    const l = layer(ln.lay); l.lines.push(ln.pts); l.ln++;
+  }
+  for (const poly of data.polys || []) {
+    const l = layer(poly.lay); l.polys.push({ c: !!poly.closed, p: poly.pts });
+    if (poly.closed) l.cl++; else l.op++;
+  }
+  for (const t of data.textList || []) {
+    const l = layer(t.lay); l.tx++;
+    l.txt.push([t.e, t.y, t.s, t.h || 1, t.rot || 0]);
+    if (/\d+\s*\+\s*\d/.test(t.s)) l.kmt.push([t.e, t.y, t.s]);
+  }
+  const faceLayers = new Map();
+  for (const face of faces) {
+    if (!faceLayers.has(face.lay)) faceLayers.set(face.lay, []);
+    faceLayers.get(face.lay).push(face);
+  }
+  for (const [name, items] of faceLayers) {
+    const l = layer(name), model = K.facesToModel(items);
+    l.tin = { pts: model.pts, tri: Array.from(model.tri) };
+    l.tri = l.tin.tri.length / 3;
+  }
+  if (!layerMap.size) throw Error("Okunabilir nokta, çizim veya üçgen bulunamadı.");
+  result.layers = [...layerMap.values()];
+  if (pointLayers.size === 1 && !faces.length) {
+    result.points = points.map((p, index) => ({ ...p, n: p.n || String(index + 1) }));
+  }
+  return result;
+}
+function renderAddedSurveys(which) {
+  const target = which === "S" ? ST.S : ST.R;
+  const list = $("surveyList" + which);
+  const sources = target.surveySources || [];
+  list.innerHTML = sources.map(s => `<li>${esc(s.name)} · ${s.added ? fmtN(s.added) + " yüzey noktası" : "Plan tabakası"}${s.pending ? " · Üçgenleme bekliyor" : ""}</li>`).join("");
+  list.hidden = !sources.length;
+  $("surveyPlan" + which).hidden = !sources.length;
+}
+let surveyImportBusy = false;
+async function addSurveyFiles(which, files) {
+  if (!files.length || surveyImportBusy) return;
+  surveyImportBusy = true;
+  const project = ST;
+  const status = $("surveyStatus" + which);
+  const inputs = [$("surveyAddS"), $("surveyAddK")];
+  inputs.forEach(input => input.disabled = true);
+  try {
+    const surveys = [], errors = [];
+    for (const file of files) {
+      status.textContent = file.name + " okunuyor…";
+      try { surveys.push(await readSurveyToAdd(file)); }
+      catch (error) { errors.push(file.name + " · " + error.message); }
+    }
+    if (ST !== project) throw Error("Açık proje değişti. Dosyaları yeniden seç.");
+    const demo = ST.ornek;
+    const key = which === "S" ? "S" : "R";
+    const old = demo ? { pts: [], src: "" } : ST[key];
+    const current = old.pts || [];
+    const protectedMesh = old.tri?.length && (old.triElle || old.cadLay || /\.(dxf|ncz)\b/i.test(old.src || ""));
+    const candidates = mergeSurveyPoints(current, surveys);
+    let newPoints = candidates.map(row => row.point);
+    let tri = old.tri, pending = old.surveyPending || 0;
+    const ignored = [];
+    if (newPoints.length && !protectedMesh) {
+      const combined = current.concat(newPoints);
+      const accepted = K.dedupe(combined);
+      const good = new Set(accepted.pts);
+      if (current.some(p => !good.has(p))) throw Error("Yeni kotlar mevcut modelle uyuşmuyor. Açık yüzey korundu; alımları ve kotları kontrol et.");
+      newPoints = [];
+      for (const row of candidates) {
+        if (good.has(row.point)) newPoints.push(row.point);
+        else { row.survey.rejected++; ignored.push(row.point); }
+      }
+      if (newPoints.length) tri = Array.from(K.tinIyi(current.concat(newPoints), +(key === "S" ? ST.set.maxE : ST.set.maxEK) || 0));
+    }
+    const acceptedPoints = new Set(newPoints);
+    for (const row of candidates) if (acceptedPoints.has(row.point)) row.survey.added++;
+    const layers = surveys.flatMap(survey => survey.layers);
+    const batch = Date.now().toString(36);
+    surveys.forEach((survey, index) => {
+      survey.id = batch + "-" + index;
+      for (const layer of survey.layers) layer.surveyId = survey.id;
+    });
+    if (newPoints.length || layers.length) {
+      if (demo) {
+        ST.ornek = false; ST.alanlar = []; ST.eksen = null; ST.eksenSrc = "";
+        ST.S = { pts: null, tri: null, src: "" };
+        ST.R = { mode: "model", flat: "", pts: null, tri: null, src: "" };
+      } else psnap();
+      if (protectedMesh) pending += newPoints.length;
+      const stored = ST[key];
+      const sources = (stored.surveySources || []).concat(surveys.filter(s => s.added || s.layers.length)
+        .map(s => ({ id: s.id, name: s.name, added: s.added, pending: !!(protectedMesh && s.added) })));
+      const update = { ...stored, surveySources: sources, surveyPending: pending };
+      if (newPoints.length) Object.assign(update, {
+        pts: current.concat(newPoints), tri, triV: 2, src: old.src || "Eklenen ölçümler",
+        kotsuz: (stored.kotsuz || []).concat(ignored)
+      });
+      if (which === "K" && newPoints.length) update.mode = "model";
+      ST[key] = update;
+      if (layers.length) {
+        const previousLayers = ST.katmanlar || [];
+        layers.forEach((l, index) => l.color = PAL[(previousLayers.length + index) % PAL.length]);
+        ST.katmanlar = previousLayers.concat(layers);
+      }
+      SECS = []; VIEW.s = 0; buildModels(); save(); info(); renderAlanlar(); recalcIfReady(); draw();
+    }
+    const messages = surveys.map(s => {
+      const details = [s.added ? s.added + " nokta eklendi" : "", s.layers.length ? s.layers.length + " Plan tabakası" : "",
+        s.duplicates ? s.duplicates + " tekrar" : "", s.conflicts ? s.conflicts + " kot çakışması, önceki kot korundu" : "",
+        s.rejected ? s.rejected + " geçersiz veya aykırı kayıt" : ""].filter(Boolean);
+      return s.name + " · " + (details.join(", ") || "Yeni veri yok");
+    });
+    if (protectedMesh && newPoints.length) messages.push("Mevcut üçgen ağı korundu. Yeni noktalar planda görünür; hesaba almak için yüzeyi yeniden üçgenle.");
+    status.textContent = [...messages, ...errors].join("\n");
+  } catch (error) {
+    status.textContent = error.message;
+  } finally {
+    surveyImportBusy = false;
+    inputs.forEach(input => input.disabled = false);
+  }
+}
+for (const which of ["S", "K"]) {
+  $("surveyAdd" + which).addEventListener("change", event => {
+    const files = Array.from(event.target.files);
+    event.target.value = "";
+    addSurveyFiles(which, files);
+  });
+  $("surveyPlan" + which).onclick = async () => {
+    await showTab("plan");
+    if (!$("v-plan").hidden) { $("lyP").checked = true; fit(); }
+  };
+}
+
 $("fS").addEventListener("change", e => { if (e.target.files[0]) { e.target.closest(".filebtn").classList.add("has"); onFile("S", e.target.files[0]); } });
 const pasteLoad = which => { const t = $(which === "S" ? "tS" : "tK").value; if (!t.trim()) return; const f = new File([t], `yapistirilan_${which === "S" ? "ilk" : "son"}_hal.ncn`, { type: "text/plain" }); onFile(which, f); };
 $("tSb").addEventListener("click", () => pasteLoad("S")); $("tKb").addEventListener("click", () => pasteLoad("K"));
@@ -10332,13 +10539,15 @@ $("maxE").addEventListener("change", e => { ST.set.maxE = K.num(e.target.value);
 function teAc(k) { const Sx = k === "S" ? ST.S : ST.R; if (!Sx || !Sx.pts || Sx.pts.length < 3 || !Sx.tri) { buildModels(); } if (!Sx || !Sx.tri || !Sx.tri.length) return alert((k === "S" ? "Siyah" : "Kırmızı") + " yüzeyde üçgen yok. Önce nokta yükle.");
   TINED.ac({ ad: k === "S" ? "siyah (ilk hâl)" : "kırmızı (son hâl)", pts: Sx.pts, tri: Sx.tri, maxE: k === "S" ? +ST.set.maxE || 0 : +ST.set.maxEK || 0, kaydet(tri, pts) { psnap(); Sx.pts = pts; Sx.tri = Array.from(tri); Sx.triElle = true; Sx.triV = 2; yuzeyDegisti(); } }); }
 $("teS").addEventListener("click", () => teAc("S")); $("teR").addEventListener("click", () => teAc("R"));
-$("reTin").addEventListener("click", () => { ST.S.triElle = false; if (/\.(dxf|ncz)/i.test(ST.S.src || "") && !confirmTin("sInfo")) return; ST.S.tri = null; buildModels(); SECS = []; save(); info(); recalcIfReady(); });
+$("reTin").addEventListener("click", () => { if ((ST.S.triElle || /\.(dxf|ncz)/i.test(ST.S.src || "") || ST.S.surveyPending) && !confirmTin("sInfo")) return; psnap(); ST.S.triElle = false; ST.S.tri = null; ST.S.surveyPending = 0; for (const source of ST.S.surveySources || []) source.pending = false; buildModels(); SECS = []; save(); info(); recalcIfReady(); });
 $("swap").addEventListener("click", () => { if (ST.R.mode !== "model" || !ST.R.pts) { $("kInfo").insertAdjacentHTML("beforeend", ' <span class="pill bad">Yer değiştirmek için kırmızı kot da dosyadan yüklenmiş olmalı.</span>'); return; }
-  const a = { pts: ST.S.pts, tri: ST.S.tri, src: ST.S.src }; ST.S = { pts: ST.R.pts, tri: ST.R.tri, src: ST.R.src }; ST.R = { mode: "model", flat: ST.R.flat, pts: a.pts, tri: a.tri, src: a.src };
+  const { mode, flat, ...red } = ST.R;
+  ST.R = { ...ST.S, mode, flat };
+  ST.S = red;
   buildModels(); SECS = []; save(); info(); recalcIfReady(); });
 $("maxEK").addEventListener("change", e => { ST.set.maxEK = K.num(e.target.value); save(); });
-$("reTinK").addEventListener("click", () => { ST.R.triElle = false; if (!ST.R.pts) return; if (/\.(dxf|ncz)/i.test(ST.R.src || "") && !confirmTin("kInfo")) return; ST.R.tri = null; buildModels(); SECS = []; save(); info(); recalcIfReady(); });
-let tinArm = false; function confirmTin(el) { if (tinArm) { tinArm = false; return true; } tinArm = true; $(el).insertAdjacentHTML("beforeend", ` <span class="pill bad">DXF'teki üçgenler silinip noktalardan yeniden üçgenlenecek. Onaylamak için tekrar bas.</span>`); setTimeout(() => tinArm = false, 5000); return false; }
+$("reTinK").addEventListener("click", () => { if (!ST.R.pts) return; if ((ST.R.triElle || /\.(dxf|ncz)/i.test(ST.R.src || "") || ST.R.surveyPending) && !confirmTin("kInfo")) return; psnap(); ST.R.triElle = false; ST.R.tri = null; ST.R.surveyPending = 0; for (const source of ST.R.surveySources || []) source.pending = false; buildModels(); SECS = []; save(); info(); recalcIfReady(); });
+let tinArm = false; function confirmTin(el) { if (tinArm) { tinArm = false; return true; } tinArm = true; $(el).insertAdjacentHTML("beforeend", ` <span class="pill bad">Mevcut üçgen ağı noktalardan yeniden kurulacak. Onaylamak için tekrar bas.</span>`); setTimeout(() => tinArm = false, 5000); return false; }
 
 window.closeProject = () => { const ap = ST.apl ? { antet: ST.apl.antet } : null; if (ap) { ap.antet.ada = ""; ap.antet.parselNo = ""; }
   ST = { proj: ST.proj, set: ST.set, S: { pts: null, tri: null, src: "" }, R: { mode: "model", flat: "", pts: null, tri: null, src: "" }, alanlar: [], eksen: null, eksenSrc: "", katmanlar: [], kesitLay: null, ekNoktalar: [], ornek: false };
@@ -10378,11 +10587,12 @@ const cv = $("planCv"), ctx = cv.getContext("2d"); const VIEW = { cx: 0, cy: 0, 
 let MODE = null, DRAFT = [], SNAP = null;
 let kubPlanFrame=0,kubPlanPaints=0;
 function resize() { const r = cv.getBoundingClientRect(); DPR = ACAD_DISPLAY.density(r); ACAD_DISPLAY.size(cv, r, DPR); }
-function bounds() { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; const add = (x, y) => { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; };
+function bounds(includeSurveyLayers = false) { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; const add = (x, y) => { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; };
   (ST.S.pts || []).forEach(p => add(p.e, p.y)); if (ST.R.mode === "model") (ST.R.pts || []).forEach(p => add(p.e, p.y)); ST.alanlar.forEach(a => a.pts.forEach(p => add(p[0], p[1]))); (ST.eksen || []).forEach(p => add(p[0], p[1]));
-  if (!isFinite(x0)) for (const k of (ST.katmanlar || [])) { if (!k.show) continue; k.points.forEach(q => add(q[0], q[1])); if (k.tin) k.tin.pts.forEach(q => add(q.e, q.y)); k.lines.forEach(l => l.forEach(q => add(q[0], q[1]))); k.polys.forEach(pp => pp.p.forEach(q => add(q[0], q[1]))); }
+  const hasGeometry = Number.isFinite(x0);
+  if (!hasGeometry || includeSurveyLayers) for (const k of (ST.katmanlar || [])) { if (!k.show || (hasGeometry && !k.surveyId)) continue; k.points.forEach(q => add(q[0], q[1])); if (k.tin) k.tin.pts.forEach(q => add(q.e, q.y)); k.lines.forEach(l => l.forEach(q => add(q[0], q[1]))); k.polys.forEach(pp => pp.p.forEach(q => add(q[0], q[1]))); }
   return isFinite(x0) ? [x0, y0, x1, y1] : [0, 0, 100, 100]; }
-function fit() { const [x0, y0, x1, y1] = bounds(); VIEW.cx = (x0 + x1) / 2; VIEW.cy = (y0 + y1) / 2; VIEW.s = Math.min(cv.width / DPR / ((x1 - x0) || 1), cv.height / DPR / ((y1 - y0) || 1)) * 0.9; draw(); }
+function fit() { const [x0, y0, x1, y1] = bounds(true); VIEW.cx = (x0 + x1) / 2; VIEW.cy = (y0 + y1) / 2; VIEW.s = Math.min(cv.width / DPR / ((x1 - x0) || 1), cv.height / DPR / ((y1 - y0) || 1)) * 0.9; draw(); }
 ACAD_PLAN.controls(cv,draw,$("kubPlanTools").querySelector(".kub-plan-extra"));
 const sx = e => (e - VIEW.cx) * VIEW.s * DPR + cv.width / 2, sy = n => (VIEW.cy - n) * VIEW.s * DPR + cv.height / 2;
 const wx = X => (X * DPR - cv.width / 2) / (VIEW.s * DPR) + VIEW.cx, wy = Y => VIEW.cy - (Y * DPR - cv.height / 2) / (VIEW.s * DPR);
@@ -10438,6 +10648,13 @@ function drawPlanFrame() {
     ctx.fillStyle = dark ? "#e6eaef" : "#1b2735"; ctx.font = `${10 * D}px Arial`; ctx.textAlign = "left"; let shownN = 0;
     if (!many) for (let i = 0; i < P.length; i++) { const p = P[i], X = sx(p.e), Y = sy(p.y); if (X < 0 || Y < 0 || X > cv.width || Y > cv.height) continue;
       ctx.fillRect(X - 1.2 * D, Y - 1.2 * D, 2.4 * D, 2.4 * D); if (names && p.n && shownN < 700) { ctx.fillText(p.n, X + 3 * D, Y - 3 * D); shownN++; } } }
+  if ($("lyP").checked && ST.R.mode === "model" && ST.R.surveySources?.some(s => s.added)) {
+    ctx.fillStyle = dark ? "#ff9a9a" : "#c12838";
+    for (const p of ST.R.pts || []) {
+      const x = sx(p.e), y = sy(p.y);
+      if (x >= 0 && y >= 0 && x <= cv.width && y <= cv.height) ctx.fillRect(x - D, y - D, 2 * D, 2 * D);
+    }
+  }
   // taslak
   if (PROF && PROF.line) { ctx.save(); ctx.strokeStyle = "#7a2fd0"; ctx.lineWidth = 3 * D; ctx.setLineDash([8 * D, 5 * D]); ctx.beginPath(); PROF.line.forEach((p, i) => i ? ctx.lineTo(sx(p[0]), sy(p[1])) : ctx.moveTo(sx(p[0]), sy(p[1]))); ctx.stroke(); const q=PROF.pts[PROF.pick||0];if(q){ctx.setLineDash([]);ctx.fillStyle="#2193e0";ctx.beginPath();ctx.arc(sx(q.x),sy(q.y),6*D,0,Math.PI*2);ctx.fill();}ctx.restore(); }
   drawOlc(D);
