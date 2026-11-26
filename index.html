@@ -2150,7 +2150,7 @@ body.kub-focus.kub-tools-open #v-plan #kubPlanTools{top:var(--plan-tools-top,66p
       <div class="pvimg"><img id="cadPvI" alt="PDF önizleme" style="width:100%;background:#fff;display:block"></div></div>
     <div id="cadInfo" class="card" hidden style="margin-top:6px;padding:10px"></div>
     <div id="cadPad" class="cadpad" hidden></div>
-    <div class="cadflow" id="cadFlow"><a id="acadAreaKitLauncher" href="#acadAreaKitModal">▱ Alan Adı ve Kot Ata</a><span class="filebtn mini" title="Dosyayı aç: mevcut çizimin yerine gelir"><span>📂 Aç</span><input type="file" id="cadF2" accept=".zip,.ZIP,.dwg,.DWG,.dxf,.DXF,.ncz,.NCZ,.ncn,.NCN,.txt,.csv,.xlsx,.xls,.XLS,.XLSX,.geojson,.json,.kml,.kmz,.xml,.XML,.pdf,.PDF,.png,.PNG,.jpg,.JPG,.jpeg,.JPEG,.webp,.WEBP"></span><span class="filebtn mini" title="Dosyayı mevcut çizimin üstüne ekle"><span>➕ Ekle</span><input type="file" id="cadF3" multiple accept=".zip,.ZIP,.dwg,.DWG,.dxf,.DXF,.ncz,.NCZ,.ncn,.NCN,.txt,.csv,.xlsx,.xls,.XLS,.XLSX,.geojson,.json,.kml,.kmz,.xml,.XML,.pdf,.PDF,.png,.PNG,.jpg,.JPG,.jpeg,.JPEG,.webp,.WEBP"></span><button type="button" id="cadSv" class="primary" title="Özgün CAD kaynağı ekliyse kaynak + güncel çizim ZIP paketi oluşturur">💾 Kaydet</button><select id="cadSvAs" style="width:auto;padding:6px"><option value="">Farklı kaydet…</option><option value="bolge">✂ Seçilen alanı kaydet (bölge: kes / değen / içinde)</option><option value="dxf">DXF (görünür + gizli tabakalar · geometri aktarımı)</option><option value="txt">TXT (nokta adı · Y · X · Z, UTF-8)</option><option value="dwg">DWG (gerçek DWG, yerel ODA dönüştürücü ile)</option><option value="ncz">NCZ (A-CAD geometrisi · Netcad'de kontrol et)</option><option value="ncn">NCN (noktalar)</option><option value="xlsx">Excel XLSX (noktalar)</option><option value="pdf">PDF (ölçekli)</option><option value="xml">LandXML (yüzey + kotlu çizgi · GNSS cihazı)</option><option value="czn">NCN (kotlu çizgi köşe noktaları)</option></select><span id="cadDoc" style="font-size:.82rem"></span><button type="button" data-f="pdf" class="primary">📄 PDF</button><button type="button" id="cadBg">🛰 Altlık</button><button type="button" id="cadGmap" title="Google Haritalar / Google Earth">🌍 Google</button><button type="button" id="cadRasterAdd" title="PNG/JPG/PDF krokisini mevcut CAD çizimine altlık olarak ekle">🖼 Altlıktan Ekle</button><input id="cadRasterFile" type="file" accept=".png,.jpg,.jpeg,.webp,.pdf" hidden><b style="flex-basis:100%;margin-top:6px">Bu çizimle:</b><button type="button" data-f="ifz">① İfraz</button><button type="button" data-f="apl">② Yapı Aplikasyonu</button><button type="button" data-f="kub">③ Kübaj</button><button type="button" data-cad-dest="akr">④ Aplikasyon Krokisi</button><button type="button" data-cad-dest="trk">⑤ Yola Terk / İhdas</button><button type="button" data-cad-dest="kam">⑥ Kamulaştırma</button><button type="button" data-cad-dest="yol">⑦ Yol Projesi</button><button type="button" data-cad-dest="hh" id="cadBackHh">⑧ Hâlihazır ↩ (yenile)</button><button type="button" data-cad-dest="kad">⑨ 3B Kadastro</button><button type="button" data-f="geri" title="İfraz parçalarını, parseli, binayı, cepheleri ve koordinat listesini bu çizime tabaka olarak ekler">⬅ Sonucu çizime al</button><button type="button" id="cadResultNcz" title="Yapı Aplikasyonu veya İfraz sonucunu CAD çizimine alıp NCZ olarak kaydet">💾 Sonuç → NCZ</button><button type="button" data-f="kapat" class="dangerb">✕ Kapat</button></div>
+    <div class="cadflow" id="cadFlow"><a id="acadAreaKitLauncher" href="#acadAreaKitModal">▱ Alan Adı ve Kot Ata</a><span class="filebtn mini" title="Dosyayı aç: mevcut çizimin yerine gelir"><span>📂 Aç</span><input type="file" id="cadF2" accept=".zip,.ZIP,.ncy,.NCY,.dwg,.DWG,.dxf,.DXF,.ncz,.NCZ,.ncn,.NCN,.txt,.csv,.xlsx,.xls,.XLS,.XLSX,.geojson,.json,.kml,.kmz,.xml,.XML,.pdf,.PDF,.png,.PNG,.jpg,.JPG,.jpeg,.JPEG,.webp,.WEBP"></span><span class="filebtn mini" title="Dosyayı mevcut çizimin üstüne ekle"><span>➕ Ekle</span><input type="file" id="cadF3" multiple accept=".zip,.ZIP,.dwg,.DWG,.dxf,.DXF,.ncz,.NCZ,.ncn,.NCN,.txt,.csv,.xlsx,.xls,.XLS,.XLSX,.geojson,.json,.kml,.kmz,.xml,.XML,.pdf,.PDF,.png,.PNG,.jpg,.JPG,.jpeg,.JPEG,.webp,.WEBP"></span><button type="button" id="cadSv" class="primary" title="Özgün CAD kaynağı ekliyse kaynak + güncel çizim ZIP paketi oluşturur">💾 Kaydet</button><select id="cadSvAs" style="width:auto;padding:6px"><option value="">Farklı kaydet…</option><option value="bolge">✂ Seçilen alanı kaydet (bölge: kes / değen / içinde)</option><option value="dxf">DXF (görünür + gizli tabakalar · geometri aktarımı)</option><option value="txt">TXT (nokta adı · Y · X · Z, UTF-8)</option><option value="dwg">DWG (gerçek DWG, yerel ODA dönüştürücü ile)</option><option value="ncz">NCZ (A-CAD geometrisi · Netcad'de kontrol et)</option><option value="ncn">NCN (noktalar)</option><option value="xlsx">Excel XLSX (noktalar)</option><option value="pdf">PDF (ölçekli)</option><option value="xml">LandXML (yüzey + kotlu çizgi · GNSS cihazı)</option><option value="czn">NCN (kotlu çizgi köşe noktaları)</option></select><span id="cadDoc" style="font-size:.82rem"></span><button type="button" data-f="pdf" class="primary">📄 PDF</button><button type="button" id="cadBg">🛰 Altlık</button><button type="button" id="cadGmap" title="Google Haritalar / Google Earth">🌍 Google</button><button type="button" id="cadRasterAdd" title="PNG/JPG/PDF krokisini mevcut CAD çizimine altlık olarak ekle">🖼 Altlıktan Ekle</button><input id="cadRasterFile" type="file" accept=".png,.jpg,.jpeg,.webp,.pdf" hidden><b style="flex-basis:100%;margin-top:6px">Bu çizimle:</b><button type="button" data-f="ifz">① İfraz</button><button type="button" data-f="apl">② Yapı Aplikasyonu</button><button type="button" data-f="kub">③ Kübaj</button><button type="button" data-cad-dest="akr">④ Aplikasyon Krokisi</button><button type="button" data-cad-dest="trk">⑤ Yola Terk / İhdas</button><button type="button" data-cad-dest="kam">⑥ Kamulaştırma</button><button type="button" data-cad-dest="yol">⑦ Yol Projesi</button><button type="button" data-cad-dest="hh" id="cadBackHh">⑧ Hâlihazır ↩ (yenile)</button><button type="button" data-cad-dest="kad">⑨ 3B Kadastro</button><button type="button" data-f="geri" title="İfraz parçalarını, parseli, binayı, cepheleri ve koordinat listesini bu çizime tabaka olarak ekler">⬅ Sonucu çizime al</button><button type="button" id="cadResultNcz" title="Yapı Aplikasyonu veya İfraz sonucunu CAD çizimine alıp NCZ olarak kaydet">💾 Sonuç → NCZ</button><button type="button" data-f="kapat" class="dangerb">✕ Kapat</button></div>
     <div class="card" id="cadRasterPanel" hidden style="margin-top:8px;padding:10px;border:1px solid #688596;background:#172831;color:#e6f5fa">
   <div class="row" style="align-items:center;gap:8px;flex-wrap:wrap"><b>🖼 Kroki altlığı · Çok noktalı dönüşüm</b><span id="cadRasterName" style="font-size:.8rem;color:#bfdae5"></span><button type="button" id="cadRasterHide" style="margin-left:auto">Gizle</button><button type="button" id="cadRasterFit">Altlığa git</button><button type="button" id="cadRasterRemove" title="Yalnız altlığı kaldırır, CAD çizimleri kalır">Kaldır</button></div>
   <p id="cadRasterStatus" style="margin:6px 0;color:#bcd6df;font-size:.82rem">Önce krokiyi açın.</p>
@@ -2175,7 +2175,7 @@ body.kub-focus.kub-tools-open #v-plan #kubPlanTools{top:var(--plan-tools-top,66p
     <div class="card" data-g="dos">
       <h2>Dosya</h2><div id="cadDwgStatus" class="note" role="status" aria-live="polite">V98 · Kaynak DWG/NCZ/DXF birebir koruma + desteklenen geometri geri-okuma kontrolü. DWG cihazda yazılır; NCZ özel kayıtları native kopyada kaybolabilir, kaynak korunur.</div>
       <div class="grid">
-        <div class="full"><div class="filebtn"><span>Dosya aç (DWG*, DXF, NCZ, NCN, XLSX, GeoJSON / KML)</span><input type="file" id="cadF" accept=".dwg,.DWG,.zip,.ZIP,.dxf,.DXF,.ncz,.NCZ,.ncn,.NCN,.cks,.CKS,.txt,.csv,.xlsx,.xls,.XLS,.XLSX,.geojson,.json,.kml,.kmz,.xml,.XML,.pdf"></div></div>
+        <div class="full"><div class="filebtn"><span>Dosya aç (DWG*, DXF, NCZ, NCN, XLSX, GeoJSON / KML)</span><input type="file" id="cadF" accept=".dwg,.DWG,.zip,.ZIP,.ncy,.NCY,.dxf,.DXF,.ncz,.NCZ,.ncn,.NCN,.cks,.CKS,.txt,.csv,.xlsx,.xls,.XLS,.XLSX,.geojson,.json,.kml,.kmz,.xml,.XML,.pdf"></div></div>
         <label style="flex-direction:row;align-items:center;gap:6px;color:var(--ink)"><input type="checkbox" id="cadApp"> Mevcut çizime ekle</label>
         <label>Yazı yüksekliği (m)<input id="cadTh" value="1" inputmode="decimal"></label>
       </div>
@@ -28615,7 +28615,7 @@ setTimeout(acadDwgUiStatus,600);
 /* V97: Attachment names such as "plan.dwg (1)" must load as DWG without mutating the bytes. */
 function acadV97NormalizeCadFilename(f){
   const rawName=String(f?.name||'');
-  const suffix=rawName.match(/^(.*\.(?:dwg|dxf|ncz))\s+\((\d{1,3})\)$/i);
+  const suffix=rawName.match(/^(.*\.(?:dwg|dxf|ncz|ncn|ncy|cks|txt|csv|xlsx?|zip|geojson|json|xml|kmz?|pdf|png|jpe?g|webp))\s+\((\d{1,3})\)$/i);
   if(!suffix)return f;
   const nf=new File([f],suffix[1],{type:f.type||'application/octet-stream',lastModified:f.lastModified||Date.now()});
   nf.acadOriginalDisplayName=rawName;
@@ -28623,17 +28623,17 @@ function acadV97NormalizeCadFilename(f){
 }
 async function loadFile(f, append, opt) {
   f=acadV97NormalizeCadFilename(f);
-  if(/\.zip$/i.test(f.name)){
+  if(/\.(?:zip|ncy)$/i.test(f.name)){
     try{
-      if(f.size>200*1024*1024)throw Error('ZIP 200 MB sınırını aşıyor; bilgisayarda çıkarıp NCZ aç.');
-      say('ZIP içinde çizim aranıyor…');
+      if(f.size>200*1024*1024)throw Error('Arşiv 200 MB sınırını aşıyor; bilgisayarda çıkarıp NCZ aç.');
+      say('Arşivde çizim aranıyor…');
       const z=await K.unzip(new Uint8Array(await f.arrayBuffer()));
       const names=Object.keys(z).filter(n=>/\.(ncz|dxf)$/i.test(n)&&!n.startsWith('__MACOSX/'));
-      if(names.length!==1)throw Error('ZIP içinde tam bir NCZ veya DXF bulunmalı. '+names.length+' uygun dosya bulundu; karışmaması için ayrı çıkar.');
-      const b=z[names[0]];if(b.byteLength>120*1024*1024)throw Error('Çıkarılan çizim çok büyük; ZIP dışında aç.');
+      if(names.length!==1)throw Error('Arşivde tek bir NCZ veya DXF bulunmalı. '+names.length+' uygun dosya bulundu; karışmaması için ayrı çıkar.');
+      const b=z[names[0]];if(b.byteLength>120*1024*1024)throw Error('Çıkarılan çizim çok büyük; arşiv dışında aç.');
       const item=new File([b],names[0].split('/').pop(),{type:'application/octet-stream'});
       return await loadFile(item,append,opt);
-    }catch(e){say('ZIP açma güvenli biçimde durduruldu: '+e.message,true);return;}
+    }catch(e){say('Arşiv açılamadı: '+e.message,true);return;}
   }
   // V95: Dosya yükleme BAŞARILI olana kadar açık projeyi ve seçimi koru.
   // Geçersiz NCZ/DXF, eksik TIN veya yarıda kalan mobil yükleme önceki veriyi silemez.
@@ -28735,8 +28735,10 @@ async function loadFile(f, append, opt) {
     }}
     if (D.paperEntityCount && [D.points,D.lines,D.polys,D.texts,D.faces||[],D.circles||[]].every(a=>a.length===0))
       throw Error('DXF yalnızca kâğıt alanında okunabilir nesne içeriyor. Bu çizimi düzenlemek için kaynak uygulamadan model alanına aktararak DXF kaydedin.');
-    if(!append && ents.length+FACES.length && [D.points,D.lines,D.polys,D.texts,D.faces||[],D.circles||[]].every(a=>a.length===0))
-      throw Error('Yeni dosyada CAD geometrisi okunamadı; mevcut proje silinmedi');
+    const hasGeometry=[D.points,D.lines,D.polys,D.texts,D.faces||[],D.circles||[]].some(a=>a.length);
+    const emptyNativeDrawing=/\.ncz$/i.test(f.name)&&D.layers?.length&&D.nczDiagnostics?.unmodeledRecords===0;
+    if(!hasGeometry&&(!emptyNativeDrawing||(!append&&ents.length+FACES.length)))
+      throw Error('Dosyada açılabilir CAD nesnesi bulunamadı');
     const sourceCoordinatesAreSacred=opt?.preserveSourceCoords || /\.(ncz|dxf|dwg)$/i.test(f.name);
     const zeroWork=sourceCoordinatesAreSacred ? {points:0,texts:0,lines:0,polys:0,circles:0,faces:0,removed:0,projected:false,preserved:true} : cadCleanZeroImport(D);
     let KAY = null;
@@ -28845,7 +28847,7 @@ async function loadFile(f, append, opt) {
     U=v95Before.U;RD=v95Before.RD;sel.clear();v95Before.sel.forEach(id=>sel.add(id));IDX=null;
     try{renderLays();zoomAll();docInfo();persist();}catch(_restore){console.warn('V95 CAD geri alma görünümü',_restore);}
     say(`${f.name} okunamadı: ${er.message}. Önceki proje geri yüklendi.`, true); if(/\.dwg$/i.test(f.name))acadDwgShowStatus({ok:false,code:'ACILAMADI',message:'DWG açma başarısız: '+String(er?.message||er)}); return false; } }
-$("cadF").addEventListener("change", e => { const f = e.target.files[0]; if (f) loadFile(f, $("cadApp").checked); e.target.value = ""; });
+$("cadF").addEventListener("change", e => cadOpenFromInput(e, {append:$("cadApp").checked, syncParcels:false}));
 $("cadNew").addEventListener("click", e => { if (!e.target.dataset.arm) { e.target.dataset.arm = 1; e.target.textContent = "Emin misin? Çizim silinir"; setTimeout(() => { delete e.target.dataset.arm; e.target.textContent = "Yeni çizim"; }, 4000); return; } delete e.target.dataset.arm; e.target.textContent = "Yeni çizim"; snap0(); ents = []; lays = { "0": { c: "#ffffff", on: true } }; cur = "0"; sel.clear(); IDX = null; FACES = []; CDOC = { name: "", fmt: "" }; DIRTY = false; FVER++; if(typeof NCZ_ORIGINAL_FILES!=='undefined')NCZ_ORIGINAL_FILES.clear(); U=[]; RD=[]; docInfo(); renderLays(); zoomAll(); persist(); });
 $("cadFromApl").addEventListener("click", () => { const A_ = window.APLT && window.APLT.S(); if (!A_ || !A_.parsel) return say("Yapı aplikasyonu / ifraz sekmesinde parsel yok", true); snap0(); const RL = ["PARSEL", "PARSEL_NOKTA", "BINA", "BINA_KOSE", "IFRAZ", "IFRAZ_NOKTA", "IFRAZ_AD", "IFRAZ_IPTAL", "IFRAZ_ESKI_SINIR", "IFRAZ_ETIKET_KILAVUZ", "IFRAZ_NOKTA_NO", "ISTINAT", "ISTINAT_NOKTA", "MERDIVEN", "MERDIVEN_NOKTA", "ASANSOR", "ASANSOR_NOKTA"]; ents = ents.filter(e => !RL.includes(e.lay)); sel.clear();
   add({ t: "pline", pts: A_.parsel.pts.map(p => [p[0], p[1], 0]), closed: true, lay: layer("PARSEL", "#40e040") }); A_.parsel.pts.forEach((p, i) => add({ t: "point", n: A_.parsel.names[i], pts: [[p[0], p[1], 0]], lay: layer("PARSEL_NOKTA", "#ff9a3c") }));
@@ -32544,27 +32546,92 @@ function bgPlan(D) { if (!PLAN || PLAN.ad !== PLAN_AD) return; const W = cv.widt
     for (let t = 0; t < T.length; t += 3) { const a = P[T[t]], b = P[T[t + 1]], c_ = P[T[t + 2]]; const ax = X(a.e), ay = Y(a.y), bx = X(b.e), by = Y(b.y), qx = X(c_.e), qy = Y(c_.y); if (Math.max(ax, bx, qx) < 0 || Math.min(ax, bx, qx) > W || Math.max(ay, by, qy) < 0 || Math.min(ay, by, qy) > H) continue; cx.moveTo(ax, ay); cx.lineTo(bx, by); cx.lineTo(qx, qy); cx.lineTo(ax, ay); } cx.stroke(); };
   try { tin(typeof MS !== "undefined" ? MS : null, "rgba(200,210,220,.22)"); tin(typeof MR !== "undefined" ? MR : null, "rgba(255,90,90,.35)"); if (typeof SECS !== "undefined" && SECS.length) { cx.strokeStyle = "rgba(255,216,0,.5)"; cx.lineWidth = 1 * D; cx.beginPath(); SECS.forEach(sc => sc.line.forEach(([a, b]) => { cx.moveTo(X(a[0]), Y(a[1])); cx.lineTo(X(b[0]), Y(b[1])); })); cx.stroke(); } } catch (e) {} }
 /* ---------- kademeli iş akışı: çizim → ① ifraz → ② yapı apl → ③ kübaj ---------- */
-$("cadF2").addEventListener("change", async e=>{const f=e.target.files?.[0];if(f&&/\.(pdf|png|jpe?g|webp)$/i.test(f.name)){e.preventDefault();e.stopImmediatePropagation();e.target.value='';try{await cadRasterImport(f,true);}catch(err){cadRasterMsg('Açma başarısız: '+err.message,true);}}},true);
 $("cadF3").addEventListener("change", async e=>{const fs=[...(e.target.files||[])];if(fs.some(f=>/\.(pdf|png|jpe?g|webp)$/i.test(f.name))){e.preventDefault();e.stopImmediatePropagation();e.target.value='';for(const f of fs){try{if(/\.(pdf|png|jpe?g|webp)$/i.test(f.name))await cadRasterImport(f,false);else await loadFile(f,true);}catch(err){cadRasterMsg(f.name+': '+err.message,true);}}}},true);
 let cadOpenInProgress=false;
-async function cadOpenDrawing(f){
-  if(!f||cadOpenInProgress)return false;
+let cadFileStatusTimer;
+function cadOpenFeedback(message,tone="progress"){
+  const notice=$("cadFileStatus");
+  if(!notice){say(message,tone==="error");return;}
+  clearTimeout(cadFileStatusTimer);
+  notice.dataset.tone=tone;
+  notice.textContent=message;
+  notice.hidden=false;
+  if(tone==="success")cadFileStatusTimer=setTimeout(()=>{notice.hidden=true;},7500);
+}
+function cadConfirmReplace(file){
+  const dialog=$("cadOpenConfirm");
+  if(!dialog?.showModal)return Promise.resolve(confirm("Açık CAD sayfası yeni dosyayla değiştirilecek. Devam edilsin mi?"));
+  $("cadOpenConfirmFile").textContent=file.name;
+  dialog.returnValue="cancel";
+  dialog.showModal();
+  return new Promise(resolve=>{
+    dialog.addEventListener("close",()=>resolve(dialog.returnValue==="open"),{once:true});
+  });
+}
+async function cadOpenDrawing(source,{append=false,syncParcels=true}={}){
+  if(!source||cadOpenInProgress)return false;
+  const file=acadV97NormalizeCadFilename(source);
+  const raster=/\.(pdf|png|jpe?g|webp)$/i.test(file.name);
   cadOpenInProgress=true;
   try{
-  if(/\.(pdf|png|jpe?g|webp)$/i.test(f.name)){await cadRasterImport(f,true);return true;}
-  if (PLAN) editExit(); $("cadKub").hidden=true;propClose();
-  if(await loadFile(f,false)!==true)return false;
-  if(/\.dwg$/i.test(f.name)){
-    const source=ents, name=f.name.replace(/\.[^.]+$/,"");
-    window.acadConsumeDwg82=()=>{window.acadConsumeDwg82=null;if(ents===source && !window.APLT.FD)window.APLT.fromCad(toFD(ents),name,null,null);};
-  }else{window.acadConsumeDwg82=null;try{window.APLT.fromCad(toFD(ents),f.name.replace(/\.[^.]+$/,""),null,null);}catch(e){say("CAD açıldı; aplikasyon aktarımı tamamlanamadı: "+e.message,true);}}
-  return true;
+    if(!append&&!raster&&(ents.length||FACES.length||CAD_RASTER)&&!await cadConfirmReplace(file)){
+      cadOpenFeedback("Dosya açma iptal edildi.","cancel");
+      return false;
+    }
+    cadOpenFeedback(file.name+" okunuyor…");
+    // Paint the feedback before parsing large drawings on the main thread.
+    await new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)));
+    if(raster){
+      if(!await cadRasterImport(file,!append)){
+        cadOpenFeedback("Dosya açma iptal edildi.","cancel");
+        return false;
+      }
+      cadOpenFeedback(file.name+" altlık olarak açıldı.","success");
+      return true;
+    }
+    if(PLAN)editExit();
+    $("cadKub").hidden=true;
+    propClose();
+    if(await loadFile(file,append)!==true){
+      cadOpenFeedback($("cadMsg").textContent||file.name+" açılamadı.","error");
+      return false;
+    }
+    cadOpenFeedback(file.name+(append?" çizime eklendi.":" açıldı."),"success");
+    if(!append&&syncParcels){
+      if(/\.dwg$/i.test(file.name)){
+        const sourceEntities=ents, name=file.name.replace(/\.[^.]+$/,"");
+        window.acadConsumeDwg82=()=>{
+          window.acadConsumeDwg82=null;
+          if(ents===sourceEntities&&!window.APLT.FD)window.APLT.fromCad(toFD(ents),name,null,null);
+        };
+      }else{
+        window.acadConsumeDwg82=null;
+        try{window.APLT.fromCad(toFD(ents),file.name.replace(/\.[^.]+$/,""),null,null);}
+        catch(error){say("CAD açıldı; aplikasyon aktarımı tamamlanamadı: "+error.message,true);}
+      }
+    }
+    return true;
+  }catch(error){
+    const message=file.name+" açılamadı: "+error.message;
+    cadOpenFeedback(message,"error");say(message,true);
+    return false;
   }finally{cadOpenInProgress=false;}
 }
-$("cadF2").addEventListener("change", async e=>{const f=e.target.files?.[0];e.target.value="";if(f)await cadOpenDrawing(f);});
-window.ACAD_OPEN_RECENT_CAD=async f=>{
-  if((ents.length||FACES.length)&&!confirm("Mevcut çizim yeni bir dosyayla değiştirilecek. Devam edilsin mi?"))return false;
-  await showTab("cad");return cadOpenDrawing(f);
+async function cadOpenFromInput(event,options){
+  const input=event.target,file=input.files?.[0];
+  input.value="";
+  if(!file||!await cadOpenDrawing(file,options))return;
+  const notice=$("cadFileStatus"), message=notice?.textContent;
+  window.RECENT?.remember(file).catch(error=>{
+    if(notice?.dataset.tone==="success"&&notice.textContent===message)
+      cadOpenFeedback(file.name+" açıldı. Son dosyalara eklenemedi: "+error.message,"error");
+  });
+}
+$("cadF2").addEventListener("change",cadOpenFromInput);
+window.ACAD_OPEN_RECENT_CAD=async file=>{
+  if($("v-cad").hidden)await showTab("cad");
+  if($("v-cad").hidden)return false;
+  return cadOpenDrawing(file);
 };
 const cadParcelSource=new WeakMap();
 const toFD = L => { L = L.filter(e => !(typeof e.lay === 'string' && e.lay.startsWith('MIM_KOORDINATSIZ:'))); /* koordinatsız mimari paftaları (projenin yanına dizilmiş) koordinatlı modüllere gönderilmez */ const d = { lines: [], polys: [], points: [], texts: [], circles: [] };
@@ -35388,49 +35455,122 @@ ciz();
 })();
 
 </script>
+<dialog id="cadOpenConfirm" aria-labelledby="cadOpenConfirmTitle">
+  <form method="dialog">
+    <h2 id="cadOpenConfirmTitle">Mevcut CAD sayfası değiştirilsin mi?</h2>
+    <p id="cadOpenConfirmFile"></p>
+    <p>Kaydedilmemiş değişiklikler kaybolabilir.</p>
+    <div class="row">
+      <button type="submit" value="cancel" autofocus>Vazgeç</button>
+      <button type="submit" value="open" class="primary">Dosyayı aç</button>
+    </div>
+  </form>
+</dialog>
+<style>
+#cadOpenConfirm{width:min(440px,calc(100vw - 28px));border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);padding:16px}
+#cadOpenConfirm::backdrop{background:#0b172ab3}
+#cadOpenConfirm p{overflow-wrap:anywhere;margin:8px 0}
+#cadOpenConfirm .row{justify-content:flex-end;margin-top:14px}
+#cadOpenConfirm button{min-height:40px}
+#cadOpenDevice{display:grid;place-items:center;height:100%;width:100%;margin:0;padding:0 10px;border:0;color:inherit;background:transparent;white-space:nowrap;font:inherit}
+#cadOpenDevice:focus-visible{outline-offset:-3px}
+#cadF2[hidden]{display:none!important}
+#cadFileStatus{display:none}
+body.acad57-cad #cadFileStatus:not([hidden]){display:block;margin:0;padding:6px 10px;border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--ink);font:600 12px/1.4 system-ui,sans-serif;overflow-wrap:anywhere}
+body.acad57-cad #cadFileStatus[data-tone="error"]{border-color:var(--bad)}
+</style>
 <script data-src="recent.js">
 /* ===== Son dosyalar: telefonda dosyayı her seferinde aramamak için ===== */
 "use strict";
 (() => {
   const $ = id => document.getElementById(id);
-  const KEY = "acad-recent", MAX = 15, MAXB = 200e6, MAXF = 80e6;
+  const KEY = "acad-recent", MAX = 15, MAXB = 200e6, MAXF = 120e6;
   const touch = matchMedia("(pointer:coarse)").matches || /Android|iPhone|iPad/i.test(navigator.userAgent);
   /* Telefonda dosya seçicide .ncz/.ncn gibi tanınmayan uzantılar gri kalıp seçilemiyor: filtreyi kaldır (her dosya seçilebilir, program içinden ne olduğuna bakar) */
   if (touch) document.querySelectorAll('input[type=file]:not(.kaseIn)').forEach(i => i.removeAttribute("accept"));
   const db = typeof IDB !== "undefined" ? IDB : null;
   let LIST = []; let busy = false;
-  const load = async () => { try { LIST = JSON.parse((db && await db.get(KEY)) || "[]"); } catch (e) { LIST = []; } };
+  const load = async () => {
+    if(!db)throw Error("Cihaz depolaması kullanılamıyor.");
+    const records=JSON.parse(await db.get(KEY)||"[]");
+    if(!Array.isArray(records))throw Error("Son dosyalar kaydı okunamadı.");
+    LIST=records;
+  };
   const store = async () => { try { await db.set(KEY, JSON.stringify(LIST)); } catch (e) {} };
   const sz = n => n > 1e6 ? (n / 1e6).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1e3)) + " KB";
-  async function remember(f) { if (!db || f.size > MAXF) return; await load(); const id = f.name + "|" + f.size; const buf = await f.arrayBuffer();
-    LIST = LIST.filter(x => x.id !== id); LIST.unshift({ id, name: f.name, size: f.size, t: Date.now(), type: f.type || "" }); try { await db.set("rf:" + id, buf); } catch (e) { return; }
-    let tot = 0; const keep = []; for (const x of LIST) { tot += x.size; if (keep.length < MAX && tot < MAXB) keep.push(x); else try { await db.set("rf:" + x.id, null); } catch (e) {} } LIST = keep; await store(); }
-  document.addEventListener("change", e => { const t = e.target; if (busy || !t || t.type !== "file" || t.classList.contains("kaseIn") || !t.files || !t.files.length) return; for (const f of t.files) remember(f).catch(() => {}); }, true);
+  let pendingWrite=Promise.resolve();
+  function remember(file){
+    if(!db||file.size>MAXF)return Promise.reject(Error(file.size>MAXF?"Dosya 120 MB sınırını aşıyor.":"Cihaz depolaması kullanılamıyor."));
+    const operation=pendingWrite.then(async()=>{
+      await load();
+      const id=file.name+"|"+file.size;
+      await db.set("rf:"+id,file);
+      LIST=[{id,name:file.name,size:file.size,t:Date.now(),type:file.type||""},...LIST.filter(x=>x.id!==id)];
+      let bytes=0;
+      const keep=[], remove=[];
+      for(const item of LIST){
+        if(keep.length<MAX&&bytes+item.size<=MAXB){bytes+=item.size;keep.push(item);}
+        else remove.push(item);
+      }
+      await db.set(KEY,JSON.stringify(keep));
+      LIST=keep;
+      for(const item of remove)await db.set("rf:"+item.id,null).catch(()=>{});
+    });
+    pendingWrite=operation.catch(()=>{});
+    return operation;
+  }
+  document.addEventListener("change",e=>{
+    const input=e.target;
+    if(busy||input?.type!=="file"||input.classList.contains("kaseIn")||["cadF2","cadF"].includes(input.id))return;
+    for(const file of input.files||[])remember(file).catch(()=>{});
+  },true);
   async function openTo(inp, x) {
     if(busy)return;busy=true;const box=$("rfBox");
     box?.querySelector("[data-recent-progress]")?.remove();const status=document.createElement("div");status.dataset.recentProgress="1";status.style.cssText="padding:8px;color:#173b50;font-weight:600;background:#e6f4ff;border-radius:7px";status.setAttribute("role","status");status.textContent=x.name+" okunuyor…";
     box?.firstElementChild?.prepend(status);
     try{
       if(!inp)throw Error("Dosya açma hedefi bulunamadı");
-      const buf=db&&await db.get("rf:"+x.id);if(!buf)throw Error("Dosya kopyası bu cihazda bulunamadı. Aç düğmesiyle özgün dosyayı seçin.");
-      const f=new File([buf],x.name,{type:x.type||"application/octet-stream"});
+      const stored=db&&await db.get("rf:"+x.id);
+      if(!stored)throw Error("Dosya kopyası bu cihazda bulunamadı. Aç düğmesiyle özgün dosyayı seçin.");
+      const f=stored instanceof File&&stored.name===x.name?stored:new File([stored],x.name,{type:x.type||"application/octet-stream"});
       if(inp.id==="cadF2"&&window.ACAD_OPEN_RECENT_CAD){
         status.textContent=x.name+" CAD çizimine aktarılıyor…";await new Promise(r=>setTimeout(r,0));
-        if(!await window.ACAD_OPEN_RECENT_CAD(f))throw Error("Çizim açılamadı veya işlem iptal edildi. CAD alt bildirimini kontrol edin.");
+        if(!await window.ACAD_OPEN_RECENT_CAD(f))throw Error($("cadFileStatus")?.textContent||"Çizim açılamadı.");
       }else{const dt=new DataTransfer();dt.items.add(f);inp.files=dt.files;inp.dispatchEvent(new Event("change",{bubbles:true}));}
-      x.t=Date.now();LIST=[x,...LIST.filter(y=>y.id!==x.id)];store();if(box)box.hidden=true;status.remove();
+      const reorder=pendingWrite.then(async()=>{
+        await load();
+        const current=LIST.find(row=>row.id===x.id);
+        if(!current)return;
+        x.t=Date.now();LIST=[x,...LIST.filter(y=>y.id!==x.id)];
+        await store();
+      });
+      pendingWrite=reorder.catch(()=>{});
+      if(box)box.hidden=true;
+      status.remove();
     }catch(e){status.textContent=String(e.message||e);status.style.color="#a32018";if(box)box.hidden=false;}
     finally{busy=false;}
   }
-  async function show(inp) { let b = $("rfBox"); if (!b) { b = document.createElement("div"); b.id = "rfBox"; b.style.cssText = "position:fixed;z-index:10002;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center"; document.body.appendChild(b); b.addEventListener("click", e => { if (e.target === b) b.hidden = true; }); }
-    b.hidden=false;b.innerHTML='<div style="background:#fff;color:#172839;width:min(560px,100vw);padding:14px;border-radius:12px"><b>Son dosyalar okunuyor…</b> <button id="rfWaitClose" type="button">Kapat</button></div>';$("rfWaitClose").onclick=()=>b.hidden=true;await load();if(b.hidden)return;const tm = t => { const d = new Date(t); return d.toLocaleDateString("tr-TR") + " " + d.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }); };
+  async function show(inp) { let b = $("rfBox"); if (!b) { b = document.createElement("div"); b.id = "rfBox"; b.style.cssText = "position:fixed;z-index:2147483590;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center"; document.body.appendChild(b); b.addEventListener("click", e => { if (e.target === b) b.hidden = true; }); }
+    const device=inp||(!$("v-plan")?.hidden?$("planDeviceFile"):null);
+    const pickDevice=()=>{b.hidden=true;device?.click();};
+    b.hidden=false;b.innerHTML='<div style="background:#fff;color:#172839;width:min(560px,100vw);padding:14px;border-radius:12px"><p id="rfLoadStatus" role="status">Son dosyalar okunuyor…</p>'+(device?'<button id="rfWaitDevice" type="button">Cihazdan dosya seç</button> ':'')+'<button id="rfWaitClose" type="button">Kapat</button></div>';
+    $("rfWaitClose").onclick=()=>b.hidden=true;
+    if(device)$("rfWaitDevice").onclick=pickDevice;
+    const panel=b.firstElementChild;
+    try{await pendingWrite;await load();}
+    catch(error){
+      if(!b.hidden&&b.firstElementChild===panel)$("rfLoadStatus").textContent="Son dosyalar okunamadı: "+error.message;
+      return;
+    }
+    if(b.hidden||b.firstElementChild!==panel)return;
+    const tm = t => { const d = new Date(t); return d.toLocaleDateString("tr-TR") + " " + d.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }); };
     b.innerHTML = `<div style="background:#fff;color:#1b2430;width:min(560px,100vw);max-height:75vh;overflow:auto;border-radius:14px 14px 0 0;padding:12px 14px;font-size:15px"><div style="display:flex;align-items:center;gap:8px"><b style="flex:1">🕘 Son açılan dosyalar</b><button type="button" id="rfX">Kapat</button></div>
       ${inp || !$("v-plan")?.hidden ? '<button type="button" id="rfDevice" style="margin:8px 0;padding:9px 13px;background:#126466;color:#fff">Cihazdan dosya seç</button>' : ""}
       <div class="note" style="margin:4px 0 8px">Bir kez açtığın dosya burada saklanır (bu cihazda). Dokununca ${inp ? "buraya" : "seçtiğin yere"} açılır; dosyayı telefonda aramana gerek kalmaz.</div>
       ${LIST.length ? LIST.map((x, i) => `<div style="display:flex;align-items:center;gap:8px;border-top:1px solid #eee;padding:8px 0"><button type="button" data-o="${i}" style="flex:1;text-align:left;padding:8px;border-radius:8px"><b>${x.name.replace(/[&<>]/g, "")}</b><br><span class="note">${sz(x.size)} · ${tm(x.t)}</span></button><button type="button" data-d="${i}" title="Listeden çıkar">✕</button></div>`).join("") : `<div class="note">Henüz dosya yok. Bir dosyayı bir kez "Dosya seç" ile açınca burada görünür.</div>`}
       ${LIST.length ? `<div style="margin-top:8px"><button type="button" id="rfClr">Listeyi temizle</button></div>` : ""}
       <div style="border-top:1px solid #cbd5e1;margin-top:12px;padding-top:10px"><button type="button" id="rfSavedSheets" style="width:100%;text-align:left;padding:12px;background:#dff3ff;color:#18354c;border-radius:9px">📁 Kayıtlı çalışma sekmelerinden aç</button><div style="font-size:12px;margin-top:5px;color:#475569">Önceki CAD projeleri açılışta kendiliğinden yüklenmez; buradan seçerek açılır.</div></div></div>`;
-    $("rfX").onclick = () => b.hidden = true; if ($("rfDevice")) $("rfDevice").onclick=()=>{ b.hidden=true; (inp||$("planDeviceFile")).click(); };
+    $("rfX").onclick = () => b.hidden = true; if ($("rfDevice")) $("rfDevice").onclick=pickDevice;
     const savedBtn=$("rfSavedSheets");if(savedBtn)savedBtn.onclick=showSavedSheets;
     b.querySelectorAll("[data-o]").forEach(x => x.onclick = () => { const it = LIST[+x.dataset.o]; if (inp) openTo(inp, it); else pick(it); });
     b.querySelectorAll("[data-d]").forEach(x => x.onclick = async () => { const it = LIST[+x.dataset.d]; LIST = LIST.filter(y => y !== it); try { await db.set("rf:" + it.id, null); } catch (e) {} await store(); show(inp); });
@@ -35469,7 +35609,7 @@ ciz();
   document.querySelectorAll('input[type=file]:not(.kaseIn)').forEach(inp => { const host = inp.closest(".filebtn") || inp.parentElement; if (inp.closest('#v-cad') && !inp.closest('.filebtn'))return;
     if (inp.id==="planDeviceFile" || !host || host.nextElementSibling && host.nextElementSibling.classList && host.nextElementSibling.classList.contains("rfBtn")) return;
     const bt = document.createElement("button"); bt.type = "button"; bt.className = "rfBtn"; bt.textContent = "🕘"; bt.title = "Son açılan dosyalardan seç"; bt.style.cssText = "padding:4px 8px;margin-left:4px;vertical-align:middle"; bt.onclick = () => show(inp); host.insertAdjacentElement("afterend", bt); });
-  const top = $("openUrl"); if (top) { const b2 = document.createElement("button"); b2.type = "button"; b2.id = "rfTop"; b2.textContent = "🕘 Son dosyalar"; b2.style.cssText = "padding:6px 12px"; b2.onclick = () => show(null); top.parentElement.appendChild(b2); }
+  const top = $("openUrl"); if (top) { const b2 = document.createElement("button"); b2.type = "button"; b2.id = "rfTop"; b2.textContent = "🕘 Son dosyalar"; b2.style.cssText = "padding:6px 12px"; b2.onclick = () => show($("v-cad")?.hidden ? null : $("cadF2")); top.parentElement.appendChild(b2); }
   /* üstte konum düğmesi: Plan'ı açar, canlı konumu gösterir ve takip eder */ if (top) { const b3 = document.createElement("button"); b3.type = "button"; b3.id = "gpsTop"; b3.textContent = "📍 Konumum"; b3.style.cssText = "padding:6px 12px"; b3.onclick = () => { try { showTab("plan"); } catch (e) {} setTimeout(() => { const t = $("tGps"); if (t && !(window.GPSS && GPSS.on)) t.click(); else if (t) t.click(); }, 120); }; top.parentElement.appendChild(b3);
     if (window.GPSS) GPSS.sub((fx, st) => { b3.classList.toggle("on", !!(GPSS.on && fx)); b3.textContent = GPSS.on ? (fx ? `📍 ±${Math.round(fx.acc)} m` : "📍 Bekleniyor…") : "📍 Konumum"; }); }
   window.RECENT = { show, remember, get list() { return LIST; } };
@@ -37524,11 +37664,24 @@ const refresh=ensureResize();
  bar.append(open);
  // The recent-files control originally remained inside the hidden DOS ribbon. Move
  // that *same* working button next to Open, retaining the IndexedDB handler.
- let recent=flow.querySelector('.rfBtn');
- if(!recent){recent=document.createElement('button');recent.type='button';recent.className='rfBtn';recent.addEventListener('click',()=>window.RECENT?.show?.($('cadF2')));}
- recent.id='acadRecentBesideOpen';recent.textContent='◷ Son açılan';recent.setAttribute('aria-label','Son açılan dosyaları göster');
- recent.title='Bu cihazda daha önce açılan dosyalar';recent.setAttribute('aria-label','Son açılan dosyaları göster');
- recent.classList.add('acad-recent-visible');recent.onclick=null;recent.addEventListener('click',e=>{e.stopImmediatePropagation();window.RECENT?.show?.($('cadF2'));},{capture:true});bar.append(recent,close,save,saveAs,print,append);
+ const file=open.querySelector("#cadF2");
+ const openButton=document.createElement("button");
+ openButton.type="button";
+ openButton.id="cadOpenDevice";
+ openButton.textContent="📂 Aç";
+ openButton.setAttribute("aria-label","CAD dosyası aç");
+ openButton.onclick=()=>file.click();
+ open.querySelector(":scope > span")?.replaceWith(openButton);
+ file.hidden=true;
+ const recent=flow.querySelector(".rfBtn")||document.createElement("button");
+ recent.type="button";
+ recent.id="acadRecentBesideOpen";
+ recent.textContent="◷ Son dosyalar";
+ recent.title="Bu cihazda daha önce açılan dosyalar";
+ recent.setAttribute("aria-label","Son açılan CAD dosyalarını göster");
+ recent.classList.add("rfBtn","acad-recent-visible");
+ recent.onclick=()=>window.RECENT?.show(file);
+ bar.append(recent,close,save,saveAs,print,append);
  actions.prepend(bar);
  // Birincil beş komut tek basamakta ve yan yana. Eski iki asamali kapatma uyarisini ust butona yansit.
  close.addEventListener('click',()=>{
@@ -37560,18 +37713,6 @@ const refresh=ensureResize();
    row.append(audit,report);panel.querySelector(':scope > h2')?.after(row);
  }
  if(nav?.classList.contains('on')) $('cadNav').querySelector('button[data-m="tab"]')?.click();
- // YENI dosya ile mevcut cizim degistirilirken veri kaybina karsi ek onay.
- // Okuyucu/format fonksiyonunu ve gercek koordinatlari degistirmez.
- for(const input of [$('cadF2'),$('cadF')]){
-   input?.addEventListener('change',event=>{
-     if(!input.files?.length || (input.id==='cadF' && $('cadApp')?.checked))return;
-     let existing=false;
-     try{const d=window.CADX?.data?.();existing=!!((d?.ents?.length||0)+(d?.faces?.length||0));}catch(_){return;}
-     if(!existing)return;
-     const ok=window.confirm('Mevcut CAD çizimi yeni dosyayla değiştirilecek. Kaydetmediğiniz değişiklikler kaybolabilir. Devam edilsin mi?');
-     if(!ok){event.stopImmediatePropagation();input.value='';}
-   },{capture:true});
- }
  // DOM degisiklikleri canli cizime dokunmaz, yalniz cetvel/menu gorunumunu yeniler.
  window.ACAD_FILE_RIBBON={version:'7.1.15.68',native:true,ids:['cadF2','cadSv','cadSvAs','cadF3'],print:'pdf',close:'kapat'};
  window.ACAD_V711568={version:'7.1.15.68',check:()=>({
@@ -38949,6 +39090,11 @@ const byId=id=>document.getElementById(id),fileRibbon=root.querySelector('.acad-
 if(!fileRibbon||!finalBar||!actions)return;
 // Top row, outside CAD viewport but displayed only while CAD tab is active.
 const host=document.createElement('div');host.id='acad57Quickfiles';host.setAttribute('role','toolbar');host.setAttribute('aria-label','CAD dosya işlemleri — Aç, Kapat, Kaydet, Farklı Kaydet, Yazdır');tabs.parentNode.insertBefore(host,tabs);
+const fileStatus=document.createElement("div");
+fileStatus.id="cadFileStatus";
+fileStatus.setAttribute("role","status");
+fileStatus.hidden=true;
+host.after(fileStatus);
 const input=byId('cadF3')?.closest('.filebtn');
 for(const el of [...fileRibbon.children])if(el!==input)host.append(el);
 fileRibbon.remove();
