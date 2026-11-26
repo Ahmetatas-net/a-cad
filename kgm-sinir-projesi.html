@@ -4,6 +4,13 @@
 @media(max-width:720px){main{padding:0 10px;margin:18px auto}.grid{display:block}article{padding:14px}.metrics{grid-template-columns:repeat(3,minmax(0,1fr))}.metric{padding:6px}.metric b{font-size:15px}.legend{font-size:13px}header{padding:10px 14px}h1{font-size:34px}}
 header{padding:14px max(3vw,16px);background:#173f3b}main{max-width:1610px;padding:0 clamp(12px,2.7vw,46px);margin:24px auto}h1{font-size:clamp(30px,3vw,44px);letter-spacing:-.035em}.grid{grid-template-columns:minmax(260px,.60fr) minmax(0,1.4fr)}article{box-shadow:0 2px 7px #1b38330b}#map{background:#f6f8f3;width:100%;height:auto;max-height:55vh;border:1px solid #ccd7cf;border-radius:9px}#editor{border-top:1px solid #cfdbd2;margin-top:12px;padding-top:10px}details{border-top:1px solid #dbe4de;margin:8px 0;padding:8px 0}summary{cursor:pointer;font-weight:650}.toolrow,#xyArea:not([hidden]){display:flex;align-items:end;flex-wrap:wrap;gap:8px}.toolrow label,#xyArea label{margin:0;flex:1 1 115px}.ownerRow{display:grid;grid-template-columns:minmax(70px,2fr) minmax(55px,1fr) minmax(38px,.5fr) minmax(38px,.5fr) auto;align-items:center;gap:4px;margin:7px 0}.ownerRow input{min-width:0}button{font-family:inherit}button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid #9b6721;outline-offset:2px}#redo,#undo,.ownerRow button,#out{background:#e0ebe5;color:#274e43}#editing,#modeHint{font-size:14px;color:#355a4a;margin:6px 0}[data-edit=sinir],[data-edit=yazi]{cursor:grab}#revSave:disabled{opacity:.55} #editor[hidden],#xyArea[hidden],#ownerArea[hidden]{display:none}@media(max-width:760px){.grid{display:flex;flex-direction:column}.grid>section{width:100%}main{margin:15px auto}#map{min-height:180px}} dialog{width:min(93vw,1100px);box-sizing:border-box;border:1px solid #adbdb6;border-radius:12px;padding:16px;color:#1c3931}dialog::backdrop{background:#152c2988}#sheetSvg{width:100%;max-height:68vh;background:#fff}#sheetNote{font-size:.86rem}@media(max-width:760px){body.loaded .grid>section:has(.work){order:-1}} [hidden]{display:none!important}html{background:#f1f5f5;color:#19333b;font:15px/1.48 "Segoe UI",Arial,sans-serif}body{margin:0}header{background:#163c43}html.embedded header{display:none}main{max-width:1510px;margin:auto;padding:clamp(14px,2vw,30px)}
 .titlebar,.actionbar{display:flex;align-items:center;gap:14px}.titlebar{justify-content:space-between;margin-bottom:17px}.titlebar p{margin:3px 0 0}h1{font:650 clamp(25px,3vw,38px)/1.15 "Segoe UI",Arial,sans-serif;letter-spacing:-.04em;margin:0}h2{font-size:17px;letter-spacing:-.015em}.format{font-weight:700;font-size:13px;border:1px solid #adc6c4;border-radius:6px;padding:4px 10px;color:#205955;background:#e3efeb}.steps,.files{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.steps article,.work,#checks,.extras{box-sizing:border-box;border:1px solid #ccd8da;border-radius:12px;background:white;padding:16px}.steps article{margin:0;border-top:3px solid #45827c}.steps label,.files label{color:#304c52;font-size:14px}.steps p,.files p{font-size:13px;line-height:1.45;margin:5px 0;color:#466067}
+.kgm-actions{background:#fff;border:1px solid #bcd0cd;border-radius:10px;padding:10px 12px;margin:10px 0 12px}
+.kgm-actions-main{display:flex;align-items:flex-start;flex-wrap:wrap;gap:10px}.kgm-actions-main details{flex:1 1 220px;margin:0}
+#kgmPrepare{background:#16635b;color:#fff;border:1px solid #13544e;font-weight:700;padding:10px 15px;min-height:44px}
+#kgmPrepare:disabled{opacity:.65}#kgmOptions summary{padding:7px 0}#kgmResult:not(:empty){border-left:3px solid #45867b;margin:8px 0;padding:6px 9px;background:#eef6f2}
+#kgmResult[data-error=true]{border-color:#a84a2a;background:#f9efe8}
+.kgm-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px 12px}
+.kgm-fields input{width:100%;min-width:0}.kgm-actions>.actionbar{margin:0}
 input[type=file],select{box-sizing:border-box;background:#f5f8f8;padding:7px;border:1px solid #bdd0d1;border-radius:6px;width:100%;min-width:0}.steps input::file-selector-button,.files input::file-selector-button{border:0;border-radius:4px;padding:5px 8px;margin-right:8px;background:#dcebea;color:#194e51;font-weight:600}.actionbar{flex-wrap:wrap;margin:12px 0;padding:12px 14px;background:#e1ecea;border-radius:10px}.actionbar button{background:#16665f}.actionbar button:disabled,button:disabled{background:#d1dedd;color:#536667}.actionbar #status,.actionbar #log{min-height:0;margin:0;font-size:14px}.actionbar #log{color:#415858}.actionbar #check:not(:disabled){background:#fff;color:#175952;border:1px solid #a0beb7}.work{margin-bottom:10px}.work>label{max-width:340px}#map{height:clamp(230px,42vw,475px);max-height:none}.work:has(#editor[hidden]) #map{display:none}.work:has(#editor[hidden])::after{content:'Plan, alanlar hesaplandığında burada görünür.';font-size:14px;color:#4d6668}.work:has(#editor[hidden]) :is(.legend,.metrics,label){display:none}.extras{margin-top:12px}.extras summary{color:#234e51}.files{margin-top:12px;grid-template-columns:repeat(2,minmax(0,1fr))}#checks{margin:12px 0}.metrics{gap:8px}.metric{background:#f3f7f6}.scroll{max-height:280px}#log,#status,#editing{overflow-wrap:anywhere}
 @media(max-width:690px){main{padding:12px}.steps,.files{grid-template-columns:minmax(0,1fr);gap:8px}.steps article{padding:10px 12px}.steps h2{margin:0 0 4px}.steps label{margin:0}.steps p{margin:4px 0}.titlebar{margin:4px 0 10px}.titlebar p{font-size:13px}.actionbar{gap:7px;padding:10px}.actionbar>div{width:100%}.actionbar button{font-size:13px;padding:8px}.ownerRow{grid-template-columns:minmax(60px,2fr) minmax(40px,1fr) 38px 38px auto}}
 html.embedded #sheetDialog[open]{position:static;width:100%;max-width:100%;max-height:none;margin:10px 0;padding:10px}#sheetDialog .toolrow>*{min-width:0}#sheetDialog .toolrow label{flex:1 1 110px}#sheetClose{margin-left:auto}#sheetSvg{max-height:540px}
@@ -15,7 +22,23 @@ html.embedded #sheetDialog[open]{position:static;width:100%;max-width:100%;max-h
 <article><h2>Proje</h2><label>Proje çizimi · NCZ / DXF<input type="file" id="cad" accept=".ncz,.dxf"></label><p>Dosya seçilince plan açılır.</p></article>
 <article><h2>Sınır</h2><label>Sınır kaynağı<select id="borderSource"><option value="project">Proje çizimindeki sınır</option><option value="file">Ayrı sınır çizimi</option><option value="picked" disabled>Plandan seçilen sınır</option><option value="cks">CKS’deki giren parçalardan</option></select></label><div id="cksRow" hidden><label>Alan hesabı · CKS<input type="file" id="cksFiles" accept=".cks" multiple></label><label>Giren parçaların tabakası<select id="enteredLayer"></select></label></div><label id="borderFileRow" hidden>Sınır çizimi · NCZ / DXF<input type="file" id="borderFile" accept=".ncz,.dxf"></label><label id="layerRow" hidden>Sınır tabakası<select id="borderLayer"></select></label><p>Giren ve kalan alanlar bu sınırdan ölçülür.</p></article>
 <article id="refs"><h2>Tapu kaydı</h2><label>Parsel cetveli ve malik dosyaları<input id="ref" type="file" multiple accept=".kap,.kml,.xls,.xlsx,.ncz"></label><p>KAP, malik KML veya KGM malik Excel’i. Alan hesabı NCZ’si de eklenebilir.</p></article></section>
-<details id="layerSettings" hidden><summary>Hesap tabakaları</summary><label>Ana parseller<select id="parcelLayer"></select></label><label>Projedeki sınır<select id="projectBorder"></select></label></details><section id="sourceCard" hidden><div class="titlebar"><div><b id="sourceTitle"></b><div id="sourceCount"></div></div><div class="sourceActions"><button id="sourcePick" aria-pressed="false">Plandan sınır seç</button><button id="sourceMinus" aria-label="Uzaklaş">−</button><button id="sourcePlus" aria-label="Yaklaş">+</button><button id="sourceFit">Tümünü göster</button></div></div><canvas id="sourceCanvas" aria-label="Kaynak proje çizimi"></canvas><div id="pickInfo" role="status"></div><div id="hitOptions" hidden><select id="hitList" aria-label="Sınır adayı"></select><button id="hitUse">Seçilen sınırı kullan</button></div></section><div class="actionbar"><button id="run" disabled>Alanları hesapla</button><button id="check" disabled>Tapu kayıtlarını eşleştir</button><div><div role="status" aria-live="polite" id="status">Proje çizimi bekleniyor.</div><div id="log" role="status"></div></div></div>
+<details id="layerSettings" hidden><summary>Hesap tabakaları</summary><label>Ana parseller<select id="parcelLayer"></select></label><label>Projedeki sınır<select id="projectBorder"></select></label></details><section id="sourceCard" hidden><div class="titlebar"><div><b id="sourceTitle"></b><div id="sourceCount"></div></div><div class="sourceActions"><button id="sourcePick" aria-pressed="false">Plandan sınır seç</button><button id="sourceMinus" aria-label="Uzaklaş">−</button><button id="sourcePlus" aria-label="Yaklaş">+</button><button id="sourceFit">Tümünü göster</button></div></div><canvas id="sourceCanvas" aria-label="Kaynak proje çizimi"></canvas><div id="pickInfo" role="status"></div><div id="hitOptions" hidden><select id="hitList" aria-label="Sınır adayı"></select><button id="hitUse">Seçilen sınırı kullan</button></div></section><section class="kgm-actions" aria-label="KGM teslim paketi">
+ <div class="kgm-actions-main">
+  <button id="kgmPrepare" type="button">KGM formatında hazırla</button>
+  <details id="kgmOptions"><summary>Pafta ve yol bilgileri</summary>
+   <div class="kgm-fields">
+    <label>Proje adı<input id="kgmName" type="text" maxlength="110" placeholder="Çizim adı kullanılır"></label>
+    <label>Koordinat sistemi<input id="kgmCrs" type="text" maxlength="50" placeholder="Örn. ITRF96 · TM33"></label>
+    <label>Başlangıç KM<input id="kgmKm" type="text" inputmode="decimal" placeholder="Örn. 50+954,65"></label>
+   </div><p>Çizimdeki PL_EKSEN tabakası, başlangıç KM ile birlikte kullanılır. KAP’ta bulunan parsel kilometresi doğrudan cetvele geçer.</p>
+  </details>
+ </div>
+ <div id="kgmResult" role="status" aria-live="polite"></div>
+ <details><summary>Alan hesabı ve tapu kontrolü</summary>
+  <div class="actionbar"><button id="run" disabled>Alanları hesapla</button><button id="check" disabled>Tapu kayıtlarını eşleştir</button></div>
+ </details>
+ <div role="status" aria-live="polite" id="status">Proje çizimi bekleniyor.</div><div id="log" role="status"></div>
+</section>
 <article class="work"><h2>Parsel planı</h2><label>Görünüm<select id="which" disabled><option>Proje bütünü</option></select></label><svg id="map" viewBox="0 0 660 310" role="img" aria-label="Kamulaştırma sınırı ve kesilen parseller"></svg><div class="legend"><span><i class="key" style="background:#166854"></i>Sınır</span><span><i class="key" style="background:#e8a36c"></i>Giren</span><span><i class="key" style="background:#dce4d8"></i>Kalan</span><span><i class="key" style="background:#87baca"></i>Yol / dere</span></div><div class="metrics"><div class="metric">Ana parsel<b id="v1">—</b></div><div class="metric">Giren alan<b id="v2">—</b></div><div class="metric">Kalan alan<b id="v3">—</b></div></div><div id="editor" hidden><div class="toolrow"><label>Plan aracı<select id="mode"><option value="bak">İncele</option><option value="sinir">Sınır köşesini taşı</option><option value="yazi">Parsel yazısını taşı</option></select></label><button id="undo" disabled>Geri al</button><button id="redo" disabled>Yinele</button></div><p id="modeHint"></p><div id="xyArea" hidden><label>Y · Doğu (m)<input id="east" type="number" step="any"></label><label>X · Kuzey (m)<input id="nord" type="number" step="any"></label><button id="xyApply">Köşeyi uygula</button></div>
 <details id="ownerArea" hidden><summary>Malik ve hisseler</summary><div id="owners"></div><button id="ownerAdd">Malik ekle</button> <button id="ownerApply">Malikleri uygula</button></details>
 <details><summary>Pafta · kuzey oku konumu</summary><div class="toolrow"><label>Yatay (mm)<input type="number" id="northX" min="-4" max="4" step=".5" value="0"></label><label>Aşağı (mm)<input type="number" id="northY" min="-3" max="3" step=".5" value="0"></label><button id="northApply">Konumu uygula</button></div></details>
@@ -2321,11 +2344,11 @@ const KgmTeslim=(()=>{
   for(const a of r.rows)geom(a.shape,'#e7eade','#747f72');for(const p of r.publics)geom(p.inside,'#bfd9db','#6c949a');for(const a of r.rows)geom(a.inside,'#efb88d','#a66c45');geom(r.border.shape,null,'#12654d');
   P.setFontSize(10);P.text('Plan kontrolü     Yeşil çizgi  Kamulaştırma sınırı     Turuncu  Giren parça     Mavi  Yol ve dere',14,285);return new Uint8Array(P.output('arraybuffer'));}
  async function sheets(r){
-  const books=[['Parsel hesabı',[['Mahalle','Ada/parsel','Ana alan m²','Giren m²','Kalan m²','Kontrol'],...r.rows.map(a=>[a.town,a.id,a.full,a.enter,a.remain,(a.issues||[]).join(' / ')])]],['Parça cetveli',[['Mahalle','Parsel','Parça','Ölçülen m²','KAP m²','Pafta dengeli m²'],...r.rows.flatMap(a=>(a.pieces||[]).map(t=>[a.town,a.id,t.name,t.size,t.ref?.raw,t.paper?.[2]]))]],['Malik ve hisse',[['Mahalle','Parsel','Malik / unvan','Baba adı','Pay','Payda'],...r.rows.flatMap(a=>(a.owners||[]).map(o=>[a.town,a.id,o.name,o.father,o.num,o.den]))]]];
+  const books=[['Parsel hesabı',[['Mahalle','Ada/parsel','Ana alan m²','Giren m²','Kalan m²','Kontrol','Tapu alanı m²'],...r.rows.map(a=>[a.town,a.id,a.full,a.enter,a.remain,(a.issues||[]).join(' / '),a.main?.balanced??a.tapuKaydi])]],['Parça cetveli',[['Mahalle','Parsel','Parça','Ölçülen m²','KAP m²','Pafta dengeli m²'],...r.rows.flatMap(a=>(a.pieces||[]).map(t=>[a.town,a.id,t.name,t.size,t.ref?.raw,t.paper?.[2]]))]],['Malik ve hisse',[['Mahalle','Parsel','Malik / unvan','Baba adı','Pay','Payda'],...r.rows.flatMap(a=>(a.owners||[]).map(o=>[a.town,a.id,o.name,o.father,o.num,o.den]))]]];
   const m='http://schemas.openxmlformats.org/spreadsheetml/2006/main',rel='http://schemas.openxmlformats.org/officeDocument/2006/relationships',pkg='http://schemas.openxmlformats.org/package/2006/relationships';
   const add=(name,data)=>({name,data});const rr=(type,id,target)=>'<Relationship Id="r'+id+'" Type="'+rel+'/'+type+'" Target="'+target+'"/>';const files=[add('_rels/.rels','<Relationships xmlns="'+pkg+'">'+rr('officeDocument',1,'xl/workbook.xml')+'</Relationships>'),add('xl/workbook.xml','<workbook xmlns="'+m+'" xmlns:r="'+rel+'"><sheets>'+books.map(([title],i)=>'<sheet name="'+esc(title)+'" sheetId="'+(i+1)+'" r:id="r'+(i+1)+'"/>').join('')+'</sheets></workbook>'),add('xl/_rels/workbook.xml.rels','<Relationships xmlns="'+pkg+'">'+books.map((_,i)=>rr('worksheet',i+1,'worksheets/sheet'+(i+1)+'.xml')).join('')+rr('styles',books.length+1,'styles.xml')+'</Relationships>')];
   const sides=['left','right','top','bottom'].map(k=>'<'+k+' style="thin"><color rgb="FF819285"/></'+k+'>').join('');files.push(add('xl/styles.xml','<styleSheet xmlns="'+m+'"><fonts count="2"><font><sz val="10"/><name val="Arial"/></font><font><b/><sz val="10"/><name val="Arial"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="2"><border/><border>'+sides+'<diagonal/></border></borders><cellStyleXfs count="1"><xf/></cellStyleXfs><cellXfs count="4"><xf/><xf borderId="1" applyBorder="1"/><xf borderId="1" fontId="1" applyBorder="1" applyFont="1"/><xf borderId="1" numFmtId="4" applyBorder="1" applyNumberFormat="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>'));
-  for(const [k,[title,data]] of books.entries()){const body=data.map((rw,i)=>'<row r="'+(i+1)+'">'+rw.map((v,j)=>{const att=' r="'+String.fromCharCode(65+j)+(i+1)+'"';return typeof v==='number'?'<c'+att+' s="3"><v>'+v+'</v></c>':'<c'+att+' s="'+(i?1:2)+'" t="inlineStr"><is><t>'+esc(v)+'</t></is></c>';}).join('')+'</row>').join('');files.push(add('xl/worksheets/sheet'+(k+1)+'.xml','<worksheet xmlns="'+m+'"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" state="frozen"/></sheetView></sheetViews><cols>'+[18,17,37,23,18,46].map((w,i)=>'<col min="'+(i+1)+'" max="'+(i+1)+'" width="'+w+'" customWidth="1"/>').join('')+'</cols><sheetData>'+body+'</sheetData><autoFilter ref="A1:F'+data.length+'"/><pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/></worksheet>'));}
+  for(const [k,[title,data]] of books.entries()){const body=data.map((rw,i)=>'<row r="'+(i+1)+'">'+rw.map((v,j)=>{const att=' r="'+String.fromCharCode(65+j)+(i+1)+'"';return typeof v==='number'?'<c'+att+' s="3"><v>'+v+'</v></c>':'<c'+att+' s="'+(i?1:2)+'" t="inlineStr"><is><t>'+esc(v)+'</t></is></c>';}).join('')+'</row>').join('');files.push(add('xl/worksheets/sheet'+(k+1)+'.xml','<worksheet xmlns="'+m+'"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" state="frozen"/></sheetView></sheetViews><cols>'+[18,17,37,23,18,46].map((w,i)=>'<col min="'+(i+1)+'" max="'+(i+1)+'" width="'+w+'" customWidth="1"/>').join('')+'</cols><sheetData>'+body+'</sheetData><autoFilter ref="A1:'+String.fromCharCode(64+data[0].length)+data.length+'"/><pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/></worksheet>'));}
   const over=(name,typ)=>'<Override PartName="/xl/'+name+'" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.'+typ+'+xml"/>';files.push(add('[Content_Types].xml','<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>'+over('workbook.xml','sheet.main')+over('styles.xml','styles')+books.map((_,i)=>over('worksheets/sheet'+(i+1)+'.xml','worksheet')).join('')+'</Types>'));return new Uint8Array(await window.O.zip(files,{nczYok:true}).arrayBuffer());
  }
  async function outputs(current,proof,inputs,revision){if(!current)throw Error('Önce sınırdan hesabı çalıştırın.');const entries=[];
@@ -2334,11 +2357,15 @@ const KgmTeslim=(()=>{
   }else{const d=drawings(current);const ncz=await window.NCZW.build(d.model);const back=window.K.parseNCZ(ncz);if(back.polys.filter(p=>p.lay==='KAD_ALN').length!==current.rows.reduce((s,r)=>s+r.shape.reduce((n,p)=>n+p.length,0),0))throw Error('Ana parsel sayısı NCZ geri okumasında değişti.');
    if(revision)entries.push({name:'01_Proje/Kamulastrma.kamrev',data:JSON.stringify(revision)});entries.push(...await KamPaper.files(current));entries.push({name:'01_Proje/Sinir_ve_Parseller.NCZ',data:ncz},{name:'01_Proje/Sinir_ve_Parseller.dxf',data:d.dxf},{name:'01_Proje/Sinir_ve_Parseller.pdf',data:pdf(current)},{name:'06_Cetveller/Parsel_ve_Malik_Cetveli.xlsx',data:await sheets(current)});}
   entries.push({name:'ACAD_Hesap_Modeli.json',data:JSON.stringify(current)});return {zip:window.O.zip(entries,{nczYok:true}),count:entries.length};}
- return {packfile,outputs,bytes,sha};
+ return {packfile,outputs,bytes,sha,drawings,sheets};
 })();
-</script><script>(()=>{
+</script>
+<script src="kgm-pafta.js"></script>
+<script src="kgm-bos-formlar.js"></script>
+<script src="kgm-paket.js"></script>
+<script>(()=>{
 const $=id=>document.getElementById(id),n=x=>x.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2}),ns='http://www.w3.org/2000/svg';let measured=null,current=null,proof=null,seq=0,loadEpoch=0;
-function clear(){document.body.classList.remove('loaded');stopEdit();busy=false;pointSelection=null;proof=null;$('zipstatus').textContent='';++seq;current=measured=null;$('zip').disabled=true;$('run').disabled=!$('cad').files.length;$('check').disabled=$('out').disabled=$('which').disabled=true;$('checks').hidden=true;$('which').replaceChildren(new Option('Proje bütünü',''));$('map').replaceChildren();for(const k of ['details','log'])$(k).textContent='';for(const k of ['v1','v2','v3'])$(k).textContent='—';$('status').textContent=$('cad').files.length?'Hesaba hazır.':'Proje çizimi bekleniyor.';}
+function clear(){$('kgmResult').textContent='';document.body.classList.remove('loaded');stopEdit();busy=false;pointSelection=null;proof=null;$('zipstatus').textContent='';++seq;current=measured=null;$('zip').disabled=true;$('run').disabled=!$('cad').files.length;$('check').disabled=$('out').disabled=$('which').disabled=true;$('checks').hidden=true;$('which').replaceChildren(new Option('Proje bütünü',''));$('map').replaceChildren();for(const k of ['details','log'])$(k).textContent='';for(const k of ['v1','v2','v3'])$(k).textContent='—';$('status').textContent=$('cad').files.length?'Hesaba hazır.':'Proje çizimi bekleniyor.';}
 function sourceReady(){return sourceModel&&sourceFile===$('cad').files[0]&&$('parcelLayer').value&&($('borderSource').value==='picked'?pickedRings?.length:$('borderSource').value==='cks'?$('cksFiles').files.length&&$('enteredLayer').value:$('borderSource').value==='file'?boundaryDrawing&&$('borderLayer').value:$('projectBorder').value);}
 function inputChanged(){++loadEpoch;clear();$('run').disabled=!sourceReady();if(!sourceModel)return;
  $('status').textContent=!$('parcelLayer').value?'Çizim açıldı. Hesap tabakalarından ana parselleri seçin.':sourceReady()?'Çizim açıldı. Alan hesabına hazır.':$('borderSource').value==='cks'?'CKS dosyalarını ve giren parça tabakasını seçin.':$('borderSource').value==='file'?'Ayrı sınır çizimini ve tabakasını seçin.':'Çizim açıldı. Hesap tabakalarından sınırı seçin veya ayrı sınır çizimini yükleyin.';}
@@ -2449,7 +2476,7 @@ function installProject(f,d){
  $('sourceCount').textContent=[d.lines.length+' çizgi',d.polys.length+' çoklu çizgi',d.points.length+' nokta',d.textList.length+' yazı'].join(' · ');
  fitSource();refreshPicks();if(incomingBoundary?.file===f){const data=incomingBoundary;incomingBoundary=null;applyPicked(data.rings,'CAD ekranından seçilen sınır');}
 }
-async function openProject(){
+async function openProject(){cadAxis=null;
  const ticket=++sourceToken,f=$('cad').files[0];sourceModel=sourceFile=extent=camera=null;$('sourceCard').hidden=$('layerSettings').hidden=true;inputChanged();$('run').disabled=true;
  if(!f)return;$('status').textContent=f.name+' okunuyor…';
  try{const d=await readDrawing(f);if(ticket!==sourceToken)return;installProject(f,d);inputChanged();if(!$('run').disabled)$('status').textContent='Çizim açıldı. Alan hesabına hazır.';}
@@ -2555,6 +2582,7 @@ function calculationModel(d){
  if(!parcels)throw Error('Ana parsel tabakasını seçin.');
  if(parcels===border)throw Error('Ana parseller ve sınır için farklı tabakalar seçin.');
  const labels=d.textList.filter(t=>/^\d+[\/_]\d+$/.test(t.s?.trim()));
+ const axes=d.lines.filter(p=>p.lay==='PL_EKSEN').map(p=>({...p,closed:false}));
  const mapped=d.polys.filter(p=>p.lay===parcels||p.lay===border||['KAD_YOL','KAD_DERE','PL_EKSEN'].includes(p.lay)).map(p=>{
   if(p.lay===border)return {...p,lay:'KAM_SINIR'};
   if(p.lay!==parcels)return p;
@@ -2562,7 +2590,7 @@ function calculationModel(d){
   const ids=new Set(labels.filter(t=>KgmOlcu.contains([p.pts],[t.e,t.y])).map(t=>t.s.trim().replace('_','/')));
   return {...p,lay:'KAD_ALN',nativeName:ids.size===1?[...ids][0]:''};
  });
- return lightModel({...d,polys:mapped,lines:d.lines.filter(p=>p.lay===border).map(p=>({...p,lay:'KAM_SINIR'}))});
+ return lightModel({...d,polys:mapped.concat(axes),lines:d.lines.filter(p=>p.lay===border).map(p=>({...p,lay:'KAM_SINIR'}))});
 }
 for(const id of ['projectBorder','parcelLayer','cksFiles','enteredLayer'])$(id).onchange=()=>{inputChanged();scheduleSource();};
 
@@ -2581,7 +2609,7 @@ $('borderFile').onchange=async()=>{
 };
 $('borderLayer').onchange=inputChanged;
 
-$('borderSource').onchange=()=>{$('cksRow').hidden=$('borderSource').value!=='cks';$('borderFileRow').hidden=$('borderSource').value!=='file';if($('borderFileRow').hidden)resetBoundaryDrawing();inputChanged();};$('ref').onchange=()=>{++loadEpoch;++seq;++generation;busy=false;registers=null;proof=null;current=measured?compose(measured,state):null;$('run').disabled=!!current||!sourceReady();$('check').disabled=!measured||!$('ref').files.length;$('log').textContent=$('ref').files.length?'Kayıtlar seçildi. '+(measured?'Eşleştirmeyi çalıştırın.':'Alan hesabıyla birlikte eşleştirilecek.') : '';if(current)show();};
+$('borderSource').onchange=()=>{$('cksRow').hidden=$('borderSource').value!=='cks';$('borderFileRow').hidden=$('borderSource').value!=='file';if($('borderFileRow').hidden)resetBoundaryDrawing();inputChanged();};$('ref').onchange=()=>{++loadEpoch;++seq;++generation;busy=false;registers=null;proof=null;$('kgmResult').textContent='';current=measured?compose(measured,state):null;$('run').disabled=!!current||!sourceReady();$('check').disabled=!measured||!$('ref').files.length;$('log').textContent=$('ref').files.length?'Kayıtlar seçildi. '+(measured?'Eşleştirmeyi çalıştırın.':'Alan hesabıyla birlikte eşleştirilecek.') : '';if(current)show();};
 function show(){refreshPicks();document.body.classList.add('loaded');$('zip').disabled=false;const r=current.rows.find(p=>p.id===$('which').value),rows=r?[r]:current.rows,svg=$('map');svg.replaceChildren();
  const frame=r?r.shape:current.border.shape,all=frame.flat(2),xx=all.map(p=>p[0]),yy=all.map(p=>p[1]),x=Math.min(...xx),y=Math.min(...yy),w=Math.max(...xx)-x,h=Math.max(...yy)-y,s=Math.min(620/(w||1),278/(h||1));
  view={x:x+w/2,y:y+h/2,s};$('northX').value=state.north[0];$('northY').value=state.north[1];const transform=p=>[(330+(p[0]-x-w/2)*s).toFixed(2),(155-(p[1]-y-h/2)*s).toFixed(2)].join(' ');
@@ -2605,7 +2633,7 @@ async function runGeometry(){clear();const ticket=seq,f=$('cad').files[0];$('run
  rawModel=raw;const result=await calcShape(null);if(ticket!==seq)return;if(raw.cks){result.cks=raw.cks;result.sinirKaynagi='CKS ile eşleşen sayısal B parçalarının birleşimi';}measured=current=result;$('which').replaceChildren(new Option('Proje bütünü',''),...result.rows.map(r=>new Option(r.id,r.id)));$('status').textContent=result.rows.length+' ana parsel hesaplandı. '+(result.border.count-result.border.zero)+' sınır kenarı bağlandı.'+(result.border.zero?' '+result.border.zero+' sıfır uzunluklu kenar ölçü dışı.':'');$('which').disabled=$('out').disabled=false;$('check').disabled=!$('ref').files.length;show();}catch(e){if(ticket===seq)$('status').textContent=e.message;}finally{if(ticket===seq)$('run').disabled=!!current||!sourceReady();}}
 $('run').onclick=async()=>{const epoch=loadEpoch;await runGeometry();if(epoch===loadEpoch&&measured&&$('ref').files.length)await $('check').onclick();};
 $('check').onclick=async()=>{const ticket=++seq;$('check').disabled=true;try{const kaps=[],kmls=[],models=[],books=[];for(const f of $('ref').files){const data=await f.arrayBuffer();if(seq!==ticket)return;if(/\.xlsx?$/i.test(f.name)){books.push(...await readBook(f,data));continue;}if(/\.ncz$/i.test(f.name)){models.push(window.K.parseNCZ(data));continue;}let t;try{t=new TextDecoder('utf-8',{fatal:true}).decode(data);}catch{t=new TextDecoder('windows-1254').decode(data);}if(/\.kap$/i.test(f.name))kaps.push(t);else if(/\.kml$/i.test(f.name))kmls.push(t);}
- if(seq!==ticket)return;if(!kaps.length&&(!books.length||kmls.length||models.length))throw Error('Malik KML veya alan hesabı NCZ için aynı mahallenin KAP dosyasını da seçin.');const previous=registers;try{registers={kaps,kmls,books,models:models.map(m=>({textList:m.textList.filter(t=>['TABLO','DE_M','DE_R'].includes(t.lay))}))};current=compose(measured,state);}catch(err){registers=previous;throw err;}const m=current.rows.reduce((s,r)=>s+(r.pieces?.length||0),0);$('log').textContent=(kaps.length?m+' parça karşılaştırıldı. ':'')+current.rows.reduce((a,r)=>a+(r.owners?.length||0),0)+' malik satırı eşleşti. '+current.rows.filter(r=>r.issues.length).length+' parselde kontrol notu.';show();}catch(e){if(ticket===seq){$('log').textContent=e.message;if(current)show();}}finally{if(ticket===seq)$('check').disabled=false;}};
+ if(seq!==ticket)return;if(!kaps.length&&(!books.length||kmls.length||models.length))throw Error('Malik KML veya alan hesabı NCZ için aynı mahallenin KAP dosyasını da seçin.');const previous=registers;try{registers={kaps,kmls,books,models:models.map(m=>({textList:m.textList.filter(t=>['TABLO','DE_M','DE_R'].includes(t.lay))}))};current=compose(measured,state);}catch(err){registers=previous;throw err;}const m=current.rows.reduce((s,r)=>s+(r.pieces?.length||0),0);$('log').textContent=(kaps.length?m+' parça karşılaştırıldı. ':'')+current.rows.reduce((a,r)=>a+(r.owners?.length||0),0)+' malik satırı eşleşti. '+current.rows.filter(r=>r.issues.length).length+' parselde kontrol notu.';show();return true;}catch(e){if(ticket===seq){$('log').textContent=e.message;if(current)show();}return false;}finally{if(ticket===seq)$('check').disabled=false;}};
 $('out').onclick=()=>{if(!current||busy||drag)return;const url=URL.createObjectURL(new Blob([JSON.stringify(current)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='Kamulaştırma_hesap_modeli.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),15000);};
 
 const assign=(el,files)=>{const dt=new DataTransfer();for(const f of files)dt.items.add(f);el.files=dt.files;};
@@ -2712,7 +2740,7 @@ function compose(geom,edit){
 }
 let busy=false,previewTimer;
 async function update(next,dir='edit'){
- if(!rawModel||!current)return;const token=++generation;++seq;busy=true;for(const id of ['zip','out','revSave'])$(id).disabled=true;
+ if(!rawModel||!current)return;$('kgmResult').textContent='';const token=++generation;++seq;busy=true;for(const id of ['zip','out','revSave'])$(id).disabled=true;
  try{const geometry=JSON.stringify(next.rings)===JSON.stringify(state.rings)?measured:await calcShape(next.rings);
  if(token!==generation)return;const result=compose(geometry,next);
  if(dir==='edit'){history.push(state);if(history.length>40)history.shift();future=[];}else if(dir==='undo'){history.pop();future.push(state);}else if(dir==='redo'){future.pop();history.push(state);}
@@ -2764,7 +2792,7 @@ $('revLoad').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!
  Object.entries(v.owners).some(([k,arr])=>!/^\d+\/\d+$/.test(k)||!Array.isArray(arr)||arr.some(o=>!o||typeof o.name!=='string'||!o.name.trim()||![o.num,o.den].every(v=>/^[1-9]\d{0,15}$/.test(v))))||
  (v.rings!==null&&(!Array.isArray(v.rings)||!v.rings.length||v.rings.some(r=>!Array.isArray(r)||r.length<3||!r.every(pair)))))throw Error('Revizyon verisi geçersiz.');
  const m=KgmOlcu.run(applyShape(data.raw,data.state.rings));const before=registers;let r;try{registers=data.registers;r=compose(m,data.state);}finally{registers=before;}
- ++loadEpoch;clear();$('borderSource').value='project';resetBoundaryDrawing();$('borderFileRow').hidden=true;$('run').disabled=true;rawModel=data.raw;registers=data.registers;state=data.state;measured=m;current=r;proof=null;$('ref').value=$('cad').value=$('proof').value='';$('which').replaceChildren(new Option('Proje bütünü',''),...r.rows.map(a=>new Option(a.id,a.id)));$('which').disabled=$('out').disabled=false;$('status').textContent=f.name+' açıldı.';show();
+ ++loadEpoch;clear();$('borderSource').value='project';resetBoundaryDrawing();$('borderFileRow').hidden=true;$('run').disabled=true;rawModel=data.raw;registers=data.registers;state=data.state;measured=m;current=r;proof=null;$('ref').value=$('cad').value=$('proof').value='';$('which').replaceChildren(new Option('Proje bütünü',''),...r.rows.map(a=>new Option(a.id,a.id)));$('which').disabled=$('out').disabled=false;$('kgmName').value=data.pafta?.name||'';$('kgmCrs').value=data.pafta?.crs||'';$('kgmKm').value=data.pafta?.km||'';$('status').textContent=f.name+' açıldı.';show();
  }catch(err){$('status').textContent=err.message;}};
 
 let previewPages=null;
@@ -2777,6 +2805,67 @@ function drawSheet(){const pg=previewPages[$('sheetKind').value][+$('sheetNum').
 function listSheets(){const kind=$('sheetKind').value,pages=previewPages[kind];$('sheetNum').replaceChildren(...pages.map((s,i)=>new Option(kind==='Olcu_Krokisi'?(current.rows[i]?.id||s.title||'Koordinatlar · s. '+(i+1)):String(i+1),String(i))));if(kind==='Olcu_Krokisi'&&selected())$('sheetNum').value=String(current.rows.indexOf(selected()));drawSheet();}
 $('viewSheet').onclick=()=>{if(!current||busy||drag)return;previewPages=KamPaper.pages(current);listSheets();const dialog=$('sheetDialog');if(document.documentElement.classList.contains('embedded')){if(!dialog.open)dialog.show();dialog.scrollIntoView({block:'center'});}else dialog.showModal();};
 $('sheetKind').onchange=listSheets;$('sheetNum').onchange=drawSheet;$('sheetClose').onclick=()=>$('sheetDialog').close();
+
+
+async function prepareKgm(){
+ if(busy||drag||$('kgmPrepare').disabled)return;
+ const status=$('kgmResult'),button=$('kgmPrepare');
+ const report=(message,error=false)=>{status.textContent=message;status.dataset.error=String(error);};
+ if(!current&&!sourceReady()){report('Proje çizimini açın, ana parsel tabakasını ve kamulaştırma sınırını seçin.',true);return;}
+ if(!registers&&!$('ref').files.length&&!Object.keys(state.owners).length){report('Tapu kaydına KAP ve malik KML ya da desteklenen tapu Excel’ini ekleyin.',true);return;}
+ button.disabled=true;
+ const load=loadEpoch;
+ try{
+  report('Sınır ve parseller hesaplanıyor…');
+  if(!current)await runGeometry();
+  if(load!==loadEpoch)return;
+  if(!current)throw Error($('status').textContent);
+  if(!registers&&$('ref').files.length){
+   report('Tapu alanları, malik ve hisseler eşleştiriliyor…');
+   const matched=await $('check').onclick();
+   if(load!==loadEpoch)return;
+   if(!matched)throw Error($('log').textContent||'Tapu kayıtları okunamadı.');
+  }
+  const optsVersion=kgmOptionsVersion,snapshot=current,ticket=seq;
+  const name=$('kgmName').value.trim()||$('cad').files[0]?.name.replace(/\.[^.]+$/,'')||'Kamulaştırma projesi';
+  const crs=$('kgmCrs').value.trim(),rawKm=$('kgmKm').value.trim().replace(',','.');
+  if(rawKm&&!/^\d+(?:[+]\d{1,3})?(?:\.\d+)?$/.test(rawKm))throw Error('Başlangıç KM’yi metre veya 50+954,65 biçiminde girin.');
+  const [wide,low]=rawKm.split('+').map(Number),start=rawKm?(Number.isFinite(low)?1000*wide+low:wide):null;
+  if(Number.isFinite(low)&&low>=1000)throw Error('Başlangıç KM’nin metre bölümü 1000’den küçük olmalı.');
+  const axes=cadAxis?[{points:cadAxis.points,start:cadAxis.start}]:snapshot.axes.map(points=>({points,start:null}));
+  if(axes.length===1&&start!==null)axes[0].start=start;
+  if(start!==null&&axes.length!==1)throw Error('Başlangıç KM için çizimde PL_EKSEN tabakasında kesintisiz tek bir eksen olmalı.');
+  report('Beyanname, ölçü krokisi, alan hesabı ve rulo plan hazırlanıyor…');
+  await new Promise(resolve=>setTimeout(resolve,0));
+  const pack=await window.KgmPaket.create(snapshot,registers,{title:name,crs,axes,font:KgmFont,area:KgmOlcu.area});
+  if(load!==loadEpoch||ticket!==seq||snapshot!==current||optsVersion!==kgmOptionsVersion)return;
+  const cad=KgmTeslim.drawings(snapshot),model=await window.NCZW.build(cad.model);
+  const control=window.KgmPafta.csv([['Ada/parsel','Kontrol'],...pack.notes]);
+  const cetvel=pack.rows.map(r=>({...r,pieces:r.pieces.map(p=>({
+    name:p.name,size:p.area,ref:p.ref,paper:[null,null,p.ref.balanced]
+   }))}));
+  const book=await KgmTeslim.sheets({...snapshot,rows:cetvel});
+  if(load!==loadEpoch||ticket!==seq||snapshot!==current||optsVersion!==kgmOptionsVersion)return;
+  const files=[...pack.files,
+    {name:'01_Proje/Sinir_ve_Parseller.NCZ',data:model},
+    {name:'01_Proje/Sinir_ve_Parseller.dxf',data:cad.dxf},
+    {name:'01_Proje/Kamulastirma.kamrev',data:JSON.stringify({format:'ACAD-KAM-REV1',raw:rawModel,registers,state,pafta:{name,crs,km:rawKm}})},
+    {name:'06_Cetveller/Parsel_ve_Malik_Cetveli.xlsx',data:book},
+    {name:'07_Kontrol/Kontrol_Listesi.csv',data:control}];
+  const blob=window.O.zip(files,{nczYok:true}),url=URL.createObjectURL(blob),link=document.createElement('a');
+  link.href=url;link.download='KGM_Kamulastirma_Paketi.zip';link.click();
+  setTimeout(()=>URL.revokeObjectURL(url),30000);
+  report(pack.rows.length+' parsel · KGM paketi indirildi.'+(pack.notes.length?' Kontrol listesinde '+pack.notes.length+' not var.':''));
+ }catch(e){if(load===loadEpoch)report(e.message||'Paftalar üretilemedi.',true);}
+ finally{button.disabled=false;}
+}
+let kgmOptionsVersion=0,cadAxis=null;
+window.kamUseDeliveryAxis=(axis)=>{
+ cadAxis=axis;
+ kgmOptionsVersion++;$('kgmResult').textContent='';
+};
+for(const id of ['kgmName','kgmCrs','kgmKm'])$(id).oninput=()=>{kgmOptionsVersion++;$('kgmResult').textContent='';};
+$('kgmPrepare').onclick=prepareKgm;
 
 state=fresh();
 })();
