@@ -1402,7 +1402,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #planSections .plan-sec-legend { display:flex; gap:7px 15px; flex-wrap:wrap; margin:8px 0; font-size:.84rem; font-weight:650 }
 #planSections .plan-sec-legend span { display:inline-flex; align-items:center; gap:5px }
 #planSections .plan-sec-legend span::before { content:""; width:13px; height:10px; border-radius:3px; background:var(--swatch); border:1px solid var(--line) }
-#planSections [data-sec-key="black"] { --swatch:#536477 }
+#planSections [data-sec-key="black"]::before { width:17px; height:2px; background:#080b0f; border:0; border-radius:2px }
+#planSections [data-sec-key="black"]::before { box-shadow:0 0 0 1px #e0e8f1 }
 #planSections [data-sec-key="red"] { --swatch:#c62b46 }
 #planSections [data-sec-key="cut"] { --swatch:#f9d5da }
 #planSections [data-sec-key="fill"] { --swatch:#d4ebfa }
@@ -6530,30 +6531,6 @@ O.sectionRegions = (section, depth, emit) => {
     }
   }
 };
-// Pick an interior point of a continuous ground profile, clear of the opposite surface when possible.
-O.sectionGroundLabel = (parts, mapX, mapY, minimumGap) => {
-  let position = null, fallback = null, best = -Infinity;
-  for (const part of parts) {
-    if (part.length < 2) continue;
-    const start = part[0][0], end = part.at(-1)[0];
-    const middle = start + (end - start) * .31;
-    for (let i = 1; i < part.length; i++) {
-      const a = part[i - 1], b = part[i];
-      if (b[0] <= a[0]) continue;
-      const offset = Math.max(a[0], Math.min(b[0], middle));
-      const t = (offset - a[0]) / (b[0] - a[0]);
-      const x = mapX(offset), y = mapY(a[1] + (b[1] - a[1]) * t);
-      const redY = mapY(a[2] + (b[2] - a[2]) * t);
-      const edge = Math.min(x - mapX(start), mapX(end) - x);
-      if (!fallback || edge > fallback.edge) fallback = { x, y, edge };
-      if (Math.abs(y - redY) < minimumGap && minimumGap > 0) continue;
-      const score = edge - Math.abs(x - mapX(middle)) * .5;
-      if (score > best) { best = score; position = { x, y }; }
-    }
-  }
-  return position || fallback;
-};
-
 /* ---------- Kesit sayfası: mm cinsinden ilkel çizim listesi (A4 yatay 297×210, orijin sol alt) ---------- */
 O.sheet = (sec, idx, n, P, set) => {
   // Yol / parsel en kesiti düzeni: antet, kesit, kot tablosu, km başlığı, imza
@@ -6607,10 +6584,13 @@ O.sheet = (sec, idx, n, P, set) => {
     fill(kind, points.map(([offset, z]) => [xo(offset), yz(z)]));
   });
   const fillKey = [["cut", "Kazı"], ["fill", "Dolgu"], ["strip", "Sıyırma"]];
-  let keyX = 282 - fillKey.filter(([kind]) => shownFills.has(kind)).length * 25;
+  let keyX = 282 - (1 + fillKey.filter(([kind]) => shownFills.has(kind)).length) * 25;
+  const mid = top - 4.1;
+  L(keyX, mid, keyX + 6.5, mid, 0.55, "#000");
+  T(keyX + 8, mid, "Arazi", 2.25);
+  keyX += 25;
   for (const [kind, label] of fillKey) {
     if (!shownFills.has(kind)) continue;
-    const mid = top - 4.1;
     fill(kind, [[keyX, mid-1.7], [keyX+6.5, mid-1.7], [keyX+6.5, mid+1.7], [keyX, mid+1.7]]);
     T(keyX + 8, mid, label, 2.25);
     keyX += 25;
@@ -6621,11 +6601,6 @@ O.sheet = (sec, idx, n, P, set) => {
     else if ((dol && SR) || KZM) { let seg = []; const want = KZM ? (mm => mm < 0) : (mm => mm > 0);
       const flush = () => { if (seg.length > 1) { PL(seg.map(([o, z]) => [xo(o), yz(z - SY)]), 0.5, "#00a000"); for (const [o, z] of [seg[0], seg[seg.length - 1]]) L(xo(o), yz(z), xo(o), yz(z - SY), 0.5, "#00a000"); } seg = []; };
       for (let i = 1; i < part.length; i++) { const [a, s1, r1] = part[i - 1], [b, s2, r2] = part[i]; if (want(((r1 - s1) + (r2 - s2)) / 2)) { if (!seg.length) seg.push([a, s1]); seg.push([b, s2]); } else flush(); } flush(); }
-  }
-  const groundLabel = O.sectionGroundLabel(sec.full, xo, yz, 3);
-  if (groundLabel) {
-    G.push({ t: "x", x: groundLabel.x, y: groundLabel.y, s: "Arazi", size: 2.45,
-      al: "c", bold: true, color: "#fff", sectionGroundBadge: true });
   }
   // orta eksen (0)
   const AXX = xo(0);
@@ -6717,11 +6692,6 @@ O.paint = (ctx, G, pxmm, W = 297, H = 210) => {
   for (const g of G) if (g.t === "x" && !g._acadOmit) { ctx.save(); ctx.translate(X(g.x), Y(g.y)); if (g.rot) ctx.rotate(-g.rot * Math.PI / 180);
     ctx.fillStyle = g.color; ctx.font = `${g.it ? "italic " : ""}${g.bold ? "700 " : ""}${g.size * 1.32 * pxmm}px ${g.kroki84?'AcadArial89,Arial,Kroki84,':''}Arial, "Liberation Sans", Arimo, "Helvetica Neue", sans-serif`;
     ctx.textAlign = g.al === "c" ? "center" : g.al === "r" ? "right" : "left"; ctx.textBaseline = "middle";
-    if (g.sectionGroundBadge) {
-      const w = ctx.measureText(g.s).width / 2 + 1.4 * pxmm, h = g.size * .92 * pxmm;
-      ctx.fillStyle = "#222a33"; ctx.fillRect(-w, -h, w * 2, h * 2);
-      ctx.fillStyle = g.color;
-    }
     ctx.fillText(g.s, 0, 0); ctx.restore(); }
   for (const g of G) if (g.t === "i") { const im = O.IMG[g.k]; if (!im) continue; ctx.save(); try { ctx.globalCompositeOperation = "multiply"; } catch (e) {} ctx.drawImage(im, X(g.x), Y(g.y + g.h), g.w * pxmm, g.h * pxmm); ctx.restore(); }
   ctx.restore();
@@ -6942,8 +6912,7 @@ O.sheetToDxf = (D, G, ox, oy, s = 1) => { // sayfa ilkellerini DXF'e (mm → s b
       if (pts.length === 2) D.line(l, pts[0], pts[1], l === lay ? COLD[g.color] : 0);
       else D.poly(l, pts, false);
     } else if (g.t === "x") {
-      const y = g.sectionGroundBadge ? g.y + g.size : g.y;
-      D.text(g.detail ? D.lay("AYRINTI_YAZI",7) : lt, ox + g.x * s, oy + y * s, g.size * s * 0.9, g.s, g.rot, g.al, COLD[g.color] && COLD[g.color] !== 7 ? COLD[g.color] : 0);
+      D.text(g.detail ? D.lay("AYRINTI_YAZI",7) : lt, ox + g.x * s, oy + g.y * s, g.size * s * 0.9, g.s, g.rot, g.al, COLD[g.color] && COLD[g.color] !== 7 ? COLD[g.color] : 0);
     }
   }
 };
@@ -11715,18 +11684,6 @@ function paintPlanSection(section, compare, cursor = null) {
       if (i) g.lineTo(x(p[0]), y(p[key])); else g.moveTo(x(p[0]), y(p[key]));
     });
     g.stroke();
-  }
-  if (compare || planSections.singleName === "Siyah arazi") {
-    const badge = O.sectionGroundLabel(section.parts, x, y, compare ? 24 : 0);
-    if (badge) {
-      g.font = "600 19px Arial";
-      const half = g.measureText("Arazi").width / 2 + 10;
-      const bx = Math.max(left + half, Math.min(right - half, badge.x));
-      g.fillStyle = "#222a33";
-      g.fillRect(bx - half, badge.y - 13, half * 2, 26);
-      g.fillStyle = "#fff"; g.textAlign = "center";
-      g.fillText("Arazi", bx, badge.y);
-    }
   }
   if (cursor === null) return;
   const offset = x0 + (Math.max(left, Math.min(right, cursor)) - left) / (right - left) * (x1 - x0);
