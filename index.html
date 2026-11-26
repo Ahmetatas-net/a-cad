@@ -1922,6 +1922,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     <div class="card kub-section-list">
       <h2>Kesit listesi</h2>
       <div class="scroll"><table class="t" id="kTable"></table></div>
+      <div class="row" id="sectionPages" hidden><button type="button" id="sectionPagePrev">Önceki sayfa</button><span id="sectionPageInfo"></span><button type="button" id="sectionPageNext">Sonraki sayfa</button></div>
     </div>
   </section>
 
@@ -5457,7 +5458,17 @@ K.num = s => { if (s == null) return NaN; const t = String(s).trim().replace(/\s
 K.hSet = h => { for (const k of Object.keys(K.H0)) if (Number.isInteger(+h[k]) && +h[k] >= 0 && +h[k] <= 4) K.H[k] = +h[k]; try { localStorage.setItem("acad_hane", JSON.stringify(K.H)); } catch (e) {} try { window.dispatchEvent(new CustomEvent("acadHane", { detail: K.H })); } catch (e) {} };
 K.cm = p => { const m = Math.pow(10, K.H.k); return [Math.round(p[0] * m) / m, Math.round(p[1] * m) / m].concat(p.length > 2 ? [p[2]] : []); };
 K.fx_ = (v, n) => isFinite(+v) ? (+v).toFixed(n) : ""; K.fk = v => K.fx_(v, K.H.k); K.fz = v => K.fx_(v, K.H.z); K.fc = v => K.fx_(v, K.H.c); K.fa = v => K.fx_(v, K.H.a); K.fu = v => K.fx_(v, K.H.u); K.nf = n => n > 0 ? "0." + "0".repeat(n) : "0";
-K.tr = (v, n = 2) => isFinite(v) ? v.toLocaleString("tr-TR", { minimumFractionDigits: n, maximumFractionDigits: n }) : "—";
+const trNumberFormats = new Map();
+K.tr = (v, n = 2) => {
+  if (!isFinite(v)) return "—";
+  if (typeof v !== "number") return v.toLocaleString("tr-TR", {minimumFractionDigits:n, maximumFractionDigits:n});
+  let fmt = trNumberFormats.get(n);
+  if (!fmt) {
+    fmt = new Intl.NumberFormat("tr-TR", {minimumFractionDigits:n, maximumFractionDigits:n});
+    trNumberFormats.set(n,fmt);
+  }
+  return fmt.format(v);
+};
 K.tk = v => K.tr(v, K.H.k); K.tz = v => K.tr(v, K.H.z); K.tc = v => K.tr(v, K.H.c); K.ta = v => K.tr(v, K.H.a); K.tu = v => K.tr(v, K.H.u);
 K.kmtxt = m => { const s = m < 0 ? "-" : ""; m = Math.abs(m); const a = Math.floor(m / 1000 + 1e-9); let b = m - a * 1000; if (b < 0) b = 0;
   return s + a + "+" + b.toFixed(2).padStart(6, "0"); };
@@ -10819,25 +10830,132 @@ function modelLoops(M) { if (!M || !M.tri || !M.tri.length) return []; if (HULLC
     if (L.length >= 3) loops.push(L.map(i => [M.pts[i].e, M.pts[i].y])); } loops.sort((a, b) => K.area(b) - K.area(a)); HULLC.set(M, loops); return loops; }
 function modelArea(x, y) { const pick = (M, ad) => { const L = modelLoops(M).filter(l => K.inPoly(l, x, y)); return L.length ? { ad, pts: L.sort((a, b) => K.area(a) - K.area(b))[0], idx: -1, model: true } : null; };
   const kir = MR && MR.tri && MR.tri.length ? pick(MR, "Kırmızı üçgenlerin alanı · ilk–son hâl farkı") : null; return kir || pick(MS, "Siyah üçgenlerin alanı · ilk–son hâl farkı"); }
-let kubVolumeBatch=null,kubCacheHits=0,kubCacheMisses=0;
-function kubVolume(S,R,poly,sy,es,limit,cut){
- if(!kubVolumeBatch)return K.surfDiff(S,R,poly,sy,es,limit,cut);
- const key=JSON.stringify([K.siyMod,sy,es,cut,poly||null]),hit=kubVolumeBatch.get(key);
- if(hit&&hit.S===S&&hit.R===R&&(hit.r.kesin===true||hit.limit===limit)){kubCacheHits++;return {...hit.r};}
- const r=K.surfDiff(S,R,poly,sy,es,limit,cut);kubCacheMisses++;if(r)kubVolumeBatch.set(key,{S,R,limit,r:{...r}});return r;
+/* Share the calculation kernel with the offline worker. The live plan keeps ownership of
+   its coordinates and indices. Only transferable copies cross the worker boundary. */
+function terrainJob(S, R, j) {
+  K.siyMod = j.mode;
+  const volume = (model, target, limit) => K.surfDiff(model, target, j.poly, j.depth, j.fillThreshold, limit, j.cutThreshold);
+  if (j.type === "sections") return calculateSectionRows(S, R, j);
+  if (j.type === "volume") return volume(S, R, j.limit);
+  if (j.type === "singleSections") {
+    const model = j.surface === "S" ? S : R;
+    return sectionsAlongAxis(model, model, j.axis, projectSectionStations(j.axis,j.settings),
+      j.poly, j.half, false, false, j.settings);
+  }
+  const model = j.surface === "R" ? R : S;
+  const reference = {flat:j.z, tri:[], pts:[], grid:model.grid};
+  const r = volume(model, reference, 250000);
+  if (j.type === "scenario") return r;
+  const sv = j.mk > 0 || j.mf > 0 ? K.sevBand(model, j.poly, j.z, j.mk, j.mf) : null;
+  let zmin = Infinity, zmax = -Infinity;
+  for (const p of model.pts) if (K.inPoly(j.poly, p.e, p.y)) {
+    zmin = Math.min(zmin, p.z); zmax = Math.max(zmax, p.z);
+  }
+  return {r, sv, zmin, zmax};
 }
-function areaCalc(pts) { if (!(MS && MS.tri.length && MR && (MR.flat !== undefined || MR.tri.length))) return null; if (MR.flat !== undefined && !MR.grid) MR.grid = MS.grid; return kubVolume(MS, MR, pts, SYE(), +ST.set.esik || 0, 120000, +ST.set.kesik || 0); }
+function terrainWorkerMain() {
+  let S, R;
+  function unpack(m) {
+    if (!m || m.flat !== undefined) return m;
+    const pts = new Array(m.xyz.length / 3);
+    for (let i = 0; i < pts.length; i++) pts[i] = {e:m.xyz[i*3], y:m.xyz[i*3+1], z:m.xyz[i*3+2]};
+    return K.index({pts, tri:m.tri});
+  }
+  self.onmessage = ({data}) => {
+    try {
+      if (data.models) {
+        S = unpack(data.models[0]); R = unpack(data.models[1]);
+        if (R?.flat !== undefined && S) R.grid = S.grid;
+      }
+      self.postMessage({id:data.id, result:terrainJob(S, R, data.job)});
+    } catch (error) { self.postMessage({id:data.id, error:error.message}); }
+  };
+}
+const terrainTasks = new Map(), volumeRequests = new Map();
+let terrainWorker = null, terrainVersion = -1, terrainSequence = 0, terrainSource = null;
+function stopTerrainWorker(error) {
+  terrainWorker?.terminate(); terrainWorker = null;
+  for (const task of terrainTasks.values()) task.reject(error);
+  terrainTasks.clear(); volumeRequests.clear();
+}
+function terrainRun(job) {
+  if (terrainVersion !== MVER) {
+    stopTerrainWorker(new Error("Arazi modeli değişti.")); terrainVersion = MVER;
+  }
+  if (typeof Worker !== "function") {
+    const first=MS, last=MR;
+    return Promise.resolve().then(() => {
+      if(last?.flat!==undefined && first)last.grid=first.grid;
+      return terrainJob(first,last,job);
+    });
+  }
+  return new Promise((resolve, reject) => {
+    const id = ++terrainSequence, transfer = [];
+    try {
+      let models;
+      if (!terrainWorker) {
+        if (!terrainSource) terrainSource = new Blob([
+          document.querySelector('script[data-src="core.js"]').textContent,
+          "\nconst KMRE = ",KMRE.toString(),";\n",
+          [terrainJob, terrainWorkerMain, calculateSectionRows, projectSectionStations, sectionsAlongAxis, terrainAutoAxis].map(fn=>fn.toString()).join("\n"),
+          "\nterrainWorkerMain();"
+        ], {type:"text/javascript"});
+        const url = URL.createObjectURL(terrainSource);
+        try { terrainWorker = new Worker(url); } finally { URL.revokeObjectURL(url); }
+        const worker = terrainWorker;
+        worker.onerror = e => { if (worker === terrainWorker) stopTerrainWorker(Error(e.message || "Arka plan hesabı başlatılamadı.")); };
+        worker.onmessage = ({data}) => {
+          const task = terrainTasks.get(data.id); if (!task) return;
+          terrainTasks.delete(data.id); if (data.error) task.reject(Error(data.error)); else task.resolve(data.result);
+        };
+        models = [MS,MR].map(m => {
+          if (!m) return null;
+          if (m.flat !== undefined) return {flat:m.flat, tri:[], pts:[]};
+          const xyz = new Float64Array(m.pts.length*3), tri = Int32Array.from(m.tri);
+          for (let i=0; i<m.pts.length; i++) {
+            const p=m.pts[i]; xyz[i*3]=p.e; xyz[i*3+1]=p.y; xyz[i*3+2]=p.z;
+          }
+          transfer.push(xyz.buffer,tri.buffer); return {xyz,tri};
+        });
+      }
+      terrainTasks.set(id,{resolve,reject});
+      terrainWorker.postMessage({id,models,job},transfer);
+    } catch (error) { stopTerrainWorker(error); reject(error); }
+  });
+}
+function terrainSettings() {
+  const depth = SYE();
+  return {depth, mode:K.siyMod, fillThreshold:+ST.set.esik||0, cutThreshold:+ST.set.kesik||0};
+}
+function terrainVolume(poly, limit=250000) {
+  if (!MS?.tri.length || !MR || !(MR.tri.length || MR.flat !== undefined)) return Promise.resolve(null);
+  const job = {type:"volume", ...terrainSettings(), poly:poly||null, limit};
+  const key = JSON.stringify([MVER,job]);
+  if (volumeRequests.has(key)) return volumeRequests.get(key);
+  const request = terrainRun(job);
+  volumeRequests.set(key,request);
+  if (volumeRequests.size>32) volumeRequests.delete(volumeRequests.keys().next().value);
+  request.catch(()=>{if(volumeRequests.get(key)===request)volumeRequests.delete(key);});
+  return request;
+}
+function areaCalc(pts) { if (!(MS && MS.tri.length && MR && (MR.flat !== undefined || MR.tri.length))) return null; if (MR.flat !== undefined && !MR.grid) MR.grid = MS.grid; return K.surfDiff(MS, MR, pts, SYE(), +ST.set.esik || 0, 120000, +ST.set.kesik || 0); }
 function pickArea(X, Y) {
   const x = wx(X), y = wy(Y); const hit = areaCands().filter(c => K.inPoly(c.pts, x, y)).sort((a, b) => K.area(a.pts) - K.area(b.pts))[0] || modelArea(x, y);
   if (!hit) { const q = kotAt(x, y); if (q.s != null || q.k != null) { showQuery(x, y); return true; } closePop(); return false; }
-  PICK = hit; QMARK = [x, y]; draw(); const r = areaCalc(hit.pts); const A = K.area(hit.pts); const pop = $("pop"); pop.hidden = false; const kq = kotAt(x, y), f3q = v => v == null || !isFinite(v) ? "—" : (+v).toFixed(3);
+  PICK = hit; QMARK = [x, y]; draw(); const A = K.area(hit.pts); const pop = $("pop"); pop.hidden = false; const kq = kotAt(x, y), f3q = v => v == null || !isFinite(v) ? "—" : (+v).toFixed(3);
   const yerH = `<div class="stat" style="margin-bottom:4px"><div><div class="k">Y</div><div class="v" style="font-size:1rem">${f3q(x)}</div></div><div><div class="k">X</div><div class="v" style="font-size:1rem">${f3q(y)}</div></div><div><div class="k">Siyah</div><div class="v" style="font-size:1rem">${f3q(kq.s)}</div></div><div><div class="k" style="color:#c00">Kırmızı</div><div class="v" style="font-size:1rem;color:#c00">${f3q(kq.k)}</div></div></div>`;
   const isKub = hit.idx >= 0 && ST.alanlar[hit.idx].kubaj;
   pop.innerHTML = `<div class="row" style="justify-content:space-between"><b style="font-size:1.02rem">${esc(hit.ad)}</b><button type="button" id="popX" style="padding:4px 10px">Kapat</button></div><div class="note">Dokunulan yer:</div>${yerH}
     <div class="note">Alan ${K.tr(A)} m² · ${K.tr(A / 1000, 3)} dekar · çevre ${K.tr(K.perim(hit.pts))} m</div>
-    ${r ? `<div class="stat"><div><div class="k">Kazı</div><div class="v">${K.tr(r.kazi)} <small>m³</small></div></div>${r.dolgu > 0 || r.siy > 0.0005 ? `<div><div class="k">Dolgu</div><div class="v">${K.tr(r.dolgu)} <small>m³</small></div></div><div><div class="k">Sıyırma</div><div class="v">${K.tr(r.siy)} <small>m³</small></div></div>` : ""}</div>
-      <div class="note">İki yüzey farkı, bu alanın içinde${r.ortak < A * 0.98 ? ` · <span class="pill bad">alanın %${K.tr((1 - r.ortak / A) * 100, 1)}'i modellerin dışında</span>` : ""}</div>` : `<div class="note"><span class="pill bad">Kübaj için ilk hâl ve son hâl yüklenmeli</span></div>`}
+    <div data-query-volume>Hacim hesaplanıyor…</div>
     <div class="row"><button type="button" class="primary" id="popK">${isKub ? "Kesitleri göster" : "Kübaj alanı yap ve kesitleri hesapla"}</button></div>`;
+  const field=pop.querySelector("[data-query-volume]"), generation=terrainGeneration;
+  terrainVolume(hit.pts,120000).then(r=>{
+    if(!field.isConnected)return;
+    if(generation!==terrainGeneration){field.textContent="Veri değişti. Alanı yeniden sorgula.";return;}
+    field.innerHTML=r ? `<div class="stat"><div><div class="k">Kazı</div><div class="v">${K.tr(r.kazi)} <small>m³</small></div></div>${r.dolgu > 0 || r.siy > 0.0005 ? `<div><div class="k">Dolgu</div><div class="v">${K.tr(r.dolgu)} <small>m³</small></div></div><div><div class="k">Sıyırma</div><div class="v">${K.tr(r.siy)} <small>m³</small></div></div>` : ""}</div>
+      <div class="note">İki yüzey farkı, bu alanın içinde${r.ortak < A * 0.98 ? ` · <span class="pill bad">alanın %${K.tr((1 - r.ortak / A) * 100, 1)}'i modellerin dışında</span>` : ""}</div>` : `<div class="note"><span class="pill bad">Kübaj için ilk hâl ve son hâl yüklenmeli</span></div>`;
+  }).catch(()=>{if(field.isConnected)field.textContent="Hacim hesaplanamadı.";});
   $("popX").onclick = closePop;
   $("popK").onclick = () => { let i = hit.idx; if (i < 0) { ST.alanlar.push({ ad: hit.ad, kubaj: false, pts: hit.pts }); i = ST.alanlar.length - 1; }
     ST.alanlar.forEach((a, j) => a.kubaj = j === i); $("sdB_alan") && ($("sdB_alan").checked = true); SECS = []; save(); renderAlanlar(); closePop(); recalcIfReady(); showTab("kesit"); };
@@ -11351,7 +11469,11 @@ function lineInfo(X, Y) { let best = null, bd = 12; const chk = (P, cl, meta) =>
     + `<div class="note" style="margin-top:4px"><b>Dokunulan kenar</b></div>` + stP([["Kenar", K.tr(sl, 3) + " m"], ["Semt", azP(a, b).toFixed(4) + "ᵍ"], ["ΔY / ΔX", `${K.tr(b[0] - a[0], 3)} / ${K.tr(b[1] - a[1], 3)}`]])
     + stP([["Baş Y", f3p(a[0])], ["X", f3p(a[1])], ["Siyah", f3p(ka.s)]]) + stP([["Son Y", f3p(b[0])], ["X", f3p(b[1])], ["Siyah", f3p(kb.s)]]) + (ka.s != null && kb.s != null && sl > 0 ? `<div class="note">Siyah yüzeyde eğim %${((kb.s - ka.s) / sl * 100).toFixed(2)}</div>` : "")
     + (cl ? `<div class="row" style="margin-top:6px"><button type="button" id="liKub">Bu alanın kübajı</button></div>` : ""));
-  if (cl) $("liKub").onclick = () => { const c = P.reduce((s, q) => [s[0] + q[0] / P.length, s[1] + q[1] / P.length], [0, 0]); const r_ = areaCalc(P); popShow(`<b>Kübaj · ${esc(best.ad)}</b>` + (r_ && r_.ortak > 0 ? stP([["Kazı", K.tr(r_.kazi) + " m³"], ["Dolgu", K.tr(r_.dolgu) + " m³"], ["Alan", K.tr(K.area(P)) + " m²"]]) + `<div class="note">Kesin hesap (üçgen kesişimleri)${r_.ortak < K.area(P) * 0.99 ? ` · alanın %${K.tr((1 - r_.ortak / K.area(P)) * 100, 1)}'i modellerin dışında` : ""}</div>` : `<div class="note">Bu alanda iki yüzey birlikte yok.</div>`)); };
+  if (cl) $("liKub").onclick = async e => { const button=e.currentTarget, generation=terrainGeneration;
+    button.disabled=true;button.textContent="Hesaplanıyor…";
+    let r_;try{r_=await terrainVolume(P,120000);}catch(error){if(button.isConnected)button.textContent="Hacim hesaplanamadı.";return;}
+    if(!button.isConnected || $("pop").hidden || generation!==terrainGeneration)return;
+    popShow(`<b>Kübaj · ${esc(best.ad)}</b>` + (r_ && r_.ortak > 0 ? stP([["Kazı", K.tr(r_.kazi) + " m³"], ["Dolgu", K.tr(r_.dolgu) + " m³"], ["Alan", K.tr(K.area(P)) + " m²"]]) + `<div class="note">Kesin hesap (üçgen kesişimleri)${r_.ortak < K.area(P) * 0.99 ? ` · alanın %${K.tr((1 - r_.ortak / K.area(P)) * 100, 1)}'i modellerin dışında` : ""}</div>` : `<div class="note">Bu alanda iki yüzey birlikte yok.</div>`)); };
   return true; }
 $("tEdit").addEventListener("click", () => window.planEdit && window.planEdit());
 $("tFit").addEventListener("click", fit);
@@ -11383,12 +11505,24 @@ $("tAlan").addEventListener("click", () => startMode(MODE === "alan" ? null : "a
 $("tEksen").addEventListener("click", () => startMode(MODE === "eksen" ? null : "eksen"));
 $("tProf").addEventListener("click", () => { closePop(); startMode(MODE === "profil" ? null : "profil"); });
 $("kubAxisProfile").addEventListener("click",()=>{closePop();if(!ST.eksen||ST.eksen.length<2){startMode("eksen");$("dbTxt").textContent="Önce ekseni çiz: iki veya daha fazla noktaya dokun, Bitir.";return;}startMode(null);profShow(ST.eksen.map(q=>q.slice(0,2)),"Eksen");});
-function drawbar() { $("drawbar").hidden = !MODE; $("coord").hidden = !!MODE;
+let draftVolumeTimer, draftVolumeRevision=0;
+function drawbar() {
+  const revision=++draftVolumeRevision; clearTimeout(draftVolumeTimer); $("drawbar").hidden = !MODE; $("coord").hidden = !!MODE;
   const pickAxis = MODE === "enkesit-eksen";
   $("dbUndo").hidden = $("dbDone").hidden = pickAxis;
   if (!MODE) return;
   if (pickAxis) { $("dbTxt").textContent = "Plandaki açık çizgiye dokun."; return; }
-  if (MODE === "alan") { let v = ""; if (DRAFT.length >= 3) { try { const r = areaCalc(DRAFT); if (r) v = ` · Kazı ${K.tr(r.kazi)} m³ · Dolgu ${K.tr(r.dolgu)} m³`; } catch (e) {} } $("dbTxt").textContent = DRAFT.length < 3 ? `Alan: köşelere dokun (${DRAFT.length} nokta)` : `Alan ${K.tr(K.area(DRAFT))} m²${v}`; }
+  if (MODE === "alan") {
+    const label=$("dbTxt");
+    label.textContent=DRAFT.length<3 ? "Alan: köşelere dokun ("+DRAFT.length+" nokta)" : "Alan "+K.tr(K.area(DRAFT))+" m²";
+    const generation=terrainGeneration;
+    if(DRAFT.length>=3)draftVolumeTimer=setTimeout(async()=>{
+      try {const r=await terrainVolume(DRAFT,120000);
+        if(r && revision===draftVolumeRevision && generation===terrainGeneration && MODE==="alan")
+          label.textContent+=" · Kazı "+K.tr(r.kazi)+" m³ · Dolgu "+K.tr(r.dolgu)+" m³";
+      }catch(error){if(revision===draftVolumeRevision)label.textContent+=" · Hacim hesaplanamadı.";}
+    },100);
+  }
   else if (MODE === "alansil") $("dbTxt").textContent = `Alanla sil: köşelere dokun (${DRAFT.length}) · sağ tuş / Bitir = içindekileri sil`;
   else if (MODE === "profil") $("dbTxt").textContent = DRAFT.length < 2 ? `Profil: hat boyunca dokun (${DRAFT.length})${ST.eksen ? " · ya da Bitir: eksen boyunca" : ""}` : `Profil hattı ${K.tr(K.perim(DRAFT, false))} m`;
   else $("dbTxt").textContent = (DRAFT.length < 2 ? `${ST.eksen ? "Yeni eksen" : "Eksen"}: başlangıçtan itibaren dokun (${DRAFT.length})` : `Eksen uzunluğu ${K.tr(K.perim(DRAFT, false))} m`) + (ST.eksen ? " · Bitir'e basınca eski eksenin yerine geçer" : ""); }
@@ -11759,33 +11893,53 @@ function profSheet() { const P = PROF.pts, G = [], T = (x, y, s_, sz = 2, al = "
   T(185, 14, "HARİTA MÜHENDİSİ", 2.4, "c"); T(185, 10, ST.proj.s2 || "", 2.2, "c"); try { O.kase(G, 250, 14, 36); } catch (e) {} return G; }
 /* ---------- baz kotu (proje kotu) ile kübaj: tek yüzey yeter ---------- */
 function bazModel() { const m = $("bzM").value; const hasS = MS && MS.tri && MS.tri.length, hasR = MR && MR.tri && MR.tri.length; if (m === "S") return hasS ? ["siyah", MS] : null; if (m === "R") return hasR ? ["kırmızı", MR] : null; return hasS ? ["siyah", MS] : hasR ? ["kırmızı", MR] : null; }
-function bazCalc() { const z = K.num($("bzK").value); const out = $("bzRes"), nt = $("bzNote"); window.BZR = null; out.innerHTML = ""; if (!isFinite(z)) { out.innerHTML = ""; nt.textContent = "Baz kotunu yaz."; return; } const mm = bazModel(); if (!mm) { out.innerHTML = ""; nt.textContent = "Önce Veri'de siyah ya da kırmızı yüzeyi yükle."; return; }
+let bazGeneration = 0, bazPending = false;
+async function bazCalc() { const generation=++bazGeneration, version=MVER; bazPending=false; const z = K.num($("bzK").value); const out = $("bzRes"), nt = $("bzNote"); window.BZR = null; out.innerHTML = ""; if (!isFinite(z)) { out.innerHTML = ""; nt.textContent = "Baz kotunu yaz."; return; } const mm = bazModel(); if (!mm) { out.innerHTML = ""; nt.textContent = "Önce Veri'de siyah ya da kırmızı yüzeyi yükle."; return; }
   const [ad, M] = mm; let poly = null, pad = ""; if ($("bzA").value === "kub") { const k = ST.alanlar.find(a => a.kubaj); if (k) { poly = k.pts; pad = k.ad; } } if (!poly) { const L = modelLoops(M); poly = L[0]; pad = "modelin tamamı"; } if (!poly) { nt.textContent = "Sınır bulunamadı."; return; }
   const mk = K.parseSev($("bzSk").value), mf = K.parseSev($("bzSd").value); if (!isFinite(mk) || !isFinite(mf)) { out.innerHTML = ""; nt.textContent = "Şev eğimini 1D/1.5Y biçiminde yaz (1 düşey / 1,5 yatay), dik için boş bırak."; return; }
-  const SY = SYE(), TUMB = K.siyMod === "tum" && SY > 0, KZB = K.siyMod === "kazi" && SY > 0; let r; /* Hesap sekmesiyle AYNI motor ve AYNI ayarlar (sıyırma kuralı, kazı/dolgu eşiği): iki yerde farklı sonuç çıkmasın */
-  try { r = K.surfDiff(M, { flat: z, pts: [], tri: new Int32Array(0), grid: M.grid }, poly, SY, +ST.set.esik || 0, 250000, +ST.set.kesik || 0); if (!r?.ortak) throw Error("ortak alan yok"); if (!validVolumeResult(r)) throw Error("geçerli bir sayısal sonuç üretilemedi"); } catch (e) { nt.textContent = "Hesaplanamadı: " + e.message; return; } /* sıyırma kuralı Kesit ayarlarından */
-  let sv = null; if (mk > 0 || mf > 0) try { sv = K.sevBand(M, poly, z, mk, mf); } catch (e) { console.error(e); } /* kesin hesap: her üçgen sınırla kırpılıp baz kotunda bölünür (ızgara yaklaşımı yok) */
-  const A_ = K.area(poly); let zmin = Infinity, zmax = -Infinity; for (const p of M.pts) { if (K.inPoly(poly, p.e, p.y)) { zmin = Math.min(zmin, p.z); zmax = Math.max(zmax, p.z); } }
+  bazPending = true; nt.textContent = "Baz kotu hesabı sürüyor…";
+  let r, sv, zmin, zmax;
+  try {
+    const result = await terrainRun({type:"baz", ...terrainSettings(), surface:M===MR?"R":"S", z, poly, mk, mf});
+    if (generation !== bazGeneration || version !== MVER) return;
+    ({r, sv, zmin, zmax} = result);
+    if (!r?.ortak || !validVolumeResult(r)) throw Error("Geçerli bir ortak hacim bulunamadı.");
+  } catch (e) { if(generation===bazGeneration) nt.textContent="Baz kotu hesabı tamamlanamadı. "+e.message; return; }
+  finally { if(generation===bazGeneration) bazPending=false; }
+  const A_ = K.area(poly);
   const sw = v => v ? (v === Math.round(v) ? v : K.tr(v, 2).replace(/0$/, "")) : "";
   out.innerHTML = `<div><div class="k">Kazı${sv ? " (toplam)" : ""}</div><div class="v">${K.tr(r.kazi + (sv ? sv.kazi : 0))} <small>m³</small></div></div><div><div class="k">Dolgu${sv ? " (toplam)" : ""}</div><div class="v">${K.tr(r.dolgu + (sv ? sv.dolgu : 0))} <small>m³</small></div></div><div><div class="k">Platform alanı</div><div class="v">${K.tr(A_)} <small>m²</small></div></div>${r.siy > 0.0005 ? `<div><div class="k">Sıyırma</div><div class="v">${K.tr(r.siy)} <small>m³</small></div></div>` : ""}` +
     (sv ? `<table class="t" style="flex-basis:100%;margin-top:6px"><thead><tr><th></th><th>Kazı m³</th><th>Dolgu m³</th></tr></thead><tbody><tr><td>Platform (sınır içi, kesin)</td><td>${K.tr(r.kazi)}</td><td>${K.tr(r.dolgu)}</td></tr><tr><td>Şev (kazı ${mk ? "1D/" + sw(mk) + "Y" : "dik"}, dolgu ${mf ? "1D/" + sw(mf) + "Y" : "dik"})</td><td>${K.tr(sv.kazi)}</td><td>${K.tr(sv.dolgu)}</td></tr><tr><td><b>Toplam</b></td><td><b>${K.tr(r.kazi + sv.kazi)}</b></td><td><b>${K.tr(r.dolgu + sv.dolgu)}</b></td></tr></tbody></table>` : "");
   window.BZR = { z, ad, M, poly, pad, r, sv, mk, mf, A: A_, zmin, zmax, sk: $("bzSk").value, sd: $("bzSd").value }; nt.innerHTML = `${ad} yüzey · baz kotu <b>${z.toFixed(3)}</b> · ${SYTXT()} · sınır: ${esc(pad)}${isFinite(zmin) ? ` · yüzey kotu ${zmin.toFixed(2)} – ${zmax.toFixed(2)}` : ""}${r.ortak < A_ * 0.98 ? ` · <span class="pill bad">alanın %${K.tr((1 - r.ortak / A_) * 100, 1)}'i modelin dışında</span>` : ""}. Kazı = yüzeyin baz üstündeki hacmi, dolgu = baz altındaki boşluk. Hesap kesin: üçgenler sınırla kırpılıp baz kotunda bölünür, yaklaşık ızgara kullanılmaz (kazı alanı ${K.tr(r.kaziAlan)} m² · dolgu alanı ${K.tr(r.dolguAlan)} m²).${sv ? ` Şev: platform kenarından eğimle araziye bağlanır; köşeler koni olarak alınır. Kazı şevi izi ${K.tr(sv.kaziAlan)} m², dolgu şevi izi ${K.tr(sv.dolguAlan)} m², ${K.tr(sv.cell, 2)} m hücre, yakınsama farkı %${K.tr(sv.yakinsama * 100, 2)}.${sv.tasma > 0.5 ? ` <span class="pill bad">Şev ${K.tr(sv.tasma)} m² kadar yüzey modelinin dışına taşıyor; o kısım hesaba girmedi, modeli genişlet.</span>` : ""}` : ""}`; ST.set.baz = { z, m: $("bzM").value, a: $("bzA").value, sk: $("bzSk").value, sd: $("bzSd").value }; save(); }
-$("bzGo").addEventListener("click", () => { bazCalc(); try { pKubGoster(false); } catch (e) {} }); $("bzTe").addEventListener("click", () => { const m = $("bzM").value; teAc(m === "R" ? "R" : (m === "S" ? "S" : (MS && MS.tri && MS.tri.length ? "S" : "R"))); }); $("bazCard").querySelector("summary").addEventListener("click", () => { $("bazCard").dataset.u = 1; });
+$("bzGo").addEventListener("click", () => { bazCalc().then(()=>pKubGoster(false)); }); $("bzTe").addEventListener("click", () => { const m = $("bzM").value; teAc(m === "R" ? "R" : (m === "S" ? "S" : (MS && MS.tri && MS.tri.length ? "S" : "R"))); }); $("bazCard").querySelector("summary").addEventListener("click", () => { $("bazCard").dataset.u = 1; });
 for (const [h, t, inf] of [["hS", "fS", "hSi"], ["hK", "fK", "hKi"]]) $(h).addEventListener("change", e => { const f = e.target.files[0]; if (!f) return; e.target.value = ""; $(inf).textContent = "Okunuyor…"; const dt = new DataTransfer(); dt.items.add(f); $(t).files = dt.files; $(t).dispatchEvent(new Event("change", { bubbles: true }));
-  let n = 0; const iv = setInterval(() => { n++; const src = (t === "fS" ? ST.S.src : ST.R.src) || ""; const M_ = t === "fS" ? MS : MR; if ((src.startsWith(f.name) && M_ && M_.tri && M_.tri.length) || n > 60) { clearInterval(iv); $(inf).innerHTML = M_ && M_.tri && M_.tri.length ? `✓ ${esc(src)} · ${fmtN(M_.pts.length)} nokta · ${fmtN(M_.tri.length / 3)} üçgen` : `<span class="pill bad">${esc(f.name)}: üçgen model oluşmadı (Veri sekmesinde tabaka seçimini kontrol et)</span>`; try { recalcIfReady(); } catch (er) {} try { surfDiff(); } catch (er) {} } }, 150); }); ["bzK", "bzM", "bzA", "bzSk", "bzSd"].forEach(id => $(id).addEventListener("change", () => { if ($("bzRes").innerHTML) bazCalc(); }));
+  let n = 0; const iv = setInterval(() => { n++; const src = (t === "fS" ? ST.S.src : ST.R.src) || ""; const M_ = t === "fS" ? MS : MR; if ((src.startsWith(f.name) && M_ && M_.tri && M_.tri.length) || n > 60) { clearInterval(iv); $(inf).innerHTML = M_ && M_.tri && M_.tri.length ? `✓ ${esc(src)} · ${fmtN(M_.pts.length)} nokta · ${fmtN(M_.tri.length / 3)} üçgen` : `<span class="pill bad">${esc(f.name)}: üçgen model oluşmadı (Veri sekmesinde tabaka seçimini kontrol et)</span>`; recalcIfReady(); } }, 150); }); ["bzK", "bzM", "bzA", "bzSk", "bzSd"].forEach(id => $(id).addEventListener("change", () => { if (bazPending || $("bzRes").innerHTML) bazCalc(); }));
 $("bzSec").addEventListener("click", () => { const z = K.num($("bzK").value); if (!isFinite(z)) return; const mm = bazModel(); if (!mm) return; if (mm[1] === MR) { ST.S = { pts: ST.R.pts, tri: ST.R.tri, src: (ST.R.src || "") + " (siyaha alındı)" }; } ST.R = { mode: "sabit", flat: z, pts: null, tri: null, src: "" }; try { document.querySelector(`input[name=kmode][value=sabit]`).checked = true; $("kSabit").value = z; } catch (e) {} buildModels(); SECS = []; save(); try { info(); } catch (e) {} recalcIfReady(); $("bzNote").innerHTML += " <b>Kesitler bu baz kotuyla hesaplandı (kırmızı = sabit kot).</b>"; });
 setTimeout(() => { try { const b = ST.set.baz; if (b) { $("bzK").value = b.z; $("bzM").value = b.m || "auto"; $("bzA").value = b.a || "kub"; $("bzSk").value = b.sk || ""; $("bzSd").value = b.sd || ""; } } catch (e) {} }, 0);
+let areaObserver;
 function renderAlanlar() {
+  areaObserver?.disconnect();
   setTimeout(renderKat, 0);
   const L = $("alanList");
   if (!ST.alanlar.length) L.innerHTML = `<p class="note">Henüz alan yok. Plan üzerinde "Alan çevir" ile çiz ya da nokta adlarıyla oluştur.</p>`;
   else L.innerHTML = ST.alanlar.map((a, i) => `<div class="alan"><div><input class="nm" data-i="${i}" value="${esc(a.ad)}" aria-label="Alan adı" style="font-weight:700;max-width:260px"></div>
     <div class="ar">${K.tr(K.area(a.pts))} m²</div>
     <div class="row"><label style="flex-direction:row;align-items:center;gap:6px;color:var(--ink)"><input type="radio" name="kub" data-i="${i}" ${a.kubaj ? "checked" : ""}> Kübaj alanı</label>
-      <span class="note">Çevre ${K.tr(K.perim(a.pts))} m · ${K.tr(K.area(a.pts) / 1000, 3)} dekar · ${a.pts.length} köşe${(() => { const r = areaCalc(a.pts); return r ? ` · <b>kazı ${K.tr(r.kazi)} m³</b>${r.dolgu > 0 ? ` · <b>dolgu ${K.tr(r.dolgu)} m³</b> · sıyırma ${K.tr(r.siy)} m³` : ""}` : ""; })()}</span></div>
+      <span class="note">Çevre ${K.tr(K.perim(a.pts))} m · ${K.tr(K.area(a.pts) / 1000, 3)} dekar · ${a.pts.length} köşe<span data-area-volume="${i}" style="display:inline-block;min-width:1px">&nbsp;</span></span></div>
     <div><button class="danger" data-del="${i}" type="button">Sil</button></div>
     <div class="row" style="grid-column:1/-1"><label style="flex-direction:row;align-items:center;gap:6px">Türü <select data-tur="${i}" style="width:auto"><option value="">—</option><option value="parsel" ${a.tur === "parsel" ? "selected" : ""}>Parsel / blok</option><option value="yol" ${a.tur === "yol" ? "selected" : ""}>Yol</option></select></label>
       <label style="flex-direction:row;align-items:center;gap:6px">No <input data-no="${i}" value="${esc(a.no || "")}" placeholder="${a.tur === "yol" ? "YOL 1" : "267/1"}" style="width:130px"></label></div></div>`).join("");
+  const showArea = async el => {
+    const area=ST.alanlar[+el.dataset.areaVolume], rev=MVER;
+    try {
+      const r=await terrainVolume(area.pts,120000);
+      if (r && rev===MVER && el.isConnected) el.textContent=" · Kazı "+K.tr(r.kazi)+" m³ · Dolgu "+K.tr(r.dolgu)+" m³ · Sıyırma "+K.tr(r.siy)+" m³";
+    } catch(e) { if(rev===MVER && el.isConnected) el.textContent=" · Hacim hesaplanamadı"; }
+  };
+  if (typeof IntersectionObserver==="function") areaObserver=new IntersectionObserver(entries=>{
+    for (const entry of entries) if(entry.isIntersecting){areaObserver.unobserve(entry.target);showArea(entry.target);}
+  });
+  L.querySelectorAll("[data-area-volume]").forEach(el=>areaObserver?areaObserver.observe(el):showArea(el));
   L.querySelectorAll("[data-tur]").forEach(x => x.addEventListener("change", () => { const a = ST.alanlar[+x.dataset.tur]; a.tur = x.value; if (!a.no) a.no = a.tur === "parsel" ? (ST.proj.parsel || "") : a.tur === "yol" ? (ST.proj.yolNo || "") : ""; save(); renderAlanlar(); recalcIfReady(); }));
   L.querySelectorAll("[data-no]").forEach(x => x.addEventListener("change", () => { ST.alanlar[+x.dataset.no].no = x.value; save(); recalcIfReady(); }));
   L.querySelectorAll("input.nm").forEach(x => x.addEventListener("input", () => { ST.alanlar[+x.dataset.i].ad = x.value; save(); draw(); }));
@@ -11849,8 +12003,9 @@ function readiness() {
   return items.every(i => i[0]);
 }
 let AUTOAX = null;
-function autoAxisNow() { // eksen çizilmemişse: kübaj alanının ya da iki modelin ortak alanının uzun doğrultusu
-  const kub = (ST.alanlar.find(a => a.kubaj) || {}).pts; let xy = null;
+function autoAxisNow() { return terrainAutoAxis(MS, MR, ST.alanlar.find(a=>a.kubaj)?.pts); }
+function terrainAutoAxis(MS, MR, kub) { // eksen çizilmemişse: kübaj alanının ya da iki modelin ortak alanının uzun doğrultusu
+  let xy = null;
   if (kub && kub.length > 2) xy = kub;
   else if (MS && MR) { const src = MR.flat !== undefined ? MS.pts : MR.pts; xy = src.filter(p => K.zAt(MS, p.e, p.y) != null && (MR.flat !== undefined || K.zAt(MR, p.e, p.y) != null)).map(p => [p.e, p.y]);
     if (xy.length < 3) xy = src.map(p => [p.e, p.y]); }
@@ -11859,7 +12014,13 @@ function mBox(ortak) { const g = [MS, MR].filter(M => M && M.tri && M.tri.length
 function kubOrtak(P) { /* kübaj alanının içinde iki yüzeyin de bulunduğu en az bir nokta var mı */ if (!P || P.length < 3 || !(MS && MS.tri.length && MR)) return true; let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity; for (const q of P) { a = Math.min(a, q[0]); c = Math.max(c, q[0]); b = Math.min(b, q[1]); d = Math.max(d, q[1]); }
   const flat = MR.flat !== undefined && (!MR.tri || !MR.tri.length); for (let i = 0; i <= 30; i++) for (let j = 0; j <= 30; j++) { const e = a + (c - a) * i / 30, n = b + (d - b) * j / 30; if (!K.inPoly(P, e, n)) continue; if (K.zAt(MS, e, n) != null && (flat || K.zAt(MR, e, n) != null)) return true; } return false; }
 let HM = null, kubRaster=null;
-function hDraw() { if($("v-kesit").hidden)return;try { h3Draw(); } catch (e) { console.error(e); } const c = $("hMap"); if (!c || H3 || $("h2Box").hidden) return; const x = c.getContext("2d"), W = c.width, H = c.height; x.fillStyle = "#fff"; x.fillRect(0, 0, W, H);
+const visibleTerrainMaps = new Set();
+const terrainMapObserver = typeof IntersectionObserver === "function" ? new IntersectionObserver(entries=>{
+  for(const e of entries){if(e.isIntersecting)visibleTerrainMaps.add(e.target);else visibleTerrainMaps.delete(e.target);}
+  hDraw();
+}, {rootMargin:"80px"}) : null;
+for(const id of ["hMap","h3d"]) if($(id)) terrainMapObserver?.observe($(id));
+function hDraw() { if($("v-kesit").hidden || (terrainMapObserver && !visibleTerrainMaps.has($(H3?"h3d":"hMap"))))return;try { h3Draw(); } catch (e) { console.error(e); } const c = $("hMap"); if (!c || H3 || $("h2Box").hidden) return; const x = c.getContext("2d"), W = c.width, H = c.height; x.fillStyle = "#fff"; x.fillRect(0, 0, W, H);
   ACAD_PLAN.controls(c,hDraw);
   const kub = (ST.alanlar.find(a => a.kubaj) || {}).pts; const b = mBox(); if (!b) { HM = null; x.fillStyle = "#5b6676"; x.font = "22px Arial"; x.textAlign = "center"; x.fillText("İlk kot ve son kot üçgenlerini yükle; alan burada görünür.", W / 2, H / 2); return; }
   let [x0, y0, x1, y1] = b; const pad = Math.max(x1 - x0, y1 - y0) * 0.03 + 1; x0 -= pad; y0 -= pad; x1 += pad; y1 += pad;
@@ -11884,7 +12045,7 @@ $("hMap").addEventListener("click", e => { if (!HM || !SECS.length) return; cons
   SECS.forEach((s_, i) => (s_.line || []).forEach(([A, B]) => { const ax = HM.X(A[0]), ay = HM.Y(A[1]), bx = HM.X(B[0]), by = HM.Y(B[1]); const dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / L2)); const d = Math.hypot(px - ax - t * dx, py - ay - t * dy); if (d < bd) { bd = d; best = i; } }));
   if (best >= 0) { SEL = best; markSectionRow(); preview(); $("sheetPrev").scrollIntoView({ behavior: "smooth", block: "center" }); } });
 let H3 = true, H3K = "";
-function h3Draw(force) { if (!H3 || $("v-kesit").hidden || !window.V3D) return; const zOf = (M, x, y) => M.flat !== undefined && (!M.tri || !M.tri.length) ? +M.flat : K.zAt(M, x, y);
+function h3Draw(force) { if ((terrainMapObserver && !visibleTerrainMaps.has($("h3d"))) || !H3 || $("v-kesit").hidden || !window.V3D) return; const zOf = (M, x, y) => M.flat !== undefined && (!M.tri || !M.tri.length) ? +M.flat : K.zAt(M, x, y);
   const mx = SD && SD.ortak ? Math.max(0.05, Math.abs(SD.fmin), Math.abs(SD.fmax)) : 1, ex = +$("h3E").value || 1, md = $("h3M").value, kub = (ST.alanlar.find(a => a.kubaj) || {}).pts, ax = ST.eksen && ST.eksen.length > 1 ? ST.eksen : AUTOAX;
   const key = [MVER, MS && MS.tri.length, MS && MS.pts.length, MR && (MR.flat !== undefined ? MR.flat : MR.tri.length), ex, md, mx.toFixed(3), kub ? JSON.stringify(kub) : "", ax ? JSON.stringify(ax) : ""].join("|"); if (!force && key === H3K) { V3D.draw(); return; } H3K = key;
   const err = V3D.set($("h3d"), { S: MS, R: MR, poly: kub, axis: ax, ex, mx, mode: md, zOf, key: MVER + "|" + (MS && MS.pts.length) + "|" + (MR && MR.pts && MR.pts.length) + "|" + ex });
@@ -11905,10 +12066,10 @@ function showSurfaceCalcError(e) {
   console.error(e);
 }
 function showRes(html,note){for(const [id,value] of [["sdTot",html],["sdNote",note],["vRes",html],["vResNote",note]]){const e=$(id);if(e&&e.innerHTML!==value)e.innerHTML=value;}
- const label=SD&&SD.ortak?(SD.kesin?"Kesin üçgen hesabı":"Yaklaşık ızgara hesabı"):"Hesap için veri gerekli";
+ const label=SD&&SD.ortak?(SD.kesin?"Kesin üçgen hesabı":"Yaklaşık ızgara hesabı"):note==="Yüzey hacmi hesaplanıyor…"?"Hesaplanıyor…":"Hesap için veri gerekli";
  for(const id of ["kubMethodData","kubMethodCalc"]){const el=$(id);if(el){el.textContent=label;el.dataset.state=SD&&SD.ortak?(SD.kesin?"exact":"approx"):"wait";}}
 }
-function surfDiff() {
+function showSurfaceVolume(result, elapsed = 0) {
   SD = null; surfaceCalcError = "";
   ST.set.sdb=$("sdB_alan").checked?"alan":"ortak";
   const el = $("sdTot"); if (!el) return;
@@ -11920,9 +12081,7 @@ function surfDiff() {
     showRes("", `<span class="pill bad">Siyah ile kırmızı örtüşmüyor, fark hesaplanamaz</span><br>Siyah: ${f(a)} · Kırmızı: ${f(b)} · aralarında yaklaşık ${fmtN(dd)} m var. Büyük ihtimalle iki dosya farklı ada/parsele ait; aynı yerin ilk hâl ve son hâl dosyalarını yükle.`); return; } }
   const useA = document.querySelector("input[name=sdb]:checked").value === "alan"; const kub = (ST.alanlar.find(a => a.kubaj) || {}).pts;
   if (MR.flat !== undefined && !useA) MR.grid = MS.grid; // sabit kotta sınır = siyah model
-  const t0 = performance.now();
   try {
-    const result = kubVolume(MS, MR, useA ? kub : null, SYE(), +ST.set.esik || 0, 250000, +ST.set.kesik || 0);
     if (!validVolumeResult(result)) throw Error("Geçersiz sayısal hacim sonucu.");
     SD = result;
   } catch (e) { showSurfaceCalcError(e); return; }
@@ -11932,14 +12091,13 @@ function surfDiff() {
   const html = `<div><div class="k">Kazı</div><div class="v">${K.tr(SD.kazi)} <small>m³</small></div></div>` + (d ? `<div><div class="k">Dolgu</div><div class="v">${K.tr(SD.dolgu)} <small>m³</small></div></div>` : "") + (SD.siy > 0.0005 ? `<div><div class="k">Sıyırma</div><div class="v">${K.tr(SD.siy)} <small>m³</small></div></div>` : "") +
     `<div><div class="k">Hesap alanı</div><div class="v">${K.tr(SD.ortak)} <small>m²</small></div></div>`;
   const note = useA && !kub ? `<span class="pill bad">Kübaj alanı seçili değil; ortak alan kullanıldı.</span>` :
-    `Sınır: ${SD.sinir}. Kazı alanı ${K.tr(SD.kaziAlan)} m²${d ? `, dolgu alanı ${K.tr(SD.dolguAlan)} m²` : ""}. Fark en az ${K.tr(SD.fmin, 3)} m, en çok ${K.tr(SD.fmax, 3)} m. ${SD.kesin ? "Kesin hesap (üçgenlerin kesişim parçaları, ızgara yok)" : "Yaklaşık hesap · " + K.tr(SD.cell, 2) + " m ızgara"}, ${Math.round(performance.now() - t0)} ms.${SYE() ? " Sıyırma: " + SYTXT() + "." : ""}`;
+    `Sınır: ${SD.sinir}. Kazı alanı ${K.tr(SD.kaziAlan)} m²${d ? `, dolgu alanı ${K.tr(SD.dolguAlan)} m²` : ""}. Fark en az ${K.tr(SD.fmin, 3)} m, en çok ${K.tr(SD.fmax, 3)} m. ${SD.kesin ? "Kesin hesap (üçgenlerin kesişim parçaları, ızgara yok)" : "Yaklaşık hesap · " + K.tr(SD.cell, 2) + " m ızgara"}, ${Math.round(elapsed)} ms.${SYE() ? " Sıyırma: " + SYTXT() + "." : ""}`;
   showRes(html, note);
 }
-document.querySelectorAll("input[name=sdb]").forEach(r => r.addEventListener("change",()=>{surfDiff();save();pKubGoster(false);if(KUB3?.open)kub3Render();}));
+document.querySelectorAll("input[name=sdb]").forEach(r => r.addEventListener("change",()=>{recalcIfReady();save();}));
 const planSections = { single: [], singleName: "", index: 0 };
 const sectionBoundary = () => ST.set.kesitSinir === "width" ? null : ST.alanlar.find(a => a.kubaj)?.pts;
-function projectSectionStations(axis) {
-  const s = ST.set;
+function projectSectionStations(axis, s = ST.set) {
   const step = +s.step > 0 ? +s.step : 10;
   const turns = +s.kurp > 0 ? Math.min(+s.kurp, step) : 0;
   const stations = K.stations(axis, step, turns, isFinite(+s.ang) ? +s.ang : 2, +s.km0 || 0);
@@ -11957,8 +12115,7 @@ function projectSectionStations(axis) {
   }
   return stations;
 }
-function sectionsAlongAxis(first, last, axis, stations, poly, half, wideAuto, withAreas) {
-  const s = ST.set;
+function sectionsAlongAxis(first, last, axis, stations, poly, half, wideAuto, withAreas, s = ST.set, depth = 0) {
   if (s.kesitSinir === "width") half = Math.max(half, +s.wL || 0, +s.wR || 0);
   const make = distance => {
     const section = K.section({
@@ -11966,7 +12123,7 @@ function sectionsAlongAxis(first, last, axis, stations, poly, half, wideAuto, wi
       wL: wideAuto ? half : +s.wL || 0, wR: wideAuto ? half : +s.wR || 0, half
     });
     if (!section.parts.length) return null;
-    if (withAreas) K.areas(section, SYE(), +s.esik || 0, +s.kesik || 0);
+    if (withAreas) K.areas(section, depth, +s.esik || 0, +s.kesik || 0);
     section.km = Math.round((distance + (+s.km0 || 0)) * 1000) / 1000;
     return section;
   };
@@ -12024,7 +12181,9 @@ function updatePlanSectionScope() {
     ? "Genişlikler eksenin çizim yönüne göre uygulanır."
     : area ? "Etkin sınır · " + area.ad : "Kübaj sınırı çizilene kadar sağ / sol genişlik kullanılır.";
 }
-function refreshPlanSections() {
+let planRefreshVersion=0;
+async function refreshPlanSections() {
+  const revision=++planRefreshVersion, version=MVER;
   if (planSectionPanel.hidden || $("v-plan").hidden) return;
   const old = $("planSectionsStation").selectedOptions[0]?.textContent;
   const length = ST.eksen?.length > 1 ? K.perim(ST.eksen, false) : 0;
@@ -12033,6 +12192,11 @@ function refreshPlanSections() {
     : SECS.length && AUTOAX ? "Otomatik eksen kullanılıyor" : "Eksen çiz veya plandan bir çizgi seç.";
   updatePlanSectionScope();
   planSections.single = [];
+  if (terrainPending && !SECS.length) {
+    renderPlanSectionList(old);
+    planSectionStatus("Enkesitler hesaplanıyor…");
+    return;
+  }
   const black = MS?.tri?.length ? MS : null;
   const red = MR?.tri?.length ? MR : null;
   const single = !SECS.length && !(black && (red || MR?.flat !== undefined)) && (black || red);
@@ -12044,9 +12208,15 @@ function refreshPlanSections() {
       if (length / (Math.min(+ST.set.kurp || Infinity, +ST.set.step || 10)) > 10000) {
         throw Error("Bu eksen için kesit aralığını büyüt.");
       }
-      planSections.single = sectionsAlongAxis(single, single, axis, projectSectionStations(axis), sectionBoundary(), half, false, false);
+      renderPlanSectionList(old);
+      planSectionStatus("Arazi enkesitleri hesaplanıyor…");
+      const rows=await terrainRun({type:"singleSections", mode:stripMode(), surface:black?"S":"R",
+        axis, settings:ST.set, poly:sectionBoundary(), half});
+      if (revision!==planRefreshVersion || version!==MVER || planSectionPanel.hidden || $("v-plan").hidden) return;
+      planSections.single=rows;
       planSections.singleName = black ? "Siyah arazi" : "Kırmızı proje";
     } catch (error) {
+      if (revision!==planRefreshVersion || version!==MVER) return;
       planSectionStatus(error.message, true);
       renderPlanSectionList(old);
       return;
@@ -12328,47 +12498,76 @@ $("planSectionsReport").onclick = async () => {
   if (!$("v-kesit").hidden) $("planSectionsFromReport").closest(".card").scrollIntoView({ block: "start", behavior: "smooth" });
 };
 
+let terrainGeneration = 0, terrainPending = false, terrainTimer;
 function recalcIfReady() {
-  const priorBatch = kubVolumeBatch;
-  kubVolumeBatch = new Map();
-  try {
-    try { surfDiff(); } catch (e) { showSurfaceCalcError(e); }
-    if (window.BZR) {
-      try { bazCalc(); } catch (e) {
-        window.BZR = null;
-        $("bzRes").innerHTML = "";
-        $("bzNote").textContent = "Baz kotu hesabı tamamlanamadı.";
-        console.error(e);
-      }
-    }
-    try { pKubGoster(false); } catch (e) { console.error(e); }
+  const generation = ++terrainGeneration, version = MVER;
+  clearTimeout(terrainTimer);
+  if (terrainVersion !== version) { stopTerrainWorker(Error("Arazi modeli değişti.")); terrainVersion = version; }
+  const ready = readiness();
+  ST.set.sdb = $("sdB_alan").checked ? "alan" : "ortak";
+  terrainPending = !!(MS?.tri.length && MR && (MR.flat !== undefined || MR.tri.length));
+  SD = null; surfaceCalcError = ""; AUTOAX = null; clearSectionResult(); pKubGoster(false);
+  if (KUB3?.open) kub3Volume();
+  if (window.BZR || bazPending) bazCalc().then(()=>pKubGoster(false));
+  if (!terrainPending) { showSurfaceVolume(null); msgK("Hesap için iki yüzey veya baz kotu gerekli."); refreshPlanSections(); return; }
+  showRes("", "Yüzey hacmi hesaplanıyor…"); msgK("Enkesitler hesaplanıyor…");
+  $("tot").textContent = "Hesaplanıyor…"; refreshPlanSections();
+  const current = () => generation === terrainGeneration && version === MVER;
+  terrainTimer = setTimeout(async () => {
+    const start = performance.now();
     try {
-      if (readiness()) calc(); else clearSectionResult();
-    } catch (e) {
-      clearSectionResult();
-      msgK("Kesit hesabı güncellenemedi.", true);
-      console.error(e);
+      const boundary = ST.alanlar.find(a=>a.kubaj)?.pts || null;
+      const volumePoly = ST.set.sdb === "alan" ? boundary : null;
+      const volume = await terrainVolume(volumePoly);
+      if (!current()) return;
+      showSurfaceVolume(volume, performance.now()-start); pKubGoster(true);
+      if (KUB3?.open) kub3Volume();
+      if (!ready) { terrainPending=false; clearSectionResult(); msgK("Kesit için eksen ve alan örtüşmesini kontrol et.", true); return; }
+      const settings = ST.set, poly = sectionBoundary() || null;
+      const layer = settings.kaynak === "cizgi" && ST.kesitLay && ST.katmanlar?.find(k=>k.lay===ST.kesitLay);
+      const segments = layer ? [...layer.lines, ...layer.polys.filter(p=>!p.c).map(p=>p.p)]
+        .map(line=>[line[0],line[line.length-1]]).filter(([a,b])=>Math.hypot(b[0]-a[0],b[1]-a[1])>2) : null;
+      const [x0,y0,x1,y1] = bounds();
+      const result = await terrainRun({type:"sections", ...terrainSettings(), settings, axis:ST.eksen,
+        boundary, poly, half:Math.hypot(x1-x0,y1-y0)+50, segments, labels:layer ? ST.katmanlar.flatMap(k=>k.kmt||[]) : []});
+      if (!current()) return;
+      let validation = null;
+      if (result.sections.length && settings.kesitSinir !== "width") {
+        const scope = poly?.length > 2 ? poly : null;
+        const r = scope === volumePoly ? volume : await terrainVolume(scope);
+        if (!current()) return;
+        const area = scope ? K.area(scope) : r.ortak;
+        validation = {kazi:r.kazi,dolgu:r.dolgu,kesin:r.kesin,kapsama:area ? r.ortak/area : 1};
+      }
+      SECS = result.sections; TOT = result.totals; AUTOAX = result.autoAxis; SV = validation;
+      SEL = Math.min(SEL, Math.max(0,SECS.length-1));
+      const source = layer ? " · " + layer.lay : AUTOAX ? " · Otomatik eksen" : "";
+      msgK(SECS.length ? SECS.length+" kesit hesaplandı"+source+"." : result.stations+" istasyonda kesit oluşmadı. Eksen, sınır ve yüzey örtüşmesini kontrol et.", !SECS.length);
+      totals(); renderTable(); preview();
+    } catch (error) {
+      if (!current()) return;
+      terrainPending=false; if (!SD) showSurfaceCalcError(error);
+      clearSectionResult(); msgK("Hesap tamamlanamadı. "+error.message, true);
+    } finally {
+      if (current()) { terrainPending = false; refreshPlanSections(); if (!$("v-plan").hidden) draw(); }
+      else if (generation===terrainGeneration && version!==MVER) recalcIfReady();
     }
-    if (!$("v-plan").hidden) draw();
-  } finally { kubVolumeBatch = priorBatch; }
-  refreshPlanSections();
+  }, 35);
 }
 let TOT = { kazi: 0, dolgu: 0, siy: 0 }, SV = null;
 function clearSectionResult(){SECS=[];TOT={kazi:0,dolgu:0,siy:0};SV=null;renderTable();preview();totals();}
-function calc() { try { calc0(); } catch (e) { clearSectionResult();msgK("Hesap sırasında hata: " + e.message, true); console.error(e); } readiness(); }
-function calc0() {
-  const t0 = performance.now(); const s = ST.set; const poly = sectionBoundary();
-  if (!MS) { clearSectionResult();msgK("Önce siyah kot dosyasını yükle.", true); return; } if (!MR) { clearSectionResult();msgK("Kırmızı kotu tanımla.", true); return; } AUTOAX = ST.eksen && ST.eksen.length > 1 ? null : autoAxisNow(); const AX = AUTOAX || ST.eksen; if (!AX) { clearSectionResult();msgK("Eksen kurulamadı: alan ya da model yok.", true); return; }
-  const st = projectSectionStations(AX);
-  const [x0, y0, x1, y1] = bounds(); const half = Math.hypot(x1 - x0, y1 - y0) + 50;
-  SECS = [];
-  const KL = s.kaynak === "cizgi" && ST.kesitLay && (ST.katmanlar || []).find(k => k.lay === ST.kesitLay);
-  if (KL) { const segs = [...KL.lines.map(l => [l[0], l[l.length - 1]]), ...KL.polys.filter(p => !p.c).map(p => [p.p[0], p.p[p.p.length - 1]])].filter(([A, B]) => Math.hypot(B[0] - A[0], B[1] - A[1]) > 2);
-    const kmt = (ST.katmanlar || []).flatMap(k => k.kmt || []);
+function calculateSectionRows(MS, MR, j) {
+  const {settings:s, poly, half, segments:segs, labels:kmt} = j;
+  const AUTOAX = j.axis?.length > 1 ? null : terrainAutoAxis(MS, MR, j.boundary);
+  const AX = AUTOAX || j.axis;
+  if (!AX) throw Error("Eksen kurulamadı: alan ya da model yok.");
+  const st = projectSectionStations(AX, s);
+  let SECS = [];
+  if (segs) {
     const run = (AXX, chh) => { SECS = [];
     for (const [A, B] of segs) { const ax = K.onAxis(AXX, chh, A, B); if (!ax) continue; const r = [ax.u[1], -ax.u[0]]; const dl = Math.hypot(B[0] - A[0], B[1] - A[1]); let dir = [(B[0] - A[0]) / dl, (B[1] - A[1]) / dl];
       if (Math.abs(dir[0] * ax.u[0] + dir[1] * ax.u[1]) > 0.7) continue; if (dir[0] * r[0] + dir[1] * r[1] < 0) dir = [-dir[0], -dir[1]];
-      const sec = K.sectionLine({ S: MS, R: MR, A, B, center: ax.c, dir }); if (!sec.parts.length) continue; K.areas(sec, SYE(), +s.esik || 0, +s.kesik || 0);
+      const sec = K.sectionLine({ S: MS, R: MR, A, B, center: ax.c, dir }); if (!sec.parts.length) continue; K.areas(sec, j.depth, +s.esik || 0, +s.kesik || 0);
       let best = null; for (const t of kmt) { const d = Math.min(...[A, B, [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2]].map(p => Math.hypot(p[0] - t[0], p[1] - t[1]))); if (d < 15 && (!best || d < best.d)) best = { d, t }; }
       const m = best && best.t[2].match(KMRE); sec.km = m ? +m[1] * 1000 + parseFloat(m[2].replace(",", ".")) : ax.s + (+s.km0 || 0); sec.kmYazi = !!m; sec.ch = ax.s; sec.s = sec.km; SECS.push(sec); }
     SECS.sort((a, b) => a.km - b.km); };
@@ -12376,15 +12575,12 @@ function calc0() {
     // km yazıları eksenin tersine artıyorsa ekseni çevir (sağ = artı, sol = eksi kalsın)
     const kw = SECS.filter(x => x.kmYazi); if (kw.length >= 2 && (kw[kw.length - 1].ch - kw[0].ch) < 0) { const rv = AX.slice().reverse(); const c2 = [0]; for (let i = 1; i < rv.length; i++) c2.push(c2[i - 1] + Math.hypot(rv[i][0] - rv[i - 1][0], rv[i][1] - rv[i - 1][1])); run(rv, c2); } }
   else {
-    SECS = sectionsAlongAxis(MS, MR, AX, st, poly, half, AUTOAX && !poly && s.kesitSinir !== "width", true);
+    SECS = sectionsAlongAxis(MS, MR, AX, st, poly, half, AUTOAX && !poly && s.kesitSinir !== "width", true, s, j.depth);
   }
-  TOT = K.volumes(SECS); SEL = Math.min(SEL, Math.max(0, SECS.length - 1));
-  SV = null; if (SECS.length && s.kesitSinir !== "width") try { const r = kubVolume(MS, MR, poly && poly.length > 2 ? poly : null, SYE(), +s.esik || 0, 250000, +s.kesik || 0); const A = poly && poly.length > 2 ? K.area(poly) : r.ortak; SV = { kazi: r.kazi, dolgu: r.dolgu, kesin: r.kesin, kapsama: A ? r.ortak / A : 1 }; } catch (e) { console.error(e); }
-  msgK(SECS.length ? `${SECS.length} kesit hesaplandı${KL ? ` (${esc(KL.lay)} tabakasındaki çizgilerden${SECS.every(x => x.kmYazi) ? ", km'ler yazılardan" : ""})` : AUTOAX ? " (otomatik eksenle)" : ""} (${Math.round(performance.now() - t0)} ms).` : `Kesit çıkmadı: ${st.list.length} kesit noktası denendi ama hiçbirinde iki model ve kübaj alanı birlikte yok. Eksen kübaj alanını kesiyor mu, iki model alanı kapsıyor mu? Plan sekmesinden kontrol et.`, !SECS.length);
-  totals(); renderTable(); preview();
+  return {sections:SECS, totals:K.volumes(SECS), autoAxis:AUTOAX, stations:st.list.length};
 }
 function msgK(t, err) { $("kMsg").className = "msg" + (err ? " err" : ""); $("kMsg").textContent = t; }
-$("calc").addEventListener("click", () => { calc(); refreshPlanSections(); });
+$("calc").addEventListener("click", recalcIfReady);
 function anyDol() { return SECS.some(s => s.dol || s.siy > 0); }
 function totals() { const d = anyDol();
   const scope = $("planSectionsReportScope");
@@ -12410,17 +12606,26 @@ function hafriyat() { let bx = document.getElementById("hfBox"); const tb = $("t
   <div style="font-size:12px;color:#667;margin-top:4px">Katsayılar zemine göre değişir (toprak kabarma ≈1,20–1,30; kaya ≈1,50–1,70). Kendi zemin değerinle değiştir; sonuçlar anında güncellenir.</div>`;
   bx.querySelectorAll("[data-hf]").forEach(i => i.addEventListener("change", () => { const v = +String(i.value).replace(",", "."); if (v > 0) { ST.set[i.dataset.hf] = v; save(); hafriyat(); } })); }
 { const _t0 = totals; totals = function () { _t0(); try { hafriyat(); } catch (e) { console.error(e); } }; }
+const sectionPageSize=80;
 function renderTable() { const d = anyDol();
+  const start = Math.max(0, Math.floor(SEL/sectionPageSize)*sectionPageSize);
+  const end = Math.min(start+sectionPageSize, SECS.length);
+  $("sectionPages").hidden = SECS.length <= sectionPageSize;
+  $("sectionPageInfo").textContent = (start+1)+"–"+end+" / "+SECS.length;
+  $("sectionPagePrev").disabled = !start; $("sectionPageNext").disabled = end>=SECS.length;
+  const pageTo = index => {SEL=index;renderTable();preview();};
+  $("sectionPagePrev").onclick = ()=>pageTo(Math.max(0,start-sectionPageSize));
+  $("sectionPageNext").onclick = ()=>pageTo(end);
   $("kTable").innerHTML = `<thead><tr><th>Km</th><th>Kazı alanı m²</th>${d ? "<th>Dolgu alanı m²</th><th>Sıyırma alanı m²</th>" : ""}<th>Mesafe m</th><th>Kazı m³</th>${d ? "<th>Dolgu m³</th><th>Sıyırma m³</th>" : ""}</tr></thead><tbody>` +
-    SECS.map((s, i) => `<tr data-i="${i}" class="${i === SEL ? "sel" : ""}"><td>${K.kmtxt(s.km)}</td><td>${K.tr(s.kazi)}</td>${d ? `<td>${K.tr(s.dolgu)}</td><td>${K.tr(s.siy)}</td>` : ""}<td>${i ? K.tr(s.L) : ""}</td><td>${i ? K.tr(s.kV) : ""}</td>${d ? `<td>${i ? K.tr(s.dV) : ""}</td><td>${i ? K.tr(s.sV) : ""}</td>` : ""}</tr>`).join("") +
+    SECS.slice(start,end).map((s, offset) => {const i=start+offset;return `<tr data-i="${i}" class="${i === SEL ? "sel" : ""}"><td>${K.kmtxt(s.km)}</td><td>${K.tr(s.kazi)}</td>${d ? `<td>${K.tr(s.dolgu)}</td><td>${K.tr(s.siy)}</td>` : ""}<td>${i ? K.tr(s.L) : ""}</td><td>${i ? K.tr(s.kV) : ""}</td>${d ? `<td>${i ? K.tr(s.dV) : ""}</td><td>${i ? K.tr(s.sV) : ""}</td>` : ""}</tr>`;}).join("") +
     `</tbody><tfoot><tr><td><b>Toplam</b></td><td></td>${d ? "<td></td><td></td>" : ""}<td></td><td><b>${K.tr(TOT.kazi)}</b></td>${d ? `<td><b>${K.tr(TOT.dolgu)}</b></td><td><b>${K.tr(TOT.siy)}</b></td>` : ""}</tr></tfoot>`;
   const table=$("kTable");table.onclick=e=>{const tr=e.target.closest("tbody tr[data-i]");if(!tr||!table.contains(tr))return;SEL=+tr.dataset.i;markSectionRow();preview();}; }
-function markSectionRow(){const table=$("kTable");table.querySelector("tbody tr.sel")?.classList.remove("sel");table.querySelector('tbody tr[data-i="'+SEL+'"]')?.classList.add("sel");}
+function markSectionRow(){const table=$("kTable");if(SECS[SEL]&&!table.querySelector('tbody tr[data-i="'+SEL+'"]')){renderTable();return;}table.querySelector("tbody tr.sel")?.classList.remove("sel");table.querySelector('tbody tr[data-i="'+SEL+'"]')?.classList.add("sel");}
 let SGC = null;
 const SHEETSET = () => { const o = { baslik: "ENKESİT", siy: SYE(), kmtxt: K.kmtxt, tr: K.tr, olcek: +ST.set.olcek || 150, esit: ST.set.esit !== false, G: 1, kotMod: ST.set.kotMod || "degisim", kotStep: +ST.set.kotStep || 5 };
   if (ST.set.kesSig !== true && SECS.length) { if (!SGC || SGC.S !== SECS || SGC.k !== o.olcek + "|" + o.siy) { let g = 1; for (const s of SECS) g = Math.max(g, O.sheetNeed(s, o)); SGC = { S: SECS, k: o.olcek + "|" + o.siy, g: Math.ceil(g * 20 - 1e-9) / 20 }; } o.G = SGC.g; } return o; };
 function preview() { if($("v-kesit").hidden)return;const c = $("sheetPrev"), x = c.getContext("2d");
-  if (!SECS.length) { try { hDraw(); } catch (e) { console.error(e); } x.fillStyle = "#fff"; x.fillRect(0, 0, c.width, c.height); x.fillStyle = "#5b6676"; x.font = "28px Arial"; x.textAlign = "center"; x.fillText("Kesit yok: veri, kübaj alanı ve eksen tanımlanınca burada görünür.", c.width / 2, c.height / 2); $("pvTxt").textContent = "—"; return; }
+  if (!SECS.length) { try { if (!terrainPending) hDraw(); } catch (e) { console.error(e); } x.fillStyle = "#fff"; x.fillRect(0, 0, c.width, c.height); x.fillStyle = "#5b6676"; x.font = "28px Arial"; x.textAlign = "center"; x.fillText(terrainPending ? "Enkesitler hesaplanıyor…" : "Kesit yok: veri, kübaj alanı ve eksen tanımlanınca burada görünür.", c.width / 2, c.height / 2); $("pvTxt").textContent = "—"; return; }
   try { hDraw(); } catch (e) { console.error(e); } const s = SECS[SEL]; const G_ = O.sheet(s, SEL + 1, SECS.length, projFor(s), SHEETSET()); O.paint(x, G_, c.width / G_.W, G_.W, G_.H); $("pvTxt").textContent = `${SEL + 1} / ${SECS.length} · km ${K.kmtxt(s.km)}`; }
 $("pv").addEventListener("click", () => { if (SEL > 0) { SEL--; preview(); markSectionRow(); } });
 $("nx").addEventListener("click", () => { if (SEL < SECS.length - 1) { SEL++; preview(); markSectionRow(); } });
@@ -12465,7 +12670,7 @@ const PF = ["cetvel", "is", "isveren", "muteahhit", "tarih", "no", "parsel", "yo
 PF.forEach(k => $("p_" + k).addEventListener(k === "yerTur" ? "change" : "input", e => { ST.proj[k] = e.target.value; save(); preview(); }));
 const oMsg = (t, err) => { $("oMsg").className = "msg" + (err ? " err" : ""); $("oMsg").textContent = t; };
 const fname = ext => `${(ST.proj.dosya || "KUBAJ").replace(/[^\w\-ÇĞİÖŞÜçğıöşü]/g, "_")}.${ext}`;
-function needSecs() { if (!SECS.length) { oMsg("Önce Kesitler sekmesinde kesitleri hesapla.", true); return false; } return true; }
+function needSecs() { if(terrainPending){oMsg("Enkesitler hesaplanıyor. Sonuç hazır olduğunda çıktı alabilirsin.");return false;} if (!SECS.length) { oMsg("Önce Kesitler sekmesinde kesitleri hesapla.", true); return false; } return true; }
 
 const X_col = c => { let s = ""; c++; while (c) { const m = (c - 1) % 26; s = String.fromCharCode(65 + m) + s; c = Math.floor((c - 1) / 26); } return s; };
 function buildXlsx() {
@@ -12701,15 +12906,15 @@ async function kaGo(tab,action){const d=$("kaDialog");d.close();await showTab(ta
 function kaTab(t){KA.tab=t;document.querySelectorAll("#kaDialog [data-ka-tab]").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.kaTab===t)));document.querySelectorAll("#kaDialog [data-ka-page]").forEach(e=>e.hidden=e.dataset.kaPage!==t);if(t==="check")kaRenderCheck();if(t==="history")kaHistoryRender();}
 function kaScenarioResult(z,r){$("kaScenarioResult").textContent=kaFormat(z,3)+" m · Kazı "+kaFormat(r.kazi)+" m³ · Dolgu "+kaFormat(r.dolgu)+" m³ · Fark "+kaFormat(r.kazi-r.dolgu)+" m³ · "+(r.kesin?"Kesin üçgen hesabı":"Yaklaşık hesap");}
 function kaScenarioModel(){if(!MS?.tri?.length)throw Error("Önce siyah arazi modelini yükle.");const poly=$("sdB_alan").checked?ST.alanlar.find(a=>a.kubaj)?.pts||null:null;if($("sdB_alan").checked&&!poly)throw Error("Seçili alan bulunamadı; sınırı çiz veya ortak alanı seç.");if(poly)kub3Polygon(poly);return {S:MS,poly,sy:SYE(),smode:K.siyMod,es:+ST.set.esik||0,cut:+ST.set.kesik||0,stamp:kaModelStamp()};}
-function kaScenarioEval(m,z){K.siyMod=m.smode;return K.surfDiff(m.S,{flat:z,pts:[],tri:new Int32Array(0),grid:m.S.grid},m.poly,m.sy,m.es,250000,m.cut);}
+function kaScenarioEval(m,z){return terrainRun({type:"scenario",z,poly:m.poly,depth:m.sy,mode:m.smode,fillThreshold:m.es,cutThreshold:m.cut});}
 async function kaBalance(auto){
  if(KA.busy)return;KA.busy=true;const token=++KA.token;$("kaBalance").disabled=$("kaTry").disabled=true;$("kaApply").disabled=true;KA.proposal=null;
  try{const m=kaScenarioModel();let z=K.num($("kaTryZ").value),r;
  if(auto){let lo=Infinity,hi=-Infinity;for(const p of m.S.pts)if(Number.isFinite(p.z)){lo=Math.min(lo,p.z);hi=Math.max(hi,p.z);}if(!Number.isFinite(lo))throw Error("Geçerli kot yok.");lo-=Math.abs(m.sy)+Math.abs(m.cut)+1;hi+=Math.abs(m.es)+1;
- for(let i=0;i<18&&hi-lo>.001;i++){if(token!==KA.token||kaModelStamp()!==m.stamp)throw Error("Veri değişti; öneri iptal edildi.");z=(lo+hi)/2;r=kaScenarioEval(m,z);if(!r?.ortak)throw Error("Seçili sınır arazi modelini kapsamıyor.");if(r.kazi>r.dolgu)lo=z;else hi=z;kaStatus("Kot dengesi deneniyor · "+(i+1)+"/18");await new Promise(resolve=>setTimeout(resolve,0));}
+ for(let i=0;i<18&&hi-lo>.001;i++){if(token!==KA.token||kaModelStamp()!==m.stamp)throw Error("Veri değişti; öneri iptal edildi.");z=(lo+hi)/2;r=await kaScenarioEval(m,z);if(token!==KA.token||kaModelStamp()!==m.stamp)throw Error("Veri değişti; öneri iptal edildi.");if(!r?.ortak)throw Error("Seçili sınır arazi modelini kapsamıyor.");if(r.kazi>r.dolgu)lo=z;else hi=z;kaStatus("Kot dengesi deneniyor · "+(i+1)+"/18");await new Promise(resolve=>setTimeout(resolve,0));}
  z=Math.round((lo+hi)/2*1000)/1000;
  }else if(!Number.isFinite(z))throw Error("Geçerli bir baz kotu gir.");
- if(token!==KA.token||kaModelStamp()!==m.stamp)throw Error("Veri değişti; öneri iptal edildi.");r=kaScenarioEval(m,z);if(!r?.ortak)throw Error("Ortak hesap alanı yok.");KA.proposal={z,r,stamp:m.stamp};$("kaTryZ").value=z.toFixed(3);kaScenarioResult(z,r);$("kaApply").disabled=false;kaStatus("Önizleme: mevcut proje değiştirilmedi. İstersen baz kotuna uygula.");
+ if(token!==KA.token||kaModelStamp()!==m.stamp)throw Error("Veri değişti; öneri iptal edildi.");r=await kaScenarioEval(m,z);if(token!==KA.token||kaModelStamp()!==m.stamp)throw Error("Veri değişti; öneri iptal edildi.");if(!r?.ortak)throw Error("Ortak hesap alanı yok.");KA.proposal={z,r,stamp:m.stamp};$("kaTryZ").value=z.toFixed(3);kaScenarioResult(z,r);$("kaApply").disabled=false;kaStatus("Önizleme: mevcut proje değiştirilmedi. İstersen baz kotuna uygula.");
  }catch(e){kaStatus(e.message);$("kaScenarioResult").textContent="—";}finally{KA.busy=false;$("kaBalance").disabled=$("kaTry").disabled=false;}
 }
 async function kaDigest(value){if(!window.crypto?.subtle)return null;const data=new TextEncoder().encode(JSON.stringify(value)),buf=await window.crypto.subtle.digest("SHA-256",data);return Array.from(new Uint8Array(buf),x=>x.toString(16).padStart(2,"0")).join("");}
@@ -12789,9 +12994,11 @@ const triN = M => Math.floor((M.tri || []).length / 3);
 
 /* hesap bağlamı */
 function ctx(kind) {
+  if (terrainPending) return {err:"Kübaj hesaplanıyor. Sonuç hazır olduğunda raporu alabilirsin."};
   const P = ST.proj || {}, set = ST.set || {};
   if (kind === "baz") {
-    if (!window.BZR) { try { bazCalc(); } catch (e) { } }
+    if (!window.BZR && !bazPending) bazCalc();
+    if (bazPending) return {err:"Baz kotu hesabı sürüyor. Sonuç hazır olduğunda raporu alabilirsin."};
     const B = window.BZR; if (!B || !B.M) return { err: "Önce baz kotunu yazıp Hesapla'ya bas." };
     const M = B.M, src = B.ad === "siyah" ? ST.S.src : ST.R.src, z = B.z;
     const zM = (x, y) => K.zAt(M, x, y);
@@ -12803,7 +13010,6 @@ function ctx(kind) {
       exact:!!B.r.kesin, yontem: (B.r.kesin?"Kesin üçgen–düzlem kesişimi.":"Yaklaşık ızgara hesabı.") + (sv ? " Şev bandı platform kenarından eğimle araziye bağlanır, ayrı satırda verilir." : ""),
       kazi: B.r.kazi, dolgu: B.r.dolgu, siy: B.r.siy || 0, SY: SYE(), tum: (K.siyMod === "tum" || K.siyMod === "kazi") && SYE() > 0, smod: K.siyMod, kaziAlan: B.r.kaziAlan, dolguAlan: B.r.dolguAlan, alan: B.r.ortak, sev: sv, baz: z, zmin: B.zmin, zmax: B.zmax };
   }
-  if (!SD || !SD.ortak) { try { surfDiff(); } catch (e) { } }
   if (!SD || !SD.ortak) return { err: "Önce siyah ve kırmızı modelleri yükle; fark hesaplanınca rapor alınır." };
   const flat = MR.flat !== undefined && (!MR.tri || !MR.tri.length);
   const zS = (x, y) => K.zAt(MS, x, y), zR = flat ? () => +MR.flat : (x, y) => K.zAt(MR, x, y);

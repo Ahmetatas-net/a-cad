@@ -1,5 +1,5 @@
 /* A-CAD çevrimdışı önbellek. users.json her zaman ağdan (hesap denetimi). */
-const V = "kubaj-model-akisi-20261126-19"; const CORE = ["index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "icon-mask.png", "apple-touch-icon.png"];
+const V = "kubaj-mobil-20261126-20"; const CORE = ["index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "icon-mask.png", "apple-touch-icon.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(V).then(c => c.addAll(CORE))); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(k => Promise.all(k.filter(x => x !== V).map(x => caches.delete(x)))).then(() => self.clients.claim())); });
 self.addEventListener("fetch", e => { const u = new URL(e.request.url); if (e.request.method !== "GET" || u.origin !== location.origin) return;
