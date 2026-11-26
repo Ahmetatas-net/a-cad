@@ -5338,12 +5338,16 @@ window.__DY=window.__DY||function(n){var v=Math.round(n*100)/100;return &#x27;1D
       <div class="msg" id="kmMsg" style="margin-top:8px"></div>
       <details data-kgm><summary>Sınırdan proje ve rulo plan üret</summary>
 <p>Mahalle çizimindeki KAM_SINIR ile ana parselleri keser. KAP alanlarını çizimden çıkan alanlarla karşılaştırır.</p>
+<details id="bpBulk"><summary>Dosyaları birlikte seç</summary>
+<label>Mahalle dosyaları (NCZ, KAP, KML ve KTB)<input id="bpBulkFiles" type="file" multiple accept=".ncz,.kap,.kml,.ktb"></label>
+<label>Mahalle cetveli<select id="bpTown" disabled><option>Dosya bekleniyor</option></select></label>
+<p id="bpBulkInfo" role="status">Aynı mahalleye ait çizim, cetvel ve malik kaydı dosya adına göre eşleşir. Aşağıdaki seçimleri kontrol edin.</p></details>
 <label>Mahalle çizimi (NCZ)<input id="bpPrimary" type="file" accept=".ncz"></label>
 <label>Mahallenin parsel cetveli (KAP)<input id="bpKap" type="file" accept=".kap"></label>
 <label>Tamamlayıcı çizimler (isteğe bağlı)<input id="bpAux" type="file" multiple accept=".ncz"></label>
 <label>Mahallenin malik kaydı (isteğe bağlı KML)<input id="bpKml" type="file" accept=".kml"></label>
 <label>Rulo için eksen (isteğe bağlı)<input id="bpKtb" type="file" accept=".ktb"></label>
-<div class="row"><button id="bpRun" type="button" class="primary">Sınırdan hesapla</button><button id="bpPlan" type="button" disabled>Rulo planı indir (SVG)</button><button id="bpCSV" type="button" disabled>Alan cetvelini indir</button><button id="bpModel" type="button" disabled>Hesap geometrisini indir</button></div><div class="row"><button type="button" id="bpAdd" disabled>Mahalle hesabını projeye ekle</button><button type="button" id="bpWhole" disabled>Birleşik ruloyu indir</button><button type="button" id="bpSheets" disabled>Kroki, beyan ve alan föylerini indir</button><button type="button" id="bpPack" disabled>Projeyi ZIP indir (CAD ve belgeler)</button></div><p id="bpProject" role="status"></p><p id="bpNote" role="status" style="white-space:pre-line"></p></details>
+<div class="row"><button id="bpRun" type="button" class="primary">Sınırdan hesapla</button><button id="bpPlan" type="button" disabled>Rulo planı indir (SVG)</button><button id="bpCSV" type="button" disabled>Alan cetvelini indir</button><button id="bpModel" type="button" disabled>Hesap geometrisini indir</button></div><div class="row"><button type="button" id="bpAdd" disabled>Mahalle hesabını projeye ekle</button><button type="button" id="bpWhole" disabled>Birleşik ruloyu indir</button><button type="button" id="bpSheets" disabled>Kroki, beyan ve alan föylerini indir</button><button type="button" id="bpPack" disabled>Projeyi ZIP indir (CAD ve belgeler)</button></div><p id="bpProject" role="status"></p><p id="bpRev" role="status" style="white-space:pre-line"></p><p id="bpNote" role="status" style="white-space:pre-line"></p><div id="bpReview"></div><details><summary>KGM özgün pafta takımı</summary><p>Proje ana klasörünü seçin. Beyanname, ölçü krokisi, alan hesabı ve rulo klasörleri, bağlı rasterlarla birlikte özgün biçimde kaydedilir.</p><label>KGM proje klasörü<input id="bpFormatFiles" type="file" webkitdirectory multiple></label><button id="bpFormatSave" type="button" disabled>Özgün paftaları ZIP indir</button><p>Projeyi ZIP indir komutu, seçilen kaynak paftaları ve eşleşen alan hesabı satırlarını ayrı klasörlere yazar.</p><p id="bpFormatStatus" role="status"></p></details></details>
       <details style="margin:8px 0"><summary>KGM tapu, malik ve hisse kayıtları</summary><label>KAP, malik KML ve isteğe bağlı kaynak malik cetveli (XLS / CadSablonu XLSX)<input type="file" multiple accept=".kap,.kml,.xls,.xlsx" id="kmKgmImport"></label><button id="kmApplyRegister" type="button">Kayıtları hesaplanan parsellere işle</button><p id="kmRegisterNote" role="status"></p><div id="kmKgmImportResult" class="scroll" style="max-height:340px;overflow:auto" role="status"></div></details>
       <details data-kgm><summary>Kadastro kontrol ekleri</summary>
         <label>Proje adı veya dosya numarası<input id="kmAnnexProject" type="text"></label>
@@ -52790,9 +52794,20 @@ const BoundaryProject=(()=>{
     if(borders.length!==1)throw Error("Ana NCZ içinde tek bir kapalı KAM_SINIR gerekli. Etkin sınırı ayrı katmanda doğrulayın.");
     const ring=p=>p.pts.map(q=>[q[0],q[1]]),border=ring(borders[0]),clip=polygonClipping;
     if(border.length<3||!border.every(q=>q.every(Number.isFinite)))throw Error("Kamulaştırma sınırında geçersiz koordinat.");
-    const geometry=(src,id)=>src.filter(p=>{
-      const m=idOf(p.nativeName);return p.closed&&/^KAD_ALA?N$/i.test(p.lay)&&m&&!m[3]&&m[1]+"/"+m[2]===id;
-    });
+    const index=(src,layer)=>{
+      const map=new Map();
+      for(const poly of src){
+        if(!poly.closed||!layer.test(poly.lay))continue;
+        const m=idOf(poly.nativeName);
+        if(!m||m[3])continue;
+        const id=m[1]+"/"+m[2];
+        if(!map.has(id))map.set(id,[]);
+        map.get(id).push(poly);
+      }
+      return map;
+    };
+    const primaryById=index(primary,/^KAD_ALA?N$/i),supportById=index(support,/^KAD_ALA?N$/i);
+    const neighborsById=index([...primary,...support],/^KAD_KOM[ŞS]U$/i);
     const publicLots=[...primary,...support].filter(p=>p.closed&&/^KAD_(YOL|DERE)$/i.test(p.lay));
     const rows=[];
     const sourceFiles=[...new Set([...primary,...support].map(p=>p.file).filter(Boolean))];
@@ -52800,14 +52815,11 @@ const BoundaryProject=(()=>{
     for(const [id,reg] of regs){
       const insideRefs=reg.parts.filter(p=>/^B\d*$/.test(p.name)),sourceB=insideRefs.reduce((a,p)=>a+p.area,0),balancedB=insideRefs.reduce((a,p)=>a+p.balanced,0);
       const out={id,...reg,sourceB,balancedB,issues:[],geometry:null};rows.push(out);
-      const local=geometry(primary,id),other=geometry(support,id);
+      const local=primaryById.get(id)||[],other=supportById.get(id)||[];
       let cand=local.length?local:other;
       let origin=local.length?"mahalle":"tamamlayıcı";
       if(!cand.length){
-        const neighbors=[...primary,...support].filter(p=>{
-          const m=idOf(p.nativeName);
-          return p.closed&&/^KAD_KOM[ŞS]U$/i.test(p.lay)&&m&&!m[3]&&m[1]+"/"+m[2]===id;
-        });
+        const neighbors=neighborsById.get(id)||[];
         const eligible=[];
         for(const p of neighbors){
           const r=ring(p);
@@ -52869,11 +52881,153 @@ const BoundaryProject=(()=>{
 "use strict";
 const get=id=>document.getElementById(id), note=get("bpNote"),buttons=["bpCSV","bpModel","bpPlan","bpAdd"].map(get);
 let saved=null,serial=0;
-const clear=()=>{serial++;saved=null;buttons.forEach(b=>b.disabled=true);note.textContent="";};
+const clear=()=>{serial++;saved=null;buttons.forEach(b=>b.disabled=true);note.textContent="";get("bpReview").replaceChildren();get("bpRev").textContent="";};
 ["bpPrimary","bpAux","bpKap","bpKtb","bpKml"].forEach(id=>get(id).addEventListener("change",clear));
 const readText=async f=>{const b=await f.arrayBuffer();try{return new TextDecoder("utf-8",{fatal:true}).decode(b);}catch{return new TextDecoder("windows-1254").decode(b);}};
-const readCAD=async f=>window.K.parseNCZ(await f.arrayBuffer()).polys.map(p=>({...p,file:f.name}));
+const parsedCAD=new WeakMap();
+const readCAD=f=>{
+ if(!parsedCAD.has(f))parsedCAD.set(f,f.arrayBuffer().then(bytes=>window.K.parseNCZ(bytes).polys.map(p=>({...p,file:f.name}))).catch(e=>{parsedCAD.delete(f);throw e;}));
+ return parsedCAD.get(f);
+};
 const fmt=v=>Number(v).toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2});
+const sourceIds=["bpPrimary","bpKap","bpAux","bpKml","bpKtb"];
+const fileStem=f=>f.name.replace(/\.[^.]+$/,"").toLocaleUpperCase("tr-TR").normalize("NFC").trim();
+const drawStem=f=>fileStem(f).replace(/^\d+\s*[-_]\s*/,"").replace(/[-_ ]ITRF(?:[-_ ]?\d+)?$/,"");
+const extension=f=>f.name.split(".").pop().toLowerCase();
+let batch=[];
+function setSelection(id,files){
+ const list=new DataTransfer();
+ files.forEach(f=>list.items.add(f));
+ get(id).files=list.files;
+}
+function applyBatch(){
+ const k=get("bpTown").value, warnings=[];
+ sourceIds.forEach(id=>setSelection(id,[]));clear();
+ if(!k)return;
+ function assign(id,candidates,role,required){
+   if(candidates.length===1)setSelection(id,candidates);
+   else if(candidates.length>1||required)warnings.push(role+" için "+(candidates.length?"birden fazla aday var":"dosya bulunamadı")+". Aşağıdan seçin.");
+ }
+ const same=(ext,stem)=>batch.filter(f=>extension(f)===ext&&stem(f)===k);
+ assign("bpKap",same("kap",fileStem),"KAP",true);
+ assign("bpPrimary",same("ncz",drawStem),"Mahalle çizimi",true);
+ assign("bpKml",same("kml",fileStem),"Malik kaydı",false);
+ assign("bpKtb",batch.filter(f=>extension(f)==="ktb"),"Eksen",false);
+ const shared=batch.filter(f=>extension(f)==="ncz"&&/(?:^|[_ -])KAM[_ -]+T[ÜU]M(?:[_ -]|$)/.test(fileStem(f))&&drawStem(f)!==k);
+ assign("bpAux",shared,"Birleşik çizim",false);
+ get("bpBulkInfo").textContent=[...warnings,"Seçili dosyaları kontrol edin. Gerekiyorsa tamamlayıcı çizimleri aşağıdan birlikte seçin."].join(" ");
+}
+get("bpBulkFiles").addEventListener("change",()=>{
+ batch=Array.from(get("bpBulkFiles").files);
+ const options=[...new Set(batch.filter(f=>extension(f)==="kap").map(fileStem))].sort((a,b)=>a.localeCompare(b,"tr"));
+ const town=get("bpTown");
+ town.replaceChildren(...options.map(n=>new Option(n,n)));
+ town.disabled=options.length===0;
+ applyBatch();
+ if(!options.length)get("bpBulkInfo").textContent="Bir mahalle KAP cetveli seçin veya dosyaları aşağıdan tek tek açın.";
+});
+get("bpTown").addEventListener("change",applyBatch);
+function showIssues(rows) {
+ const host=get("bpReview");host.replaceChildren();
+ for(const r of rows){
+   const details=document.createElement("details"),label=document.createElement("summary"),info=document.createElement("p");
+   label.textContent=r.id+" · Kontrolü aç";info.textContent=r.issues.join(" / ");
+   details.append(label,info);
+   details.addEventListener("toggle",()=>{
+     if(!details.open||!r.geometry||details.querySelector("svg"))return;
+     const g=r.geometry,pts=g.parent;let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+     for(const [x,y] of pts){x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x);y1=Math.max(y1,y);}
+     const scale=Math.min(446/(x1-x0||1),220/(y1-y0||1));
+     const project=([x,y])=>[(240+(x-(x0+x1)/2)*scale).toFixed(2),(126-(y-(y0+y1)/2)*scale).toFixed(2)].join(" ");
+     const ns="http://www.w3.org/2000/svg",svg=document.createElementNS(ns,"svg");
+     svg.setAttribute("viewBox","0 0 480 252");svg.setAttribute("role","img");svg.setAttribute("aria-label",r.id+" ana parsel ve kamulaştırmaya giren alan");
+     svg.style.cssText="display:block;width:100%;max-width:580px;background:#f6f8f5;border-radius:6px";
+     const draw=(rings,fill,stroke)=>{const p=document.createElementNS(ns,"path");p.setAttribute("d",rings.map(ring=>"M"+ring.map(project).join("L")+"Z").join(""));p.setAttribute("fill",fill);p.setAttribute("stroke",stroke);p.setAttribute("fill-rule","evenodd");p.setAttribute("stroke-width","2");svg.append(p);};
+     draw([pts],"#e1e8e5","#41595c");g.inside.forEach(poly=>draw(poly,"#f5af7d","#9c4822"));
+     const cap=document.createElement("p");cap.textContent="Turuncu · Giren "+fmt(g.enter)+" m²   |   Gri · Kalan "+fmt(g.remain)+" m²";
+     if(r.publicOverlap?.length)cap.textContent+="   |   Örtüşme "+r.publicOverlap.map(o=>o.name+" ("+fmt(o.area)+" m²)").join(", ");
+     details.append(svg,cap);
+   });host.append(details);
+ }
+}
+const kgmFiles=get("bpFormatFiles"),kgmSave=get("bpFormatSave"),kgmStatus=get("bpFormatStatus");
+let formatVersion=0,formatEntries=[];
+kgmFiles.addEventListener("change",()=>{
+ formatVersion++;formatEntries=[];kgmSave.disabled=true;
+ // Only the document folders go into the format pack. Preserve every nested name and byte.
+ for(const file of kgmFiles.files){
+   const paths=file.webkitRelativePath.split("/");
+   const i=paths.findIndex(p=>/^[2345]\s*[-_. ]/.test(p)&&/(BEYAN|KROK|ALAN|RULO)/i.test(p.toLocaleUpperCase("tr")));
+   if(i<0||i===paths.length-1)continue;
+   const name=paths.slice(i).join("/");
+   if(paths.some(p=>p==="."||p===".."||!p||p.includes("\\"))){kgmStatus.textContent="Klasör yolu okunamadı.";return;}
+   formatEntries.push({name,file});
+ }
+ const names=new Set(formatEntries.map(e=>e.name));
+ if(names.size!==formatEntries.length){kgmStatus.textContent="Aynı yolda birden çok dosya var. Tek proje klasörü seçin.";return;}
+ if(!formatEntries.some(e=>/\.NCZ$/i.test(e.name))){kgmStatus.textContent="NCZ paftası içeren proje ana klasörünü seçin.";return;}
+ kgmSave.disabled=false;
+ kgmStatus.textContent=formatEntries.length+" kaynak dosya seçildi. NCZ paftaları ve aynı klasörlerdeki bağlı dosyalar özgün adlarıyla saklanır.";
+});
+kgmSave.addEventListener("click",async()=>{
+ const ticket=formatVersion;kgmSave.disabled=true;
+ try{
+   const entries=[];
+   for(const item of formatEntries){entries.push({name:item.name,data:new Uint8Array(await item.file.arrayBuffer())});if(ticket!==formatVersion)return;}
+   const data=window.O.zip(entries,{nczYok:true});download(data,"application/zip","KGM_Ozgun_Pafta_Takimi.zip");
+   kgmStatus.textContent=entries.length+" özgün dosya ZIP paketine yazıldı.";
+ }catch(err){if(ticket===formatVersion)kgmStatus.textContent=err.message||"Kaynak paftalar kaydedilemedi.";}
+ finally{if(ticket===formatVersion)kgmSave.disabled=!formatEntries.length;}
+});
+
+function nativeAreaSheet(input,result){
+ const data=input.slice(),v=new DataView(data.buffer,data.byteOffset,data.byteLength),dec=new TextDecoder("windows-1254");
+ const u=p=>v.getUint32(p,true),check=(ok,msg)=>{if(!ok)throw Error(msg);};
+ check(data.length>=120&&data[0]===1,"NCZ başlığı okunamadı");
+ const ls=u(13),sec=u(45);check(ls+17<data.length&&data[ls]===6&&sec+5<data.length&&data[sec]===23,"NCZ bölümleri tanınmadı");
+ const layers=[];for(let i=0;i<data[ls+16];i++){const p=ls+17+29*i;check(p+29<=data.length&&data[p+5]<=23,"NCZ tablosu tanınmadı");layers.push(dec.decode(data.subarray(p+6,p+6+data[p+5])));}
+ const refs=[],digits=[],values=new Map(),seen=new Set(),report=[];
+ for(const r of result.rows){if(!r.geometry)continue;values.set(r.id,[r.geometry.parentArea,r.main.balanced]);for(const p of r.pieces||[])if(p.ref)values.set(r.id+"/"+p.name,[p.area,p.ref.balanced]);}
+ let pos=sec+5+u(sec+1);
+ while(pos<data.length){
+   check(pos+5<=data.length,"NCZ kayıt sonu eksik");
+   const mk=data[pos],size=u(pos+1),r=pos+5;pos=r+size;check(pos<=data.length,"NCZ kaydı eksik");
+   if(![21,22].includes(mk)||size<93||data[r+1]!==5)continue;
+   const layer=layers[data[r+2]],off=r+(mk===22?28:0)+92;
+   if(!["DE_M","DE_R"].includes(layer)||off>=pos||off+1+data[off]!==pos)continue;
+   const str=dec.decode(data.subarray(off+1,pos)),item={str,off:off+1,x:v.getFloat64(r+11,true),y:v.getFloat64(r+3,true),h:v.getFloat32(off-11,true)};
+   if(layer==="DE_M"&&/^\d+_\d+(?:\/[A-Z]\d*)?$/.test(str))refs.push(item);
+   if(layer==="DE_R"&&/^[-+]?\d+\.\d{2}$/.test(str))digits.push(item);
+ }
+ check(refs.length,"Özgün alan satırı bulunamadı");
+ for(const row of refs){
+   const key=row.str.replace("_","/"),pair=values.get(key),cells=digits.filter(c=>Math.abs(c.y-row.y)<row.h*.12&&c.x-row.x>10*row.h&&c.x-row.x<65*row.h).sort((a,b)=>a.x-b.x);
+   check(pair&&!seen.has(key)&&cells.length===3,key+" satırı güvenle eşleştirilemedi");seen.add(key);
+   const [a,c,b]=cells,original=[a,c,b].map(el=>Math.round(Number(el.str)*100)),calc=Math.round(pair[0]*100),fix=original[2]-calc;
+   check(Math.abs(Number(b.str)-pair[1])<=.011&&Math.abs(calc-original[0])<=2&&Math.abs(original[0]+original[1]-original[2])<=1,key+" kaynak ve hesap değerleri uyuşmuyor");
+   const updated=[(calc/100).toFixed(2),(fix>=0?"+":"")+(fix/100).toFixed(2)];
+   for(const [i,field] of [a,c].entries()){if(Number(field.str)===Number(updated[i]))continue;check(field.str.length===updated[i].length,key+" yazı genişliğini kontrol edin");data.set(new TextEncoder().encode(updated[i]),field.off);}
+   report.push([result.town,key,a.str,updated[0],updated[1],b.str,"Eşleşti"]);
+ }
+ for(const key of values.keys())if(!seen.has(key))report.push([result.town,key,"","","","","Kaynak paftada satır yok"]);
+ return {data,report};
+}
+
+function revision(oldResult,newResult){
+ const delta=[],before=new Map(oldResult.rows.map(r=>[r.id,r]));
+ for(const row of newResult.rows){
+   const prior=before.get(row.id);before.delete(row.id);
+   if(!prior){delta.push(row.id+" eklendi");continue;}
+   if(!prior.geometry||!row.geometry){if(!!prior.geometry!==!!row.geometry)delta.push(row.id+" hesap durumu değişti");continue;}
+   const a=prior.geometry,b=row.geometry,diff=(x,y)=>Math.abs(x-y)>0.000001;
+   if(diff(a.enter,b.enter)||diff(a.remain,b.remain)||diff(a.parentArea,b.parentArea)){
+     delta.push(row.id+" · Giren "+fmt(a.enter)+" → "+fmt(b.enter)+" m², kalan "+fmt(a.remain)+" → "+fmt(b.remain)+" m²");
+   }
+ }
+ before.forEach(r=>delta.push(r.id+" çıkarıldı"));
+ return delta.length?"Değişen parseller ("+delta.length+")\n"+delta.join("\n"):"Önceki mahalle hesabıyla karşılaştırıldı. Geometrik alan değişikliği yok.";
+}
+
 get("bpRun").onclick=async()=>{
   clear();const ticket=serial;
   try{
@@ -52882,6 +53036,7 @@ get("bpRun").onclick=async()=>{
     note.textContent="Sınır ve parseller okunuyor…";
     const base=await readCAD(primary),aux=[];
     for(const f of get("bpAux").files){if(ticket!==serial)return;for(const p of await readCAD(f))aux.push(p);}
+    if(ticket!==serial)return;
     const input=await readText(kap),malik=get("bpKml").files[0];
     const ownerText=malik?await readText(malik):null;
     const axis=ktb?window.APLGEO.ktbAxis(window.APLGEO.ktbParse(await readText(ktb))):null;
@@ -52906,6 +53061,7 @@ get("bpRun").onclick=async()=>{
     }
     const total=result.rows.reduce((n,r)=>n+(r.geometry?.enter||0),0);
     const review=result.rows.filter(r=>r.issues.length);
+    showIssues(review);
     saved={result,axis,source:[kap,malik].filter(Boolean)};buttons.forEach(b=>b.disabled=false);
     note.textContent=result.town+" · "+result.rows.filter(r=>r.geometry).length+"/"+result.rows.length+" parsel hesaplandı · "+fmt(total)+" m² giren alan."+
       (review.length?"\n"+review.map(r=>r.id+" · "+r.issues.join(" / ")).join("\n"):"")+
@@ -52943,6 +53099,8 @@ get("bpAdd").onclick=()=>{
  if(!saved)return;
  const r=saved.result,first=project.values().next().value;
  if(first&&first.result.district!==r.district){note.textContent="İl/ilçe farklı. Ayrı proje açın.";return;}
+ const previous=project.get(r.town);
+ get("bpRev").textContent=previous?revision(previous.result,r):"";
  project.set(r.town,saved);
  const names=[...project.keys()];
  get("bpProject").textContent="Bu oturumdaki proje: "+names.join(", ")+". Aynı mahalleyi eklemek hesabını günceller.";
@@ -53006,6 +53164,26 @@ get("bpPack").onclick=async()=>{
      throw Error(res.town+" NCZ geri okuma kontrolü başarısız.");
    files.push({name:prefix+"Plan.dxf",data:d.build()},{name:prefix+"Plan.ncz",data:ncz},{name:prefix+"Hesap.json",data:JSON.stringify(res)},{name:prefix+"Kose.csv",data:"\uFEFF"+coords.join("\r\n")});
    for(const f of g.source||[])files.push({name:prefix+"Kaynak/"+f.name,data:new Uint8Array(await f.arrayBuffer())});
+  }
+  if(formatEntries.length){
+    const snapshot=formatEntries.slice(),ver=formatVersion;
+    files.forEach(f=>f.name="Hesap_Kontrolu/"+f.name);
+    const report=[["Mahalle","Ada/parsel/parça","Kaynak hesap","Yeni hesap","Düzeltme","Dengeli alan","Durum"]];
+    const townKey=s=>s.toLocaleUpperCase("tr-TR").normalize("NFC").replace(/\s+(M|MAH\.?|MAHALLESİ|KÖYÜ)$/,"").trim();
+    for(const entry of snapshot){
+      const bytes=new Uint8Array(await entry.file.arrayBuffer());
+      if(ver!==formatVersion)throw Error("KGM kaynak seçimi değişti. Paketi yeniden alın.");
+      files.push({name:"KGM_Kaynak/"+entry.name,data:bytes});
+      const match=entry.file.name.match(/^(?:\d+[-_ ])?(.+?)[_ -]ALAN[_ -]HESABI\.NCZ$/iu);
+      if(!match||!/^4[-_. ]/.test(entry.name))continue;
+      const candidates=groups.filter(g=>townKey(g.result.town)===townKey(match[1]));
+      if(candidates.length!==1){report.push(["",entry.name,"","","","","Mahalle adı eşleşmedi"]);continue;}
+      try{
+        const out=nativeAreaSheet(bytes,candidates[0].result);
+        files.push({name:"KGM_Hesap/"+entry.name,data:out.data});report.push(...out.report);
+      }catch(error){report.push([candidates[0].result.town,entry.name,"","","","",error.message]);}
+    }
+    files.push({name:"Hesap_Kontrolu/KGM_eslestirme.csv",data:"\uFEFF"+report.map(row=>row.map(cell=>'"'+String(cell).replaceAll('"','""')+'"').join(";")).join("\r\n")});
   }
   download(window.O.zip(files,{nczYok:true}),"application/zip","Kamulaştırma_Projesi.zip");
  }catch(e){get("bpProject").textContent=e.message||"Proje paketi oluşturulamadı.";}
