@@ -6447,21 +6447,102 @@ K.surfVolume = (S, R, poly, cell, SY = 0) => { try { const r = K.surfDiffExact(S
 K.parseSev = t => { t = String(t || "").trim().replace(/,/g, "."); if (!t || /^(yok|dik|0)$/i.test(t)) return 0; let m = t.match(/^(\d*\.?\d+)\s*D\s*\/\s*(\d*\.?\d+)\s*Y$/i); if (m) return +m[2] / +m[1]; m = t.match(/^(\d*\.?\d+)\s*Y\s*\/\s*(\d*\.?\d+)\s*D$/i); if (m) return +m[1] / +m[2]; m = t.match(/^(\d*\.?\d+)\s*[:\/]\s*(\d*\.?\d+)$/); if (m) return +m[2] / +m[1]; return NaN; };
 K.sevBand = (M, poly, base, mk, mf, cell) => {
   const n = poly.length; let zmin = Infinity, zmax = -Infinity; for (const p of M.pts) { if (p.z < zmin) zmin = p.z; if (p.z > zmax) zmax = p.z; }
-  let W = Math.max(mk > 0 ? Math.max(0, zmax - base) * mk : 0, mf > 0 ? Math.max(0, base - zmin) * mf : 0); if (!(W > 0)) return { kazi: 0, dolgu: 0, kaziAlan: 0, dolguAlan: 0, W: 0, cell: 0, tasma: 0 };
+  let W = Math.max(mk > 0 ? Math.max(0, zmax - base) * mk : 0, mf > 0 ? Math.max(0, base - zmin) * mf : 0); if (!(W > 0)) return { kazi: 0, dolgu: 0, kaziAlan: 0, dolguAlan: 0, W: 0, cell: 0, tasma: 0, yakinsama: 0 };
   let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity; for (const q of poly) { a = Math.min(a, q[0]); c = Math.max(c, q[0]); b = Math.min(b, q[1]); d = Math.max(d, q[1]); }
   for (let it = 0; it < 3; it++) { /* bant genişliğini yakındaki arazi kotlarına göre daralt */ let z0 = Infinity, z1 = -Infinity; for (const p of M.pts) if (p.e > a - W && p.e < c + W && p.y > b - W && p.y < d + W) { if (p.z < z0) z0 = p.z; if (p.z > z1) z1 = p.z; } if (!isFinite(z0)) break; zmin = z0; zmax = z1;
     const W2 = Math.max(mk > 0 ? Math.max(0, zmax - base) * mk : 0, mf > 0 ? Math.max(0, base - zmin) * mf : 0); if (W2 >= W - 1e-9) break; W = W2; }
   if (!(W > 0)) return { kazi: 0, dolgu: 0, kaziAlan: 0, dolguAlan: 0, W: 0, cell: 0, tasma: 0, yakinsama: 0 };
   const g = M.grid; a = Math.max(a - W, g.minx); b = Math.max(b - W, g.miny); c = Math.min(c + W, g.maxx); d = Math.min(d + W, g.maxy);
   const ox = a, oy = b, LP = poly.map(q => [q[0] - ox, q[1] - oy]);
-  const dist = (x, y) => { let m = Infinity; for (let i = 0, j = n - 1; i < n; j = i++) { const p = LP[j], q = LP[i], dx = q[0] - p[0], dy = q[1] - p[1], L2 = dx * dx + dy * dy; let t = L2 ? ((x - p[0]) * dx + (y - p[1]) * dy) / L2 : 0; t = t < 0 ? 0 : t > 1 ? 1 : t; const ex = x - p[0] - t * dx, ey = y - p[1] - t * dy, e2 = ex * ex + ey * ey; if (e2 < m) m = e2; } return Math.sqrt(m); };
+  // The grid, sample order and interpolation match the original calculation. Index
+  // geometry in local coordinates so each sample only visits relevant edges.
+  const edges = LP.map((q,i) => {
+    const p = LP[(i+n-1)%n], dx=q[0]-p[0], dy=q[1]-p[1];
+    return {p,q,dx,dy,len2:dx*dx+dy*dy};
+  });
+  const distance2 = (edge,x,y) => {
+    const {p,dx,dy,len2}=edge, px=x-p[0], py=y-p[1];
+    const t=len2 ? Math.min(1,Math.max(0,(px*dx+py*dy)/len2)) : 0;
+    const ex=px-t*dx, ey=py-t*dy;
+    return ex*ex+ey*ey;
+  };
+  const dist = (near,x,y) => {
+    let best=Infinity;
+    for(const edge of near) best=Math.min(best,distance2(edge,x,y));
+    return Math.sqrt(best);
+  };
+  function sampleTile(left,bottom,right,top,cs, candidates) {
+    const cx=(left+right)/2, cy=(bottom+top)/2;
+    const radius=Math.hypot(right-left,top-bottom)/2 + 1e-8;
+    const distances=candidates.map(edge=>distance2(edge,cx,cy));
+    let best=Infinity;
+    for(const square of distances) best=Math.min(best,square);
+    const nearest=Math.sqrt(best);
+    if(nearest>W+cs+radius) return null;
+    const crosses=nearest<=radius;
+    if(!crosses && K.inPoly(LP,cx,cy)) return null;
+    // Distance to a segment changes by at most the distance moved. Any
+    // segment farther than nearest + 2 radii cannot win inside this tile.
+    const limit=(nearest+2*radius)**2;
+    const near=candidates.filter((edge,i)=>distances[i]<=limit);
+    const ray=crosses ? edges.filter(({p,q})=>Math.max(p[1],q[1])>=bottom &&
+      Math.min(p[1],q[1])<=top && Math.max(p[0],q[0])>=left) : [];
+    return {near,ray};
+  }
+  function inside(ray,x,y) {
+    let result=false;
+    for(const {q,p} of ray) if((q[1]>y)!==(p[1]>y) &&
+      x<(p[0]-q[0])*(y-q[1])/(p[1]-q[1])+q[0]) result=!result;
+    return result;
+  }
   const run = cs => { let kz = 0, dl = 0, kA = 0, dA = 0, tas = 0; const nx = Math.ceil((c - a) / cs), ny = Math.ceil((d - b) / cs);
     const one = (x, y, dd, w) => { const z = K.zAt(M, x + ox, y + oy); if (z == null) { if ((mk > 0 && base + dd / mk < zmax) || (mf > 0 && base - dd / mf > zmin)) tas += w; return; }
       if (z > base && mk > 0) { const h = z - (base + dd / mk); if (h > 0) { kz += h * w; kA += w; } } else if (z < base && mf > 0) { const h = (base - dd / mf) - z; if (h > 0) { dl += h * w; dA += w; } } };
     const SS = 8, w8 = 1 / (SS * SS);
-    for (let i = 0; i < nx; i++) { const x = (i + 0.5) * cs; for (let j = 0; j < ny; j++) { const y = (j + 0.5) * cs; const dd = dist(x, y); if (dd > W + cs) continue;
-      if (dd < cs * 0.75) { /* platform kenarını kesen hücre: alt örnekle, kenar hatası kalmasın */ for (let u = 0; u < SS; u++) for (let v = 0; v < SS; v++) { const xx = x + ((u + 0.5) / SS - 0.5) * cs, yy = y + ((v + 0.5) / SS - 0.5) * cs; if (K.inPoly(LP, xx, yy)) continue; one(xx, yy, dist(xx, yy), w8); } continue; }
-      if (K.inPoly(LP, x, y) || dd > W) continue; one(x, y, dd, 1); } }
+    const size=24;
+    for(let first=0;first<nx;first+=size) {
+      const end=Math.min(nx,first+size), band=[];
+      // Visit only tiles within reach of a segment, even for a long diagonal
+      // road. The extra two cells cover boundary subsamples and rounding.
+      const reach=W+2*cs+1e-8, left=first*cs-reach, right=end*cs+reach;
+      const byRow=new Map();
+      for(const edge of edges) {
+        const {p,q,dx,dy}=edge;
+        if(Math.max(p[0],q[0])<left || Math.min(p[0],q[0])>right)continue;
+        let low=Math.min(p[1],q[1]), high=Math.max(p[1],q[1]);
+        if(dx!==0) {
+          const t1=(left-p[0])/dx, t2=(right-p[0])/dx;
+          const startY=p[1]+Math.max(0,Math.min(t1,t2))*dy;
+          const endY=p[1]+Math.min(1,Math.max(t1,t2))*dy;
+          low=Math.min(startY,endY); high=Math.max(startY,endY);
+        }
+        const row0=Math.max(0,Math.floor((low-reach)/(cs*size))*size);
+        const row1=Math.min(ny-1,Math.floor((high+reach)/(cs*size))*size);
+        for(let row=row0;row<=row1;row+=size) {
+          let candidates=byRow.get(row);
+          if(!candidates)byRow.set(row,candidates=[]);
+          candidates.push(edge);
+        }
+      }
+      for(const row of [...byRow.keys()].sort((a,b)=>a-b)) {
+        const stop=Math.min(ny,row+size);
+        const tile=sampleTile(first*cs,row*cs,end*cs,stop*cs,cs,byRow.get(row));
+        if(tile)band.push({tile,row,stop});
+      }
+      for(let i=first;i<end;i++) {
+        const x=(i+0.5)*cs;
+        for(const {tile,row,stop} of band) for(let j=row;j<stop;j++) {
+          const y=(j+0.5)*cs, dd=dist(tile.near,x,y);
+          if(dd>W+cs)continue;
+          if(dd<cs*0.75) {
+            for(let u=0;u<SS;u++)for(let v=0;v<SS;v++) {
+              const xx=x+((u+0.5)/SS-0.5)*cs, yy=y+((v+0.5)/SS-0.5)*cs;
+              if(!inside(tile.ray,xx,yy))one(xx,yy,dist(tile.near,xx,yy),w8);
+            }
+          } else if(dd<=W && !inside(tile.ray,x,y))one(x,y,dd,1);
+        }
+      }
+    }
     const s2 = cs * cs; return { kazi: kz * s2, dolgu: dl * s2, kaziAlan: kA * s2, dolguAlan: dA * s2, tasma: tas * s2, cell: cs }; };
   const per = K.perim(poly, true); const cs = Math.max(0.02, Math.sqrt((per + Math.PI * W) * W / 400000)); const r = run(cs), r2 = run(cs * 2);
   r.W = W; r.yakinsama = Math.abs(r.kazi + r.dolgu - r2.kazi - r2.dolgu) / Math.max(1, r.kazi + r.dolgu); return r; };
@@ -11893,14 +11974,26 @@ function profSheet() { const P = PROF.pts, G = [], T = (x, y, s_, sz = 2, al = "
   T(185, 14, "HARİTA MÜHENDİSİ", 2.4, "c"); T(185, 10, ST.proj.s2 || "", 2.2, "c"); try { O.kase(G, 250, 14, 36); } catch (e) {} return G; }
 /* ---------- baz kotu (proje kotu) ile kübaj: tek yüzey yeter ---------- */
 function bazModel() { const m = $("bzM").value; const hasS = MS && MS.tri && MS.tri.length, hasR = MR && MR.tri && MR.tri.length; if (m === "S") return hasS ? ["siyah", MS] : null; if (m === "R") return hasR ? ["kırmızı", MR] : null; return hasS ? ["siyah", MS] : hasR ? ["kırmızı", MR] : null; }
-let bazGeneration = 0, bazPending = false;
+let bazGeneration = 0, bazPending = false, lastBazRequest = null;
+function requestBaseVolume(job,version) {
+  const key=JSON.stringify(job);
+  if(lastBazRequest?.version===version && lastBazRequest.key===key) return lastBazRequest.promise;
+  const previous=lastBazRequest?.promise;
+  const promise=Promise.resolve(previous).catch(()=>{}).then(()=>{
+    if(lastBazRequest?.promise!==promise || version!==MVER) throw Error("Baz kotu girdileri değişti.");
+    return terrainRun(job);
+  });
+  lastBazRequest={key,version,promise};
+  promise.catch(()=>{if(lastBazRequest?.promise===promise)lastBazRequest=null;});
+  return promise;
+}
 async function bazCalc() { const generation=++bazGeneration, version=MVER; bazPending=false; const z = K.num($("bzK").value); const out = $("bzRes"), nt = $("bzNote"); window.BZR = null; out.innerHTML = ""; if (!isFinite(z)) { out.innerHTML = ""; nt.textContent = "Baz kotunu yaz."; return; } const mm = bazModel(); if (!mm) { out.innerHTML = ""; nt.textContent = "Önce Veri'de siyah ya da kırmızı yüzeyi yükle."; return; }
   const [ad, M] = mm; let poly = null, pad = ""; if ($("bzA").value === "kub") { const k = ST.alanlar.find(a => a.kubaj); if (k) { poly = k.pts; pad = k.ad; } } if (!poly) { const L = modelLoops(M); poly = L[0]; pad = "modelin tamamı"; } if (!poly) { nt.textContent = "Sınır bulunamadı."; return; }
   const mk = K.parseSev($("bzSk").value), mf = K.parseSev($("bzSd").value); if (!isFinite(mk) || !isFinite(mf)) { out.innerHTML = ""; nt.textContent = "Şev eğimini 1D/1.5Y biçiminde yaz (1 düşey / 1,5 yatay), dik için boş bırak."; return; }
-  bazPending = true; nt.textContent = "Baz kotu hesabı sürüyor…";
+  bazPending = true; nt.textContent = "Platform ve şev hacimleri hesaplanıyor…";
   let r, sv, zmin, zmax;
   try {
-    const result = await terrainRun({type:"baz", ...terrainSettings(), surface:M===MR?"R":"S", z, poly, mk, mf});
+    const result = await requestBaseVolume({type:"baz", ...terrainSettings(), surface:M===MR?"R":"S", z, poly, mk, mf},version);
     if (generation !== bazGeneration || version !== MVER) return;
     ({r, sv, zmin, zmax} = result);
     if (!r?.ortak || !validVolumeResult(r)) throw Error("Geçerli bir ortak hacim bulunamadı.");
@@ -11909,8 +12002,8 @@ async function bazCalc() { const generation=++bazGeneration, version=MVER; bazPe
   const A_ = K.area(poly);
   const sw = v => v ? (v === Math.round(v) ? v : K.tr(v, 2).replace(/0$/, "")) : "";
   out.innerHTML = `<div><div class="k">Kazı${sv ? " (toplam)" : ""}</div><div class="v">${K.tr(r.kazi + (sv ? sv.kazi : 0))} <small>m³</small></div></div><div><div class="k">Dolgu${sv ? " (toplam)" : ""}</div><div class="v">${K.tr(r.dolgu + (sv ? sv.dolgu : 0))} <small>m³</small></div></div><div><div class="k">Platform alanı</div><div class="v">${K.tr(A_)} <small>m²</small></div></div>${r.siy > 0.0005 ? `<div><div class="k">Sıyırma</div><div class="v">${K.tr(r.siy)} <small>m³</small></div></div>` : ""}` +
-    (sv ? `<table class="t" style="flex-basis:100%;margin-top:6px"><thead><tr><th></th><th>Kazı m³</th><th>Dolgu m³</th></tr></thead><tbody><tr><td>Platform (sınır içi, kesin)</td><td>${K.tr(r.kazi)}</td><td>${K.tr(r.dolgu)}</td></tr><tr><td>Şev (kazı ${mk ? "1D/" + sw(mk) + "Y" : "dik"}, dolgu ${mf ? "1D/" + sw(mf) + "Y" : "dik"})</td><td>${K.tr(sv.kazi)}</td><td>${K.tr(sv.dolgu)}</td></tr><tr><td><b>Toplam</b></td><td><b>${K.tr(r.kazi + sv.kazi)}</b></td><td><b>${K.tr(r.dolgu + sv.dolgu)}</b></td></tr></tbody></table>` : "");
-  window.BZR = { z, ad, M, poly, pad, r, sv, mk, mf, A: A_, zmin, zmax, sk: $("bzSk").value, sd: $("bzSd").value }; nt.innerHTML = `${ad} yüzey · baz kotu <b>${z.toFixed(3)}</b> · ${SYTXT()} · sınır: ${esc(pad)}${isFinite(zmin) ? ` · yüzey kotu ${zmin.toFixed(2)} – ${zmax.toFixed(2)}` : ""}${r.ortak < A_ * 0.98 ? ` · <span class="pill bad">alanın %${K.tr((1 - r.ortak / A_) * 100, 1)}'i modelin dışında</span>` : ""}. Kazı = yüzeyin baz üstündeki hacmi, dolgu = baz altındaki boşluk. Hesap kesin: üçgenler sınırla kırpılıp baz kotunda bölünür, yaklaşık ızgara kullanılmaz (kazı alanı ${K.tr(r.kaziAlan)} m² · dolgu alanı ${K.tr(r.dolguAlan)} m²).${sv ? ` Şev: platform kenarından eğimle araziye bağlanır; köşeler koni olarak alınır. Kazı şevi izi ${K.tr(sv.kaziAlan)} m², dolgu şevi izi ${K.tr(sv.dolguAlan)} m², ${K.tr(sv.cell, 2)} m hücre, yakınsama farkı %${K.tr(sv.yakinsama * 100, 2)}.${sv.tasma > 0.5 ? ` <span class="pill bad">Şev ${K.tr(sv.tasma)} m² kadar yüzey modelinin dışına taşıyor; o kısım hesaba girmedi, modeli genişlet.</span>` : ""}` : ""}`; ST.set.baz = { z, m: $("bzM").value, a: $("bzA").value, sk: $("bzSk").value, sd: $("bzSd").value }; save(); }
+    (sv ? `<table class="t" style="flex-basis:100%;margin-top:6px"><thead><tr><th></th><th>Kazı m³</th><th>Dolgu m³</th></tr></thead><tbody><tr><td>Platform (sınır içi, ${r.kesin?"kesin":"yaklaşık"})</td><td>${K.tr(r.kazi)}</td><td>${K.tr(r.dolgu)}</td></tr><tr><td>Şev (kazı ${mk ? "1D/" + sw(mk) + "Y" : "dik"}, dolgu ${mf ? "1D/" + sw(mf) + "Y" : "dik"})</td><td>${K.tr(sv.kazi)}</td><td>${K.tr(sv.dolgu)}</td></tr><tr><td><b>Toplam</b></td><td><b>${K.tr(r.kazi + sv.kazi)}</b></td><td><b>${K.tr(r.dolgu + sv.dolgu)}</b></td></tr></tbody></table>` : "");
+  window.BZR = { z, ad, M, poly, pad, r, sv, mk, mf, A: A_, zmin, zmax, sk: $("bzSk").value, sd: $("bzSd").value }; nt.innerHTML = `${ad} yüzey · baz kotu <b>${z.toFixed(3)}</b> · ${SYTXT()} · sınır: ${esc(pad)}${isFinite(zmin) ? ` · yüzey kotu ${zmin.toFixed(2)} – ${zmax.toFixed(2)}` : ""}${r.ortak < A_ * 0.98 ? ` · <span class="pill bad">alanın %${K.tr((1 - r.ortak / A_) * 100, 1)}'i modelin dışında</span>` : ""}. Kazı = yüzeyin baz üstündeki hacmi, dolgu = baz altındaki boşluk. Platform: ${r.kesin ? "kesin üçgen hesabı" : "yaklaşık ızgara hesabı"} (kazı alanı ${K.tr(r.kaziAlan)} m² · dolgu alanı ${K.tr(r.dolguAlan)} m²).${sv ? ` ${sv.W>0?"Şev bandı iki ızgara aralığıyla kontrol edildi.":"Şev bandı oluşmadı."} Kazı şevi izi ${K.tr(sv.kaziAlan)} m², dolgu şevi izi ${K.tr(sv.dolguAlan)} m², ${K.tr(sv.cell, 2)} m hücre, yakınsama farkı %${K.tr(sv.yakinsama * 100, 2)}.${sv.tasma > 0.5 ? ` <span class="pill bad">Şev ${K.tr(sv.tasma)} m² kadar yüzey modelinin dışına taşıyor; o kısım hesaba girmedi, modeli genişlet.</span>` : ""}` : ""}`; ST.set.baz = { z, m: $("bzM").value, a: $("bzA").value, sk: $("bzSk").value, sd: $("bzSd").value }; save(); }
 $("bzGo").addEventListener("click", () => { bazCalc().then(()=>pKubGoster(false)); }); $("bzTe").addEventListener("click", () => { const m = $("bzM").value; teAc(m === "R" ? "R" : (m === "S" ? "S" : (MS && MS.tri && MS.tri.length ? "S" : "R"))); }); $("bazCard").querySelector("summary").addEventListener("click", () => { $("bazCard").dataset.u = 1; });
 for (const [h, t, inf] of [["hS", "fS", "hSi"], ["hK", "fK", "hKi"]]) $(h).addEventListener("change", e => { const f = e.target.files[0]; if (!f) return; e.target.value = ""; $(inf).textContent = "Okunuyor…"; const dt = new DataTransfer(); dt.items.add(f); $(t).files = dt.files; $(t).dispatchEvent(new Event("change", { bubbles: true }));
   let n = 0; const iv = setInterval(() => { n++; const src = (t === "fS" ? ST.S.src : ST.R.src) || ""; const M_ = t === "fS" ? MS : MR; if ((src.startsWith(f.name) && M_ && M_.tri && M_.tri.length) || n > 60) { clearInterval(iv); $(inf).innerHTML = M_ && M_.tri && M_.tri.length ? `✓ ${esc(src)} · ${fmtN(M_.pts.length)} nokta · ${fmtN(M_.tri.length / 3)} üçgen` : `<span class="pill bad">${esc(f.name)}: üçgen model oluşmadı (Veri sekmesinde tabaka seçimini kontrol et)</span>`; recalcIfReady(); } }, 150); }); ["bzK", "bzM", "bzA", "bzSk", "bzSd"].forEach(id => $(id).addEventListener("change", () => { if (bazPending || $("bzRes").innerHTML) bazCalc(); }));
