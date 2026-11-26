@@ -1404,9 +1404,9 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #planSections .plan-sec-legend span::before { content:""; width:13px; height:10px; border-radius:3px; background:var(--swatch); border:1px solid var(--line) }
 #planSections [data-sec-key="black"] { --swatch:#536477 }
 #planSections [data-sec-key="red"] { --swatch:#c62b46 }
-#planSections [data-sec-key="cut"] { --swatch:repeating-linear-gradient(135deg,#942a3b 0 1px,#f9c8ce 1px 4px) }
-#planSections [data-sec-key="fill"] { --swatch:repeating-linear-gradient(45deg,#216e9b 0 1px,#bbdef3 1px 4px) }
-#planSections [data-sec-key="strip"] { --swatch:repeating-linear-gradient(0deg,#367349 0 1px,#c7e8ce 1px 3px) }
+#planSections [data-sec-key="cut"] { --swatch:#f9d5da }
+#planSections [data-sec-key="fill"] { --swatch:#d4ebfa }
+#planSections [data-sec-key="strip"] { --swatch:#ddf1e1 }
 #planSectionsProbe { min-height:1.4em }
 #planSectionsValues { font-variant-numeric:tabular-nums; font-weight:650 }
 #planSectionsStatus[data-error="true"] { color:#c56a24; font-weight:650 }
@@ -1761,7 +1761,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
           <button type="button" id="planSectionsNext" aria-label="Sonraki enkesit">›</button>
         </div>
         <div class="plan-sec-legend" aria-label="Grafik renkleri">
-          <span data-sec-key="black">Siyah arazi</span>
+          <span data-sec-key="black">Arazi</span>
           <span data-sec-key="red">Kırmızı proje</span>
           <span data-sec-key="cut">Kazı</span>
           <span data-sec-key="fill">Dolgu</span>
@@ -6501,10 +6501,10 @@ window.GPSS = (() => {
 "use strict";
 const O = {}; try { window.O = O; } catch (e) {}
 
-O.sectionHatchStyles = Object.freeze({
-  cut:   { fill: "#f9d5da", ink: "#a53346", slope: 1, aci: 1, layer: "ENK_KAZI_TARAMA" },
-  fill:  { fill: "#d4ebfa", ink: "#266c9c", slope: -1, aci: 5, layer: "ENK_DOLGU_TARAMA" },
-  strip: { fill: "#ddf1e1", ink: "#357744", slope: 0, aci: 3, layer: "ENK_SIYIRMA_TARAMA" }
+O.sectionFillStyles = Object.freeze({
+  cut:   { fill: "#f9d5da", aci: 1, layer: "ENK_KAZI_TARAMA" },
+  fill:  { fill: "#d4ebfa", aci: 5, layer: "ENK_DOLGU_TARAMA" },
+  strip: { fill: "#ddf1e1", aci: 3, layer: "ENK_SIYIRMA_TARAMA" }
 });
 O.sectionRegions = (section, depth, emit) => {
   const stripDepth = section.siy > 0 ? depth : 0;
@@ -6530,26 +6530,28 @@ O.sectionRegions = (section, depth, emit) => {
     }
   }
 };
-// Clip equally spaced parallel lines to one trapezoid in drawing coordinates.
-O.sectionHatchLines = (points, slope, spacing, emit) => {
-  const offsets = points.map(([x, y]) => y - slope * x);
-  const min = Math.min(...offsets), max = Math.max(...offsets);
-  if (max - min < 1e-8) return;
-  const first = Math.ceil((min + 1e-8) / spacing);
-  const last = Math.floor((max - 1e-8) / spacing);
-  for (let k = first; k <= Math.max(first, last); k++) {
-    const v = last < first ? (min + max) / 2 : k * spacing;
-    const hits = [];
-    for (let i = 0; i < points.length; i++) {
-      const j = (i + 1) % points.length, a = offsets[i], b = offsets[j];
-      if (!((a <= v && b > v) || (b <= v && a > v))) continue;
-      const t = (v - a) / (b - a);
-      hits.push(points[i][0] + (points[j][0] - points[i][0]) * t);
+// Pick an interior point of a continuous ground profile, clear of the opposite surface when possible.
+O.sectionGroundLabel = (parts, mapX, mapY, minimumGap) => {
+  let position = null, fallback = null, best = -Infinity;
+  for (const part of parts) {
+    if (part.length < 2) continue;
+    const start = part[0][0], end = part.at(-1)[0];
+    const middle = start + (end - start) * .31;
+    for (let i = 1; i < part.length; i++) {
+      const a = part[i - 1], b = part[i];
+      if (b[0] <= a[0]) continue;
+      const offset = Math.max(a[0], Math.min(b[0], middle));
+      const t = (offset - a[0]) / (b[0] - a[0]);
+      const x = mapX(offset), y = mapY(a[1] + (b[1] - a[1]) * t);
+      const redY = mapY(a[2] + (b[2] - a[2]) * t);
+      const edge = Math.min(x - mapX(start), mapX(end) - x);
+      if (!fallback || edge > fallback.edge) fallback = { x, y, edge };
+      if (Math.abs(y - redY) < minimumGap && minimumGap > 0) continue;
+      const score = edge - Math.abs(x - mapX(middle)) * .5;
+      if (score > best) { best = score; position = { x, y }; }
     }
-    if (hits.length < 2) continue;
-    const x0 = Math.min(...hits), x1 = Math.max(...hits);
-    if (x1 - x0 > 1e-7) emit([x0, v + slope * x0], [x1, v + slope * x1]);
   }
+  return position || fallback;
 };
 
 /* ---------- Kesit sayfası: mm cinsinden ilkel çizim listesi (A4 yatay 297×210, orijin sol alt) ---------- */
@@ -6559,13 +6561,8 @@ O.sheet = (sec, idx, n, P, set) => {
   const T = (x, y, s, size = 2.2, al = "l", rot = 0, bold = false, color = "#000") => G.push({ t: "x", x, y, s: String(s), size, al, rot, bold, color });
   const L = (x1, y1, x2, y2, w = 0.25, color = "#000") => G.push({ t: "l", p: [[x1, y1], [x2, y2]], w, color });
   const PL = (p, w, color) => G.push({ t: "l", p, w, color });
-  const hatch = (kind, points) => {
-    const style = O.sectionHatchStyles[kind];
-    G.push({ t: "f", p: points, color: style.fill });
-    O.sectionHatchLines(points, style.slope, kind === "strip" ? 1.45 : 2.65, (a, b) => {
-      G.push({ t: "l", p: [a, b], w: .16, color: style.ink, sectionHatch: kind });
-    });
-  };
+  const fill = (kind, points) => G.push({ t: "f", p: points, color: O.sectionFillStyles[kind].fill, sectionFill: kind });
+  const guide = (x, from, to) => G.push({ t: "l", p: [[x, from], [x, to]], w: .15, color: "#666", sectionGuide: true });
   PL([[8, 8], [289, 8], [289, 202], [8, 202], [8, 8]], 0.7, "#000");
   // ---- antet
   let y = 202; const RH = 6.4, FS = 2.6, LX = 40, VX = 42;
@@ -6604,17 +6601,17 @@ O.sheet = (sec, idx, n, P, set) => {
   // ölçek işareti ve kıyas
   { const bx = 13, by = ttop + 13; L(bx, by, bx, by + 7, 0.25); L(bx - 0.8, by + 5.6, bx, by + 7, 0.25); L(bx + 0.8, by + 5.6, bx, by + 7, 0.25); T(bx - 1, by + 9, `1/${sv}`, 2.1);
     L(bx, by, bx + 8, by, 0.25); L(bx + 6.6, by + 0.8, bx + 8, by, 0.25); L(bx + 6.6, by - 0.8, bx + 8, by, 0.25); T(bx + 9, by, `1/${sc}`, 2.1); T(11, ttop + 4, `Kıyas = ${kiyas}`, 2.1); }
-  const shownHatches = new Set();
+  const shownFills = new Set();
   O.sectionRegions(sec, SY, (kind, points) => {
-    shownHatches.add(kind);
-    hatch(kind, points.map(([offset, z]) => [xo(offset), yz(z)]));
+    shownFills.add(kind);
+    fill(kind, points.map(([offset, z]) => [xo(offset), yz(z)]));
   });
-  const hatchKey = [["cut", "Kazı"], ["fill", "Dolgu"], ["strip", "Sıyırma"]];
-  let keyX = 282 - hatchKey.filter(([kind]) => shownHatches.has(kind)).length * 25;
-  for (const [kind, label] of hatchKey) {
-    if (!shownHatches.has(kind)) continue;
+  const fillKey = [["cut", "Kazı"], ["fill", "Dolgu"], ["strip", "Sıyırma"]];
+  let keyX = 282 - fillKey.filter(([kind]) => shownFills.has(kind)).length * 25;
+  for (const [kind, label] of fillKey) {
+    if (!shownFills.has(kind)) continue;
     const mid = top - 4.1;
-    hatch(kind, [[keyX, mid-1.7], [keyX+6.5, mid-1.7], [keyX+6.5, mid+1.7], [keyX, mid+1.7]]);
+    fill(kind, [[keyX, mid-1.7], [keyX+6.5, mid-1.7], [keyX+6.5, mid+1.7], [keyX, mid+1.7]]);
     T(keyX + 8, mid, label, 2.25);
     keyX += 25;
   }
@@ -6624,6 +6621,11 @@ O.sheet = (sec, idx, n, P, set) => {
     else if ((dol && SR) || KZM) { let seg = []; const want = KZM ? (mm => mm < 0) : (mm => mm > 0);
       const flush = () => { if (seg.length > 1) { PL(seg.map(([o, z]) => [xo(o), yz(z - SY)]), 0.5, "#00a000"); for (const [o, z] of [seg[0], seg[seg.length - 1]]) L(xo(o), yz(z), xo(o), yz(z - SY), 0.5, "#00a000"); } seg = []; };
       for (let i = 1; i < part.length; i++) { const [a, s1, r1] = part[i - 1], [b, s2, r2] = part[i]; if (want(((r1 - s1) + (r2 - s2)) / 2)) { if (!seg.length) seg.push([a, s1]); seg.push([b, s2]); } else flush(); } flush(); }
+  }
+  const groundLabel = O.sectionGroundLabel(sec.full, xo, yz, 3);
+  if (groundLabel) {
+    G.push({ t: "x", x: groundLabel.x, y: groundLabel.y, s: "Arazi", size: 2.45,
+      al: "c", bold: true, color: "#fff", sectionGroundBadge: true });
   }
   // orta eksen (0)
   const AXX = xo(0);
@@ -6636,14 +6638,14 @@ O.sheet = (sec, idx, n, P, set) => {
     const P_ = sec.full.flat().filter(q => q[3]), gap = 2.4 * (set.G > 1 ? Math.min(set.G, 1.25) / set.G : 1);
     const pick = bit => { const L_ = P_.filter(q => q[3] & bit).sort((a, b) => a[0] - b[0]); const out = []; for (const q of L_) { const X = xo(q[0]); if (out.length && X - out[out.length - 1][0] < gap) { if (q[3] === 3) out[out.length - 1] = [X, q]; continue; } out.push([X, q]); } return out; };
     const SL = pick(1), RL = pick(2), rowY = i => ttop - rh * i - rh / 2;
-    for (const [X, q] of SL) { L(X, ttop, X, yz(q[1]), 0.15, "#666"); T(X - 1.2, rowY(0), q[1].toFixed(3), 1.85, "c", 90, false, "#000"); if (TUM || (KZM ? q[2] < q[1] : (SR && q[2] > q[1]))) T(X - 1.2, rowY(1), (q[1] - SY).toFixed(3), 1.85, "c", 90, false, "#00a000"); }
-    for (const [X, q] of RL) { L(X, ttop, X, yz(Math.max(q[1], q[2])), 0.15, "#666"); T(X - 1.2, rowY(SR ? 2 : 1), q[2].toFixed(3), 1.85, "c", 90, false, "#c00000"); T(X - 1.2, rowY(NR - 1), q[0].toFixed(3), 1.85, "c", 90, false, "#c00000"); }
+    for (const [X, q] of SL) { guide(X, ttop, yz(q[1])); T(X - 1.2, rowY(0), q[1].toFixed(3), 1.85, "c", 90, false, "#000"); if (TUM || (KZM ? q[2] < q[1] : (SR && q[2] > q[1]))) T(X - 1.2, rowY(1), (q[1] - SY).toFixed(3), 1.85, "c", 90, false, "#00a000"); }
+    for (const [X, q] of RL) { guide(X, ttop, yz(Math.max(q[1], q[2]))); T(X - 1.2, rowY(SR ? 2 : 1), q[2].toFixed(3), 1.85, "c", 90, false, "#c00000"); T(X - 1.2, rowY(NR - 1), q[0].toFixed(3), 1.85, "c", 90, false, "#c00000"); }
   } else {
   const labs = []; for (const part of sec.full) { labs.push(part[0][0], part[part.length - 1][0]); for (let o = Math.ceil(part[0][0] / ST_) * ST_; o <= part[part.length - 1][0] + 1e-9; o += ST_) labs.push(o); }
     const uniq = [...new Set(labs.map(o => Math.round(o * 1000) / 1000))].sort((a, b) => a - b); const shown = [];
     for (const o of uniq) { const X = xo(o); if (shown.length && X - shown[shown.length - 1][0] < 3.2) { const ends = sec.full.some(pp => Math.abs(pp[0][0] - o) < 1e-6 || Math.abs(pp[pp.length - 1][0] - o) < 1e-6); if (!ends) continue; shown.pop(); } const z = zAt(o); if (z) shown.push([X, o, z[0], z[1]]); }
     for (const [X, o, s, r] of shown) {
-      L(X, ttop, X, yz(Math.max(s, r)), 0.15, "#666"); const f = r - s;
+      guide(X, ttop, yz(Math.max(s, r))); const f = r - s;
       const vals = [[s.toFixed(3), "#000"]]; if (SR) vals.push([(TUM || (KZM ? f < 0 : f > 0)) ? (s - SY).toFixed(3) : "", "#00a000"]);
       vals.push([r.toFixed(3), "#c00000"], [o.toFixed(3), "#c00000"]);
       vals.forEach(([t, c], i) => t && T(X - 1.2, ttop - rh * i - rh / 2, t, 1.85, "c", 90, false, c));
@@ -6681,8 +6683,29 @@ O.paint = (ctx, G, pxmm, W = 297, H = 210) => {
   if (G && G.coz !== false && !G.__coz && window.APLGEO && APLGEO.cakisma) { try { APLGEO.cakisma(G); } catch (e) { console.error(e); } }
   ctx.save(); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W * pxmm, H * pxmm); ctx.lineCap = "butt"; ctx.lineJoin = "round";
   const X = x => x * pxmm, Y = y => (H - y) * pxmm;
-  for (const g of G) if (g.t === "f" && !g.levelMark87) { ctx.fillStyle = g.color; ctx.beginPath(); g.p.forEach(([x, y], i) => i ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y))); ctx.closePath(); ctx.fill(); }
-  for (const g of G) if (g.t === "l" && !g.ust && !g.levelMark87) { ctx.strokeStyle = g.color; ctx.lineWidth = (g.kot86 || g.sketchRing88) ? g.w * pxmm : Math.max(0.6, g.w * pxmm); ctx.setLineDash(g.dash ? g.dash.map(v => v * pxmm) : []); ctx.beginPath(); g.p.forEach(([x, y], i) => i ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y))); ctx.stroke(); }
+  const paintLine = g => {
+    ctx.strokeStyle = g.color;
+    ctx.lineWidth = (g.kot86 || g.sketchRing88) ? g.w * pxmm : Math.max(0.6, g.w * pxmm);
+    ctx.setLineDash(g.dash ? g.dash.map(v => v * pxmm) : []);
+    ctx.beginPath();
+    g.p.forEach(([x, y], i) => i ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y)));
+    ctx.stroke();
+  };
+  for (const g of G) if (g.sectionGuide) paintLine(g);
+  const fillPath = points => {
+    points.forEach(([x, y], i) => i ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y)));
+    ctx.closePath();
+  };
+  if (G.some(g => g.sectionFill)) for (const [kind, style] of Object.entries(O.sectionFillStyles)) {
+    ctx.fillStyle = style.fill;
+    ctx.beginPath();
+    for (const g of G) if (g.sectionFill === kind) fillPath(g.p);
+    ctx.fill();
+  }
+  for (const g of G) if (g.t === "f" && !g.levelMark87 && !g.sectionFill) {
+    ctx.fillStyle = g.color; ctx.beginPath(); fillPath(g.p); ctx.fill();
+  }
+  for (const g of G) if (g.t === "l" && !g.ust && !g.levelMark87 && !g.sectionGuide) paintLine(g);
   ctx.setLineDash([]);
   for (const g of G) if (g.t === "l" && g.ust) { ctx.beginPath(); g.p.forEach(([x, y], i) => i ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y))); ctx.closePath(); ctx.fillStyle = "#fff"; ctx.fill(); ctx.strokeStyle = g.color; ctx.lineWidth = Math.max(0.6, g.w * pxmm); ctx.stroke(); } /* balastro */
   for(const g of G)if(g.levelMark87){
@@ -6693,7 +6716,13 @@ O.paint = (ctx, G, pxmm, W = 297, H = 210) => {
   }
   for (const g of G) if (g.t === "x" && !g._acadOmit) { ctx.save(); ctx.translate(X(g.x), Y(g.y)); if (g.rot) ctx.rotate(-g.rot * Math.PI / 180);
     ctx.fillStyle = g.color; ctx.font = `${g.it ? "italic " : ""}${g.bold ? "700 " : ""}${g.size * 1.32 * pxmm}px ${g.kroki84?'AcadArial89,Arial,Kroki84,':''}Arial, "Liberation Sans", Arimo, "Helvetica Neue", sans-serif`;
-    ctx.textAlign = g.al === "c" ? "center" : g.al === "r" ? "right" : "left"; ctx.textBaseline = "middle"; ctx.fillText(g.s, 0, 0); ctx.restore(); }
+    ctx.textAlign = g.al === "c" ? "center" : g.al === "r" ? "right" : "left"; ctx.textBaseline = "middle";
+    if (g.sectionGroundBadge) {
+      const w = ctx.measureText(g.s).width / 2 + 1.4 * pxmm, h = g.size * .92 * pxmm;
+      ctx.fillStyle = "#222a33"; ctx.fillRect(-w, -h, w * 2, h * 2);
+      ctx.fillStyle = g.color;
+    }
+    ctx.fillText(g.s, 0, 0); ctx.restore(); }
   for (const g of G) if (g.t === "i") { const im = O.IMG[g.k]; if (!im) continue; ctx.save(); try { ctx.globalCompositeOperation = "multiply"; } catch (e) {} ctx.drawImage(im, X(g.x), Y(g.y + g.h), g.w * pxmm, g.h * pxmm); ctx.restore(); }
   ctx.restore();
 };
@@ -6900,11 +6929,22 @@ O.dxf = () => {
 const COLD = { "#808080": 8, "#9a9a9a": 8, "#000": 7, "#000000": 7, "#d00000": 1, "#c00000": 1, "#00a000": 3, "#888": 8, "#7a1f1f": 1, "#1f5f2f": 3 };
 O.sheetToDxf = (D, G, ox, oy, s = 1) => { // sayfa ilkellerini DXF'e (mm → s birim) koy
   const lay = D.lay("ENKESIT_SAYFA", 7), ls = D.lay("ENK_SIYAH", 7), lk = D.lay("ENK_KIRMIZI", 1), lg = D.lay("ENK_SIYIRMA", 3), lt = D.lay("ENK_YAZI", 7);
+  const points = g => g.p.map(([x, y]) => [ox + x * s, oy + y * s]);
+  for (const g of G) if (g.sectionGuide) D.line(lay, ...points(g), 8);
+  for (const g of G) if (g.sectionFill) {
+    const style = O.sectionFillStyles[g.sectionFill];
+    D.solid(D.lay(style.layer, style.aci), points(g));
+  }
   for (const g of G) {
-    if (g.t === "l") { const hatchStyle = O.sectionHatchStyles[g.sectionHatch];
-      const l = hatchStyle ? D.lay(hatchStyle.layer, hatchStyle.aci) : g.color === "#d00000" ? lk : g.detail ? D.lay("AYRINTI_GORSEL",7) : g.color === "#00a000" ? lg : g.w === 0.6 && g.color === "#000" && g.p.length > 2 ? ls : lay;
-      const pts = g.p.map(([x, y]) => [ox + x * s, oy + y * s]); if (pts.length === 2) D.line(l, pts[0], pts[1], l === lay ? COLD[g.color] : 0); else D.poly(l, pts, false); }
-    else if (g.t === "x") D.text(g.detail?D.lay("AYRINTI_YAZI",7):lt, ox + g.x * s, oy + g.y * s, g.size * s * 0.9, g.s, g.rot, g.al, COLD[g.color] && COLD[g.color] !== 7 ? COLD[g.color] : 0);
+    if (g.t === "l" && !g.sectionGuide) {
+      const l = g.color === "#d00000" ? lk : g.detail ? D.lay("AYRINTI_GORSEL",7) : g.color === "#00a000" ? lg : g.w === 0.6 && g.color === "#000" && g.p.length > 2 ? ls : lay;
+      const pts = points(g);
+      if (pts.length === 2) D.line(l, pts[0], pts[1], l === lay ? COLD[g.color] : 0);
+      else D.poly(l, pts, false);
+    } else if (g.t === "x") {
+      const y = g.sectionGroundBadge ? g.y + g.size : g.y;
+      D.text(g.detail ? D.lay("AYRINTI_YAZI",7) : lt, ox + g.x * s, oy + y * s, g.size * s * 0.9, g.s, g.rot, g.al, COLD[g.color] && COLD[g.color] !== 7 ? COLD[g.color] : 0);
+    }
   }
 };
 
@@ -10043,7 +10083,7 @@ const DEF_POZ = [ // kaynak: 116-3.HAKEDIS_TOPRAK_ISLERI_guncel.xlsx
   { kod: "PAÇAL K", ac: "Her Cins ve Zeminde ve Her Derinlikte Serbest Tesviye ve Derin Temel Kazısı Yapılması" },
   { kod: "DOLGU 1", ac: "Her cins ve klasdaki zeminde dolguda kullanılan kazı malzemesinin sulama ve sıkıştırılmasının yapılması" }];
 const OLD_POZ = ["2200/Ö - KGM2206", "KGM/2200"];
-const DEF_SET = { siyMod: "dolgu", kaynak: "aralik", cm: 33, kesik: 0.10, olcek: 150, esit: true, step: 10, kurp: 5, ang: 2, km0: 0, siy: 0.25, esik: 0.10, wL: 10, wR: 10, maxE: 50, maxEK: 50 };
+const DEF_SET = { siyMod: "yok", kaynak: "aralik", cm: 33, kesik: 0.10, olcek: 150, esit: true, step: 10, kurp: 5, ang: 2, km0: 0, siy: 0.25, esik: 0.10, wL: 10, wR: 10, maxE: 50, maxEK: 50 };
 let ST; // {proj,set,S:{pts,tri,src},R:{mode,pts,tri,flat},alanlar:[{ad,pts,kubaj}],eksen:[[e,n]]}
 let MS = null, MR = null, SECS = [], SEL = 0;
 
@@ -11329,8 +11369,18 @@ $("oSig").addEventListener("change", e => { ST.set.kesSig = e.target.value === "
 $("vOl").addEventListener("change", e => { const v = K.num(e.target.value); ST.set.olcek = v > 0 ? v : 150; $("vOl").value = $("sOl").value = ST.set.olcek; save(); preview(); });
 $("sEsit").addEventListener("change", e => { ST.set.esit = e.target.checked; save(); preview(); });
 $("eKm0").addEventListener("change", e => { const v = K.kmNum(e.target.value); ST.set.km0 = isFinite(v) ? v : 0; e.target.value = K.kmtxt(ST.set.km0); $("sKm0").value = $("vKm0").value = e.target.value; save(); renderAlanlar(); recalcIfReady(); });
-function SYE() { K.siyMod = (ST && ST.set && ST.set.siyMod) || "dolgu"; return K.siyMod === "yok" ? 0 : +ST.set.siy || 0; }
-function SYTXT() { const m = (ST.set && ST.set.siyMod) || "dolgu", y = +ST.set.siy || 0; return m === "yok" || !y ? "sıyırma yok" : m === "tum" ? `tamamında ${K.tr(y)} m sıyırma (ayrı kalem; kazı ve dolgu sıyırma tabanından)` : m === "kazi" ? `kazıda ${K.tr(y)} m sıyırma (ayrı kalem; kazı sıyırma tabanından)` : `dolguda ${K.tr(y)} m sıyırma (dolgu sıyırma tabanından)`; }
+const stripMode = () => ["dolgu", "kazi", "tum"].includes(ST?.set?.siyMod) ? ST.set.siyMod : "yok";
+function SYE() {
+  K.siyMod = stripMode();
+  const depth = K.num(ST?.set?.siy);
+  return K.siyMod !== "yok" && Number.isFinite(depth) && depth > 0 ? depth : 0;
+}
+function SYTXT() {
+  const y = SYE(), mode = stripMode();
+  return !y ? "sıyırma yok" : mode === "tum" ? `tamamında ${K.tr(y)} m sıyırma (ayrı kalem; kazı ve dolgu sıyırma tabanından)`
+    : mode === "kazi" ? `kazıda ${K.tr(y)} m sıyırma (ayrı kalem; kazı sıyırma tabanından)`
+    : `dolguda ${K.tr(y)} m sıyırma (dolgu sıyırma tabanından)`;
+}
 $("sSiyM").addEventListener("change", e => { ST.set.siyMod = e.target.value; save(); renderAlanlar(); recalcIfReady(); try { if (window.BZR) bazCalc(); } catch (er) { } });
 const SETF = { sKesik: "kesik", sOl: "olcek", sStep: "step", sKurp: "kurp", sAng: "ang", sKm0: "km0", sSiy: "siy", sEsik: "esik", sWL: "wL", sWR: "wR" };
 Object.entries(SETF).forEach(([id, k]) => $(id).addEventListener("change", e => { const v = k === "km0" ? K.kmNum(e.target.value) : K.num(e.target.value); ST.set[k] = isFinite(v) ? v : 0;
@@ -11354,7 +11404,7 @@ function readiness() {
   if (!aOk) { items[3] = [false, `Kübaj alanı (${esc(kub.ad)}) ilk ve son kotun ortak bölgesinde değil`]; kotsuz.push("kübaj alanı"); }
   const hu = $("hUyar"); if (hu) hu.innerHTML = kotsuz.length ? `<div class="row" style="gap:8px;align-items:center;margin-bottom:8px;background:#fdecec;border:1px solid #e3a0a0;border-radius:8px;padding:8px"><span>Yüklü ${kotsuz.join(" ve ")} iki üçgenin birlikte olduğu yerde değil (başka projeden kalmış olabilir); kesit çıkmaz.</span><button type="button" id="hTemiz">Kaldır, veriye göre otomatik kur</button></div>` : "";
   if (kotsuz.length) $("hTemiz").onclick = () => { if (!eOk) ST.eksen = null; if (!aOk) ST.alanlar = ST.alanlar.filter(a => a !== kub); SECS = []; save(); try { renderAlanlar(); } catch (e) {} recalcIfReady(); };
-  const oz = $("kAyarOz"); if (oz) oz.textContent = `· her ${K.tr(+ST.set.step || 10, 2)} m · ${(ST.set.siyMod || "dolgu") === "yok" || !SYE() ? "sıyırma yok" : ({ tum: "tamamında", kazi: "kazıda", dolgu: "dolguda" }[ST.set.siyMod || "dolgu"]) + " sıyırma " + K.tr(SYE(), 2) + " m"} · 1/${+ST.set.olcek || 150}`;
+  const oz = $("kAyarOz"); if (oz) oz.textContent = `· her ${K.tr(+ST.set.step || 10, 2)} m · ${!SYE() ? "sıyırma yok" : ({ tum: "tamamında", kazi: "kazıda", dolgu: "dolguda" }[stripMode()]) + " sıyırma " + K.tr(SYE(), 2) + " m"} · 1/${+ST.set.olcek || 150}`;
   const bz = $("bazCard"); if (bz) { const n = (MS && MS.tri.length ? 1 : 0) + (MR && MR.tri && MR.tri.length ? 1 : 0); if (!bz.dataset.u) bz.open = n === 1; }
   const el = $("ready"); if (el) el.innerHTML = items.map(([ok, t]) => `<span class="pill ${ok ? "ok" : "bad"}">${ok ? "✓" : "✗"} ${t}</span>`).join("");
   return items.every(i => i[0]);
@@ -11643,22 +11693,14 @@ function paintPlanSection(section, compare, cursor = null) {
     line(left, py, right, py);
     g.fillStyle = "#41566a"; g.fillText(K.tr(z, 2), left - 10, py);
   }
-  const patterns = regions.map(({ kind, points }) => {
-    const path = points.map(([offset, z]) => [x(offset), y(z)]);
-    g.fillStyle = O.sectionHatchStyles[kind].fill;
+  if (regions.length) for (const [kind, style] of Object.entries(O.sectionFillStyles)) {
+    g.fillStyle = style.fill;
     g.beginPath();
-    path.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y));
-    g.closePath(); g.fill();
-    return { kind, path };
-  });
-  for (const { kind, path } of patterns) {
-    const style = O.sectionHatchStyles[kind];
-    g.strokeStyle = style.ink; g.lineWidth = 1.35;
-    g.beginPath();
-    O.sectionHatchLines(path, -style.slope, kind === "strip" ? 8 : 11, (a, b) => {
-      g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]);
-    });
-    g.stroke();
+    for (const region of regions) if (region.kind === kind) {
+      region.points.forEach(([offset, level], i) => i ? g.lineTo(x(offset), y(level)) : g.moveTo(x(offset), y(level)));
+      g.closePath();
+    }
+    g.fill();
   }
   g.strokeStyle = "#8ca4b8"; g.lineWidth = 1.5; g.setLineDash([6, 6]);
   line(x(0), top, x(0), bottom); g.setLineDash([]);
@@ -11673,6 +11715,18 @@ function paintPlanSection(section, compare, cursor = null) {
       if (i) g.lineTo(x(p[0]), y(p[key])); else g.moveTo(x(p[0]), y(p[key]));
     });
     g.stroke();
+  }
+  if (compare || planSections.singleName === "Siyah arazi") {
+    const badge = O.sectionGroundLabel(section.parts, x, y, compare ? 24 : 0);
+    if (badge) {
+      g.font = "600 19px Arial";
+      const half = g.measureText("Arazi").width / 2 + 10;
+      const bx = Math.max(left + half, Math.min(right - half, badge.x));
+      g.fillStyle = "#222a33";
+      g.fillRect(bx - half, badge.y - 13, half * 2, 26);
+      g.fillStyle = "#fff"; g.textAlign = "center";
+      g.fillText("Arazi", bx, badge.y);
+    }
   }
   if (cursor === null) return;
   const offset = x0 + (Math.max(left, Math.min(right, cursor)) - left) / (right - left) * (x1 - x0);
@@ -12236,7 +12290,7 @@ function boot() {
   PUNDO.length=0;$("tUndoP").hidden=true;if($("profBox")){$("profBox").remove();PROF=null;}if($("kub3Panel")?.open)$("kub3Panel").close();
   $("sdB_alan").checked=ST.set.sdb==="alan";document.querySelector("input[name=sdb][value=ortak]").checked=!$("sdB_alan").checked;
   $("maxE").value = ST.set.maxE; $("maxEK").value = ST.set.maxEK; $("kSabit").value = Number.isFinite(K.num(ST.R.flat)) ? ST.R.flat : "";
-  $("sSiyM").value = ST.set.siyMod || "dolgu"; Object.entries(SETF).forEach(([id, k]) => $(id).value = k === "km0" ? K.kmtxt(+ST.set.km0 || 0) : (ST.set[k] ?? "")); $("eKm0").value = K.kmtxt(+ST.set.km0 || 0); $("vKm0").value = K.kmtxt(+ST.set.km0 || 0); $("vOl").value = ST.set.olcek || 150; $("sKay").value = ST.set.kaynak || "aralik"; $("sEsit").checked = ST.set.esit !== false;
+  $("sSiyM").value = stripMode(); Object.entries(SETF).forEach(([id, k]) => $(id).value = k === "km0" ? K.kmtxt(+ST.set.km0 || 0) : (ST.set[k] ?? "")); $("eKm0").value = K.kmtxt(+ST.set.km0 || 0); $("vKm0").value = K.kmtxt(+ST.set.km0 || 0); $("vOl").value = ST.set.olcek || 150; $("sKay").value = ST.set.kaynak || "aralik"; $("sEsit").checked = ST.set.esit !== false;
   PF.forEach(k => $("p_" + k).value = ST.proj[k] || (k === "yerTur" ? "oto" : "")); renderPoz();
   buildModels(); info(); renderAlanlar(); renderKat(); renderNp(); VIEW.s = 0; SECS = []; SEL = 0; recalcIfReady(); save();
 }
