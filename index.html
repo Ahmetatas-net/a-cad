@@ -53363,10 +53363,15 @@ const KgmPaper = (() => {
    const rollGroup=groups.find(g=>town(g.result.town)===profile.rollBoundaryTown);if(!rollGroup)throw Error('Ruloya esas mahalle sınırı eksik.');stroke(rollGroup.result.border,'KAM_SINIR',true);
    if(axes)stroke(axes.pts,'PL_EKSEN',false);
   }
+  const differences=[['Rulo sırası','Kimlik','Alan','KGM kaynak rulo','A-CAD çıktısı','Çıktının dayanağı']];
   const regRows=[['Rulo sırası','Mahalle','Kimlik','Nitelik','Geometrik giren (m²)','Cetvel alanı (m²)','Dayanak']];
   const R='TABLO_YAZI_BLACK',slope=-.00665,theta=Math.atan(slope);
   for(const v of a.register){
-   const base=norm([v.x,v.y]),put=(x,t,w,h=1.85)=>add(R,[base[0]+x,base[1]+slope*x],t,h,theta,w);
+   const base=norm([v.x,v.y]),field={0:'order',9.2:'station',27.8:'sheet',49.3:'ada',65.1:'parcel',64:'parcel',77.7:'tapuCinsi',97:'actual',123:'zoning',144.4:'tapu',163.6:'geometry',182:'enter',204:'right',224:'left',334:'doc',365:'note'};
+   const put=(x,t,w,h=1.85)=>{const key=field[x],ink=v.ink?.[key],source=v.sourceCheck?.[key],value=String(t??'');
+    if(source&&value&&source!==value)differences.push([v.order,v.id||v.road,({station:'Kilometre',geometry:'Geometrik alan (m²)',enter:'Giren (m²)',right:'Sağ kalan (m²)',left:'Sol kalan (m²)'})[key],source,value,key==='station'?'KAP parsel kilometresi':key==='geometry'?'Sınır hesabı':'KAP dengeli alanı']);
+    if(ink){const len=scene.length;add(R,[base[0]+ink[0],base[1]+ink[1]],value,ink[2],ink[3],w);if(scene.length>len)scene.at(-1)[7]=Math.min(w,ink[4]*value.length/Math.max(1,ink[5]));}
+    else add(R,[base[0]+x,base[1]+slope*x],value,h,theta,w);};
    put(0,String(v.order),7);
    const fmtKm=x=>{if(x==null||x==='')return '';const v=Math.round(Number(x)*100);return Math.floor(v/100000)+'+'+num((v%100000)/100).padStart(6,'0');};
    const key=v.id||v.native,assoc=a.rollRights[key];put(97,assoc.actual,23);put(123,assoc.zoning,19);put(334,assoc.doc,22);put(365,assoc.note,34);
@@ -53376,12 +53381,12 @@ const KgmPaper = (() => {
     stat(i,cat,bal);regRows.push([v.order,town(groups[i].result.town),r.id,classification,num(r.geometry.enter),num(bal),'KAP dengeli alanı']);
     put(9.2,fmtKm(r.station),18);put(27.8,r.sheet,20);put(49.3,r.id.split('/')[0],12);put(65.1,r.id.split('/')[1],10.5);
     put(77.7,source[4],18);put(144.4,num(r.main.balanced),17);put(163.6,num(r.geometry.parentArea),17);put(182,num(bal),17);
-    for(const [letter,x] of [['A',224],['C',204]]){const pp=r.pieces.filter(p=>p.name[0]===letter);if(pp.length)put(x,num(pp.reduce((n,p)=>n+(p.ref?.balanced??p.area),0)),17);}
+    for(const [letter,x] of [['A',224],['C',204]]){const pp=r.pieces.filter(p=>p.name[0]===letter);if(pp.length)put(x,num(pp.reduce((n,p)=>n+(p.ref?.balanced??p.area),0)),17);else if(v.ink?.[field[x]]?.[6])put(x,'-',17);}
     const slots=v.ownerPositions.length?v.ownerPositions:[base];
     if(r.owners.length>slots.length)throw Error(r.id+' malik satırları kaynak cetveldeki boşluğa sığmıyor.');
     r.owners.forEach((o,i)=>{const [x,y]=slots[i];for(const [u,z,w] of [[240.2,o.father,24],[265.4,o.name,47],[314,o.n+'/'+o.d,17]])add(R,[x+u,y+slope*u],z,1.85,theta,w);});
    }else{const p=roadIndex.get(v.native),area=BoundaryProject.area(p.poly),cat=p.layer==='KAD_DERE'?'stream':'road';stat(v.town,cat,area);
-    put(9.2,v.station,18);put(27.8,v.sheet,20);put(64,v.road,12);put(77.7,v.road.replace(/\d/g,''),18);put(163.6,num(area),16);put(182,num(area),17);
+    put(9.2,v.station,18);put(27.8,v.sheet,20);put(64,v.road,12);put(163.6,num(area),16);put(182,num(area),17);
     regRows.push([v.order,profile.towns[v.town],v.road,p.layer,num(area),num(area),v.native]);}
   }
   for(const b of a.inventory){const g=totalGroups[indexTown(b.id)];if(!g)throw Error('Yapı kaydı parselle eşleşmedi.');const k=b.group.startsWith('Özel')?'buildingPrivate':'buildingOther';g.building[k]=(g.building[k]||0)+b.count;}
@@ -53398,7 +53403,7 @@ const KgmPaper = (() => {
    const slot=sheetArea[i];add('TABLO_PAFTA',slot.t,town(g.result.town),1.93,theta);add('TABLO_PAFTA',slot.s,'1/1000',1.69,theta);
    for(let j=0;j<set.length;j+=2)add('TABLO_PAFTA',[slot.p[0],slot.p[1]-j*1.28],set.slice(j,j+2).map(split).join(',')+(j+2<set.length?',':''),1.69,theta,46);
   }
-  return {page:{origin,items:scene,id:'Rulo'},register:regRows,totals:totalGroups};
+  return {page:{origin,items:scene,id:'Rulo'},register:regRows,totals:totalGroups,differences};
  }
  async function create(profile,groups){
   if(profile.version!==1||!profile.paperVersion||!profile.forms?.rulo?.back)throw Error('KGM pafta kalıbı okunamadı.');
@@ -53445,7 +53450,7 @@ const KgmPaper = (() => {
   if(!decoded.polys.some(p=>p.lay==='ALN_KAMULAŞTIRMA')||!decoded.textList.some(t=>t.s==='TOPLAM'||t.s?.includes('Genel Toplam')))throw Error('Rulo plan geri okunamadı.');
   scenes.rulo=[out.page];files.push({name:'5-RULO PLAN/'+profile.rollFilename,data:rul});
   for(const [name,v] of Object.entries(profile.assets))files.push({name:'5-RULO PLAN/'+name,data:b64(v)});
-  files.push({name:'CETVELLER/Kose_koordinatlari.csv',data:csv(coords)},{name:'CETVELLER/Malik_hisseleri.csv',data:csv(owners)},{name:'CETVELLER/Rulo_cetveli.csv',data:csv(out.register)},{name:'CETVELLER/Mahalle_ozeti.json',data:JSON.stringify(out.totals)},{name:'BASKI/Pafta_yerlesimleri.json',data:JSON.stringify(scenes)});
+  files.push({name:'CETVELLER/Kose_koordinatlari.csv',data:csv(coords)},{name:'CETVELLER/Malik_hisseleri.csv',data:csv(owners)},{name:'CETVELLER/Rulo_cetveli.csv',data:csv(out.register)},{name:'CETVELLER/KGM_kaynak_rulo_farklari.csv',data:csv(out.differences)},{name:'CETVELLER/Mahalle_ozeti.json',data:JSON.stringify(out.totals)},{name:'BASKI/Pafta_yerlesimleri.json',data:JSON.stringify(scenes)});
   return files;
  }
  return {create};
