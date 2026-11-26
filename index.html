@@ -1804,8 +1804,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       <div class="row">
         <label><input type="checkbox" id="lyP" checked> Noktalar</label>
         <label><input type="checkbox" id="lyN" checked> Nokta adları</label>
-        <label><input type="checkbox" id="lyS" checked> <span style="display:inline-block;width:18px;height:3px;background:#333"></span> Siyah üçgenler (ilk hâl)</label>
-        <label><input type="checkbox" id="lyK" checked> <span style="display:inline-block;width:18px;height:3px;background:#d70000"></span> Kırmızı üçgenler (son hâl)</label>
+        <label><input type="checkbox" id="lyS" checked> <span class="plan-tin-swatch ground"></span> Siyah üçgenler (ilk hâl)</label>
+        <label><input type="checkbox" id="lyK" checked> <span class="plan-tin-swatch project"></span> Kırmızı üçgenler (son hâl)</label>
         <label><input type="checkbox" id="lyX" checked> Kesitler</label>
         <label><input type="checkbox" id="lyE"> 〰 Eş yükselti eğrileri</label>
         <label style="flex-direction:row;align-items:center;gap:4px">Aralık<select id="lyEi" style="width:auto"><option value="0">Otomatik</option><option value="1">1 m</option><option value="2">2 m</option><option value="5">5 m</option><option value="10">10 m</option><option value="20">20 m</option></select></label>
@@ -1813,6 +1813,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
         <label><input type="checkbox" id="lyEl" checked> Eğri kotları</label>
         <label title="Görsel yumuşatma eğriyi gerçek geçiş yerinden biraz kaydırır; doğruluk için kapalı tutun"><input type="checkbox" id="lyEs"> Yumuşat (yalnız görünüm)</label>
         <span class="note" id="lyEinfo" role="status"></span>
+        <span id="planContourLegend" class="plan-contour-legend" hidden><span id="contourLegendS">Arazi eğrisi</span><span id="contourLegendR">Proje eğrisi</span></span>
       </div>
       <p class="note" style="margin-top:8px">Sürükleyerek kaydır, iki parmakla ya da tekerlekle yakınlaştır. Kaybolursan boş bir yere çift dokun: çizim ortalanır. Bir noktaya dokununca adı, Y, X ve Z kotu; çevrili bir alanın ya da üçgenlerin içine dokununca o alanın kübajı (ilk hâl – son hâl farkı) açılır. "Sorgula" ile dokunduğun yerin koordinatı ve kotları, "Nokta ekle" ile yeni nokta. Çizerken yalnızca noktalar ve çizgiler tutulur, boşluğa dokunmak nokta koymaz.</p>
     </div>
@@ -10626,12 +10627,12 @@ function drawTin(M, color, w) { tinDrawG(ctx, M, color, w, sx, sy, cv.width, cv.
 function draw(){if(kubPlanFrame||$("v-plan").hidden)return;kubPlanFrame=requestAnimationFrame(()=>{kubPlanFrame=0;if(!$("v-plan").hidden)drawPlanFrame();});}
 function drawPlanFrame() {
   if (!cv.width) return; kubPlanPaints++; ACAD_PLAN.surface(ctx,cv.width,cv.height,VIEW.s*DPR,VIEW.cx,VIEW.cy,DPR);const D=DPR;try { window.BGI && BGI.draw(ctx, sx, sy); } catch (e) {} const dark=ACAD_PLAN.dark();
-  if ($("lyS").checked) drawTin(MS, $("lyE").checked ? (dark ? "rgba(200,200,200,.22)" : "rgba(120,120,120,.28)") : dark ? "rgba(225,232,240,.45)" : "rgba(20,28,38,.45)", 1);
-  // kırmızı üçgenler siyahın üstünde
-  if ($("lyK").checked && MR && MR.tri && MR.tri.length) drawTin(MR, dark ? "rgba(255,90,90,.9)" : "rgba(215,0,0,.85)", 1.3);
+  const palette = planTerrainPalette(dark), contours = $("lyE").checked;
+  if ($("lyS").checked) drawTin(MS, contours ? palette.S.softMesh : palette.S.mesh, .85);
+  if ($("lyK").checked && MR?.tri?.length) drawTin(MR, contours ? palette.R.softMesh : palette.R.mesh, .9);
   try { drawEgri(D, dark); } catch (e) { console.error(e); }
   // tabakalar
-  for (const k of (ST.katmanlar || [])) { if (!k.show) continue; if (k.tin) drawTin(k.tin, /KIRMIZI|KIRIMZI|KRMZ/i.test(k.lay) ? "rgba(215,0,0,.65)" : "rgba(110,110,110,.45)", 0.8); ctx.strokeStyle = k.color; ctx.fillStyle = k.color; ctx.lineWidth = 1.4 * D; ctx.beginPath();
+  for (const k of (ST.katmanlar || [])) { if (!k.show) continue; if (k.tin) { const style = /KIRMIZI|KIRIMZI|KRMZ/i.test(k.lay) ? palette.R : palette.S; drawTin(k.tin, contours ? style.softMesh : style.mesh, .75); } ctx.strokeStyle = k.color; ctx.fillStyle = k.color; ctx.lineWidth = 1.4 * D; ctx.beginPath();
     for (const l of k.lines) { ctx.moveTo(sx(l[0][0]), sy(l[0][1])); for (let i = 1; i < l.length; i++) ctx.lineTo(sx(l[i][0]), sy(l[i][1])); }
     for (const pp of k.polys) { pp.p.forEach((q, i) => i ? ctx.lineTo(sx(q[0]), sy(q[1])) : ctx.moveTo(sx(q[0]), sy(q[1]))); if (pp.c && pp.p.length) ctx.lineTo(sx(pp.p[0][0]), sy(pp.p[0][1])); }
     ctx.stroke(); if (k.points.length && k.points.length < 6000) for (const q of k.points) ctx.fillRect(sx(q[0]) - 1.5 * D, sy(q[1]) - 1.5 * D, 3 * D, 3 * D);
@@ -11143,21 +11144,55 @@ function contourForPlan(model, step) {
   }
 }
 
-function egriDrawG(g, D, dark, X_, Y_, W, H, m, want, lbl, smooth, interactive = false) { const ctx = g, sx = X_, sy = Y_; const L = []; if (m.includes("S") && MS && MS.tri && MS.tri.length) L.push([MS, "#1f7fff", "#45c845"]); if (m.includes("R") && MR && MR.tri && MR.tri.length) L.push([MR, "#ff4fa0", "#b0008a"]);
-  const info = [];
-  for (const [M, col, colA] of L) { const step = egriStep(M, want);
+const PLAN_TERRAIN_PALETTES = {
+  light: {
+    S: { mesh: "rgba(51,61,71,.49)", softMesh: "rgba(51,61,71,.24)", contour: "#367e76", major: "#1f625a" },
+    R: { mesh: "rgba(181,63,67,.57)", softMesh: "rgba(181,63,67,.27)", contour: "#7f65a2", major: "#634684" }
+  },
+  dark: {
+    S: { mesh: "rgba(199,209,218,.40)", softMesh: "rgba(199,209,218,.23)", contour: "#71b7a8", major: "#a3d8c8" },
+    R: { mesh: "rgba(224,112,118,.56)", softMesh: "rgba(224,112,118,.28)", contour: "#b09ac9", major: "#d1b9e9" }
+  }
+};
+const planTerrainPalette = dark => PLAN_TERRAIN_PALETTES[dark ? "dark" : "light"];
+function egriDrawG(g, D, dark, X_, Y_, W, H, m, want, lbl, smooth, interactive = false) { const ctx = g, sx = X_, sy = Y_, palette = planTerrainPalette(dark);
+  const models = [];
+  if (m.includes("S") && MS?.tri?.length) models.push([MS, "S"]);
+  if (m.includes("R") && MR?.tri?.length) models.push([MR, "R"]);
+  const info = [], placed = [];
+  ctx.save();
+  try { for (const [M, key] of models) { const step = egriStep(M, want);
     const E = interactive ? contourForPlan(M, step) : egriCalc(M, step);
     if (!E || E.error) { info.push(E?.error || "Eğriler hazırlanıyor…"); continue; }
-    info.push(`${M === MS ? "siyah" : "kırmızı"} ${step} m`); const labs = []; const idx = k => ((k % 5) + 5) % 5 === 0;
-    for (const big of [false, true]) { ctx.strokeStyle = big ? colA : col; ctx.lineWidth = (big ? 1.5 : 0.9) * D; ctx.globalAlpha = 1; ctx.beginPath();
+    const { contour, major } = palette[key];
+    info.push(`${key === "S" ? "arazi" : "proje"} ${step} m`); const labs = []; const idx = k => ((k % 5) + 5) % 5 === 0;
+    for (const big of [false, true]) { ctx.strokeStyle = big ? major : contour; ctx.lineWidth = (big ? 1.65 : 1.05) * D;
+      ctx.setLineDash(models.length === 2 && key === "R" ? [6 * D, 3.5 * D] : []);
+      ctx.globalAlpha = 1; ctx.beginPath();
       for (const ln of E.lines) { if (idx(ln.k) !== big) continue; const P_ = ln.p, bb=ln.b; // Conservative, fast viewport test: unlike sampling 8 vertices,
         // a long line crossing the screen is never silently omitted.
         if(bb){const xa=sx(bb[0]),xb=sx(bb[2]),ya=sy(bb[1]),yb=sy(bb[3]);
           if(Math.max(xa,xb)<-50||Math.min(xa,xb)>W+50||Math.max(ya,yb)<-50||Math.min(ya,yb)>H+50)continue;
         }
         ctx.moveTo(sx(P_[0][0]), sy(P_[0][1])); if (smooth) { for (let q = 1; q < P_.length - 1; q++) { const mx = (P_[q][0] + P_[q + 1][0]) / 2, my = (P_[q][1] + P_[q + 1][1]) / 2; ctx.quadraticCurveTo(sx(P_[q][0]), sy(P_[q][1]), sx(mx), sy(my)); } } else for (let q = 1; q < P_.length - 1; q++) ctx.lineTo(sx(P_[q][0]), sy(P_[q][1])); ctx.lineTo(sx(P_[P_.length - 1][0]), sy(P_[P_.length - 1][1]));
-        if (big && lbl && P_.length > 3) { const q = P_.length >> 1, x1 = sx(P_[q][0]), y1 = sy(P_[q][1]), x2 = sx(P_[q + 1][0]), y2 = sy(P_[q + 1][1]); if (x1 > 0 && y1 > 0 && x1 < W && y1 < H && !labs.some(l => Math.hypot(l[0] - x1, l[1] - y1) < 60 * D)) labs.push([x1, y1, ln.k, Math.atan2(y2 - y1, x2 - x1)]); } } ctx.stroke(); }
-    ctx.globalAlpha = 1; ctx.font = `600 ${10 * D}px Arial`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; for (const [x, y, k, a] of labs.slice(0, 400)) { let an = a; if (an > Math.PI / 2) an -= Math.PI; if (an < -Math.PI / 2) an += Math.PI; ctx.save(); ctx.translate(x, y); ctx.rotate(an); const t = K.tr(k * step, Number.isInteger(step) ? 0 : 2); ctx.lineWidth = 3 * D; ctx.strokeStyle = dark ? "#000" : "#fff"; ctx.strokeText(t, 0, 0); ctx.fillStyle = colA; ctx.fillText(t, 0, 0); ctx.restore(); } }
+        if (big && lbl && P_.length >= 2 && placed.length < 240) {
+          const start = P_[0], end = P_.at(-1);
+          if (P_.length === 2 && Math.hypot(sx(end[0]) - sx(start[0]), sy(end[1]) - sy(start[1])) < 30 * D) continue;
+          for (const fraction of [.5, .68, .32]) {
+            const q = Math.min(P_.length - 2, Math.floor((P_.length - 1) * fraction));
+            const a = P_[q], b = P_[q + 1], x1 = (sx(a[0]) + sx(b[0])) / 2, y1 = (sy(a[1]) + sy(b[1])) / 2;
+            if (x1 < 18*D || y1 < 8*D || x1 > W-18*D || y1 > H-8*D ||
+                placed.some(l => Math.abs(l[0]-x1) < 53*D && Math.abs(l[1]-y1) < 23*D)) continue;
+            const mark = [x1, y1, ln.k, Math.atan2(sy(b[1])-sy(a[1]), sx(b[0])-sx(a[0]))];
+            placed.push(mark); labs.push(mark); break;
+          }
+        }
+      }
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1; ctx.font = `600 ${10 * D}px Arial`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; for (const [x, y, k, a] of labs.slice(0, 400)) { let an = a; if (an > Math.PI / 2) an -= Math.PI; if (an < -Math.PI / 2) an += Math.PI; ctx.save(); ctx.translate(x, y); ctx.rotate(an); const t = K.tr(k * step, Number.isInteger(step) ? 0 : 2); ctx.lineWidth = 3 * D; ctx.strokeStyle = dark ? "#000" : "#fff"; ctx.strokeText(t, 0, 0); ctx.fillStyle = major; ctx.fillText(t, 0, 0); ctx.restore(); } }
+  } finally { ctx.restore(); }
   return info.length ? "Aralık: " + info.join(" · ") + " · Her 5. eğri kalın çizilir. Kotlar üçgen yüzeyden okunur." : ""; }
 function drawEgri(D, dark) {
   const status = $("lyEinfo");
@@ -11165,6 +11200,14 @@ function drawEgri(D, dark) {
     ? egriDrawG(ctx, D, dark, sx, sy, cv.width, cv.height, $("lyEm").value, +$("lyEi").value || 0, $("lyEl").checked, $("lyEs").checked, true)
     : "";
   if (status.textContent !== text) status.textContent = text;
+  const mode = $("lyEm").value, enabled = $("lyE").checked;
+  const showS = enabled && mode.includes("S") && !!MS?.tri?.length;
+  const showR = enabled && mode.includes("R") && !!MR?.tri?.length;
+  $("planContourLegend").hidden = !showS && !showR;
+  $("contourLegendS").hidden = !showS;
+  const projectKey = $("contourLegendR");
+  projectKey.hidden = !showR;
+  projectKey.classList.toggle("dashed", showS && showR);
   const button = $("quickContour");
   if (button.title !== text) button.title = text;
 }
@@ -11181,7 +11224,7 @@ window.ARZX = (() => {
     if (o.tin !== false && (o.only ? o.tin : vis("lyK")) && hasR) fc("UCGEN_KIRMIZI", 1, MR);
     if (all && vis("lyP")) { if (hasS) pt("NOKTA_SIYAH", 7, MS); if (hasR) pt("NOKTA_KIRMIZI", 1, MR); }
     if (o.only ? o.egri : vis("lyE")) { const m = $("lyEm").value, want = +$("lyEi").value || 0, lbl = vis("lyEl");
-      for (const [M, ad, ca, cb] of [[hasS && m.includes("S") ? MS : null, "SIYAH", 5, 3], [hasR && m.includes("R") ? MR : null, "KIRMIZI", 6, 1]]) { if (!M) continue; const step = egriStep(M, want), E = egriCalc(M, step);
+      for (const [M, ad, ca, cb] of [[hasS && m.includes("S") ? MS : null, "SIYAH", 122, 124], [hasR && m.includes("R") ? MR : null, "KIRMIZI", 192, 194]]) { if (!M) continue; const step = egriStep(M, want), E = egriCalc(M, step);
         for (const ln of E.lines) { const ana = ((ln.k % 5) + 5) % 5 === 0, z = ln.k * step, lay = `EGRI_${ad}_${ana ? "ANA" : "ARA"}`; P.push({ t: "pl", lay, col: ana ? cb : ca, p: ln.p.map(q => [q[0], q[1], z]), z });
           if (ana && lbl && ln.p.length > 3) { const q = ln.p.length >> 1, a = ln.p[q], b = ln.p[q + 1]; let an = Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI; if (an > 90) an -= 180; if (an < -90) an += 180; P.push({ t: "tx", lay: `EGRI_${ad}_KOT`, col: cb, p: [[a[0], a[1], z]], s: String(Math.round(z * 100) / 100), mm: 2, rot: an, al: "c" }); } } } }
     if (all) {
@@ -11203,13 +11246,13 @@ window.ARZX = (() => {
       if (e.t === "face") D.face(l, ...e.p); else if (e.t === "pl") { if (e.p.length === 2 && !e.c) D.line(l, e.p[0], e.p[1]); else D.poly(l, e.p, e.c, 0, e.z); }
       else if (e.t === "pt") { const q = e.p[0]; D.point(l, q[0], q[1], q[2] || 0); if (e.n) D.text(lay(e.lay + "_AD", e.col), q[0] + mm(0.8), q[1] + mm(0.6), mm(1.5), e.n); }
       else if (e.t === "tx") D.text(l, e.p[0][0], e.p[0][1], e.h || mm(e.mm || 2), e.s, e.rot || 0, e.al || "l"); } }
-  const ACI = { 1: "#d00000", 3: "#00863a", 4: "#008a9a", 5: "#1f5fd0", 6: "#b0008a", 7: "#000", 8: "#8a8a8a", 30: "#d86a00" };
+  const ACI = { 1: "#d00000", 3: "#00863a", 4: "#008a9a", 5: "#1f5fd0", 6: "#b0008a", 7: "#000", 8: "#8a8a8a", 30: "#d86a00", 122:"#367e76", 124:"#1f625a", 192:"#7f65a2", 194:"#634684" };
   /* PDF / kâğıt: dünya → mm dönüşümüyle G ilkellerine; y yukarı */
   function toG(P, Mp, s, fr, G, bw) { const col = c => bw ? "#000" : ACI[c] || "#000"; const inF = q => q[0] > fr[0] && q[0] < fr[2] && q[1] > fr[1] && q[1] < fr[3]; const occ = new Set();
     const Ln = (a, b, w, c) => { const q = A.clipSeg(a, b, fr); if (q) G.push({ t: "l", p: q, w, color: c }); };
     const seen = new Set();
     for (const e of P) { const c = col(e.col);
-      if (e.t === "face") { for (let i = 0; i < 3; i++) { const a = e.p[i], b = e.p[(i + 1) % 3], k = a[0] < b[0] || (a[0] === b[0] && a[1] < b[1]) ? a[0] + "," + a[1] + "," + b[0] + "," + b[1] : b[0] + "," + b[1] + "," + a[0] + "," + a[1]; if (seen.has(e.lay + k)) continue; seen.add(e.lay + k); Ln(Mp(a), Mp(b), 0.08, c); } }
+      if (e.t === "face") { const mesh = bw ? c : e.lay === "UCGEN_KIRMIZI" ? "#c59999" : e.lay === "UCGEN_SIYAH" ? "#929ba3" : c; for (let i = 0; i < 3; i++) { const a = e.p[i], b = e.p[(i + 1) % 3], k = a[0] < b[0] || (a[0] === b[0] && a[1] < b[1]) ? a[0] + "," + a[1] + "," + b[0] + "," + b[1] : b[0] + "," + b[1] + "," + a[0] + "," + a[1]; if (seen.has(e.lay + k)) continue; seen.add(e.lay + k); Ln(Mp(a), Mp(b), 0.08, mesh); } }
       else if (e.t === "pl") { const w = /^EGRI_.*_ANA$/.test(e.lay) ? 0.25 : /KUBAJ|EKSEN/.test(e.lay) ? 0.35 : 0.15; for (let i = 1; i < e.p.length; i++) Ln(Mp(e.p[i - 1]), Mp(e.p[i]), w, c); if (e.c && e.p.length > 2) Ln(Mp(e.p[e.p.length - 1]), Mp(e.p[0]), w, c); }
       else if (e.t === "pt") { const q = Mp(e.p[0]); if (!inF(q)) continue; G.push({ t: "l", p: [[q[0] - 0.4, q[1] - 0.4], [q[0] + 0.4, q[1] + 0.4]], w: 0.12, color: c }, { t: "l", p: [[q[0] - 0.4, q[1] + 0.4], [q[0] + 0.4, q[1] - 0.4]], w: 0.12, color: c });
         const k = Math.floor(q[0] / 7) + "," + Math.floor(q[1] / 1.8); if (e.n && !occ.has(k)) { occ.add(k); G.push({ t: "x", x: q[0] + 0.7, y: q[1] + 0.6, s: e.n, size: 1.4, color: c }); } }
@@ -51812,6 +51855,14 @@ body.wide #v-plan.kub-modern>#planBox{order:-1;grid-row:2/span 80}
 #kub3Panel .kub3-modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(106px,1fr));gap:6px;margin:7px 0}#kub3Panel .kub3-view{position:relative;overflow:hidden;border:1px solid #7894a8;border-radius:11px;background:#f6f8fb}#kub3Cv{width:100%;height:clamp(240px,46dvh,530px);display:block;touch-action:none}#kub3Count{position:absolute;bottom:7px;left:7px;padding:5px 8px;font-size:.75rem;background:#142b3ddf;color:#eef8fe;border-radius:7px;pointer-events:none}
 #kub3Panel .kub3-edit{margin-top:8px}#kub3Panel .kub3-edit label{flex:1 1 125px}.kub3-results{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:8px 0}.kub3-results>div{background:#203d52;border:1px solid #416b83;padding:9px;border-radius:9px;color:#bad3e5;font-size:.75rem}.kub3-results b{display:block;font-size:1rem;margin-top:4px;color:#f4f9ff;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}#kub3Status{font-size:.82rem;line-height:1.4;color:#e4f3fc;min-height:1.2em}#kub3Scope{color:#b6d2e1}
 @media(max-width:650px){#kub3Panel{width:98vw;max-height:95dvh;padding:8px}#kub3Panel .kub3-modes{grid-template-columns:repeat(3,minmax(0,1fr))}#kub3Panel .kub3-modes button{font-size:.74rem;padding:6px 3px}#kub3Cv{height:37dvh;min-height:210px}.kub3-results b{font-size:.82rem}#kub3Panel .kub3-controls label:not(.kub3-check){flex:1 1 95px}}
+#v-plan .plan-tin-swatch{display:inline-block;width:16px;height:2px;border-radius:2px}
+#v-plan .plan-tin-swatch.ground{background:#8c949d}
+#v-plan .plan-tin-swatch.project{background:#bd676d}
+.plan-contour-legend{display:inline-flex;flex-wrap:wrap;gap:7px 12px;font-size:.78rem}
+.plan-contour-legend[hidden],.plan-contour-legend [hidden]{display:none!important}
+.plan-contour-legend span::before{content:"";display:inline-block;width:17px;margin-right:5px;vertical-align:middle;border-top:2px solid #4a9b8c}
+#contourLegendR::before{border-top-color:#9475bc}
+#contourLegendR.dashed::before{border-top-style:dashed}
 #quickContour[aria-pressed=true]{background:#126f77;color:#fff;border-color:#76c5c8}
 #kub3Panel .kub3-compass{position:absolute;right:10px;top:10px;display:grid;justify-items:center;gap:0;padding:4px 9px;border-radius:9px;background:#10273a;color:#f4f9fd;pointer-events:none;font:600 .75rem Arial}
 #kub3North{display:block;font:700 20px/22px Arial;color:#7cdbec}
