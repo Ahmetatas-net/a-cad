@@ -1404,8 +1404,9 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #planSections .plan-sec-legend span::before { content:""; width:13px; height:10px; border-radius:3px; background:var(--swatch); border:1px solid var(--line) }
 #planSections [data-sec-key="black"] { --swatch:#536477 }
 #planSections [data-sec-key="red"] { --swatch:#c62b46 }
-#planSections [data-sec-key="cut"] { --swatch:#f0a886 }
-#planSections [data-sec-key="fill"] { --swatch:#85c8de }
+#planSections [data-sec-key="cut"] { --swatch:repeating-linear-gradient(135deg,#942a3b 0 1px,#f9c8ce 1px 4px) }
+#planSections [data-sec-key="fill"] { --swatch:repeating-linear-gradient(45deg,#216e9b 0 1px,#bbdef3 1px 4px) }
+#planSections [data-sec-key="strip"] { --swatch:repeating-linear-gradient(0deg,#367349 0 1px,#c7e8ce 1px 3px) }
 #planSectionsProbe { min-height:1.4em }
 #planSectionsValues { font-variant-numeric:tabular-nums; font-weight:650 }
 #planSectionsStatus[data-error="true"] { color:#c56a24; font-weight:650 }
@@ -1764,6 +1765,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
           <span data-sec-key="red">Kırmızı proje</span>
           <span data-sec-key="cut">Kazı</span>
           <span data-sec-key="fill">Dolgu</span>
+          <span data-sec-key="strip">Sıyırma</span>
         </div>
         <canvas id="planSectionsChart" width="760" height="330" aria-label="Enkesit kot grafiği" aria-describedby="planSectionsProbe planSectionsScale"></canvas>
         <p class="note" id="planSectionsScale">Yatay ve düşey eksenler ayrı ölçeklidir.</p>
@@ -6499,6 +6501,57 @@ window.GPSS = (() => {
 "use strict";
 const O = {}; try { window.O = O; } catch (e) {}
 
+O.sectionHatchStyles = Object.freeze({
+  cut:   { fill: "#f9d5da", ink: "#a53346", slope: 1, aci: 1, layer: "ENK_KAZI_TARAMA" },
+  fill:  { fill: "#d4ebfa", ink: "#266c9c", slope: -1, aci: 5, layer: "ENK_DOLGU_TARAMA" },
+  strip: { fill: "#ddf1e1", ink: "#357744", slope: 0, aci: 3, layer: "ENK_SIYIRMA_TARAMA" }
+});
+O.sectionRegions = (section, depth, emit) => {
+  const stripDepth = section.siy > 0 ? depth : 0;
+  const mode = section.siyMod;
+  const baseDepth = mode === "tum" ? depth : 0;
+  const betweenSurfaces = (kind, a, b, groundDepth) => {
+    emit(kind, [[a[0], a[1] - groundDepth], [b[0], b[1] - groundDepth], [b[0], b[2]], [a[0], a[2]]]);
+  };
+  for (const part of section.full) {
+    for (let i = 1; i < part.length; i++) {
+      // K.areas provides breakpoints at every zero crossing of the relevant baseline.
+      const a = part[i - 1], b = part[i];
+      if (b[0] - a[0] < 1e-8) continue;
+      const delta = (a[2] - a[1] + b[2] - b[1]) / 2 + baseDepth;
+      const strip = stripDepth > 0 && (mode === "tum" || (mode === "kazi" ? delta < 0 : delta > 0));
+      if (delta < -1e-8 && section.kazi > 0) {
+        const ground = mode === "kazi" ? depth : baseDepth;
+        if (delta + ground - baseDepth < -1e-8) betweenSurfaces("cut", a, b, ground);
+      } else if (delta > 1e-8 && section.dol) {
+        betweenSurfaces("fill", a, b, baseDepth);
+      }
+      if (strip) emit("strip", [[a[0], a[1]-stripDepth], [b[0], b[1]-stripDepth], [b[0], b[1]], [a[0], a[1]]]);
+    }
+  }
+};
+// Clip equally spaced parallel lines to one trapezoid in drawing coordinates.
+O.sectionHatchLines = (points, slope, spacing, emit) => {
+  const offsets = points.map(([x, y]) => y - slope * x);
+  const min = Math.min(...offsets), max = Math.max(...offsets);
+  if (max - min < 1e-8) return;
+  const first = Math.ceil((min + 1e-8) / spacing);
+  const last = Math.floor((max - 1e-8) / spacing);
+  for (let k = first; k <= Math.max(first, last); k++) {
+    const v = last < first ? (min + max) / 2 : k * spacing;
+    const hits = [];
+    for (let i = 0; i < points.length; i++) {
+      const j = (i + 1) % points.length, a = offsets[i], b = offsets[j];
+      if (!((a <= v && b > v) || (b <= v && a > v))) continue;
+      const t = (v - a) / (b - a);
+      hits.push(points[i][0] + (points[j][0] - points[i][0]) * t);
+    }
+    if (hits.length < 2) continue;
+    const x0 = Math.min(...hits), x1 = Math.max(...hits);
+    if (x1 - x0 > 1e-7) emit([x0, v + slope * x0], [x1, v + slope * x1]);
+  }
+};
+
 /* ---------- Kesit sayfası: mm cinsinden ilkel çizim listesi (A4 yatay 297×210, orijin sol alt) ---------- */
 O.sheet = (sec, idx, n, P, set) => {
   // Yol / parsel en kesiti düzeni: antet, kesit, kot tablosu, km başlığı, imza
@@ -6506,7 +6559,13 @@ O.sheet = (sec, idx, n, P, set) => {
   const T = (x, y, s, size = 2.2, al = "l", rot = 0, bold = false, color = "#000") => G.push({ t: "x", x, y, s: String(s), size, al, rot, bold, color });
   const L = (x1, y1, x2, y2, w = 0.25, color = "#000") => G.push({ t: "l", p: [[x1, y1], [x2, y2]], w, color });
   const PL = (p, w, color) => G.push({ t: "l", p, w, color });
-  const F = (p, color) => G.push({ t: "f", p, color });
+  const hatch = (kind, points) => {
+    const style = O.sectionHatchStyles[kind];
+    G.push({ t: "f", p: points, color: style.fill });
+    O.sectionHatchLines(points, style.slope, kind === "strip" ? 1.45 : 2.65, (a, b) => {
+      G.push({ t: "l", p: [a, b], w: .16, color: style.ink, sectionHatch: kind });
+    });
+  };
   PL([[8, 8], [289, 8], [289, 202], [8, 202], [8, 8]], 0.7, "#000");
   // ---- antet
   let y = 202; const RH = 6.4, FS = 2.6, LX = 40, VX = 42;
@@ -6545,13 +6604,21 @@ O.sheet = (sec, idx, n, P, set) => {
   // ölçek işareti ve kıyas
   { const bx = 13, by = ttop + 13; L(bx, by, bx, by + 7, 0.25); L(bx - 0.8, by + 5.6, bx, by + 7, 0.25); L(bx + 0.8, by + 5.6, bx, by + 7, 0.25); T(bx - 1, by + 9, `1/${sv}`, 2.1);
     L(bx, by, bx + 8, by, 0.25); L(bx + 6.6, by + 0.8, bx + 8, by, 0.25); L(bx + 6.6, by - 0.8, bx + 8, by, 0.25); T(bx + 9, by, `1/${sc}`, 2.1); T(11, ttop + 4, `Kıyas = ${kiyas}`, 2.1); }
-  // tarama (şeffaf kırmızı) ve çizgiler
+  const shownHatches = new Set();
+  O.sectionRegions(sec, SY, (kind, points) => {
+    shownHatches.add(kind);
+    hatch(kind, points.map(([offset, z]) => [xo(offset), yz(z)]));
+  });
+  const hatchKey = [["cut", "Kazı"], ["fill", "Dolgu"], ["strip", "Sıyırma"]];
+  let keyX = 282 - hatchKey.filter(([kind]) => shownHatches.has(kind)).length * 25;
+  for (const [kind, label] of hatchKey) {
+    if (!shownHatches.has(kind)) continue;
+    const mid = top - 4.1;
+    hatch(kind, [[keyX, mid-1.7], [keyX+6.5, mid-1.7], [keyX+6.5, mid+1.7], [keyX, mid+1.7]]);
+    T(keyX + 8, mid, label, 2.25);
+    keyX += 25;
+  }
   for (const part of sec.full) {
-    for (let i = 1; i < part.length; i++) { const [a, s1, r1] = part[i - 1], [b, s2, r2] = part[i]; const m = ((r1 - s1) + (r2 - s2)) / 2;
-      if (TUM) { const g1 = s1 - SY, g2 = s2 - SY, mt = ((r1 - g1) + (r2 - g2)) / 2; if ((mt < 0 && sec.kazi > 0) || (mt > 0 && dol)) F([[xo(a), yz(g1)], [xo(b), yz(g2)], [xo(b), yz(r2)], [xo(a), yz(r1)]], "rgba(220,0,0,0.22)"); continue; }
-      if (KZM) { if (m < 0 && sec.kazi > 0) { const g1 = s1 - SY, g2 = s2 - SY; if ((r1 - g1) + (r2 - g2) < 0) F([[xo(a), yz(g1)], [xo(b), yz(g2)], [xo(b), yz(r2)], [xo(a), yz(r1)]], "rgba(220,0,0,0.22)"); } else if (m > 0 && dol) F([[xo(a), yz(s1)], [xo(b), yz(s2)], [xo(b), yz(r2)], [xo(a), yz(r1)]], "rgba(220,0,0,0.22)"); continue; }
-      if (m < 0 && sec.kazi > 0) F([[xo(a), yz(s1)], [xo(b), yz(s2)], [xo(b), yz(r2)], [xo(a), yz(r1)]], "rgba(220,0,0,0.22)");
-      else if (m > 0 && dol) F([[xo(a), yz(s1 - SY)], [xo(b), yz(s2 - SY)], [xo(b), yz(r2)], [xo(a), yz(r1)]], "rgba(220,0,0,0.22)"); }
     PL(part.map(p => [xo(p[0]), yz(p[1])]), 0.5, "#000"); PL(part.map(p => [xo(p[0]), yz(p[2])]), 0.5, "#d00000");
     if (TUM) { PL(part.map(p => [xo(p[0]), yz(p[1] - SY)]), 0.5, "#00a000"); for (const p of [part[0], part[part.length - 1]]) L(xo(p[0]), yz(p[1]), xo(p[0]), yz(p[1] - SY), 0.5, "#00a000"); }
     else if ((dol && SR) || KZM) { let seg = []; const want = KZM ? (mm => mm < 0) : (mm => mm > 0);
@@ -6834,7 +6901,8 @@ const COLD = { "#808080": 8, "#9a9a9a": 8, "#000": 7, "#000000": 7, "#d00000": 1
 O.sheetToDxf = (D, G, ox, oy, s = 1) => { // sayfa ilkellerini DXF'e (mm → s birim) koy
   const lay = D.lay("ENKESIT_SAYFA", 7), ls = D.lay("ENK_SIYAH", 7), lk = D.lay("ENK_KIRMIZI", 1), lg = D.lay("ENK_SIYIRMA", 3), lt = D.lay("ENK_YAZI", 7);
   for (const g of G) {
-    if (g.t === "l") { const l = g.color === "#d00000" ? lk : g.detail ? D.lay("AYRINTI_GORSEL",7) : g.color === "#00a000" ? lg : g.w === 0.6 && g.color === "#000" && g.p.length > 2 ? ls : lay;
+    if (g.t === "l") { const hatchStyle = O.sectionHatchStyles[g.sectionHatch];
+      const l = hatchStyle ? D.lay(hatchStyle.layer, hatchStyle.aci) : g.color === "#d00000" ? lk : g.detail ? D.lay("AYRINTI_GORSEL",7) : g.color === "#00a000" ? lg : g.w === 0.6 && g.color === "#000" && g.p.length > 2 ? ls : lay;
       const pts = g.p.map(([x, y]) => [ox + x * s, oy + y * s]); if (pts.length === 2) D.line(l, pts[0], pts[1], l === lay ? COLD[g.color] : 0); else D.poly(l, pts, false); }
     else if (g.t === "x") D.text(g.detail?D.lay("AYRINTI_YAZI",7):lt, ox + g.x * s, oy + g.y * s, g.size * s * 0.9, g.s, g.rot, g.al, COLD[g.color] && COLD[g.color] !== 7 ? COLD[g.color] : 0);
   }
@@ -11509,10 +11577,13 @@ function selectPlanSection(index, reveal = false) {
     const compare = !!SECS.length;
     const blackOnly = planSections.singleName === "Siyah arazi";
     for (const indicator of planSectionPanel.querySelectorAll("[data-sec-key]")) {
-      indicator.hidden = !compare && indicator.dataset.secKey !== (blackOnly ? "black" : "red");
+      indicator.hidden = indicator.dataset.secKey === "strip"
+        ? !compare || !(section.siy > 0)
+        : !compare && indicator.dataset.secKey !== (blackOnly ? "black" : "red");
     }
     $("planSectionsValues").textContent = compare
-      ? `Kazı ${K.tr(section.kazi)} m² · Dolgu ${K.tr(section.dolgu)} m²`
+      ? `Kazı ${K.tr(section.kazi)} m² · Dolgu ${K.tr(section.dolgu)} m²` +
+        (section.siy > 0 ? ` · Sıyırma ${K.tr(section.siy)} m²` : "")
       : planSections.singleName + " · Tek yüzey";
     $("planSectionsProbe").textContent = "Kot okumak için grafiğe dokun.";
     const adjusted = compare && (SYE() > 0 || +ST.set.esik > 0 || +ST.set.kesik > 0);
@@ -11523,19 +11594,6 @@ function selectPlanSection(index, reveal = false) {
     if (reveal) planSectionPanel.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }
   draw();
-}
-function planSectionBands(part, paint) {
-  for (let i = 1; i < part.length; i++) {
-    const a = part[i - 1], b = part[i];
-    const da = a[2] - a[1], db = b[2] - b[1];
-    if (da * db < 0) {
-      const fraction = da / (da - db);
-      const level = a[1] + (b[1] - a[1]) * fraction;
-      const meeting = [a[0] + (b[0] - a[0]) * fraction, level, level];
-      paint(a, meeting, da);
-      paint(meeting, b, db);
-    } else if (da || db) paint(a, b, da || db);
-  }
 }
 function planSectionSample(parts, offset) {
   for (const part of parts) {
@@ -11560,6 +11618,11 @@ function paintPlanSection(section, compare, cursor = null) {
     x0 = Math.min(x0, point[0]); x1 = Math.max(x1, point[0]);
     for (const [key] of series) { z0 = Math.min(z0, point[key]); z1 = Math.max(z1, point[key]); }
   }
+  const regions = [];
+  if (compare) O.sectionRegions(section, SYE(), (kind, points) => {
+    regions.push({ kind, points });
+    for (const [, z] of points) { z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
+  });
   const margin = Math.max(.05, (z1 - z0) * .09);
   z0 -= margin; z1 += margin;
   const left = 114, top = 47, right = width - 32, bottom = height - 53;
@@ -11580,14 +11643,22 @@ function paintPlanSection(section, compare, cursor = null) {
     line(left, py, right, py);
     g.fillStyle = "#41566a"; g.fillText(K.tr(z, 2), left - 10, py);
   }
-  if (compare) for (const part of section.parts) {
-    planSectionBands(part, (a, b, difference) => {
-      g.fillStyle = difference > 0 ? "#b5e1ee" : "#f5c8ad";
-      g.beginPath();
-      g.moveTo(x(a[0]), y(a[1])); g.lineTo(x(b[0]), y(b[1]));
-      g.lineTo(x(b[0]), y(b[2])); g.lineTo(x(a[0]), y(a[2]));
-      g.closePath(); g.fill();
+  const patterns = regions.map(({ kind, points }) => {
+    const path = points.map(([offset, z]) => [x(offset), y(z)]);
+    g.fillStyle = O.sectionHatchStyles[kind].fill;
+    g.beginPath();
+    path.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y));
+    g.closePath(); g.fill();
+    return { kind, path };
+  });
+  for (const { kind, path } of patterns) {
+    const style = O.sectionHatchStyles[kind];
+    g.strokeStyle = style.ink; g.lineWidth = 1.35;
+    g.beginPath();
+    O.sectionHatchLines(path, -style.slope, kind === "strip" ? 8 : 11, (a, b) => {
+      g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]);
     });
+    g.stroke();
   }
   g.strokeStyle = "#8ca4b8"; g.lineWidth = 1.5; g.setLineDash([6, 6]);
   line(x(0), top, x(0), bottom); g.setLineDash([]);
