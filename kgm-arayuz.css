@@ -329,7 +329,11 @@
 }
 
 @media (max-width: 700px) {
-  #kamModeBar button { flex: 1 1 140px; min-height: 40px; padding-inline: 5px; }
+  #v-apl[data-active-module="kam"]:not([hidden]) > #kamModeBar {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  #kamModeBar button { min-width: 0; min-height: 40px; padding-inline: 5px; white-space: normal; }
   #kamModeBar button:not([data-mode]) { margin-inline-start: 0; }
   .kgm-page main { gap: 8px; padding: 8px; }
   .kgm-page :is(.kgm-heading, .steps article, .kgm-actions, #sourceCard, .work, #checks, #layerSettings, .extras) { padding: 9px 10px; }
