@@ -268,8 +268,8 @@ body.wide #kubSub{position:sticky;top:46px;z-index:59}
 body.wide:has(#kubSub:not([hidden])) #planBox{top:94px!important}
 @media (min-width:1000px){body.wide:has(#kubSub:not([hidden])) #planBox{height:calc(100vh - 104px)!important}}
 @media (min-width:1000px){
- body.wide #v-plan:not([hidden]),body.wide #v-apl:not([hidden]){display:grid!important;grid-template-columns:minmax(0,1fr) 430px;gap:12px;align-items:start}
- body.wide #v-plan>*,body.wide #v-apl>*{grid-column:2;min-width:0}
+ body.wide #v-apl:not([hidden]){display:grid!important;grid-template-columns:minmax(0,1fr) 430px;gap:12px;align-items:start}
+ body.wide #v-apl>*{grid-column:2;min-width:0}
  body.wide #planBox,body.wide #aplBox{grid-column:1!important;grid-row:1/span 80;position:sticky;top:56px;height:calc(100vh - 66px)!important}
  body.wide #cadBox{height:calc(100vh - 210px)!important}
  body.wide #v-kesit #hMap{height:calc(100vh - 260px)!important}}
@@ -1795,7 +1795,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 <input type="file" id="planDeviceFile" multiple accept=".json,.ncn,.ncz,.dxf,.cks,.txt,.csv,.xls,.xlsx,.geojson,.kml,.kmz">
 <button type="button" id="planRecentFiles">Son dosyalar</button><button type="button" id="planSaveProject">Projeyi kaydet</button>
 <div id="planFileChoice" class="plan-context" hidden><strong id="planChosenName"></strong><button type="button" data-role="new" class="plan-new-field">Ölçülerle yeni proje aç</button><button type="button" data-role="S">Siyah araziye ekle</button><button type="button" data-role="K">Kırmızı yüzeye ekle</button><button type="button" data-role="drawing">Çizim olarak aç</button><button type="button">Vazgeç</button></div><div id="planModelChoice" class="plan-context" hidden><label>Mevcut arazi<select id="planFieldModel"></select></label><button type="button" id="planModelStart">Modeli aç</button><button type="button" id="planModelCancel">Vazgeç</button></div><div id="planFileStatus" role="status"></div></div>
-<div class="kub-plan-main"><h2 class="plan-title">Plan ve sınır</h2><button id="tFit" type="button">Ekrana sığdır</button><button id="tSorgu" type="button">Kot sorgula</button><button type="button" id="kubBoundary">Kübaj sınırı</button><button id="tAlan" type="button">Alan çiz</button><button id="tEksen" type="button">Eksen çiz</button><button id="tProf" type="button">Profil çiz</button><button type="button" id="kubAxisProfile">Eksen profili</button><button type="button" id="planSectionsOpen" aria-expanded="false" aria-controls="planSections">Enkesit</button><button type="button" id="quickContour" aria-pressed="false">Hızlı eğri</button><button type="button" id="kub3Open">3B Arazi</button></div><details class="plan-model"><summary>Üçgen modeli</summary><div class="kub3-planbar"><label>Üçgen modeli<select id="kub3Target2D"><option value="auto">Otomatik</option><option value="S">Siyah</option><option value="R">Kırmızı</option></select></label><button type="button" id="kub3Fix2D">Otomatik düzelt</button><button id="tUcEk" type="button">△ Üçgen ekle</button><button id="tUcDon" type="button">⤾ Üçgen döndür</button><button id="tUcSil" type="button" class="danger">✕ Üçgen sil</button><span id="kub3PlanStatus" role="status"></span></div></details><details class="kub-plan-more"><summary>Diğer araçlar</summary><div class="kub-plan-extra"><label class="filebtn mini" style="margin:0"><span>Çizim ekle</span><input type="file" id="tOpen" multiple accept=".dxf,.DXF,.ncz,.NCZ,.ncn,.NCN,.cks,.CKS,.txt,.csv,.xls,.xlsx,.XLS,.XLSX,.geojson,.json,.kml,.kmz"></label><button id="tKay" type="button" class="primary">Çizimi kaydet</button><button type="button" id="planPreviousProject" hidden>Önceki projeye dön</button><button type="button" data-ka-open>Proje kontrolü</button><button id="tEdit" type="button" class="primary">✏️ Düzenle (taşı, döndür, kes…)</button><button id="tEksDel" type="button" class="danger" hidden>Ekseni sil</button><button id="tOlc" type="button">📏 Mesafe</button><button id="tASorgu" type="button">▱ Alanı sorgula</button><button id="tNokta" type="button">Nokta ekle</button><button id="tYazi" type="button">A Yazı</button><button id="tSec" type="button">👆 Seç · Sil · Taşı</button><button id="tSil" type="button" class="danger">🗑 Sil</button><button id="tASil" type="button" class="danger">⬠ Alanla sil</button><button id="tUndoP" type="button" hidden>↶ Geri al</button><button id="tBg" type="button">🛰 Altlık</button><button id="tGmap" type="button">🌍 Google</button><button id="tGps" type="button">📍 Konumum</button><button id="tFol" type="button" hidden>⦿ Takip</button></div></details></aside><div class="plan-map"><div class="plan-mapbar"><b>Plan görünümü</b><span class="plan-mouse-tip">Sol tık seçer · Sağ tık veya Enter bitirir · Esc iptal</span><span class="plan-touch-tip">Köşelere dokun · Bitir ile tamamla</span></div><div id="planBox">
+<div class="kub-plan-main"><h2 class="plan-title">Plan ve sınır</h2><button id="tFit" type="button">Ekrana sığdır</button><button id="tSorgu" type="button">Kot sorgula</button><button type="button" id="kubBoundary">Kübaj sınırı</button><button id="tAlan" type="button">Alan çiz</button><button id="tEksen" type="button">Eksen çiz</button><button id="tProf" type="button">Profil çiz</button><button type="button" id="kubAxisProfile">Eksen profili</button><button type="button" id="planSectionsOpen" aria-expanded="false" aria-controls="planSections">Enkesit</button><button type="button" id="quickContour" aria-pressed="false">Hızlı eğri</button><button type="button" id="kub3Open">3B Arazi</button></div><button type="button" id="autoPlanMesh">Otomatik üçgenle</button><label hidden id="autoLayerBox">Ölçü tabakası<select id="autoLayerPick"></select></label><details class="plan-model"><summary>Üçgen modeli</summary><div class="kub3-planbar"><label>Üçgen modeli<select id="kub3Target2D"><option value="auto">Otomatik</option><option value="S">Siyah</option><option value="R">Kırmızı</option></select></label><button type="button" id="kub3Fix2D">Otomatik düzelt</button><button id="tUcEk" type="button">△ Üçgen ekle</button><button id="tUcDon" type="button">⤾ Üçgen döndür</button><button id="tUcSil" type="button" class="danger">✕ Üçgen sil</button><span id="kub3PlanStatus" role="status"></span></div></details><details class="kub-plan-more"><summary>Diğer araçlar</summary><div class="kub-plan-extra"><label class="filebtn mini" style="margin:0"><span>Çizim ekle</span><input type="file" id="tOpen" multiple accept=".dxf,.DXF,.ncz,.NCZ,.ncn,.NCN,.cks,.CKS,.txt,.csv,.xls,.xlsx,.XLS,.XLSX,.geojson,.json,.kml,.kmz"></label><button id="tKay" type="button" class="primary">Çizimi kaydet</button><button type="button" id="planPreviousProject" hidden>Önceki projeye dön</button><button type="button" data-ka-open>Proje kontrolü</button><button id="tEdit" type="button" class="primary">✏️ Düzenle (taşı, döndür, kes…)</button><button id="tEksDel" type="button" class="danger" hidden>Ekseni sil</button><button id="tOlc" type="button">📏 Mesafe</button><button id="tASorgu" type="button">▱ Alanı sorgula</button><button id="tNokta" type="button">Nokta ekle</button><button id="tYazi" type="button">A Yazı</button><button id="tSec" type="button">👆 Seç · Sil · Taşı</button><button id="tSil" type="button" class="danger">🗑 Sil</button><button id="tASil" type="button" class="danger">⬠ Alanla sil</button><button id="tUndoP" type="button" hidden>↶ Geri al</button><button id="tBg" type="button">🛰 Altlık</button><button id="tGmap" type="button">🌍 Google</button><button id="tGps" type="button">📍 Konumum</button><button id="tFol" type="button" hidden>⦿ Takip</button></div></details></aside><div class="plan-map"><div class="plan-mapbar"><b>Plan görünümü</b><span class="plan-mouse-tip">Sol tık seçer · Sağ tık veya Enter bitirir · Esc iptal</span><span class="plan-touch-tip">Köşelere dokun · Bitir ile tamamla</span></div><div id="planBox">
       <canvas id="planCv" aria-label="Plan görünümü"></canvas>
       <div id="pKub" hidden style="position:absolute;left:8px;bottom:38px;z-index:5;background:rgba(255,255,255,.93);border:1px solid #ccc;border-radius:8px;padding:5px 9px;font:600 13px Arial;line-height:1.35;pointer-events:none;box-shadow:0 1px 4px rgba(0,0,0,.15)"></div>
       <div class="coord" id="coord"></div>
@@ -10686,7 +10686,6 @@ async function readSurveyToAdd(file) {
   }
   const data = /\.ncz$/i.test(file.name) ? K.parseNCZ(bytes) : K.parseDXF(toText(bytes));
   const points = data.points || [], faces = data.faces || [];
-  const pointLayers = new Set(points.map(p => p.lay || "0"));
   const layerMap = new Map();
   const layer = name => {
     name = name || "0";
@@ -10725,7 +10724,7 @@ async function readSurveyToAdd(file) {
   }
   if (!layerMap.size) throw Error("Okunabilir nokta, çizim veya üçgen bulunamadı.");
   result.layers = [...layerMap.values()];
-  if (pointLayers.size === 1 && !faces.length) {
+  if (!faces.length) {
     result.points = points.map((p, index) => ({ ...p, n: p.n || String(index + 1) }));
   }
   return result;
@@ -10754,12 +10753,19 @@ async function addSurveyFiles(which, files) {
       catch (error) { errors.push(file.name + " · " + error.message); }
     }
     if (ST !== project) throw Error("Açık proje değişti. Dosyaları yeniden seç.");
+    for (const survey of surveys) {
+      if (survey.layers.length && survey.points.length) {
+        const allowed=new Set(compatibleSurvey(survey.layers.filter(l=>l.pt),which==="K"?"R":"S").map(l=>l.lay));
+        survey.points=survey.points.filter(p=>allowed.has(p.lay||"0"));
+      }
+    }
     const demo = ST.ornek;
     const key = which === "S" ? "S" : "R";
     const old = demo ? { pts: [], src: "" } : ST[key];
     const current = old.pts || [];
     const protectedMesh = old.tri?.length && (old.triElle || old.cadLay || /\.(dxf|ncz)\b/i.test(old.src || ""));
     const candidates = mergeSurveyPoints(current, surveys);
+    if(surveys.some(s=>s.conflicts && s.layers.filter(l=>l.pt).length>1)) throw Error("Ölçü tabakalarında aynı konumda farklı kotlar var. Modeli aç / değiştir ile kullanılacak tabakayı seç.");
     let newPoints = candidates.map(row => row.point);
     let tri = old.tri, pending = old.surveyPending || 0;
     const ignored = [];
@@ -10984,7 +10990,13 @@ async function finishNewSurvey(selection, model) {
   const {surveys,layers,generation}=selection;
   if (generation !== projectRead) return;
   const existing=(model?.tin.pts || []).map(p=>({...p}));
-  const rows=mergeSurveyPoints(existing,surveys);
+  for (const survey of surveys) if(survey.layers.length && survey.points.length) {
+    const allowed=new Set(compatibleSurvey(survey.layers.filter(l=>l.pt),"S").map(l=>l.lay));
+    survey.points=survey.points.filter(p=>allowed.has(p.lay||"0"));
+  }
+  let rows=mergeSurveyPoints(existing,surveys);
+  const pointConflict=!model && surveys.some(s=>s.conflicts) && layers.filter(l=>l.pt).length>1;
+  if(pointConflict)rows=[];
   const group=K.dedupe(existing.length ? [] : rows.map(r=>r.point));
   const keep=new Set(group.pts);
   const accepted=existing.length ? rows : rows.filter(row=>keep.has(row.point));
@@ -11009,6 +11021,7 @@ async function finishNewSurvey(selection, model) {
   installKubProject(next);clearPlanChoice();
   const rejected=surveys.reduce((n,s)=>n+s.rejected,0),conflicts=surveys.reduce((n,s)=>n+s.conflicts,0);
   const note=model&&accepted.length ? " · "+accepted.length+" ek nokta üçgenleme bekliyor" : "";
+  if(pointConflict){autoPlanMesh();return;}
   planFileStatus(name+" açıldı · "+points.length+" nokta · "+layers.length+" tabaka"+note+
     (rejected ? " · "+rejected+" ölçü dışarıda" : "")+(conflicts ? " · "+conflicts+" kot çakışması" : ""));
 }
@@ -11060,6 +11073,7 @@ let newArm = false; $("newP").addEventListener("click", e => { if (!newArm) { ne
 const cv = $("planCv"), ctx = cv.getContext("2d"); const VIEW = { cx: 0, cy: 0, s: 0 }; let DPR = 1;
 let MODE = null, DRAFT = [], SNAP = null;
 let kubPlanFrame=0,kubPlanPaints=0;
+if(window.ResizeObserver) new ResizeObserver(()=>{if(!$("v-plan").hidden)draw();}).observe(cv);
 function resize() { const r = cv.getBoundingClientRect(); DPR = ACAD_DISPLAY.density(r); ACAD_DISPLAY.size(cv, r, DPR); }
 function bounds(includeSurveyLayers = false) { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; const add = (x, y) => { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; };
   (ST.S.pts || []).forEach(p => add(p.e, p.y)); if (ST.R.mode === "model") (ST.R.pts || []).forEach(p => add(p.e, p.y)); ST.alanlar.forEach(a => a.pts.forEach(p => add(p[0], p[1]))); (ST.eksen || []).forEach(p => add(p[0], p[1]));
@@ -12218,6 +12232,65 @@ function commitTerrainSurface(k, next) {
   ST.ornek = false;
   yuzeyDegisti(k, prepared);
 }
+function surveyRole(name) {
+  const label=String(name||"").toLocaleUpperCase("tr-TR").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/İ/g,"I");
+  if (/KIRMIZI|PROJE|BITMIS|SON[_ -]?HAL/.test(label)) return "R";
+  if (/SIYAH|ARAZI|MEVCUT|ILK[_ -]?HAL/.test(label)) return "S";
+  return "";
+}
+function compatibleSurvey(layers, target) {
+  const marks=new Set(layers.map(l=>surveyRole(l.lay)).filter(Boolean));
+  if (marks.size) return layers.filter(l=>surveyRole(l.lay)===target);
+  return layers;
+}
+let autoLayerChoice=null;
+function chooseMeshLayer(layers,k,message) {
+  autoLayerChoice={project:ST,target:k,layers};
+  $("autoLayerBox").hidden=false;
+  $("autoLayerPick").replaceChildren(new Option("Tabakayı seç…",""), ...layers.map((l,i)=>new Option(l.file+" · "+l.lay,String(i))));
+  planFileStatus(message);
+}
+$("autoLayerPick").onchange=e=>{
+  const pick=autoLayerChoice;
+  if(!pick || pick.project!==ST || e.target.value==="")return;
+  autoPlanMesh(pick.layers[Number(e.target.value)],pick.target);
+};
+function autoPlanMesh(chosen,chosenTarget) {
+  if (chosen && !chosenTarget) chosen=null;
+  $("autoLayerBox").hidden=true;autoLayerChoice=null;
+  const select=$("kub3Target2D"), status=$("kub3PlanStatus");
+  const layers=(ST.katmanlar||[]).filter(l=>l.show!==false && l.points?.length);
+  let k=chosenTarget || select.value;
+  if(k==="auto") {
+    const available=["S","R"].filter(t=> (t==="S" || ST.R.mode!=="sabit") && (ST[t]?.pts?.length || layers.some(l=>l.which===(t==="S"?"S":"K") && compatibleSurvey([l],t).length)));
+    k=available.find(t=>$(t==="S"?"lyS":"lyK").checked) || available[0] || "S";
+  }
+  select.dataset.active=k;const label=k==="S"?"Siyah":"Kırmızı", surface=ST[k];
+  function say(t){status.textContent=t;planFileStatus(t);}
+  if(k==="R" && surface.mode==="sabit"){say("Baz kotu düz yüzeydir. Üçgenlemek için kırmızı ölçü dosyasını seç.");return;}
+  const display=()=>{ $(k==="S"?"lyS":"lyK").checked=true;draw(); };
+  if(surface.tri?.length){display();say(label+" yüzey · "+surface.pts.length+" nokta · "+surface.tri.length/3+" üçgen. "+(surface.surveyPending?"Ek ölçüler için Veri / Yüzeyler’de yeniden üçgenle.":"Mevcut üçgenler gösteriliyor."));return;}
+  try {
+    let pts=surface.pts||[], conflicts=0;
+    if(!pts.length){
+      const eligible=l=>l.which===(k==="S"?"S":"K") || (l.which==="R" && k==="R") || l.ref && !["S","K","R"].includes(l.which);
+      const native=chosen ? [chosen].filter(l=>l.tin?.tri?.length) : compatibleSurvey((ST.katmanlar||[]).filter(l=>eligible(l)&&l.show!==false&&l.tin?.tri?.length),k);
+      if(native.length>1){chooseMeshLayer(native,k,"Birden fazla üçgen modeli var. Kullanılacak tabakayı seç.");return;}
+      if(native.length===1){const l=native[0];commitTerrainSurface(k,{...surface,pts:l.tin.pts,tri:Array.from(l.tin.tri),src:l.file+" · "+l.lay});display();say(label+" yüzey · "+l.tin.tri.length/3+" kaynak üçgeni kullanıldı.");return;}
+      const source=chosen ? [chosen] : compatibleSurvey(layers.filter(eligible),k);
+      const surveys=source.map(l=>({name:l.file||l.lay,added:0,duplicates:0,rejected:0,conflicts:0,points:l.points.map(p=>({e:p[0],y:p[1],n:p[2],z:p[3]}))}));
+      pts=mergeSurveyPoints([],surveys).map(row=>row.point); conflicts=surveys.reduce((n,s)=>n+s.conflicts,0);
+      if(conflicts){if(source.length>1)chooseMeshLayer(source,k,"Aynı konumda farklı kotlar var. Ölçü tabakasını seç.");else say("Bu tabakada aynı konumda farklı kotlar var. Ölçü kayıtlarını kontrol et.");return;}
+    }
+    const clean=K.dedupe(pts).pts;
+    if(clean.length<3){say(label+" yüzey için en az üç ayrı konumda kotu bilinen ölçü noktası gerekli.");return;}
+    const tri=Array.from(K.tinIyi(clean,Number(k==="S"?ST.set.maxE:ST.set.maxEK)||0));
+    if(!tri.length){say("Üçgen kurulamadı. Noktaların doğrusal olup olmadığını ve en uzun kenar ayarını kontrol et.");return;}
+    commitTerrainSurface(k,{...surface,pts:clean,tri,surveyPending:0}); display();
+    say(label+" yüzey · "+clean.length+" nokta · "+tri.length/3+" üçgen oluşturuldu.");
+  } catch(e){say("Üçgen kurulamadı. "+e.message);}
+}
+
 function kub3Fix(k,output){
  const M=kub3Surface(k);if(!M?.pts?.length||!M.tri?.length){output("Bu modelde üçgen bulunamadı.");return;}
  const a=kub3Repair(M),r=a.report,summary="Geçersiz "+r.invalid+" · çift "+r.duplicate+" · sıfır alan "+r.degenerate+" · yön "+r.orientation+" · eş kotlu nokta "+(r.merged||0);
@@ -12410,8 +12483,9 @@ function kub3Init(){
  $("kub3Back").onclick=()=>{if(KUB3.mode==="boundary")KUB3.path.pop();else KUB3.vertices.pop();kub3Overlay();};
  $("kub3Finish").onclick=()=>{try{kub3Boundary(KUB3.path);kub3Mode("inspect");kub3Status("Kübaj sınırı uygulandı.");}catch(e){kub3Status(e.message);}};
  $("kub3CreateR").onclick=()=>{if(ST.R.mode==="model"&&ST.R.tri?.length)return kub3Status("Kırmızı model zaten var; değiştirilmedi.");if(!ST.S.tri?.length)return kub3Status("Önce siyah modeli yükle.");const f=ST.R.mode==="sabit"?K.num(ST.R.flat):null;if(f!==null&&!Number.isFinite(f))return kub3Status("Sabit kot geçersiz.");try{commitTerrainSurface("R",{mode:"model",flat:"",src:"Siyah modelden proje",pts:ST.S.pts.map(p=>({...p,z:f??p.z})),tri:Array.from(ST.S.tri)});}catch(e){kub3Status(e.message);return;}KUB3.key="R";$("kub3Target").value="R";kub3Mode("inspect");kub3Render();kub3Status("Kırmızı model oluşturuldu; siyah kaynak korundu.");};
- $("kub3Target2D").onchange=e=>{const k=e.target.value;if(k==="S")$("lyS").checked=true;if(k==="R")$("lyK").checked=true;draw();};
- $("kub3Fix2D").onclick=()=>{const k=$("kub3Target2D").value;if(k==="auto")return $("kub3PlanStatus").textContent="Önce siyah veya kırmızı modeli seç.";kub3Fix(k,t=>$("kub3PlanStatus").textContent=t);};
+ $("autoPlanMesh").onclick=autoPlanMesh;
+ $("kub3Target2D").onchange=e=>{const k=e.target.value;if(k==="auto"){autoPlanMesh();return;}if(k==="S")$("lyS").checked=true;if(k==="R")$("lyK").checked=true;draw();};
+ $("kub3Fix2D").onclick=()=>{const k=$("kub3Target2D").value;if(k==="auto"){autoPlanMesh();const key=$("kub3Target2D").dataset.active;if(key && ST[key].tri?.length)kub3Fix(key,t=>$("kub3PlanStatus").textContent=t);return;}kub3Fix(k,t=>$("kub3PlanStatus").textContent=t);};
  $("kubBoundary").onclick=()=>beginBoundary(null);
 }
 
@@ -13680,7 +13754,7 @@ function kaInit(){
 
 if(document.readyState==="loading")window.addEventListener("DOMContentLoaded",kaInit,{once:true});else queueMicrotask(kaInit);
 function boot() {
-  PKUB0 = null; QMARK = null; SNAP = null;
+  PKUB0 = null; QMARK = null; SNAP = null; autoLayerChoice=null;$("autoLayerBox").hidden=true;
   ++bazGeneration; bazPending = false; lastBazRequest = null; window.BZR = null;
   $("bzRes").replaceChildren(); $("bzNote").textContent = ""; $("coord").textContent = "";
   const baseSettings = ST.set.baz || {};
