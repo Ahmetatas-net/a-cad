@@ -9,13 +9,13 @@ input[type=file],select{box-sizing:border-box;background:#f5f8f8;padding:7px;bor
 html.embedded #sheetDialog[open]{position:static;width:100%;max-width:100%;max-height:none;margin:10px 0;padding:10px}#sheetDialog .toolrow>*{min-width:0}#sheetDialog .toolrow label{flex:1 1 110px}#sheetClose{margin-left:auto}#sheetSvg{max-height:540px}
 .picks{position:relative;display:flex;align-items:center;gap:8px;min-height:40px;padding:4px 7px;border:1px solid #b8cdca;border-radius:6px;background:#f4f8f7;margin:4px 0}.picks strong{border-radius:4px;padding:3px 7px;background:#dcebe8;white-space:nowrap;color:#1d5951}.picks small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.picks input[type=file]{position:absolute;inset:0;margin:0;opacity:0;cursor:pointer;width:100%;height:100%}.picks:focus-within{outline:2px solid #298c80}
 #needsReview{display:flex;gap:6px;flex-wrap:wrap}#needsReview button{background:#f7eee2;color:#6f4b1f;min-height:32px;padding:4px 8px}
-</style><header><b>A-CAD</b><span>Kamulaştırma</span></header><main>
+</style><style>#sourceCard{margin:10px 0;padding:12px;background:white;border:1px solid #bcd0cd;border-radius:10px}#sourceTitle{overflow-wrap:anywhere}#sourceCard .titlebar{flex-wrap:wrap;gap:6px;margin:0 0 8px}#sourceCount{font-size:13px;color:#456462}.sourceActions{display:flex;gap:5px}.sourceActions button{padding:7px 10px}.sourceActions button:focus-visible{outline:3px solid #4a8d86}#sourceCanvas{display:block;width:100%;height:clamp(195px,32vw,365px);touch-action:none;border-radius:6px}#layerSettings label{display:inline-block;margin-right:12px}.work:has(#editor[hidden]){display:none}</style><header><b>A-CAD</b><span>Kamulaştırma</span></header><main>
 <div class="titlebar"><div><h1>Kamulaştırma planı</h1><p>Proje çiziminden giren ve kalan alanları hesaplayın, tapu kayıtlarını parsellere bağlayın.</p></div><span class="format">KGM</span></div>
 <section class="steps" aria-label="Proje girişleri">
-<article><h2>Proje</h2><label>Proje çizimi · NCZ<input type="file" id="cad" accept=".ncz"></label><p>Kapalı ana parselleri içeren kadastro veya proje çizimi.</p></article>
-<article><h2>Sınır</h2><label>Sınır kaynağı<select id="borderSource"><option value="project">Projedeki KAM_SINIR</option><option value="file">Ayrı sınır çizimi</option></select></label><label id="borderFileRow" hidden>Sınır çizimi · NCZ<input type="file" id="borderFile" accept=".ncz"></label><label id="layerRow" hidden>Sınır tabakası<select id="borderLayer"></select></label><p>Giren ve kalan alanlar bu sınırdan ölçülür.</p></article>
+<article><h2>Proje</h2><label>Proje çizimi · NCZ / DXF<input type="file" id="cad" accept=".ncz,.dxf"></label><p>Dosya seçilince plan açılır.</p></article>
+<article><h2>Sınır</h2><label>Sınır kaynağı<select id="borderSource"><option value="project">Proje çizimindeki sınır</option><option value="file">Ayrı sınır çizimi</option><option value="picked" disabled>Plandan seçilen sınır</option><option value="cks">CKS’deki giren parçalardan</option></select></label><div id="cksRow" hidden><label>Alan hesabı · CKS<input type="file" id="cksFiles" accept=".cks" multiple></label><label>Giren parçaların tabakası<select id="enteredLayer"></select></label></div><label id="borderFileRow" hidden>Sınır çizimi · NCZ / DXF<input type="file" id="borderFile" accept=".ncz,.dxf"></label><label id="layerRow" hidden>Sınır tabakası<select id="borderLayer"></select></label><p>Giren ve kalan alanlar bu sınırdan ölçülür.</p></article>
 <article id="refs"><h2>Tapu kaydı</h2><label>Parsel cetveli ve malik dosyaları<input id="ref" type="file" multiple accept=".kap,.kml,.xls,.xlsx,.ncz"></label><p>KAP, malik KML veya KGM malik Excel’i. Alan hesabı NCZ’si de eklenebilir.</p></article></section>
-<div class="actionbar"><button id="run" disabled>Alanları hesapla</button><button id="check" disabled>Tapu kayıtlarını eşleştir</button><div><div role="status" aria-live="polite" id="status">Proje çizimi bekleniyor.</div><div id="log" role="status"></div></div></div>
+<details id="layerSettings" hidden><summary>Hesap tabakaları</summary><label>Ana parseller<select id="parcelLayer"></select></label><label>Projedeki sınır<select id="projectBorder"></select></label></details><section id="sourceCard" hidden><div class="titlebar"><div><b id="sourceTitle"></b><div id="sourceCount"></div></div><div class="sourceActions"><button id="sourcePick" aria-pressed="false">Plandan sınır seç</button><button id="sourceMinus" aria-label="Uzaklaş">−</button><button id="sourcePlus" aria-label="Yaklaş">+</button><button id="sourceFit">Tümünü göster</button></div></div><canvas id="sourceCanvas" aria-label="Kaynak proje çizimi"></canvas><div id="pickInfo" role="status"></div><div id="hitOptions" hidden><select id="hitList" aria-label="Sınır adayı"></select><button id="hitUse">Seçilen sınırı kullan</button></div></section><div class="actionbar"><button id="run" disabled>Alanları hesapla</button><button id="check" disabled>Tapu kayıtlarını eşleştir</button><div><div role="status" aria-live="polite" id="status">Proje çizimi bekleniyor.</div><div id="log" role="status"></div></div></div>
 <article class="work"><h2>Parsel planı</h2><label>Görünüm<select id="which" disabled><option>Proje bütünü</option></select></label><svg id="map" viewBox="0 0 660 310" role="img" aria-label="Kamulaştırma sınırı ve kesilen parseller"></svg><div class="legend"><span><i class="key" style="background:#166854"></i>Sınır</span><span><i class="key" style="background:#e8a36c"></i>Giren</span><span><i class="key" style="background:#dce4d8"></i>Kalan</span><span><i class="key" style="background:#87baca"></i>Yol / dere</span></div><div class="metrics"><div class="metric">Ana parsel<b id="v1">—</b></div><div class="metric">Giren alan<b id="v2">—</b></div><div class="metric">Kalan alan<b id="v3">—</b></div></div><div id="editor" hidden><div class="toolrow"><label>Plan aracı<select id="mode"><option value="bak">İncele</option><option value="sinir">Sınır köşesini taşı</option><option value="yazi">Parsel yazısını taşı</option></select></label><button id="undo" disabled>Geri al</button><button id="redo" disabled>Yinele</button></div><p id="modeHint"></p><div id="xyArea" hidden><label>Y · Doğu (m)<input id="east" type="number" step="any"></label><label>X · Kuzey (m)<input id="nord" type="number" step="any"></label><button id="xyApply">Köşeyi uygula</button></div>
 <details id="ownerArea" hidden><summary>Malik ve hisseler</summary><div id="owners"></div><button id="ownerAdd">Malik ekle</button> <button id="ownerApply">Malikleri uygula</button></details>
 <details><summary>Pafta · kuzey oku konumu</summary><div class="toolrow"><label>Yatay (mm)<input type="number" id="northX" min="-4" max="4" step=".5" value="0"></label><label>Aşağı (mm)<input type="number" id="northY" min="-3" max="3" step=".5" value="0"></label><button id="northApply">Konumu uygula</button></div></details>
@@ -2179,7 +2179,7 @@ const KgmOlcu=(()=>{
   }
   return result;
  }
- return {run,compare,balance,area};
+ return {run,compare,balance,area,contains,border,region};
 })();
 </script><script>/* All print formats consume these millimetre coordinates, including the reserved compass cell. */
 const KamPaper=(()=>{
@@ -2339,16 +2339,240 @@ const KgmTeslim=(()=>{
 </script><script>(()=>{
 const $=id=>document.getElementById(id),n=x=>x.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2}),ns='http://www.w3.org/2000/svg';let measured=null,current=null,proof=null,seq=0,loadEpoch=0;
 function clear(){document.body.classList.remove('loaded');stopEdit();busy=false;pointSelection=null;proof=null;$('zipstatus').textContent='';++seq;current=measured=null;$('zip').disabled=true;$('run').disabled=!$('cad').files.length;$('check').disabled=$('out').disabled=$('which').disabled=true;$('checks').hidden=true;$('which').replaceChildren(new Option('Proje bütünü',''));$('map').replaceChildren();for(const k of ['details','log'])$(k).textContent='';for(const k of ['v1','v2','v3'])$(k).textContent='—';$('status').textContent=$('cad').files.length?'Hesaba hazır.':'Proje çizimi bekleniyor.';}
-function inputChanged(){++loadEpoch;clear();const missing=$('borderSource').value==='file'&&(!boundaryDrawing||!$('borderLayer').value);$('run').disabled=!$('cad').files.length||missing;if(missing)$('status').textContent=$('borderFile').files.length?'Sınır tabakasını seçin.':'Ayrı sınır çizimini seçin.';}
+function sourceReady(){return sourceModel&&sourceFile===$('cad').files[0]&&$('parcelLayer').value&&($('borderSource').value==='picked'?pickedRings?.length:$('borderSource').value==='cks'?$('cksFiles').files.length&&$('enteredLayer').value:$('borderSource').value==='file'?boundaryDrawing&&$('borderLayer').value:$('projectBorder').value);}
+function inputChanged(){++loadEpoch;clear();$('run').disabled=!sourceReady();if(!sourceModel)return;
+ $('status').textContent=!$('parcelLayer').value?'Çizim açıldı. Hesap tabakalarından ana parselleri seçin.':sourceReady()?'Çizim açıldı. Alan hesabına hazır.':$('borderSource').value==='cks'?'CKS dosyalarını ve giren parça tabakasını seçin.':$('borderSource').value==='file'?'Ayrı sınır çizimini ve tabakasını seçin.':'Çizim açıldı. Hesap tabakalarından sınırı seçin veya ayrı sınır çizimini yükleyin.';}
 const refreshPicks=()=>{for(const input of document.querySelectorAll('.picks input')){const names=Array.from(input.files,f=>f.name),out=input.previousElementSibling;out.textContent=names.length>1?names.length+' dosya':names[0]||'Dosya seçilmedi';out.title=names.join(' · ');}};
  for(const input of document.querySelectorAll('.steps input[type=file]')){const box=document.createElement('span'),action=document.createElement('strong'),name=document.createElement('small');box.className='picks';action.textContent='Dosya seç';input.before(box);box.append(action,name,input);input.addEventListener('change',refreshPicks);}
- refreshPicks();$('cad').onchange=inputChanged;let boundaryDrawing=null,borderRead=0;
+ let sourceFile=null,sourceModel=null,sourceToken=0;
+async function readDrawing(file){
+ const bytes=await file.arrayBuffer();
+ let model;
+ if(/\.dxf$/i.test(file.name)){
+  let text;try{text=new TextDecoder('utf-8',{fatal:true}).decode(bytes);}catch{text=new TextDecoder('windows-1254').decode(bytes);}
+  if(text.startsWith('AutoCAD Binary DXF'))throw Error('İkili DXF okunamadı. Çizimi metin (ASCII) DXF olarak kaydedin.');
+  model=K.parseDXF(text);
+ }else if(/\.ncz$/i.test(file.name))model=K.parseNCZ(bytes);
+ else throw Error('Proje çizimi olarak NCZ veya DXF seçin.');
+ if(!['lines','polys','faces','points','textList'].some(key=>model[key]?.length))throw Error(file.name+' içinde okunabilir çizim nesnesi bulunamadı.');
+ return model;
+}
+const sourceCanvas=$('sourceCanvas'),pen=sourceCanvas.getContext('2d');
+let extent=null,camera=null,request=0,hold=null;
+function eachShape(model,cb){
+ for(const g of model.lines)cb(g.pts,g.lay,false);
+ for(const g of model.polys)cb(g.pts,g.lay,g.closed);
+ for(const g of model.faces||[])cb(g.p,g.lay,true);
+}
+let pickedRings=null,picking=false,hitChoices=[],incomingBoundary=null;
+function pickOn(on){picking=on;$('sourcePick').setAttribute('aria-pressed',String(on));sourceCanvas.style.cursor=on?'crosshair':'grab';if(!on){hitChoices=[];$('hitOptions').hidden=true;}}
+function applyPicked(rings,title){
+ if(!sourceModel)return;const clean=rings.map(pts=>({lay:'KAM_SINIR',closed:true,pts:pts.map(p=>p.slice(0,2))}));
+ const region=KgmOlcu.border({lines:[],polys:clean});pickedRings=clean;
+ $('borderSource').value='picked';$('borderSource').onchange();pickOn(false);
+ $('pickInfo').textContent=title+' · '+n(KgmOlcu.area(region.shape))+' m²';scheduleSource();
+}
+window.addEventListener('kam:use-boundary',e=>{const d=e.detail;if(d.file!==$('cad').files[0])return;if(sourceFile!==d.file){incomingBoundary=d;return;}try{applyPicked(d.rings,'CAD ekranından seçilen sınır');}catch(error){$('pickInfo').textContent=error.message;}});
+function acceptHit(i){
+ const p=hitChoices[i];if(!p)return;
+ try{let rings;
+ if(p.closed||p.pts.length>=4&&p.pts[0][0]===p.pts.at(-1)[0]&&p.pts[0][1]===p.pts.at(-1)[1])rings=[p.pts];
+ else{const parts=[...sourceModel.lines,...sourceModel.polys].filter(q=>q.lay===p.lay).map(q=>({...q,lay:'KAM_SINIR'}));rings=KgmOlcu.border({lines:parts,polys:[]}).shape.flat();}
+ applyPicked(rings,p.lay);
+ }catch(e){$('pickInfo').textContent=e.message;}
+}
+function hitAt(e){
+ const box=sourceCanvas.getBoundingClientRect(),s=scaleFor(box.width,box.height);
+ const px=camera.x+(e.clientX-box.left-box.width/2)/s,py=camera.y-(e.clientY-box.top-box.height/2)/s;
+ const hits=[];
+ for(const p of [...sourceModel.lines,...sourceModel.polys]){
+  let best=Infinity;for(let k=0;k<p.pts.length-(p.closed?0:1);k++){
+   const a=p.pts[k],b=p.pts[(k+1)%p.pts.length],dx=b[0]-a[0],dy=b[1]-a[1],d=dx*dx+dy*dy;if(!d)continue;
+   const u=Math.max(0,Math.min(1,((px-a[0])*dx+(py-a[1])*dy)/d));best=Math.min(best,Math.hypot(px-a[0]-u*dx,py-a[1]-u*dy)*s);
+  }if(best<=12)hits.push({p,best});
+ }hits.sort((a,b)=>a.best-b.best);
+ hitChoices=hits.filter(h=>h.best<=hits[0].best+2).map(h=>h.p);
+ const list=$('hitList');list.replaceChildren(...hitChoices.map((p,i)=>new Option(p.lay+' · '+(p.nativeName||p.pts.length+' köşe')+' ('+(i+1)+')',String(i))));
+ $('hitOptions').hidden=hitChoices.length<2;
+ if(hitChoices.length===1)acceptHit(0);else $('pickInfo').textContent=hitChoices.length?'Üst üste çizgiler var. Sınırı listeden seçin.':'Çizgi bulunamadı. Yaklaşıp sınır kenarına dokunun.';
+}
+$('hitUse').onclick=()=>acceptHit(Number($('hitList').value));
+$('sourcePick').onclick=()=>{pickOn(!picking);$('pickInfo').textContent=picking?'Sınırın kenarına dokunun.':'';};
+let clickStart;sourceCanvas.addEventListener('pointerdown',e=>clickStart=[e.clientX,e.clientY]);
+sourceCanvas.addEventListener('pointerup',e=>{if(picking&&clickStart&&Math.hypot(e.clientX-clickStart[0],e.clientY-clickStart[1])<5)hitAt(e);clickStart=null;});
+
+function fitSource(){
+ if(!extent)return;
+ const [l,b,r,t]=extent;camera={x:(l+r)/2,y:(b+t)/2,zoom:1};scheduleSource();
+}
+function scheduleSource(){if(!request)request=requestAnimationFrame(()=>{request=0;paintSource();});}
+function scaleFor(w,h){return Math.min((w-24)/Math.max(.001,extent[2]-extent[0]),(h-24)/Math.max(.001,extent[3]-extent[1]))*camera.zoom;}
+function paintSource(){
+ if(!sourceModel||!camera||!sourceCanvas.clientWidth)return;
+ const w=sourceCanvas.clientWidth,h=sourceCanvas.clientHeight,dpr=Math.min(devicePixelRatio||1,2);
+ sourceCanvas.width=Math.round(w*dpr);sourceCanvas.height=Math.round(h*dpr);pen.setTransform(dpr,0,0,dpr,0,0);
+ const scale=scaleFor(w,h),x=e=>w/2+(e-camera.x)*scale,y=n=>h/2-(n-camera.y)*scale;
+ pen.fillStyle='#f6f9f7';pen.fillRect(0,0,w,h);
+ const layers=new Map();
+ eachShape(sourceModel,(pts,layer,closed)=>{
+  if(!pts?.length)return;let path=layers.get(layer);if(!path){path=new Path2D();layers.set(layer,path);}
+  path.moveTo(x(pts[0][0]),y(pts[0][1]));for(let i=1;i<pts.length;i++)path.lineTo(x(pts[i][0]),y(pts[i][1]));if(closed)path.closePath();
+ });
+ const border=$('projectBorder').value;
+ for(const [layer,path] of [...layers].sort(([a],[b])=>Number(a===border)-Number(b===border))){
+  pen.lineWidth=layer===border?2:1;pen.strokeStyle=layer===border?'#ad4837':layer===$('parcelLayer').value?'#236458':'#87949c';pen.stroke(path);
+ }
+ if(pickedRings&&$('borderSource').value==='picked'){pen.lineWidth=3;pen.strokeStyle='#a63631';for(const p of pickedRings){pen.beginPath();p.pts.forEach((q,i)=>i?pen.lineTo(x(q[0]),y(q[1])):pen.moveTo(x(q[0]),y(q[1])));pen.closePath();pen.stroke();}}
+ pen.fillStyle='#334f57';for(const p of sourceModel.points||[])pen.fillRect(x(p.e)-1,y(p.y)-1,2,2);
+ pen.font='11px sans-serif';for(const t of sourceModel.textList||[]){const px=x(t.e),py=y(t.y);if(px<0||px>w||py<0||py>h)continue;if(camera.zoom>=3||layers.size===0||t.lay==='PARSEL_NO')pen.fillText(t.s||'',px,py);}
+}
+function zoomSource(factor){if(camera){camera.zoom=Math.max(.25,Math.min(1024,camera.zoom*factor));scheduleSource();}}
+$('sourceFit').onclick=fitSource;$('sourcePlus').onclick=()=>zoomSource(1.6);$('sourceMinus').onclick=()=>zoomSource(1/1.6);
+sourceCanvas.onpointerdown=e=>{if(!camera)return;sourceCanvas.setPointerCapture(e.pointerId);hold={id:e.pointerId,x:e.clientX,y:e.clientY};};
+sourceCanvas.onpointermove=e=>{if(hold?.id!==e.pointerId)return;const s=scaleFor(sourceCanvas.clientWidth,sourceCanvas.clientHeight);camera.x-=(e.clientX-hold.x)/s;camera.y+=(e.clientY-hold.y)/s;hold.x=e.clientX;hold.y=e.clientY;scheduleSource();};
+sourceCanvas.onlostpointercapture=()=>{hold=null;};new ResizeObserver(scheduleSource).observe(sourceCanvas);
+function optionsFor(id,names,preferred){
+ const pick=$(id);pick.replaceChildren(new Option('Tabaka seçin',''),...names.map(n=>new Option(n,n)));pick.value=preferred.find(n=>names.includes(n))||'';
+}
+function installProject(f,d){
+ sourceFile=f;sourceModel=d;pickedRings=null;pickOn(false);$('pickInfo').textContent='';if($('borderSource').value==='picked')$('borderSource').value='project';
+ let l=Infinity,b=Infinity,r=-Infinity,t=-Infinity;
+ const grow=(x,y)=>{if(Number.isFinite(x)&&Number.isFinite(y)){l=Math.min(l,x);r=Math.max(r,x);b=Math.min(b,y);t=Math.max(t,y);}};
+ eachShape(d,pts=>{for(const p of pts||[])grow(p[0],p[1]);});
+ for(const p of [...d.points,...d.textList])grow(p.e,p.y);
+ if(!Number.isFinite(l))throw Error('Çizimde gösterilecek sonlu koordinat bulunamadı.');
+ extent=[l,b,r,t];const names=list=>[...new Set(list.map(p=>p.lay))].sort((a,b)=>a.localeCompare(b,'tr'));
+ optionsFor('enteredLayer',names(d.polys.filter(p=>p.closed)),['ALN_KAM','KAD_B','KAM_GIREN']);
+ optionsFor('parcelLayer',names(d.polys.filter(p=>p.closed)),['KAD_ALN','KAD_ALAN','ALN_ESKI']);
+ optionsFor('projectBorder',names([...d.polys,...d.lines]),['KAM_SINIR','PRO_KAMSIN']);
+ $('sourceCard').hidden=false;$('layerSettings').hidden=false;$('sourceTitle').textContent=f.name;
+ $('sourceCount').textContent=[d.lines.length+' çizgi',d.polys.length+' çoklu çizgi',d.points.length+' nokta',d.textList.length+' yazı'].join(' · ');
+ fitSource();refreshPicks();if(incomingBoundary?.file===f){const data=incomingBoundary;incomingBoundary=null;applyPicked(data.rings,'CAD ekranından seçilen sınır');}
+}
+async function openProject(){
+ const ticket=++sourceToken,f=$('cad').files[0];sourceModel=sourceFile=extent=camera=null;$('sourceCard').hidden=$('layerSettings').hidden=true;inputChanged();$('run').disabled=true;
+ if(!f)return;$('status').textContent=f.name+' okunuyor…';
+ try{const d=await readDrawing(f);if(ticket!==sourceToken)return;installProject(f,d);inputChanged();if(!$('run').disabled)$('status').textContent='Çizim açıldı. Alan hesabına hazır.';}
+ catch(err){if(ticket!==sourceToken)return;sourceModel=sourceFile=null;$('run').disabled=true;$('status').textContent=err.message;}
+}
+function kmReadCks(text) {
+  const coords = new Map(), rings = [];
+  const numeric = s => /^[+-]?\d+(?:[.,]\d+)?$/.test(s);
+  const num = s => Number(s.replace(",", "."));
+  let inAreas = false, current = null, titleArea = null;
+  for (const line of text.split(/\r?\n/)) {
+    const cells = line.trim().split(/[³│|]/).slice(1, -1).map(s => s.trim());
+    if (!cells.length) continue;
+    if (cells[0] === "Ada/Parsel") { inAreas = true; continue; }
+    if (!inAreas && cells.length === 6) {
+      for (const i of [0, 3]) {
+        if (!cells[i] || !numeric(cells[i+1]) || !numeric(cells[i+2])) continue;
+        const xy = [num(cells[i+1]), num(cells[i+2])], prev = coords.get(cells[i]);
+        if (prev && (prev[0] !== xy[0] || prev[1] !== xy[1])) throw Error("Çelişkili nokta: " + cells[i]);
+        coords.set(cells[i], xy);
+      }
+    } else if (inAreas && cells.length === 5) {
+      const [id, names, area, adjustment, balanced] = cells;
+      if (id === "Tapu Alanı" && numeric(names)) titleArea = num(names);
+      if (names === "TOPLAM") { current = null; continue; }
+      if (id) {
+        current = null;
+        if (!numeric(area) || !numeric(adjustment) || !numeric(balanced)) continue;
+        if (rings.some(r => r.id === id)) throw Error("Çift alan adı: " + id);
+        current = {id, names:[], source:num(area), adjustment:num(adjustment), balanced:num(balanced)};
+        rings.push(current);
+      }
+      if (current) current.names.push(...names.split(",").map(s => s.trim()).filter(Boolean));
+    }
+  }
+  if (!rings.length) throw Error("Koordine özet ve alan tablosu okunamadı.");
+  for (const r of rings) {
+    r.xy = r.names.map(n => { if (!coords.has(n)) throw Error(r.id + " · eksik nokta " + n); return coords.get(n); });
+    if (new Set(r.names).size < 3) throw Error(r.id + " · en az üç köşe gerekli.");
+    const [ox,oy] = r.xy[0];
+    let twice = 0;
+    for (let i=0;i<r.xy.length;i++) {
+      const [x,y] = r.xy[i], [nx,ny] = r.xy[(i+1)%r.xy.length];
+      twice += (x-ox)*(ny-oy) - (nx-ox)*(y-oy);
+    }
+    r.calculated = Math.abs(twice)/2;
+  }
+  return {id:rings[0].id,titleArea,rings};
+}
+async function cksModel(d){
+ const inputs=[...$('cksFiles').files],parents=[],pieces=[],seen=new Set(),checks=[];
+ const idKey=s=>String(s||'').trim().replace(/^(\d+)\/(\d+)/,'$1_$2');
+ function match(r,layer){
+  const found=d.polys.filter(p=>p.closed&&p.lay===layer&&idKey(p.nativeName)===idKey(r.id));
+  if(found.length!==1)throw Error(r.id+' için '+layer+' tabakasında tek bir adlandırılmış alan gerekli.');
+  const p=found[0],pts=p.pts.map(v=>v.slice(0,2)),area=KgmOlcu.area([[pts]]);
+  if(Math.abs(area-r.source)>.00501)throw Error(r.id+' · NCZ alanı ile CKS hesap alanı uyuşmuyor.');
+  const same=(a,b)=>Math.abs(a[0]-b[0])<=.00501&&Math.abs(a[1]-b[1])<=.00501;
+  if(!pts.every(v=>r.xy.some(q=>same(v,q)))||!r.xy.every(q=>pts.some(v=>same(v,q))))throw Error(r.id+' · CKS köşeleri kaynak geometri ile uyuşmuyor.');
+  checks.push({parsel:r.id,cks:r.source,basiliKoordinattan:r.calculated,sayisalCizimden:area});return p;
+ }
+ for(const f of inputs){
+  const bytes=await f.arrayBuffer();let text;try{text=new TextDecoder('utf-8',{fatal:true}).decode(bytes);}catch{text=new TextDecoder('windows-1254').decode(bytes);}
+  const book=kmReadCks(text),id=idKey(book.id);
+  if(!/^\d+_\d+$/.test(id)||seen.has(id))throw Error('CKS dosyalarında eksik veya yinelenen ada/parsel var.');seen.add(id);
+  parents.push({...match(book.rings[0],$('parcelLayer').value),lay:'KAD_ALN'});
+  const enter=book.rings.filter(r=>idKey(r.id).startsWith(id+'/')&&/^B\d*$/i.test(r.id.split('/').at(-1)));
+  if(!enter.length)throw Error(id+' için CKS’de giren B parçası yok.');
+  for(const r of enter)pieces.push([match(r,$('enteredLayer').value).pts.map(p=>p.slice(0,2))]);
+ }
+ if(!parents.length)throw Error('Alan hesabı CKS dosyalarını seçin.');
+ let shape=[];for(const p of pieces)shape=polygonClipping.union(shape,p);
+ const bound=shape.flatMap(p=>p.map(pts=>({lay:'KAM_SINIR',closed:true,pts})));
+ return {lines:[],polys:[...parents,...bound],points:[],cks:checks};
+}
+
+window.kamSourceParts=async function(file){
+ const d=file===sourceFile?sourceModel:await readDrawing(file);
+ const parcels=new Map(),parts=new Map(),roads=[];
+ const add=(map,key,ring)=>{if(!map.has(key))map.set(key,[]);map.get(key).push(ring);};
+ for(const p of d.polys){if(!p.closed)continue;const id=(p.nativeName||'').replace(/^(\d+)_(\d+)/,'$1/$2'),xy=p.pts.map(q=>q.slice(0,2));
+ if(!xy.length)continue;if(xy[0][0]!==xy.at(-1)[0]||xy[0][1]!==xy.at(-1)[1])xy.push(xy[0]);
+ if(['KAD_ALN','KAD_ALAN'].includes(p.lay)&&/^\d+\/\d+$/.test(id))add(parcels,id,xy);
+ else if(['KAD_YOL','KAD_DERE'].includes(p.lay))roads.push([xy]);
+ else if(!/[İI]RT[İI]FAK/i.test(p.lay)&&/^\d+\/\d+\/B\d*$/i.test(id))add(parts,id,xy);
+ }
+ if(!parts.size)throw Error('Çizimde adlandırılmış giren B parçaları bulunamadı.');
+ let union=[];for(const [id,rings] of parts){const parent=parcels.get(id.split('/').slice(0,2).join('/'));if(!parent)throw Error(id+' ana parseli bulunamadı.');
+ const shape=KgmOlcu.region(rings),outer=KgmOlcu.region(parent);if(KgmOlcu.area(polygonClipping.difference(shape,outer))>.02)throw Error(id+' giren parçası ana parselin dışına taşıyor.');union=polygonClipping.union(union,shape);}
+ for(const road of roads)union=polygonClipping.union(union,road);if(union.some(poly=>poly.length>1))throw Error('Kaynak parçaların birleşiminde iç boşluk var. Özgün sınır tabakasını seçin.');return union.map(poly=>poly[0]);
+};
+window.kamCalculateSelection=async function(file,rings){
+ if(!file||!rings?.length)throw Error('Önce proje çizimi ve kapalı sınır gerekli.');
+ const field=$('cad');
+ if(field.files[0]!==file){assign(field,[file]);await openProject();}
+ if(!sourceModel||sourceFile!==field.files[0])throw Error('Proje açma tamamlanamadı.');
+ applyPicked(rings,'CAD ekranından seçilen sınır');await $('run').onclick();
+ if(!current)throw Error($('status').textContent);
+ return {count:current.rows.length,area:$('v2').textContent};
+};
+function calculationModel(d){
+ const parcels=$('parcelLayer').value,border=$('borderSource').value==='project'?$('projectBorder').value:null;
+ if(!parcels)throw Error('Ana parsel tabakasını seçin.');
+ if(parcels===border)throw Error('Ana parseller ve sınır için farklı tabakalar seçin.');
+ const labels=d.textList.filter(t=>/^\d+[\/_]\d+$/.test(t.s?.trim()));
+ const mapped=d.polys.filter(p=>p.lay===parcels||p.lay===border||['KAD_YOL','KAD_DERE','PL_EKSEN'].includes(p.lay)).map(p=>{
+  if(p.lay===border)return {...p,lay:'KAM_SINIR'};
+  if(p.lay!==parcels)return p;
+  if(p.nativeName||!p.closed)return {...p,lay:'KAD_ALN'};
+  const ids=new Set(labels.filter(t=>KgmOlcu.contains([p.pts],[t.e,t.y])).map(t=>t.s.trim().replace('_','/')));
+  return {...p,lay:'KAD_ALN',nativeName:ids.size===1?[...ids][0]:''};
+ });
+ return lightModel({...d,polys:mapped,lines:d.lines.filter(p=>p.lay===border).map(p=>({...p,lay:'KAM_SINIR'}))});
+}
+for(const id of ['projectBorder','parcelLayer','cksFiles','enteredLayer'])$(id).onchange=()=>{inputChanged();scheduleSource();};
+
+ refreshPicks();$('cad').onchange=openProject;let boundaryDrawing=null,borderRead=0;
 function resetBoundaryDrawing(){++borderRead;boundaryDrawing=null;$('borderFile').value='';$('borderLayer').replaceChildren();$('layerRow').hidden=true;}
 $('borderFile').onchange=async()=>{
  const ticket=++borderRead,file=$('borderFile').files[0];boundaryDrawing=null;$('borderLayer').replaceChildren();$('layerRow').hidden=true;inputChanged();
  if(!file)return;
  $('run').disabled=true;$('status').textContent='Sınır tabakaları okunuyor…';
- try{const d=K.parseNCZ(await file.arrayBuffer());if(ticket!==borderRead)return;
+ try{const d=await readDrawing(file);if(ticket!==borderRead)return;
   const names=[...new Set([...d.lines,...d.polys].map(v=>v.lay).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'tr'));
   if(!names.length)throw Error('Sınır çiziminde çizgi veya çokgen tabakası bulunamadı.');
   boundaryDrawing={lines:d.lines,polys:d.polys};$('borderLayer').replaceChildren(new Option('Sınır tabakasını seçin',''),...names.map(n=>new Option(n,n)));
@@ -2357,7 +2581,7 @@ $('borderFile').onchange=async()=>{
 };
 $('borderLayer').onchange=inputChanged;
 
-$('borderSource').onchange=()=>{$('borderFileRow').hidden=$('borderSource').value!=='file';if($('borderFileRow').hidden)resetBoundaryDrawing();inputChanged();};$('ref').onchange=()=>{++loadEpoch;++seq;++generation;busy=false;registers=null;proof=null;current=measured?compose(measured,state):null;$('run').disabled=!!current||!$('cad').files.length||$('borderSource').value==='file'&&(!boundaryDrawing||!$('borderLayer').value);$('check').disabled=!measured||!$('ref').files.length;$('log').textContent=$('ref').files.length?'Kayıtlar seçildi. '+(measured?'Eşleştirmeyi çalıştırın.':'Alan hesabıyla birlikte eşleştirilecek.') : '';if(current)show();};
+$('borderSource').onchange=()=>{$('cksRow').hidden=$('borderSource').value!=='cks';$('borderFileRow').hidden=$('borderSource').value!=='file';if($('borderFileRow').hidden)resetBoundaryDrawing();inputChanged();};$('ref').onchange=()=>{++loadEpoch;++seq;++generation;busy=false;registers=null;proof=null;current=measured?compose(measured,state):null;$('run').disabled=!!current||!sourceReady();$('check').disabled=!measured||!$('ref').files.length;$('log').textContent=$('ref').files.length?'Kayıtlar seçildi. '+(measured?'Eşleştirmeyi çalıştırın.':'Alan hesabıyla birlikte eşleştirilecek.') : '';if(current)show();};
 function show(){refreshPicks();document.body.classList.add('loaded');$('zip').disabled=false;const r=current.rows.find(p=>p.id===$('which').value),rows=r?[r]:current.rows,svg=$('map');svg.replaceChildren();
  const frame=r?r.shape:current.border.shape,all=frame.flat(2),xx=all.map(p=>p[0]),yy=all.map(p=>p[1]),x=Math.min(...xx),y=Math.min(...yy),w=Math.max(...xx)-x,h=Math.max(...yy)-y,s=Math.min(620/(w||1),278/(h||1));
  view={x:x+w/2,y:y+h/2,s};$('northX').value=state.north[0];$('northY').value=state.north[1];const transform=p=>[(330+(p[0]-x-w/2)*s).toFixed(2),(155-(p[1]-y-h/2)*s).toFixed(2)].join(' ');
@@ -2373,12 +2597,12 @@ function show(){refreshPicks();document.body.classList.add('loaded');$('zip').di
 }
 $('map').addEventListener('click',ev=>{const id=ev.target.dataset.parcel;if(id&&$('mode').value==='bak'&&$('which').value!==id){$('which').value=id;$('which').onchange();}});
 $('which').onchange=()=>{pointSelection=null;show();};
-async function runGeometry(){clear();const ticket=seq,f=$('cad').files[0];$('run').disabled=true;$('status').textContent='Çizim okunuyor…';try{const data=await f.arrayBuffer();if(ticket!==seq)return;const raw=lightModel(window.K.parseNCZ(data));if($('borderSource').value==='file'){
+async function runGeometry(){clear();const ticket=seq,f=$('cad').files[0];$('run').disabled=true;$('status').textContent='Çizim okunuyor…';try{if(sourceFile!==f){const d=await readDrawing(f);if(ticket!==seq)return;installProject(f,d);}const raw=$('borderSource').value==='cks'?await cksModel(sourceModel):calculationModel(sourceModel);if(ticket!==seq)return;if($('borderSource').value==='picked'){if(!pickedRings)throw Error('Plandan bir sınır seçin.');raw.polys=raw.polys.filter(p=>p.lay!=='KAM_SINIR').concat(pickedRings);raw.lines=[];}if($('borderSource').value==='file'){
  const file=$('borderFile').files[0];if(!file)throw Error('Ayrı sınır çizimini seçin.');
  const layer=$('borderLayer').value;if(!boundaryDrawing||!layer)throw Error('Sınır tabakasını seçin.');
  const pieces=list=>list.filter(p=>p.lay===layer).map(p=>({...p,lay:'KAM_SINIR'}));
  raw.lines=pieces(boundaryDrawing.lines);raw.polys=raw.polys.filter(p=>p.lay!=='KAM_SINIR').concat(pieces(boundaryDrawing.polys));}
- rawModel=raw;const result=await calcShape(null);if(ticket!==seq)return;measured=current=result;$('which').replaceChildren(new Option('Proje bütünü',''),...result.rows.map(r=>new Option(r.id,r.id)));$('status').textContent=result.rows.length+' ana parsel hesaplandı. '+(result.border.count-result.border.zero)+' sınır kenarı bağlandı.'+(result.border.zero?' '+result.border.zero+' sıfır uzunluklu kenar ölçü dışı.':'');$('which').disabled=$('out').disabled=false;$('check').disabled=!$('ref').files.length;show();}catch(e){if(ticket===seq)$('status').textContent=e.message;}finally{if(ticket===seq)$('run').disabled=!!current;}}
+ rawModel=raw;const result=await calcShape(null);if(ticket!==seq)return;if(raw.cks){result.cks=raw.cks;result.sinirKaynagi='CKS ile eşleşen sayısal B parçalarının birleşimi';}measured=current=result;$('which').replaceChildren(new Option('Proje bütünü',''),...result.rows.map(r=>new Option(r.id,r.id)));$('status').textContent=result.rows.length+' ana parsel hesaplandı. '+(result.border.count-result.border.zero)+' sınır kenarı bağlandı.'+(result.border.zero?' '+result.border.zero+' sıfır uzunluklu kenar ölçü dışı.':'');$('which').disabled=$('out').disabled=false;$('check').disabled=!$('ref').files.length;show();}catch(e){if(ticket===seq)$('status').textContent=e.message;}finally{if(ticket===seq)$('run').disabled=!!current||!sourceReady();}}
 $('run').onclick=async()=>{const epoch=loadEpoch;await runGeometry();if(epoch===loadEpoch&&measured&&$('ref').files.length)await $('check').onclick();};
 $('check').onclick=async()=>{const ticket=++seq;$('check').disabled=true;try{const kaps=[],kmls=[],models=[],books=[];for(const f of $('ref').files){const data=await f.arrayBuffer();if(seq!==ticket)return;if(/\.xlsx?$/i.test(f.name)){books.push(...await readBook(f,data));continue;}if(/\.ncz$/i.test(f.name)){models.push(window.K.parseNCZ(data));continue;}let t;try{t=new TextDecoder('utf-8',{fatal:true}).decode(data);}catch{t=new TextDecoder('windows-1254').decode(data);}if(/\.kap$/i.test(f.name))kaps.push(t);else if(/\.kml$/i.test(f.name))kmls.push(t);}
  if(seq!==ticket)return;if(!kaps.length&&(!books.length||kmls.length||models.length))throw Error('Malik KML veya alan hesabı NCZ için aynı mahallenin KAP dosyasını da seçin.');const previous=registers;try{registers={kaps,kmls,books,models:models.map(m=>({textList:m.textList.filter(t=>['TABLO','DE_M','DE_R'].includes(t.lay))}))};current=compose(measured,state);}catch(err){registers=previous;throw err;}const m=current.rows.reduce((s,r)=>s+(r.pieces?.length||0),0);$('log').textContent=(kaps.length?m+' parça karşılaştırıldı. ':'')+current.rows.reduce((a,r)=>a+(r.owners?.length||0),0)+' malik satırı eşleşti. '+current.rows.filter(r=>r.issues.length).length+' parselde kontrol notu.';show();}catch(e){if(ticket===seq){$('log').textContent=e.message;if(current)show();}}finally{if(ticket===seq)$('check').disabled=false;}};
@@ -2389,7 +2613,7 @@ $('proof').onchange=async()=>{const epoch=++loadEpoch;proof=null;$('zip').textCo
  const data=await KgmTeslim.packfile(file);if(epoch!==loadEpoch)return;
  const inputs=[];for(const f of data.inputs){const b=KgmTeslim.bytes(f.data);if(await KgmTeslim.sha(b)!==f.sha)throw Error('Girdi doğrulanamadı.');inputs.push(new File([b],f.name.split('/').pop()));}
  const geo=inputs.filter((f,i)=>data.inputs[i].role==='project');if(geo.length!==1)throw Error('Teslim takımında tek ana çizim gerekli.');
- if(epoch!==loadEpoch)return;$('borderSource').value='project';resetBoundaryDrawing();$('borderFileRow').hidden=true;assign($('cad'),geo);assign($('ref'),inputs.filter(f=>f!==geo[0]));await runGeometry();if(!measured)throw Error('Takımın sınır hesabı tamamlanamadı.');await $('check').onclick();
+ if(epoch!==loadEpoch)return;++sourceToken;$('borderSource').value='project';resetBoundaryDrawing();$('cksRow').hidden=$('borderFileRow').hidden=true;assign($('cad'),geo);assign($('ref'),inputs.filter(f=>f!==geo[0]));await runGeometry();if(!measured)throw Error('Takımın sınır hesabı tamamlanamadı.');await $('check').onclick();
  if(epoch!==loadEpoch)return;if(!current?.unmatched)throw Error('Parsel ve malik cetvelleri doğrulanamadı.');proof=data;$('zip').textContent='Kontrol ZIP’ini indir';$('zipstatus').textContent=data.files.length+' teslim dosyası hazır.';
  }catch(e){if(epoch===loadEpoch)$('zipstatus').textContent=e.message;}};
 $('zip').onclick=async()=>{if(!current||busy||drag)return;const epoch=seq;$('zip').disabled=true;$('zipstatus').textContent='Çizimler ve cetveller hazırlanıyor…';try{const changed=activeEdit();const product=await KgmTeslim.outputs(current,changed?null:proof,[$('cad').files[0],...$('ref').files],changed?{format:'ACAD-KAM-REV1',raw:rawModel,registers,state}:null);if(epoch!==seq)return;
