@@ -5336,7 +5336,7 @@ window.__DY=window.__DY||function(n){var v=Math.round(n*100)/100;return &#x27;1D
       <div class="grid" style="margin-top:8px;grid-template-columns:repeat(auto-fit,minmax(130px,1fr))"><label>Yeni nokta öneki<input id="kmOn" value="KM"></label><label>İlk numara<input id="kmN0" inputmode="numeric" value="1"></label><label class="full">Kullanım amacı (listede)<input id="kmAmac" placeholder="örn. Elektrik Üretim Alanı / Yol"></label></div>
       <div class="row" style="margin-top:10px"><button type="button" class="primary" id="kmGo">Hesapla</button><button type="button" id="kmClr">Temizle</button></div>
       <div class="msg" id="kmMsg" style="margin-top:8px"></div>
-      <details style="margin:8px 0"><summary>KGM tapu, malik ve hisse kayıtları</summary><label>KAP, malik KML ve isteğe bağlı kaynak malik cetveli (XLS)<input type="file" multiple accept=".kap,.kml,.xls" id="kmKgmImport"></label><button id="kmApplyRegister" type="button">Kayıtları hesaplanan parsellere işle</button><p id="kmRegisterNote" role="status"></p><div id="kmKgmImportResult" class="scroll" style="max-height:340px;overflow:auto" role="status"></div></details>
+      <details style="margin:8px 0"><summary>KGM tapu, malik ve hisse kayıtları</summary><label>KAP, malik KML ve isteğe bağlı kaynak malik cetveli (XLS / CadSablonu XLSX)<input type="file" multiple accept=".kap,.kml,.xls,.xlsx" id="kmKgmImport"></label><button id="kmApplyRegister" type="button">Kayıtları hesaplanan parsellere işle</button><p id="kmRegisterNote" role="status"></p><div id="kmKgmImportResult" class="scroll" style="max-height:340px;overflow:auto" role="status"></div></details>
       <details data-kgm><summary>Kadastro kontrol ekleri</summary>
         <label>Proje adı veya dosya numarası<input id="kmAnnexProject" type="text"></label>
         <div class="row"><label>Ek<select id="kmAnnexNumber"><option>3</option><option>5</option><option>8</option><option>9</option><option>11</option></select></label>
@@ -5515,14 +5515,17 @@ K.unzip = async buf => { const d = buf instanceof Uint8Array ? buf : new Uint8Ar
     out[name] = meth === 0 ? raw : meth === 8 ? new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer()) : null; }
   return out; };
 /* XLSX → metin satırları (her satır hücreleri boşlukla) */
-K.xlsxText = async buf => { const z = await K.unzip(buf), td = new TextDecoder(); const ss = [];
-  if (z["xl/sharedStrings.xml"]) { const x = new DOMParser().parseFromString(td.decode(z["xl/sharedStrings.xml"]), "application/xml"); for (const si of x.getElementsByTagName("si")) ss.push([...si.getElementsByTagName("t")].map(t => t.textContent).join("")); }
+K.xlsxText = async (buf,asCells=false) => { const z = await K.unzip(buf), td = new TextDecoder(); const ss = [];
+  if (z["xl/sharedStrings.xml"]) { const x = new DOMParser().parseFromString(td.decode(z["xl/sharedStrings.xml"]), "application/xml"); for (const si of x.getElementsByTagNameNS("*","si")) ss.push([...si.getElementsByTagNameNS("*","t")].map(t => t.textContent).join("")); }
   const sheets = Object.keys(z).filter(k => /^xl\/worksheets\/sheet\d+\.xml$/.test(k)).sort((a, b) => parseInt(a.match(/\d+/)) - parseInt(b.match(/\d+/)));
   return sheets.map(k => { const x = new DOMParser().parseFromString(td.decode(z[k]), "application/xml"); const lines = [];
-    for (const row of x.getElementsByTagName("row")) { const cells = []; for (const c of row.getElementsByTagName("c")) { const t = c.getAttribute("t"), v = c.getElementsByTagName("v")[0];
-        let val = t === "s" ? ss[+(v && v.textContent)] : t === "inlineStr" ? [...c.getElementsByTagName("t")].map(q => q.textContent).join("") : v ? v.textContent : "";
-        if (val !== undefined && val !== null && String(val).trim() !== "") cells.push(String(val).trim().replace(/\s+/g, "_")); }
-      if (cells.length) lines.push(cells.join(" ")); } return lines.join("\n"); }); };
+    for (const row of x.getElementsByTagNameNS("*","row")) { const cells = []; for (const c of row.getElementsByTagNameNS("*","c")) { const t = c.getAttribute("t"), v = c.getElementsByTagNameNS("*","v")[0];
+        let val = t === "s" ? ss[+(v && v.textContent)] : t === "inlineStr" ? [...c.getElementsByTagNameNS("*","t")].map(q => q.textContent).join("") : v ? v.textContent : "";
+        if(asCells){
+          const ref=c.getAttribute("r")||"",letters=ref.match(/^[A-Z]+/)?.[0];
+          if(letters){let col=0;for(const ch of letters)col=col*26+ch.charCodeAt(0)-64;cells[col-1]=String(val??"").trim();}
+        }else if(val!==undefined && val!==null && String(val).trim()!=="") cells.push(String(val).trim().replace(/\s+/g,"_")); }
+      if(cells.length)lines.push(asCells?cells:cells.join(" ")); } return asCells?lines:lines.join("\n"); }); };
 /* XLS (Excel 97–2003, BIFF8 / OLE2) → metin satırları (her sayfa) */
 K.xlsText = (buf,asCells=false) => {
   const d = buf instanceof Uint8Array ? buf : new Uint8Array(buf), dv = new DataView(d.buffer, d.byteOffset, d.byteLength);
@@ -9754,8 +9757,74 @@ A.piAlign = PI => { const P = PI.filter(p => isFinite(p[0]) && isFinite(p[1])); 
     for (let k = 0; k <= n; k++) { const t = a0 + sg * Math.abs(dl) * k / n; out.push([cx + R * Math.cos(t), cy + R * Math.sin(t)]); } }
   out.push([P[P.length - 1][0], P[P.length - 1][1]]); return out; };
 /* KGM KTB (kamulaştırma proje bilgisi): $KM0, $YATAY (ad Y X R), $KAMUGEN */
-A.ktbParse = txt => { const o = { km0: 0, pi: [], gen: null }; let sec = ""; for (const raw of String(txt).split(/\r?\n/)) { const l = raw.trim(); if (!l) continue; if (l[0] === "$") { sec = l === "$SON" ? "" : l.slice(1).toUpperCase(); continue; } const f = l.split(/\s+/);
-    if (sec === "KM0") o.km0 = parseFloat(f[0]) || 0; else if (sec === "YATAY" && f.length >= 3) o.pi.push([parseFloat(f[1]), parseFloat(f[2]), parseFloat(f[3]) || 0, f[0]]); else if (sec === "KAMUGEN") o.gen = f.map(Number); } return o; };
+A.ktbParse = txt => { const o = { km0: 0, pi: [], gen: null, elements: [], transitions: [] }; let sec = ""; for (const raw of String(txt).split(/\r?\n/)) { const l = raw.trim(); if (!l) continue; if (l[0] === "$") { sec = l === "$SON" ? "" : l.slice(1).toUpperCase(); continue; } const f = l.split(/\s+/);
+    if (sec === "ELEMENTS") o.elements.push(f); else if (sec === "GECIS") o.transitions.push(f); else if (sec === "KM0") o.km0 = Number(f[0]); else if (sec === "YATAY" && f.length >= 3) o.pi.push([parseFloat(f[1]), parseFloat(f[2]), parseFloat(f[3]) || 0, f[0]]); else if (sec === "KAMUGEN") o.gen = f.map(Number); } return o; };
+// Element chainages are in metres. In survey Y/X order AR -1 is counterclockwise.
+A.ktbAxis = o => {
+  if(!o.elements.length){
+    if(!o.pi.length)throw Error("KTB içinde YATAY veya ELEMENTS güzergâhı bulunamadı.");
+    if(!Number.isFinite(o.km0)||o.pi.some(p=>!Number.isFinite(p[0])||!Number.isFinite(p[1])||p[2]<0))
+      throw Error("YATAY koordinatları, yarıçap veya başlangıç kilometresi geçersiz.");
+    if(o.transitions?.some(row=>row.slice(2).some(v=>Number(v)!==0)))
+      throw Error("Geçiş eğrisi için doğrulanmış sayısal ekseni açın.");
+    let priorTangent=0;
+    for(let i=1;i+1<o.pi.length;i++){
+      const a=o.pi[i-1],b=o.pi[i],c=o.pi[i+1],r=b[2];
+      if(!(r>0)){priorTangent=0;continue;}
+      const u=[b[0]-a[0],b[1]-a[1]],v=[c[0]-b[0],c[1]-b[1]];
+      const angle=Math.abs(Math.atan2(u[0]*v[1]-u[1]*v[0],u[0]*v[0]+u[1]*v[1]));
+      const tangent=r*Math.tan(angle/2);
+      if(priorTangent+tangent>Math.hypot(...u)+.025||tangent>Math.hypot(...v)+.025)
+        throw Error(b[3]+" kurbunun teğet uzunluğu komşu PI mesafesini aşıyor. Plandaki doğrulanmış ekseni seçin.");
+      priorTangent=tangent;
+    }
+    const pts=A.piAlign(o.pi);
+    if(!pts)throw Error("YATAY için en az iki geçerli PI gerekli.");
+    return {pts,km0:o.km0,description:o.pi.length+" PI"};
+  }
+  const pts=[],tau=2*Math.PI;
+  let nextStation=null,first=null,arcs=0;
+  const distance=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
+  for(const [i,row] of o.elements.entries()){
+    const arc=row[0]==="AR", station=Number(row[1]);
+    const fields=row.slice(1,arc?12:6).map(Number);
+    const fail=msg=>{throw Error("KTB eleman "+(i+1)+" · "+msg);};
+    if((!arc&&row[0]!=="LN")||fields.length!==(arc?11:5)||!fields.every(Number.isFinite))fail("Desteklenmeyen veya eksik geometri.");
+    const start=fields.slice(arc?7:1,arc?9:3),end=fields.slice(arc?9:3,arc?11:5);
+    if(first===null){first=station;pts.push(start);}
+    if(distance(pts.at(-1),start)>.025 || (nextStation!==null&&Math.abs(station-nextStation)>.025))fail("Koordinat veya kilometre süreksiz.");
+    let length=distance(start,end);
+    if(arc){
+      const radius=fields[1], direction=-fields[2], center=fields.slice(5,7);
+      if(!(radius>0)||Math.abs(direction)!==1||[start,end].some(p=>Math.abs(distance(p,center)-radius)>.025))fail("Kurp yarıçapı veya yönü tutarsız.");
+      const angle=p=>Math.atan2(p[1]-center[1],p[0]-center[0]);
+      const a=angle(start),sweep=((direction*(angle(end)-a))%tau+tau)%tau;
+      length=radius*sweep;
+      const n=Math.ceil(Math.max(length/1, sweep/0.008));
+      if(n>200000||!Number.isFinite(n))fail("Kurp uzunluğu kontrol gerekli.");
+      for(let j=1;j<n;j++){const t=a+direction*sweep*j/n;pts.push([center[0]+radius*Math.cos(t),center[1]+radius*Math.sin(t)]);}
+      arcs++;
+    }
+    if(length<=0)fail("Sıfır uzunluklu eleman.");
+    pts.push(end);nextStation=station+length;
+  }
+  return {pts,km0:first,description:(o.elements.length-arcs)+" doğru · "+arcs+" kurp"};
+};
+A.ktbExportSource = (txt,km0) => {
+  const parsed=A.ktbParse(txt), axis=A.ktbAxis(parsed), delta=km0-axis.km0;
+  if(!Number.isFinite(delta))throw Error("Başlangıç kilometresi geçersiz.");
+  if(Math.abs(delta)<1e-8)return txt;
+  let section="";
+  return txt.split(/(\r?\n)/).map(line=>{
+    const name=line.trim();
+    if(name.startsWith("$")){section=name.toUpperCase();return line;}
+    if(!name)return line;
+    if(section==="$KM0")return line.replace(/[-+\d.]+/,v=>(+v+delta).toFixed(5));
+    if(section==="$ELEMENTS")return line.replace(/^(\s*(?:LN|AR)\s+)([-+\d.]+)/,(_,prefix,v)=>prefix+(+v+delta).toFixed(5));
+    if(section==="$KAMUGEN")return line.replace(/[-+\d.]+/,v=>(+v+delta).toFixed(3));
+    return line;
+  }).join("");
+};
 A.ktbYaz = (km0, pi, tarih) => { const f = v => isFinite(v) ? (+v).toFixed(7) : ""; const L = ["$KAMUGEN", "0.000 50.000 50.000", "$SON", "$KM0", "    " + (+km0 || 0).toFixed(5), "$SON", "$YATAY"];
   pi.forEach((p, i) => L.push(`${p[3] || "S-" + (i + 1)} ${f(p[0])} ${f(p[1])} ${i && i < pi.length - 1 ? f(p[2] || 0) : i ? "" : f(0)}`.replace(/\s+$/, i === pi.length - 1 ? " " : ""))); L.push("$SON", "$GECIS"); pi.forEach((p, i) => L.push(`${p[3] || "S-" + (i + 1)} 1 ${i < pi.length - 1 ? "0.0000000 0.0000000" : " "}`)); L.push("$SON", "$KAMU_SINIR", `KAMU_SINIR;${tarih || ""};;;`, "$SON"); return L.join("\r\n") + "\r\n"; };
 /* KGM KAP satırı (52 alan): sıra, ada_parsel[/parça], hesap, tapu, cins, , pafta, 0, Y, X, , 1000.00, 1, … , not, …, mahalle, ilçe, il, 0.00, KM */
@@ -19244,7 +19313,49 @@ function kmReadCks(text) {
 }
 let kmRegister=null;
 function kmLocation(s){return String(s||"").trim().toLocaleUpperCase("tr-TR").replace(/\s+/g," ");}
-function kmRegistryKey(il,ilce,mah,id){return [il,ilce,mah,id].map(kmLocation).join("|");}
+function kmTownKey(s){return kmLocation(s).replace(/\s+(?:M|MAH|MAHALLESİ|KÖYÜ)\.?$/u,"");}
+function kmRegistryKey(il,ilce,mah,id){return [kmLocation(il),kmLocation(ilce),kmTownKey(mah),kmLocation(id)].join("|");}
+function kmMatchOwners(parents,ownerRows){
+  const candidates=new Map(), people=new Map();
+  for(const key of parents.keys()){
+    const tail=key.split("|").slice(2).join("|");
+    if(!candidates.has(tail))candidates.set(tail,[]);
+    candidates.get(tail).push(key);
+  }
+  for(const row of ownerRows){
+    const key=kmRegistryKey(row[14],row[15],row[16],row[1]);
+    const [il,ilce,...tail]=key.split("|");
+    const matches=(candidates.get(tail.join("|"))||[]).filter(k=>{
+      const v=k.split("|");return (!il||v[0]===il)&&(!ilce||v[1]===ilce);
+    });
+    if(matches.length>1)throw Error(row[1]+" · Malik kaydının il/ilçesi belirsiz. İlgili KAP ve KML çiftini ayrı açın.");
+    const id=matches[0]||key;
+    if(!people.has(id))people.set(id,[]);
+    people.get(id).push(row);
+  }
+  return people;
+}
+async function kmCadBook(bytes){
+ const plots=new Map();
+ for(const rows of await K.xlsxText(bytes,true)){
+   const h=rows[0]?.map(kmLocation)||[],cols=["İL","İLÇE","MAHALLE/KÖY","ADA","PARSEL","ADI","SOYADI","BABA ADI","HISSEPAY","HISSEPAYDA","YUZOLCUM"].map(k=>h.indexOf(k));
+   if(cols.includes(-1))continue;
+   for(const row of rows.slice(1)){
+     const [il,ilce,town,ada,par,first,last,father,num,den,area]=cols.map(i=>row[i]||"");
+     if(!ada&&!par)continue;
+     const key=kmRegistryKey(il,ilce,town,ada+"_"+par),n=Number(num),d=Number(den),a=Number(area);
+     if(!ada||!par||!area||!Number.isFinite(a)||!num||!Number.isSafeInteger(n)||!Number.isSafeInteger(d)||n<=0||d<=0)throw Error(ada+"/"+par+" · XLSX tapu/hisse satırı eksik.");
+     const entry=plots.get(key)||{owners:[],tapu:a,identities:[]};
+     if(entry.tapu!==a)throw Error(ada+"/"+par+" · XLSX içinde farklı tapu alanları var.");
+     const owner=[(first+" "+last).trim(),father,n+"/"+d];
+     entry.owners.push(owner);
+     entry.identities.push(JSON.stringify([row[h.indexOf("TC")]||"",...owner]));
+     plots.set(key,entry);
+   }
+ }
+ if(!plots.size)throw Error("XLSX içinde CadSablonu tapu başlıkları bulunamadı.");
+ return plots;
+}
 function kmBookRows(bytes){
  const plots=new Map();let town="",plot=null;
  for(const r of K.xlsText(bytes,true)[0]||[]){
@@ -19284,8 +19395,8 @@ $("kmApplyRegister").onclick=()=>{
       const info=k.bilgi[kmKey(r)]||{},fields={tapu:entry[3],pafta:entry[6],cins:entry[4],malik:owners.map(v=>[v[2],v[11],v[3],v[5]+"/"+v[4]].join(";")).join("\n")};
       for(const [col,val] of Object.entries(fields))if(info[col]&&info[col]!==val&&!(col==="tapu"&&K.num(info[col])===Number(val)))throw Error(id+" · "+col+" alanında farklı bilgi var. Mevcut kaydı kontrol edin.");
       const pieces=kmRegister.pieces.get(key)||[],regB=pieces.filter(v=>/^B\d*$/i.test(v[1].split("/")[1])).reduce((a,v)=>a+Number(v[3]),0);
-      const book=kmRegister.book?.get(kmLocation(an.mahalle)+"|"+id);
-      const bookIssue=!kmRegister.book?"":!book?"Kaynak XLS parseli bulunamadı":kmOwnerSignature(book.owners)!==kmOwnerSignature(owners.map(v=>[v[2],v[3],v[5]+"/"+v[4]]))?"KML ile XLS malik/hisse kaydı farklı":Number.isFinite(book.tapu)&&Math.abs(Number(entry[3])-book.tapu)>.005?"KAP ile XLS tapu alanı farklı":"";
+      const book=kmRegister.book?.get(key)||kmRegister.book?.get(kmLocation(an.mahalle)+"|"+id);
+      const bookIssue=!kmRegister.book?"":!book?"Kaynak tapu cetvelinde parsel bulunamadı":kmOwnerSignature(book.owners)!==kmOwnerSignature(owners.map(v=>[v[2],v[3],v[5]+"/"+v[4]]))?"KML ile tapu cetvelindeki malik/hisse kaydı farklı":Number.isFinite(book.tapu)&&Math.abs(Number(entry[3])-book.tapu)>.005?"KAP ile cetveldeki tapu alanı farklı":"";
       if(bookIssue)bookMismatch++;
       staged.push([kmKey(r),{...info,...fields,bookIssue,bookGiren:book?.giren??null,registerB:pieces.length?regB:null}]);total+=owners.length;
     }
@@ -19298,11 +19409,23 @@ $("kmKgmImport").onchange=async e=>{
  const input=e.target,files=[...input.files];if(!files.length)return;
  const dest=$("kmKgmImportResult");const seq=String((Number(input.dataset.seq)||0)+1);input.dataset.seq=seq;
  try{
-  kmRegister=null;$("kmRegisterNote").textContent="";let book=null;const parents=new Map(),people=new Map(),pieces=new Map();const main=new Map(),parts=new Map(),owners=new Map(),kinds=new Set();
+  kmRegister=null;$("kmRegisterNote").textContent="";let book=null;const parents=new Map(),ownerRows=[],pieces=new Map();const main=new Map(),parts=new Map(),owners=new Map(),kinds=new Set();
   const key=(v,id,il,ilce)=>kmRegistryKey(il,ilce,v,id);
   for(const f of files){
-   const type=f.name.split(".").pop().toLowerCase();if(kinds.has(type))throw Error("Her türden bir dosya seçin.");kinds.add(type);
-   const bytes=await f.arrayBuffer();if(type==="xls"){book=kmBookRows(bytes);continue;}let data;
+   const type=f.name.split(".").pop().toLowerCase();if(type==="xls"&&kinds.has(type))throw Error("Bir kaynak malik cetveli seçin.");if(!["kap","kml","xls","xlsx"].includes(type))throw Error("Beklenmeyen dosya türü.");kinds.add(type);
+   const bytes=await f.arrayBuffer();if(type==="xls"||type==="xlsx"){
+     const next=type==="xls"?kmBookRows(bytes):await kmCadBook(bytes);
+     book??=new Map();
+     for(const [key,entry] of next){
+       const old=book.get(key);
+       if(old){
+         const identical=old.identities&&entry.identities&&old.tapu===entry.tapu&&
+           JSON.stringify([...old.identities].sort())===JSON.stringify([...entry.identities].sort());
+         if(!identical)throw Error("Tapu cetvellerinde aynı parsel için farklı kayıt var: "+key);
+       }else book.set(key,entry);
+     }
+     continue;
+   }let data;
    try{data=new TextDecoder("utf-8",{fatal:true}).decode(bytes);}catch{data=new TextDecoder("windows-1254").decode(bytes);}
    if(data.trimStart().startsWith("<"))throw Error("Bu dosya coğrafi KML. Netcad CKS alan kontrolündeki karşılaştırma planını kullanın.");
    for(const [i,line] of data.split(/\r?\n/).entries()){
@@ -19314,13 +19437,15 @@ $("kmKgmImport").onchange=async e=>{
      if(part){if(!pieces.has(rk))pieces.set(rk,[]);pieces.get(rk).push(r);}else parents.set(rk,r);
      if(!part){if(main.has(k))throw Error("Aynı mahallede tekrarlanan ana parsel: "+id);main.set(k,{no:r[0],v:r[43],id,area:Number(r[3])});}
      else{if(!parts.has(k))parts.set(k,new Map());if(parts.get(k).has(part))throw Error("Mükerrer parça: "+r[1]);parts.get(k).set(part,Number(r[3]));}
-    }else{const rk=kmRegistryKey(r[14],r[15],r[16],r[1]);if(!people.has(rk))people.set(rk,[]);people.get(rk).push(r);
-     const k=key(r[16],r[1],r[14],r[15]);owners.set(k,(owners.get(k)||0)+1);}
+    }else ownerRows.push(r);
    }
   }
+  const people=kmMatchOwners(parents,ownerRows);for(const [k,v] of people)owners.set(k,v.length);
   if(seq!==input.dataset.seq)return;
   const wrapper=document.createElement("div"),summary=document.createElement("p");wrapper.append(summary);
   summary.textContent=main.size+" ana kayıt · "+[...parts.values()].reduce((t,v)=>t+v.size,0)+" parça · "+[...owners.values()].reduce((a,b)=>a+b,0)+" malik satırı";
+  const badShares=[...people].filter(([,rows])=>!kmFullShares(rows));
+  if(badShares.length)summary.textContent+=" · Pay toplamı kontrol edilecek parseller: "+badShares.map(([key])=>key.split("|").slice(-2).join(" ")).join(", ");
   if(main.size) {
    const bTotal = [...parts.values()].reduce((sum,items)=>sum+[...items].reduce((t,[name,area])=>t+(/^B\d*$/.test(name)?area:0),0),0);
    summary.textContent+=" · B parçaları toplamı "+tr2(bTotal)+" m²";
@@ -19484,11 +19609,11 @@ function kmFromLots(preview){
   $("kmPreviewBorder").hidden=true;
   try {
     const parents=kmNativeParcels();
-    if(!parents)throw Error("Adlandırılmış KAD_ALN ana parsellerini içeren NCZ dosyasını açın.");
-    const ids=new Set(parents.map(p=>p.no.ada+"_"+p.no.no));
+    if(!parents)throw Error("KAD_ALN veya KAD_ALAN tabakasında ada ve parseli tanımlı NCZ dosyasını açın.");
+    const ids=kmParentIds(parents);
     const sources=[],names=new Set(),lots=Object.create(null),warnings=[];
     for(const p of FD.polys) {
-      if(!p.closed)continue;
+      if(!p.closed || /[İI]RT[İI]FAK/i.test(p.lay))continue;
       const m=/^(\d+)[_/](\d+)\/(B\d*)$/i.exec(p.nativeName||"");
       const pub=/^KAD_(YOL|DERE)$/i.test(p.lay);
       const field=/^(\d+)[_/](\d+)\/([A-Z]\d*)$/i.exec(p.nativeName||"");
@@ -19521,11 +19646,31 @@ function kmFromLots(preview){
 function kmSetSinir(pts, src, rings, sourceRegion, sourceLots, warnings=[],axisWidths=false) { const k = KM(); const R = sourceRegion ? rings : (rings && rings.length ? rings : [pts]).map(r => A.clean(r.map(p => [p[0], p[1]]), 0.002, true)).filter(r => r.length >= 3 && A.area(r) >= 1); if (!R.length) return kmMsg("Sınır kapalı bir alan olmalı (en az 3 köşe).", true); const P = R[0];
   const previous=kmResultState(k),had=!!k.list.length||!!k.revision; k.sinir = { pts: P, rings: R.length > 1 ? R : null, names: P.map(p => nameOf(p, 0.02) || ""), src, ...(axisWidths?{axisWidths:true}:{}), ...(sourceRegion?{sourceRegion,sourceLots,warnings}:{}) }; if(had&&FD){try{kmHesapla(previous);kmPrev();return true;}catch(err){kmRestoreState(k,previous);kmRender();drawA();kmMsg("Revizyon uygulanmadı: "+err.message,true);return false;}} k.list = []; k.yeni=[]; k.hariciP=[]; k.harici=0; k.hariciL = []; save(); kmRender(); kmPrev(); kmFit(); const SA = kmSA(k); kmMsg(`Sınır alındı: ${R.length > 1 ? R.length + " parça, " : ""}${R.reduce((t, r) => t + r.length, 0)} köşe, ${tra(SA)} m². Şimdi "Hesapla"ya bas.`); }
 /* parsel adayları: numaralı parseller varsa onlar; yoksa sınırı en çok kesen tabakadaki kapalı alanlar (bina vb. içte kalanlar atılır) */
+function kmParentIds(parents){
+  const groups=new Map();
+  for(const parent of parents){
+    const key=parent.no.ada+"_"+parent.no.no;
+    if(!groups.has(key))groups.set(key,[]);
+    groups.get(key).push(parent);
+  }
+  for(const [key,group] of groups){
+    if(group.length===1)continue;
+    let detail="";
+    if(group.length===2){
+      const [outer,inner]=group.slice().sort((a,b)=>b.a-a.a);
+      if(outer.a>inner.a && polygonClipping.difference([inner.pts],[outer.pts]).length===0){
+        detail=" İç halka düşüldüğünde net alan "+tr2(outer.a-inner.a)+" m².";
+      }
+    }
+    throw Error(key.replace("_","/")+" için birden fazla ana geometri var."+detail+" Çizimde aynı parselin halkalarını doğrulayın.");
+  }
+  return new Set(groups.keys());
+}
 function kmNativeParcels() {
-  if (!FD || !FD.polys.some(p => p.closed && /^KAD_B$/i.test(p.lay))) return null;
+  if (!FD || !FD.polys.some(p => p.closed && /^(?:KAD_B(?:_|$)|ALN_KAM$)/i.test(p.lay))) return null;
   const parents = [];
   for (const [i,p] of FD.polys.entries()) {
-    if (!p.closed || !/^KAD_ALN$/i.test(p.lay)) continue;
+    if (!p.closed || !/^KAD_ALA?N$/i.test(p.lay)) continue;
     const id = /^(\d+)[_/](\d+)$/.exec((p.nativeName || "").trim());
     if (!id) return null;
     parents.push({v:"f"+i, lay:p.lay, pts:p.pts, a:A.area(p.pts), bb:A.bbox(p.pts), no:{ada:id[1],no:id[2]}});
@@ -19548,11 +19693,16 @@ function kmCalculateRaw() { const k = KM(); if (!FD) return kmMsg("Önce köy/ad
     const pts=A.serit(ax.pts,left,right);if(!pts)throw Error("Güncel eksenden şerit oluşturulamadı.");
     k.sinir={pts,rings:null,names:pts.map(p=>nameOf(p,.02)||""),src:"eksen şeridi: sol "+left+" m, sağ "+right+" m",axisWidths:true};
   }
-  const t0 = performance.now(); const RS = kmR(k), SN = RS.length > 1 ? RS : k.sinir.pts; const parents = kmNativeParcels(); const C = []; { const seen = new Set(); for (const r of RS) for (const o of kmParselAday(r, parents)) if (!seen.has(o.v)) { seen.add(o.v); C.push(o); } } const rows = []; const key = p => p[0].toFixed(3) + "," + p[1].toFixed(3);
+  const t0 = performance.now(); const RS = kmR(k), SN = RS.length > 1 ? RS : k.sinir.pts; const parents = kmNativeParcels(); const C = []; { const seen = new Set(); for (const r of RS) for (const o of kmParselAday(r, parents)) if (!seen.has(o.v)) { seen.add(o.v); C.push(o); } }
+  if(parents){
+    const selected=new Set(C.map(p=>p.no.ada+"_"+p.no.no));
+    kmParentIds(parents.filter(p=>selected.has(p.no.ada+"_"+p.no.no)));
+  }
+  const rows = []; const key = p => p[0].toFixed(3) + "," + p[1].toFixed(3);
   const minK = Math.max(0, parseFloat(String(k.minK || "0").replace(",", ".")) || 0);
   for (const o of C) { const P = A.clean(o.pts.map(p => [p[0], p[1]]), 0.002, true); const original=k.sinir.sourceLots?.[o.no?.ada+"_"+o.no?.no];
     if(k.sinir.sourceRegion&&!original)continue;
-    let parts = original ? original.map(q=>({...q,sourceAd:q.ad,pts:q.pts.map(p=>p.slice())})) : A.kamBol(P, SN); const g = parts.filter(q => q.in).reduce((t, q) => t + A.area(q.pts), 0); if (g < 0.05) continue;
+    let parts = original ? original.map(q=>({...q,sourceAd:q.ad,pts:q.pts.map(p=>p.slice())})) : A.kamBol(P, SN); const g = parts.filter(q => q.in).reduce((t, q) => t + A.area(q.pts), 0); if (!(g > 0) && !parts.some(q=>q.hata)) continue;
     const r = { v: o.v, ada: o.no ? o.no.ada || "" : "", no: o.no ? o.no.no : "", adaT: !!(o.no && o.no.tahmin), pts: P, parts, hata: parts[0].hata || "" }; r.key0 = (r.ada || "") + "/" + (r.no || r.v || ""); const b = k.bilgi[r.key0] || {};
     if (b.tam && !original) r.parts = [{ pts: P.map(p => [p[0], p[1]]), in: true, tam: true }];
     else if (!k.sinir.sourceRegion && minK > 0 && !r.hata) { /* sınırın parsel kenarına çok yakın geçmesinden doğan küçük girmeyen kırıntı, komşu giren parçaya katılır */ let ch = true, g_ = 0; while (ch && g_++ < 20) { ch = false; for (const q of r.parts.filter(q => !q.in && A.area(q.pts) < minK)) { const kf = p => p[0].toFixed(4) + "," + p[1].toFixed(4), qs = new Set(q.pts.map(kf)); const nb = r.parts.find(x => x.in && x.pts.filter(p => qs.has(kf(p))).length >= 2); if (!nb) continue; const u = A.union([nb.pts, q.pts]); if (!u) continue; nb.pts = u; nb.kirinti = (nb.kirinti || 0) + A.area(q.pts); r.parts = r.parts.filter(x => x !== q); ch = true; break; } } }
@@ -19698,7 +19848,7 @@ function kmOwnerStage(cells,k,ant){
   // Preserve TC only for an unambiguous matching existing name/father, not inherited by new owners.
   const prior=kmMalikler(old);const malik=owners.map(o=>{const same=prior.filter(p=>kmLocation(p.ad)===kmLocation(o[0])&&kmLocation(p.baba)===kmLocation(o[2]));return [o[0],same.length===1?same[0].tc:'',o[2],o[3]].join(';');}).join('\n');
   const ownerPlace=kmRegistryKey(ant.il,ant.ilce,town(ant.mahalle),id);
-  if(malik!==old.malik||old.excelOwners!==malik||old.ownerPlace!==ownerPlace)staged.push([key,{...old,malik,excelOwners:malik,ownerPlace,bookIssue:old.bookIssue==="KML ile XLS malik/hisse kaydı farklı"?"":old.bookIssue,ownerSource:'Güncel malik Excel'}]);
+  if(malik!==old.malik||old.excelOwners!==malik||old.ownerPlace!==ownerPlace)staged.push([key,{...old,malik,excelOwners:malik,ownerPlace,bookIssue:old.bookIssue==="KML ile tapu cetvelindeki malik/hisse kaydı farklı"?"":old.bookIssue,ownerSource:'Güncel malik Excel'}]);
  }
  if(!plots.size)throw Error('Bu köy için KGM ayrıntılı cetvelinde parsel bulunamadı.');
  if(missing.length)throw Error('Excel’de '+missing.length+' parsel eksik ('+missing.slice(0,6).join(', ')+'). Önceki kayıtlar korundu.');
@@ -19741,6 +19891,14 @@ function kmSira(k, rows) { const ax = kmAxis(); const T = FD ? FD.texts.filter(t
 function kmFit(points) { const k = KM(); if (!k.sinir) return drawA(); rs(); const [x0, y0, x1, y1] = A.bbox(Array.isArray(points)?points:kmR(k).flat()); V.cx = (x0 + x1) / 2; V.cy = (y0 + y1) / 2; V.s = Math.min(cv.width / dpr / ((x1 - x0) || 1), cv.height / dpr / ((y1 - y0) || 1)) * 0.8; drawA(); }
 function kmFindings(k){
   const messages=[...(k.sinir?.warnings||[])];
+  for(const r of k.list||[]){
+    const g=r.parts.filter(q=>q.in).reduce((t,q)=>t+A.area(q.pts),0);
+    if(g>0 && g<.05)messages.push(kmKey(r)+" · 0,05 m² altında kesişim, koordinat ve sınırı kontrol edin.");
+  }
+  if(k.ktbText){
+    const source=A.ktbParse(k.ktbText);
+    if(source.gen && source.km0>0 && Math.abs(source.km0*1000-source.gen[0])<.01)messages.push("KTB başlangıcı ile genişlik istasyonu farklı büyüklükte. Kilometreyi plan üzerindeki yazıyla doğrulayın.");
+  }
   for(const r of k.list){
     const id=r.ada+"/"+r.no,b=k.bilgi[kmKey(r)]||{};
     if(b.bookIssue)messages.push(id+" · "+b.bookIssue+".");
@@ -19947,7 +20105,7 @@ $("kmFmt").addEventListener("change", () => { KM().fmt = $("kmFmt").value; save(
 [["kmS0", "s0"], ["kmMinK", "minK"], ["kmKm0", "km0"]].forEach(([id, f]) => $(id).addEventListener("change", () => { KM()[f] = $(id).value.trim(); save(); kmRender(); if (KM().list.length) { kmHesapla(); kmPrev(); } }));
 $("kmAxPick2").addEventListener("click", () => $("kmAxPick").click());
 $("kmAxClr").addEventListener("click", () => { const k = KM(); k.ax = null;k.axSrc="";k.pi=null;k.ktbText=null;if(k.sinir?.axisWidths){k.sinir=null;k.list=[];k.yeni=[];k.harici=0;k.hariciL=[];k.hariciP=[];} save();kmRender();drawA();if(k.list.length)kmHesapla();kmPrev(); });
-$("kmAxF").addEventListener("change", async e => { const f = e.target.files[0]; if (!f) return; const k = KM(); try { if (/\.ktb$/i.test(f.name) || /\.txt$/i.test(f.name)) { const t = new TextDecoder("windows-1254").decode(await f.arrayBuffer()); const o = A.ktbParse(t); const P = A.piAlign(o.pi); if (!P) throw new Error("$YATAY bölümünde en az iki nokta yok"); k.ax = P; k.pi = o.pi; k.axSrc = f.name + ` (${o.pi.length} PI)`; k.ktbText=t;k.km0=Number.isFinite(o.km0)?String(o.km0):""; }
+$("kmAxF").addEventListener("change", async e => { const f = e.target.files[0]; if (!f) return; const k = KM(); try { if (/\.ktb$/i.test(f.name) || /\.txt$/i.test(f.name)) { const t = new TextDecoder("windows-1254").decode(await f.arrayBuffer()); const o = A.ktbParse(t); const axis=A.ktbAxis(o); k.ax=axis.pts;k.pi=o.pi.length?o.pi:null;k.axSrc=f.name+" ("+axis.description+")";k.ktbText=t;k.km0=String(axis.km0); }
     else { const R = await readAny(f); let best = null, bl = 0; const L_ = [...(R.polys || []), ...(R.lines || [])]; const ex = L_.filter(o => /EKSEN|AKS|AXIS|CNTR|CENTER|ALIGN/i.test(o.lay || "")); for (const o of (ex.length ? ex : L_)) { const P = o.pts.map(p => [p[0], p[1]]), l = A.ekLen(P); if (l > bl) { bl = l; best = { P, lay: o.lay }; } } if (!best) throw new Error("dosyada çizgi yok"); k.ax = best.P; k.pi = null;k.ktbText=null; k.axSrc = f.name + (best.lay ? " · " + best.lay : ""); }
     save(); kmRender(); drawA(); kmMsg(`Eksen alındı: ${k.axSrc}.`); if (k.list.length) { kmHesapla(); kmPrev(); } } catch (er) { kmMsg("Eksen dosyası okunamadı: " + er.message, true); } e.target.value = ""; });
 [["kmOn", "on"], ["kmN0", "n0"], ["kmSol", "sol"], ["kmSag", "sag"], ["kmAmac", "amac"]].forEach(([id, f]) => $(id).addEventListener("change", () => { KM()[f] = $(id).value.trim(); save();if((f==="sol"||f==="sag")&&KM().sinir?.axisWidths){try{kmHesapla();kmPrev();}catch(e){kmMsg(e.message,true);}} }));
@@ -20187,11 +20345,11 @@ function kmKgmFiles() { const k = KM(), an = S().antet, R_ = kmKgmRows(); const 
       const balanced=kmPartAreas(r,K.num(x.b.tapu));const ks = x.tapu / (x.hes || 1); for (const q of r.parts.slice().sort((a, b) => nsort(a.ad, b.ad))) { const qc = A.label(q.pts), qa = A.area(q.pts); kap.push(A.kapSatir({ sira: x.sira, ad: nm + "/" + q.ad, tapu: balanced?.[q.ad] ?? (x.tam && r.parts.length===1 ? x.tapu : qa * ks), hesap: qa, cins: q.in ? "YOL" : "", pafta: x.pafta, y: qc[0], x: qc[1], not: "", mah, ilce, il, km: x.km })); }
       for (const m of x.mal) { const [pay, payda] = kmHisse(m.hisse); kml.push(A.kmlSatir({ no: ++mn, ad: nm, adSoyad: m.ad, baba: m.baba, pay, payda, alan: x.tapu, cins: x.cins, tc: m.tc, il, ilce, mah })); } }
     else { const nm = x.ad.replace(".", "_"), c = x.h.c; kap.push(A.kapSatir({ sira: x.sira, ad: nm, tapu: x.hes, hesap: x.hes, cins: x.tur, pafta: an.pafta || "", y: c[0], x: c[1], not: "", mah, ilce, il, km: x.km })); if (x.tur === "YOL") kap.push(A.kapSatir({ sira: x.sira, ad: nm + "/B", tapu: x.hes, hesap: x.hes, cins: "YOL", pafta: an.pafta || "", y: c[0], x: c[1], not: "", mah, ilce, il, km: x.km })); } }
-  const ax = kmAxis(); let pi = k.pi; if (!pi && ax) { /* eksen çoklu çizgisinden PI: doğrusal ara noktalar atılır */ const P = A.clean(ax.pts, 0.05, false); pi = P.map((p, i) => [p[0], p[1], 0, "S-" + (i + 1)]); }
+  const ax=kmAxis(),pi=k.pi;
   const d = new Date(), tarih = `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${d.getFullYear()}`;
   const base = (mah || "KAMULASTIRMA").replace(/\s+/g, "_"); const files = [{ name: base + ".KAP", data: cp1254(kap.join("\r\n") + "\r\n") }, { name: base + ".KML", data: cp1254(kml.join("\r\n") + (kml.length ? "\r\n" : "")) }];
-  if (pi && pi.length >= 2) files.push({ name: base + ".KTB", data: cp1254(k.ktbText && k.pi ? (Number(A.ktbParse(k.ktbText).km0)===Number(ax?.km0)?k.ktbText:k.ktbText.replace(/(\$KM0[^\S\r\n]*\r?\n)[^\r\n]+/,(_,line)=>line+"    "+Number(ax?.km0||0).toFixed(5))) : A.ktbYaz(ax ? ax.km0 : 0, pi, tarih)) }); return { files, nKap: kap.length, nKml: kml.length }; }
-$("kmKap").addEventListener("click", async () => { if (!kmNeed()) return; try { const o = kmKgmFiles(); await saveFile(kfn("KGM.zip"), O.zip(o.files), $("kmMsg")); kmMsg(`KAP ${o.nKap} satır, KML ${o.nKml} malik${o.files.length > 2 ? ", KTB" : " (eksen yok, KTB yazılmadı)"}.`); } catch (e) { kmMsg("KGM dosyaları oluşturulamadı: " + e.message, true); } });
+  if(ax && (k.ktbText||pi?.length>=2))files.push({name:base+".KTB",data:cp1254(k.ktbText?A.ktbExportSource(k.ktbText,ax.km0):A.ktbYaz(ax.km0,pi,tarih))}); return { files, nKap: kap.length, nKml: kml.length }; }
+$("kmKap").addEventListener("click", async () => { if (!kmNeed()) return; try { const o = kmKgmFiles(); await saveFile(kfn("KGM.zip"), O.zip(o.files), $("kmMsg")); kmMsg(`KAP ${o.nKap} satır, KML ${o.nKml} malik${o.files.length > 2 ? ", KTB" : " (özgün kurp/PI kaydı yok, KTB yazılmadı)"}.`); } catch (e) { kmMsg("KGM dosyaları oluşturulamadı: " + e.message, true); } });
 /* ===================== YOLA TERK / YOLDAN İHDAS ===================== */
 function TY0() { return { mod: "terk", pars: [], imar: [], flip: {}, on: "", n0: 1, mk: "0.09", kalanCins: "Arsa", ihdas: null, ihdasNo: "", ihdasMalik: "", ihdasCins: "Arsa", tevhid: false, res: null }; } /* hoisted: sayfa Terk sekmesinde açılınca erken çağrılıyor */
 function TY() { const a = S(); if (!a.tk) a.tk = TY0(); return a.tk; }
