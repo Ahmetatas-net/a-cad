@@ -5407,7 +5407,7 @@ window.__DY=window.__DY||function(n){var v=Math.round(n*100)/100;return &#x27;1D
       <div class="grid" style="margin-top:8px;grid-template-columns:repeat(auto-fit,minmax(130px,1fr))"><label>Yeni nokta öneki<input id="kmOn" value="KM"></label><label>İlk numara<input id="kmN0" inputmode="numeric" value="1"></label><label class="full">Kullanım amacı (listede)<input id="kmAmac" placeholder="örn. Elektrik Üretim Alanı / Yol"></label></div>
       <div class="row" style="margin-top:10px"><button type="button" class="primary" id="kmGo">Hesapla</button><button type="button" id="kmClr">Temizle</button></div>
       <div class="msg" id="kmMsg" style="margin-top:8px"></div>
-      <p><a class="btn" href="kgm-sinir-projesi.html" target="_blank" rel="noopener">Sınırdan ölç ve KAP ile karşılaştır ↗</a></p><details data-kgm><summary>Sınırdan proje ve rulo plan üret</summary>
+      <p><a class="btn" href="kgm-sinir-projesi.html" target="_blank" rel="noopener">Kamulaştırma planını aç · sınır, malik ve pafta ↗</a></p><details data-kgm><summary>Sınırdan proje ve rulo plan üret</summary>
 <p>Mahalle çizimindeki KAM_SINIR ile ana parselleri keser. KAP alanlarını çizimden çıkan alanlarla karşılaştırır.</p>
 <details id="bpBulk"><summary>Dosyaları birlikte seç</summary>
 <label>Mahalle dosyaları (NCZ, KAP, KML ve KTB)<input id="bpBulkFiles" type="file" multiple accept=".ncz,.kap,.kml,.ktb"></label>
@@ -53661,6 +53661,17 @@ const KgmPaper = (() => {
  function sketch(s,r,keys,box,neighbours,frame){
   const project=frame?p=>[(p[0]-frame[0])*frame[2]-(p[1]-frame[1])*frame[3]+frame[4],(p[0]-frame[0])*frame[3]+(p[1]-frame[1])*frame[2]+frame[5]]:fit(r.geometry.parent,[box[0]+7,box[1]+5,box[2]-9,box[3]-5]),seen=new Set(),labels=[];
   const overlap=(a,b)=>a[0]<b[2]&&b[0]<a[2]&&a[1]<b[3]&&b[1]<a[3];
+  // Reserve the original template's symbol footprints and printed text, in its own axes.
+  for(const item of s){
+   const [tag,,p,value,h,angle]=item;
+   if(tag==='s'&&Array.isArray(h)&&h.every(Number.isFinite)){
+    const [south,west,north,east]=h;labels.push([west-1,south-1,east+1,north+1]);
+   }else if(tag==='t'){
+    const co=Math.cos(angle||0),si=Math.sin(angle||0),w=item[7]||String(value).length*h*.66;
+    const b=bounds([[0,0],[w*co,w*si],[-h*si,h*co],[w*co-h*si,w*si+h*co]].map(([x,y])=>[p[0]+x,p[1]+y]));
+    labels.push([b[0]-.6,b[1]-.6,b[2]+.6,b[3]+.6]);
+   }
+  }
   const label=(lay,px,py,v,h,ang=0)=>{
    const w=Math.max(1.5,v.length*h*.64),co=Math.cos(ang),si=Math.sin(ang);
    for(const [dx,dy] of [[1,1],[1,-h-1],[-w-1,1],[-w-1,-h-1],[1,3*h],[-w-1,3*h],[1,-3*h],[-w-1,-3*h]]){
