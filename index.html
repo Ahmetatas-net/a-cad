@@ -1718,7 +1718,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
   <!-- PLAN -->
   <section id="v-plan" class="view kub-modern" hidden style="flex-direction:column;gap:14px">
-    <div id="kubPlanTools" class="tool kub-plan-tools" aria-label="Plan komutları"><div class="kub-plan-main"><label class="filebtn mini" style="margin:0"><span>📂 Dosya aç</span><input type="file" id="tOpen" multiple accept=".dxf,.DXF,.ncz,.NCZ,.ncn,.NCN,.cks,.CKS,.txt,.csv,.xls,.xlsx,.XLS,.XLSX,.geojson,.json,.kml,.kmz"></label><button id="tFit" type="button">Tümünü göster</button><button id="tSorgu" type="button">Kot sorgula</button><button id="tAlan" type="button">Alan çiz</button><button id="tEksen" type="button">Eksen çiz</button><button id="tProf" type="button">Profil çiz</button><button id="tKay" type="button" class="primary">Kaydet</button><button type="button" id="kubAxisProfile">Eksen profili</button><button type="button" id="planSectionsOpen" aria-expanded="false" aria-controls="planSections">Enkesit</button><button type="button" id="kub3Open">3B model düzenle</button><button type="button" id="kubBoundary">Kübaj sınırı</button><button type="button" data-ka-open>Akıllı kontrol</button></div><div class="kub3-planbar"><label>Üçgen modeli<select id="kub3Target2D"><option value="auto">Otomatik</option><option value="S">Siyah</option><option value="R">Kırmızı</option></select></label><button type="button" id="kub3Fix2D">Otomatik düzelt</button><button id="tUcEk" type="button">△ Üçgen ekle</button><button id="tUcDon" type="button">⤾ Üçgen döndür</button><button id="tUcSil" type="button" class="danger">✕ Üçgen sil</button><span id="kub3PlanStatus" role="status"></span></div><details class="kub-plan-more"><summary>Diğer işlemler · düzenleme, ölçü, üçgen, altlık</summary><div class="kub-plan-extra"><button id="tEdit" type="button" class="primary">✏️ Düzenle (taşı, döndür, kes…)</button><button id="tEksDel" type="button" class="danger" hidden>Ekseni sil</button><button id="tOlc" type="button">📏 Mesafe</button><button id="tASorgu" type="button">▱ Alanı sorgula</button><button id="tNokta" type="button">Nokta ekle</button><button id="tYazi" type="button">A Yazı</button><button id="tSec" type="button">👆 Seç · Sil · Taşı</button><button id="tSil" type="button" class="danger">🗑 Sil</button><button id="tASil" type="button" class="danger">⬠ Alanla sil</button><button id="tUndoP" type="button" hidden>↶ Geri al</button><button id="tBg" type="button">🛰 Altlık</button><button id="tGmap" type="button">🌍 Google</button><button id="tGps" type="button">📍 Konumum</button><button id="tFol" type="button" hidden>⦿ Takip</button></div></details></div>
+    <div id="kubPlanTools" class="tool kub-plan-tools" aria-label="Plan komutları"><div class="kub-plan-main"><label class="filebtn mini" style="margin:0"><span>📂 Dosya aç</span><input type="file" id="tOpen" multiple accept=".dxf,.DXF,.ncz,.NCZ,.ncn,.NCN,.cks,.CKS,.txt,.csv,.xls,.xlsx,.XLS,.XLSX,.geojson,.json,.kml,.kmz"></label><button id="tFit" type="button">Tümünü göster</button><button id="tSorgu" type="button">Kot sorgula</button><button id="tAlan" type="button">Alan çiz</button><button id="tEksen" type="button">Eksen çiz</button><button id="tProf" type="button">Profil çiz</button><button id="tKay" type="button" class="primary">Kaydet</button><button type="button" id="kubAxisProfile">Eksen profili</button><button type="button" id="planSectionsOpen" aria-expanded="false" aria-controls="planSections">Enkesit</button><button type="button" id="quickContour" aria-pressed="false">Hızlı eğri</button><button type="button" id="kub3Open">3B Arazi</button><button type="button" id="kubBoundary">Kübaj sınırı</button><button type="button" data-ka-open>Akıllı kontrol</button></div><div class="kub3-planbar"><label>Üçgen modeli<select id="kub3Target2D"><option value="auto">Otomatik</option><option value="S">Siyah</option><option value="R">Kırmızı</option></select></label><button type="button" id="kub3Fix2D">Otomatik düzelt</button><button id="tUcEk" type="button">△ Üçgen ekle</button><button id="tUcDon" type="button">⤾ Üçgen döndür</button><button id="tUcSil" type="button" class="danger">✕ Üçgen sil</button><span id="kub3PlanStatus" role="status"></span></div><details class="kub-plan-more"><summary>Diğer işlemler · düzenleme, ölçü, üçgen, altlık</summary><div class="kub-plan-extra"><button id="tEdit" type="button" class="primary">✏️ Düzenle (taşı, döndür, kes…)</button><button id="tEksDel" type="button" class="danger" hidden>Ekseni sil</button><button id="tOlc" type="button">📏 Mesafe</button><button id="tASorgu" type="button">▱ Alanı sorgula</button><button id="tNokta" type="button">Nokta ekle</button><button id="tYazi" type="button">A Yazı</button><button id="tSec" type="button">👆 Seç · Sil · Taşı</button><button id="tSil" type="button" class="danger">🗑 Sil</button><button id="tASil" type="button" class="danger">⬠ Alanla sil</button><button id="tUndoP" type="button" hidden>↶ Geri al</button><button id="tBg" type="button">🛰 Altlık</button><button id="tGmap" type="button">🌍 Google</button><button id="tGps" type="button">📍 Konumum</button><button id="tFol" type="button" hidden>⦿ Takip</button></div></details></div>
     <div id="planBox">
       <canvas id="planCv" aria-label="Plan görünümü"></canvas>
       <div id="pKub" hidden style="position:absolute;left:8px;bottom:38px;z-index:5;background:rgba(255,255,255,.93);border:1px solid #ccc;border-radius:8px;padding:5px 9px;font:600 13px Arial;line-height:1.35;pointer-events:none;box-shadow:0 1px 4px rgba(0,0,0,.15)"></div>
@@ -1812,7 +1812,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
         <label style="flex-direction:row;align-items:center;gap:4px">Model<select id="lyEm" style="width:auto"><option value="S">Siyah (ilk hâl)</option><option value="R">Kırmızı (son hâl)</option><option value="SR">İkisi</option></select></label>
         <label><input type="checkbox" id="lyEl" checked> Eğri kotları</label>
         <label title="Görsel yumuşatma eğriyi gerçek geçiş yerinden biraz kaydırır; doğruluk için kapalı tutun"><input type="checkbox" id="lyEs"> Yumuşat (yalnız görünüm)</label>
-        <span class="note" id="lyEinfo"></span>
+        <span class="note" id="lyEinfo" role="status"></span>
       </div>
       <p class="note" style="margin-top:8px">Sürükleyerek kaydır, iki parmakla ya da tekerlekle yakınlaştır. Kaybolursan boş bir yere çift dokun: çizim ortalanır. Bir noktaya dokununca adı, Y, X ve Z kotu; çevrili bir alanın ya da üçgenlerin içine dokununca o alanın kübajı (ilk hâl – son hâl farkı) açılır. "Sorgula" ile dokunduğun yerin koordinatı ve kotları, "Nokta ekle" ile yeni nokta. Çizerken yalnızca noktalar ve çizgiler tutulur, boşluğa dokunmak nokta koymaz.</p>
     </div>
@@ -9930,19 +9930,26 @@ gl_Position=M*vec4(p,1.0);gl_PointSize=ps;}`;
   function upload(arr) { const gl = ST.gl, b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, arr, gl.STATIC_DRAW); return b; }
   /* üçgen model → düz gölgeli üçgen dizileri (her üçgen kendi normaliyle) */
   function mesh(M, other, sgn, o) { const P = M.pts, T = M.tri, nt = T.length / 3, pos = new Float32Array(nt * 9), nor = new Float32Array(nt * 9), cl = new Float32Array(nt * 9), uv = o.uvf ? new Float32Array(nt * 6) : null; let ku = 0;
-    const dz = new Float64Array(P.length); for (let i = 0; i < P.length; i++) { const q = P[i]; const z2 = other ? o.zOf(other, q.e, q.y) : null; dz[i] = z2 == null ? NaN : sgn * (z2 - q.z); }
+    const dz = new Float64Array(P.length); for (let i = 0; i < P.length; i++) { const q = P[i]; const z2 = other && !o.uni && !o.height ? o.zOf(other, q.e, q.y) : null; dz[i] = z2 == null ? NaN : sgn * (z2 - q.z); }
     let k = 0; for (let t = 0; t < nt; t++) { const A = P[T[3 * t]], B = P[T[3 * t + 1]], C = P[T[3 * t + 2]]; if (!A || !B || !C) continue;
       const a = [A.e - o.cx, A.y - o.cy, (A.z - o.cz) * o.ex], b = [B.e - o.cx, B.y - o.cy, (B.z - o.cz) * o.ex], c = [C.e - o.cx, C.y - o.cy, (C.z - o.cz) * o.ex];
       const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]]; let nx = u[1] * v[2] - u[2] * v[1], ny = u[2] * v[0] - u[0] * v[2], nz = u[0] * v[1] - u[1] * v[0]; if (nz < 0) { nx = -nx; ny = -ny; nz = -nz; }
-      const ii = [T[3 * t], T[3 * t + 1], T[3 * t + 2]]; [a, b, c].forEach((q, j) => { pos.set(q, k + 3 * j); nor.set([nx, ny, nz], k + 3 * j); cl.set(o.uni || col(dz[ii[j]], o.mx), k + 3 * j); }); k += 9;
+      const ii = [T[3 * t], T[3 * t + 1], T[3 * t + 2]]; [a, b, c].forEach((q, j) => {
+        pos.set(q, k + 3 * j);
+        nor.set([nx, ny, nz], k + 3 * j);
+        const height = o.height ? Math.max(0, Math.min(1, q[2] / o.height)) : null;
+        const tone = height === null ? (o.uni || col(dz[ii[j]], o.mx))
+          : [.19 + .67 * height, .55 + .18 * height, .58 - .27 * height];
+        cl.set(tone, k + 3 * j);
+      }); k += 9;
       if (uv) { for (const Q of [A, B, C]) { const w = o.uvf(Q.e, Q.y); uv[ku++] = w[0]; uv[ku++] = w[1]; } } }
     return { pos: pos.subarray(0, k), nor: nor.subarray(0, k), cl: cl.subarray(0, k), uv: uv ? uv.subarray(0, ku) : null, n: k / 3, mode: 4 }; }
   function line(pts, o, rgb) { const pos = [], nor = [], cl = []; for (const q of pts) { pos.push(q[0] - o.cx, q[1] - o.cy, (q[2] - o.cz) * o.ex + o.lift); nor.push(0, 0, 1); cl.push(...rgb); } return { pos: new Float32Array(pos), nor: new Float32Array(nor), cl: new Float32Array(cl), n: pts.length, mode: 3 }; }
-  function set(cv, D) { let gl; try { gl = init(cv); } catch (e) { return "3B görünüm açılamadı: " + e.message; } if (!gl) return "Bu cihaz WebGL desteklemiyor; 3B görünüm açılamadı.";
+  function set(cv, D) { ST.kubajNavigation = !!D.kubajNavigation; let gl; try { gl = init(cv); } catch (e) { return "3B görünüm açılamadı: " + e.message; } if (!gl) return "Bu cihaz WebGL desteklemiyor; 3B görünüm açılamadı.";
     for (const b of ST.bufs) for (const k of ["p", "n", "c", "t", "t2"]) if (b[k]) gl.deleteBuffer(b[k]); ST.bufs = [];
     const S = D.S && D.S.tri && D.S.tri.length ? D.S : null, R = D.R && D.R.tri && D.R.tri.length ? D.R : null; const base = S || R; if (!base) { ST.cam = null; draw(); return "Üçgen yüzey yüklenmedi."; }
     let x0 = Infinity, y0 = Infinity, z0 = Infinity, x1 = -Infinity, y1 = -Infinity, z1 = -Infinity; for (const M of (D.sinir === "S" && S ? [S] : [S, R])) if (M) for (const q of M.pts) { x0 = Math.min(x0, q.e); x1 = Math.max(x1, q.e); y0 = Math.min(y0, q.y); y1 = Math.max(y1, q.y); z0 = Math.min(z0, q.z); z1 = Math.max(z1, q.z); }
-    const o = { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, cz: z0, ex: D.ex || 1, mx: D.mx || 1, zOf: D.zOf }; o.lift = Math.max(0.05, (z1 - z0) * o.ex * 0.004);
+    const o = { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, cz: z0, ex: D.ex || 1, mx: D.mx || 1, zOf: D.zOf, height: D.heightColor ? Math.max(.001, (z1 - z0) * (D.ex || 1)) : 0 }; o.lift = Math.max(0.05, (z1 - z0) * o.ex * 0.004);
     const add = (m, a, lit) => ST.bufs.push({ p: upload(m.pos), n: upload(m.nor), c: upload(m.cl), t: m.uv ? upload(m.uv) : null, cnt: m.n, mode: m.mode, a, lit, src: m.mode === 4 ? m.pos : null });
     if (ST.tex) { gl.deleteTexture(ST.tex); ST.tex = null; } if (ST.tex2) { gl.deleteTexture(ST.tex2); ST.tex2 = null; } ST.detUv = null; if (D.doku && D.doku.img && D.doku.uvf) { try { const tx = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tx); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, D.doku.img);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR); ST.tex = tx; } catch (e) { console.warn("doku", e); ST.tex = null; } }
@@ -9961,7 +9968,7 @@ gl_Position=M*vec4(p,1.0);gl_PointSize=ps;}`;
     for (const x of (D.ekler || [])) if (x.M && x.M.tri && x.M.tri.length) add(mesh(x.M, null, 1, Object.assign({}, o, { uni: x.uni || [0.7, 0.7, 0.7] })), x.a == null ? 1 : x.a, 1);
     for (const L of (D.cizgiler || [])) if (L.pts && L.pts.length > 1) add(line(L.pts, o, L.rgb || [0.1, 0.1, 0.1]), 1, 0);
     const Rr = Math.max(x1 - x0, y1 - y0, (z1 - z0) * o.ex) / 2 || 1; const keep = ST.cam && ST.key === D.key; ST.R = Rr; ST.key = D.key;
-    if (!keep) ST.cam = { yaw: -0.6, pitch: 0.62, dist: Rr * 2.6, tx: 0, ty: 0, tz: (z1 - z0) * o.ex / 2 }; else ST.cam.tz = (z1 - z0) * o.ex / 2;
+    if (!keep) ST.cam = { yaw: -0.6, pitch: 0.62, dist: fitDistance(), tx: 0, ty: 0, tz: (z1 - z0) * o.ex / 2 }; else ST.cam.tz = (z1 - z0) * o.ex / 2;
     draw(); return ""; }
   /* üst katman: [{pts:[[x,y,z]…], rgb, w, nokta}] — dünya koordinatı; yüzey tamponuna dokunmaz */
   function overlay(list) { const gl = ST.gl, o = ST.o; if (!gl || !o) return; for (const b of ST.obufs) for (const k of ["p", "n", "c"]) gl.deleteBuffer(b[k]); ST.obufs = [];
@@ -10017,9 +10024,14 @@ gl_Position=M*vec4(p,1.0);gl_PointSize=ps;}`;
     gl.bindBuffer(gl.ARRAY_BUFFER, b.k); gl.enableVertexAttribArray(P.a.k); gl.vertexAttribPointer(P.a.k, 1, gl.UNSIGNED_BYTE, false, 0, 0);
     gl.disable(gl.BLEND); gl.depthMask(true); gl.drawArrays(gl.POINTS, 0, b.n);
     gl.disableVertexAttribArray(P.a.k); if (P.a.c >= 0) gl.disableVertexAttribArray(P.a.c); gl.useProgram(ST.prg); }
-  function reset() { if (!ST.cam) return; ST.cam = { yaw: -0.6, pitch: 0.62, dist: ST.R * 2.6, tx: 0, ty: 0, tz: ST.cam.tz }; draw(); }
+  function fitDistance() {
+    const cv = ST.cv;
+    if (!ST.kubajNavigation || !cv?.clientWidth || !cv.clientHeight) return ST.R * 2.6;
+    return ST.R * 3.35 * Math.max(1, cv.clientHeight / cv.clientWidth);
+  }
+  function reset() { if (!ST.cam) return; ST.cam = { yaw: -0.6, pitch: 0.62, dist: fitDistance(), tx: 0, ty: 0, tz: ST.cam.tz }; draw(); }
   function draw() { if (ST.req) return; ST.req = requestAnimationFrame(draw0); }
-  function draw0() { ST.req = 0; const gl = ST.gl, cv = ST.cv; if (!gl || !cv.clientWidth || !cv.clientHeight) return; const dpr = Math.min(2, window.devicePixelRatio || 1), w = Math.round(cv.clientWidth * dpr), h = Math.round(cv.clientHeight * dpr); if (w && h && (cv.width !== w || cv.height !== h)) { cv.width = w; cv.height = h; }
+  function draw0() { ST.req = 0; const gl = ST.gl, cv = ST.cv; if (!gl || !cv.clientWidth || !cv.clientHeight) return; const maxDpr = ST.kubajNavigation && ST.moving ? 1.2 : 2; const dpr = Math.min(maxDpr, window.devicePixelRatio || 1), w = Math.round(cv.clientWidth * dpr), h = Math.round(cv.clientHeight * dpr); if (w && h && (cv.width !== w || cv.height !== h)) { cv.width = w; cv.height = h; }
     gl.viewport(0, 0, cv.width, cv.height); gl.clearColor(0.97, 0.975, 0.985, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); if (!ST.cam || (!ST.bufs.length && !ST.bulutV)) return;
     gl.enable(gl.DEPTH_TEST); gl.useProgram(ST.prg); const c = ST.cam, cp = Math.cos(c.pitch), tg = [c.tx, c.ty, c.tz], e = [tg[0] + c.dist * cp * Math.sin(c.yaw), tg[1] - c.dist * cp * Math.cos(c.yaw), tg[2] + c.dist * Math.sin(c.pitch)];
     const M = m4.mul(m4.persp(0.8, cv.width / cv.height, c.dist * 0.01, c.dist * 20), m4.look(e, tg, [0, 0, 1])); ST.M = M; gl.uniformMatrix4fv(ST.loc.M, false, M);
@@ -10028,18 +10040,24 @@ gl_Position=M*vec4(p,1.0);gl_PointSize=ps;}`;
       if (L.t >= 0) { if (b.t && ST.tex) { gl.bindBuffer(gl.ARRAY_BUFFER, b.t); gl.enableVertexAttribArray(L.t); gl.vertexAttribPointer(L.t, 2, gl.FLOAT, false, 0, 0); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, ST.tex); gl.uniform1i(L.tx, 0); gl.uniform1f(L.ut, 1); } else { gl.disableVertexAttribArray(L.t); gl.vertexAttrib2f(L.t, -1, -1); gl.uniform1f(L.ut, 0); } }
       if (L.t2 >= 0) { if (b.t2 && ST.tex2) { gl.bindBuffer(gl.ARRAY_BUFFER, b.t2); gl.enableVertexAttribArray(L.t2); gl.vertexAttribPointer(L.t2, 2, gl.FLOAT, false, 0, 0); gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, ST.tex2); gl.uniform1i(L.tx2, 1); gl.uniform1f(L.ud, 1); } else { gl.disableVertexAttribArray(L.t2); gl.vertexAttrib2f(L.t2, -1, -1); gl.uniform1f(L.ud, 0); } }
       if (b.mode === 3) gl.lineWidth(2); gl.drawArrays(b.mode, 0, b.cnt); } } gl.depthMask(true); if (ST.onDraw) try { ST.onDraw(); } catch (e) {} }
-  function bind(cv) { const P = new Map(); let last = null;
+  function bind(cv) { const P = new Map(); let last = null, settle = 0;
+    const moving = () => {
+      if (!ST.kubajNavigation) return;
+      ST.moving = true; clearTimeout(settle);
+      settle = setTimeout(() => { ST.moving = false; draw(); }, 150);
+    };
     const pan = (dx, dy) => { const c = ST.cam; if (!c) return; const s = c.dist * 0.0016 * 1.6, cy = Math.cos(c.yaw), sy = Math.sin(c.yaw); c.tx += (-dx * cy - dy * sy * 1) * s; c.ty += (-dx * sy + dy * cy) * s; draw(); };
     cv.addEventListener("contextmenu", e => e.preventDefault());
     let dn = null; cv.addEventListener("pointerdown", e => { cv.setPointerCapture(e.pointerId); P.set(e.pointerId, [e.clientX, e.clientY]); last = null; dn = P.size === 1 ? { x: e.clientX, y: e.clientY, t: performance.now(), b: e.button, mv: 0 } : null; e.preventDefault(); });
     let hq = 0; cv.addEventListener("pointermove", e => { if (dn) dn.mv = Math.max(dn.mv, Math.hypot(e.clientX - dn.x, e.clientY - dn.y)); if (P.size || !ST.onHover || hq) return; hq = requestAnimationFrame(() => { hq = 0; try { ST.onHover(rayAt(e.clientX, e.clientY), e.clientX, e.clientY); } catch (er) {} }); });
     cv.addEventListener("pointermove", e => { if (!P.has(e.pointerId) || !ST.cam) return; const pr = P.get(e.pointerId), dx = e.clientX - pr[0], dy = e.clientY - pr[1]; const c = ST.cam;
-      if (P.size >= 2) { P.set(e.pointerId, [e.clientX, e.clientY]); const v = [...P.values()], d = Math.hypot(v[0][0] - v[1][0], v[0][1] - v[1][1]), m = [(v[0][0] + v[1][0]) / 2, (v[0][1] + v[1][1]) / 2];
+      if (P.size >= 2) { moving(); P.set(e.pointerId, [e.clientX, e.clientY]); const v = [...P.values()], d = Math.hypot(v[0][0] - v[1][0], v[0][1] - v[1][1]), m = [(v[0][0] + v[1][0]) / 2, (v[0][1] + v[1][1]) / 2];
         if (last) { c.dist = Math.max(ST.R * 0.05, Math.min(ST.R * 20, c.dist * last.d / Math.max(1, d))); pan(m[0] - last.m[0], m[1] - last.m[1]); } last = { d, m }; return; }
-      P.set(e.pointerId, [e.clientX, e.clientY]);
-      if (e.buttons & 2 || e.shiftKey) pan(dx, dy); else { c.yaw -= dx * 0.008; c.pitch = Math.max(0.05, Math.min(1.55, c.pitch + dy * 0.006)); draw(); } });
+      if (ST.kubajNavigation && dn && dn.mv < 6) return;
+      moving(); P.set(e.pointerId, [e.clientX, e.clientY]);
+      if (e.buttons & 2 || e.shiftKey || (ST.kubajNavigation && ST.panMode)) pan(dx, dy); else { c.yaw -= dx * 0.008; c.pitch = Math.max(0.05, Math.min(ST.kubajNavigation ? Math.PI/2-.0001 : 1.55, c.pitch + dy * 0.006)); draw(); } });
     const up = e => { const tap = dn && dn.mv < 6 && performance.now() - dn.t < 600 && P.size === 1 && e.type === "pointerup"; const bt = dn && dn.b; P.delete(e.pointerId); last = null; dn = null; if (tap && ST.onPick) { try { ST.onPick(rayAt(e.clientX, e.clientY), e.clientX, e.clientY, bt); } catch (er) { console.error(er); } } }; cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
-    cv.addEventListener("wheel", e => { if (!ST.cam) return; e.preventDefault(); ST.cam.dist = Math.max(ST.R * 0.05, Math.min(ST.R * 20, ST.cam.dist * Math.exp(e.deltaY * 0.0012))); draw(); }, { passive: false });
+    cv.addEventListener("wheel", e => { if (!ST.cam) return; e.preventDefault(); moving(); ST.cam.dist = Math.max(ST.R * 0.05, Math.min(ST.R * 20, ST.cam.dist * Math.exp(e.deltaY * 0.0012))); draw(); }, { passive: false });
     cv.addEventListener("dblclick", reset); window.addEventListener("resize", draw); }
   return { set, reset, draw, col, overlay, rayAt, ekran, setDetay, bulut, bulutAyar, on(k, f) { ST[k] = f; }, st: () => ST };
 };
@@ -10961,11 +10979,37 @@ $("wideBtn").addEventListener("click", () => setWide(!document.body.classList.co
 try { if (localStorage.getItem("acad-wide")) setTimeout(() => setWide(true), 0); } catch (e) {}
 ["lyP", "lyN", "lyS", "lyK", "lyX"].forEach(id => $(id).addEventListener("change", draw));
 $("lyEl").addEventListener("change", draw); $("lyEs").addEventListener("change", draw);
-["lyE", "lyEi", "lyEm"].forEach(id => $(id).addEventListener("change", () => { ST.set.egri = { on: $("lyE").checked, i: +$("lyEi").value || 0, m: $("lyEm").value }; save(); draw(); }));
-setTimeout(() => { try { const g = ST.set.egri || {}; $("lyE").checked = !!g.on; $("lyEi").value = String(g.i || 0); $("lyEm").value = g.m || "S"; } catch (e) {} }, 0);
+function contourSettingsChanged() {
+  ST.set.egri = { on: $("lyE").checked, i: +$("lyEi").value || 0, m: $("lyEm").value };
+  $("quickContour").setAttribute("aria-pressed", String(ST.set.egri.on));
+  save(); draw();
+}
+function restoreContourSettings() {
+  const settings = ST.set.egri || {};
+  $("lyE").checked = !!settings.on;
+  $("lyEi").value = String(settings.i || 0);
+  $("lyEm").value = settings.m || "S";
+  $("quickContour").setAttribute("aria-pressed", String(!!settings.on));
+}
+["lyE", "lyEi", "lyEm"].forEach(id => $(id).addEventListener("change", contourSettingsChanged));
+$("quickContour").onclick = () => {
+  const hasGround = !!MS?.tri?.length, hasProject = !!MR?.tri?.length;
+  if (!$("lyE").checked && !hasGround && !hasProject) {
+    $("coord").textContent = "Eş yükselti eğrileri için önce üçgen yüzey yükle.";
+    return;
+  }
+  if (!$("lyE").checked) {
+    $("lyEm").value = hasGround ? "S" : "R";
+    $("lyEi").value = "0";
+    $("lyEl").checked = true;
+    $("lyEs").checked = false;
+  }
+  $("lyE").checked = !$("lyE").checked;
+  contourSettingsChanged();
+};
 /* ---------- eş yükselti eğrileri: üçgenlerden; aralık kot farkına göre otomatik, her 5. eğri kalın ve kotlu ---------- */
-const EGC = new WeakMap();
-const egriStep = (M, want) => { if (want > 0) return want; let lo = Infinity, hi = -Infinity; for (const p of M.pts) { if (p.z < lo) lo = p.z; if (p.z > hi) hi = p.z; } const raw = (hi - lo) / 25; return [1, 2, 5, 10, 20, 50].find(v => v >= raw) || 50; };
+const EGC = new WeakMap(), autoContourStep = new WeakMap();
+const egriStep = (M, want) => { if (want > 0) return want; if(autoContourStep.has(M)) return autoContourStep.get(M); let lo = Infinity, hi = -Infinity; for (const p of M.pts) { if (p.z < lo) lo = p.z; if (p.z > hi) hi = p.z; } const raw = (hi - lo) / 25, step = [1, 2, 5, 10, 20, 50].find(v => v >= raw) || 50; autoContourStep.set(M,step); return step; };
 /* V7.1.15.67: iso-elevation intersections, with exactly-on-vertex cases
    and bounded workload. The original model coordinates and heights are untouched. */
 function egriCalc(M, step) {
@@ -11052,9 +11096,59 @@ function egriChain(sg){
   }
   return out;
 }
-function egriDrawG(g, D, dark, X_, Y_, W, H, m, want, lbl, smooth) { const ctx = g, sx = X_, sy = Y_; const L = []; if (m.includes("S") && MS && MS.tri && MS.tri.length) L.push([MS, "#1f7fff", "#45c845"]); if (m.includes("R") && MR && MR.tri && MR.tri.length) L.push([MR, "#ff4fa0", "#b0008a"]);
+const contourJobs = new WeakMap();
+let contourWorkerAvailable = true;
+function contourForPlan(model, step) {
+  const cached = EGC.get(model);
+  if (cached?.step === step) return cached;
+  if (model.tri.length < 36000 || !contourWorkerAvailable || typeof Worker !== "function") return egriCalc(model, step);
+  const previous = contourJobs.get(model);
+  if (previous?.step === step) return previous.result;
+  previous?.worker?.terminate();
+  const job = { step, worker: null, result: null };
+  try {
+    const program = `const EGC = new WeakMap();${egriCalc.toString()}${egriChain.toString()}
+    onmessage = ({data}) => {
+      try {
+        const pts = [];
+        for (let i = 0; i < data.xyz.length; i += 3) pts.push({e:data.xyz[i],y:data.xyz[i+1],z:data.xyz[i+2]});
+        const result = egriCalc({pts,tri:data.tri},data.step);
+        postMessage(result,[result.segs.buffer]);
+      } catch(error) { postMessage({error:error.message}); }
+    };`;
+    const url = URL.createObjectURL(new Blob([program], {type:"text/javascript"}));
+    try { job.worker = new Worker(url); } finally { URL.revokeObjectURL(url); }
+    contourJobs.set(model, job);
+    job.worker.onmessage = ({data}) => {
+      job.worker.terminate(); job.worker = null;
+      if (contourJobs.get(model) !== job) return;
+      job.result = data;
+      if (!data.error) EGC.set(model, data);
+      draw();
+    };
+    job.worker.onerror = () => {
+      job.worker?.terminate();
+      contourWorkerAvailable = false;
+      contourJobs.delete(model);
+      draw();
+    };
+    const xyz = new Float64Array(model.pts.length * 3), tri = Int32Array.from(model.tri);
+    model.pts.forEach((p,i) => { xyz[i*3]=p.e; xyz[i*3+1]=p.y; xyz[i*3+2]=p.z; });
+    job.worker.postMessage({xyz,tri,step},[xyz.buffer,tri.buffer]);
+    return null;
+  } catch (error) {
+    job.worker?.terminate();
+    contourWorkerAvailable = false;
+    return egriCalc(model, step);
+  }
+}
+
+function egriDrawG(g, D, dark, X_, Y_, W, H, m, want, lbl, smooth, interactive = false) { const ctx = g, sx = X_, sy = Y_; const L = []; if (m.includes("S") && MS && MS.tri && MS.tri.length) L.push([MS, "#1f7fff", "#45c845"]); if (m.includes("R") && MR && MR.tri && MR.tri.length) L.push([MR, "#ff4fa0", "#b0008a"]);
   const info = [];
-  for (const [M, col, colA] of L) { const step = egriStep(M, want), E = egriCalc(M, step), S_ = E.segs; info.push(`${M === MS ? "siyah" : "kırmızı"} ${step} m`); const labs = []; const idx = k => ((k % 5) + 5) % 5 === 0;
+  for (const [M, col, colA] of L) { const step = egriStep(M, want);
+    const E = interactive ? contourForPlan(M, step) : egriCalc(M, step);
+    if (!E || E.error) { info.push(E?.error || "Eğriler hazırlanıyor…"); continue; }
+    info.push(`${M === MS ? "siyah" : "kırmızı"} ${step} m`); const labs = []; const idx = k => ((k % 5) + 5) % 5 === 0;
     for (const big of [false, true]) { ctx.strokeStyle = big ? colA : col; ctx.lineWidth = (big ? 1.5 : 0.9) * D; ctx.globalAlpha = 1; ctx.beginPath();
       for (const ln of E.lines) { if (idx(ln.k) !== big) continue; const P_ = ln.p, bb=ln.b; // Conservative, fast viewport test: unlike sampling 8 vertices,
         // a long line crossing the screen is never silently omitted.
@@ -11063,9 +11157,17 @@ function egriDrawG(g, D, dark, X_, Y_, W, H, m, want, lbl, smooth) { const ctx =
         }
         ctx.moveTo(sx(P_[0][0]), sy(P_[0][1])); if (smooth) { for (let q = 1; q < P_.length - 1; q++) { const mx = (P_[q][0] + P_[q + 1][0]) / 2, my = (P_[q][1] + P_[q + 1][1]) / 2; ctx.quadraticCurveTo(sx(P_[q][0]), sy(P_[q][1]), sx(mx), sy(my)); } } else for (let q = 1; q < P_.length - 1; q++) ctx.lineTo(sx(P_[q][0]), sy(P_[q][1])); ctx.lineTo(sx(P_[P_.length - 1][0]), sy(P_[P_.length - 1][1]));
         if (big && lbl && P_.length > 3) { const q = P_.length >> 1, x1 = sx(P_[q][0]), y1 = sy(P_[q][1]), x2 = sx(P_[q + 1][0]), y2 = sy(P_[q + 1][1]); if (x1 > 0 && y1 > 0 && x1 < W && y1 < H && !labs.some(l => Math.hypot(l[0] - x1, l[1] - y1) < 60 * D)) labs.push([x1, y1, ln.k, Math.atan2(y2 - y1, x2 - x1)]); } } ctx.stroke(); }
-    ctx.globalAlpha = 1; ctx.font = `600 ${10 * D}px Arial`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; for (const [x, y, k, a] of labs.slice(0, 400)) { let an = a; if (an > Math.PI / 2) an -= Math.PI; if (an < -Math.PI / 2) an += Math.PI; ctx.save(); ctx.translate(x, y); ctx.rotate(an); const t = String(Math.round(k * step)); ctx.lineWidth = 3 * D; ctx.strokeStyle = dark ? "#000" : "#fff"; ctx.strokeText(t, 0, 0); ctx.fillStyle = colA; ctx.fillText(t, 0, 0); ctx.restore(); } }
-  return info.length ? "Aralık: " + info.join(" · ") + " (mavi ara, yeşil her 5. ana eğri) · eğriler üçgen kenarlarında doğrusal enterpolasyonla, kotun tam geçtiği yerden" : ""; }
-function drawEgri(D, dark) { if (!$("lyE").checked) return; $("lyEinfo").textContent = egriDrawG(ctx, D, dark, sx, sy, cv.width, cv.height, $("lyEm").value, +$("lyEi").value || 0, $("lyEl").checked, $("lyEs").checked); }
+    ctx.globalAlpha = 1; ctx.font = `600 ${10 * D}px Arial`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; for (const [x, y, k, a] of labs.slice(0, 400)) { let an = a; if (an > Math.PI / 2) an -= Math.PI; if (an < -Math.PI / 2) an += Math.PI; ctx.save(); ctx.translate(x, y); ctx.rotate(an); const t = K.tr(k * step, Number.isInteger(step) ? 0 : 2); ctx.lineWidth = 3 * D; ctx.strokeStyle = dark ? "#000" : "#fff"; ctx.strokeText(t, 0, 0); ctx.fillStyle = colA; ctx.fillText(t, 0, 0); ctx.restore(); } }
+  return info.length ? "Aralık: " + info.join(" · ") + " · Her 5. eğri kalın çizilir. Kotlar üçgen yüzeyden okunur." : ""; }
+function drawEgri(D, dark) {
+  const status = $("lyEinfo");
+  const text = $("lyE").checked
+    ? egriDrawG(ctx, D, dark, sx, sy, cv.width, cv.height, $("lyEm").value, +$("lyEi").value || 0, $("lyEl").checked, $("lyEs").checked, true)
+    : "";
+  if (status.textContent !== text) status.textContent = text;
+  const button = $("quickContour");
+  if (button.title !== text) button.title = text;
+}
 /* ================= PLAN / CAD DIŞA AKTARMA: DXF ve PDF =================
    Plan'da görünen her şey (siyah/kırmızı üçgenler, noktalar, eğriler, alanlar, eksen, kesitler, yazılar, açılan dosyalar)
    ortak bir ilkel listesine çevrilir; DXF ve PDF aynı listeden üretilir. Koordinat ve kotlar değiştirilmeden yazılır. */
@@ -11339,10 +11441,16 @@ function kub3Render(){
  if(!KUB3?.open)return;const raw=kub3Model(),model=KUB3.key==="R"?MR:MS,other=KUB3.key==="R"?MS:MR;
  $("kub3Count").textContent=(raw?.pts?.length||0)+" nokta · "+((raw?.tri?.length||0)/3)+" üçgen";
  $("kub3Undo").disabled=!PUNDO.length;$("kub3CreateR").disabled=!ST.S.tri?.length||!!(ST.R.mode==="model"&&ST.R.tri?.length);
- if(!model?.tri?.length){KUB3V.set($("kub3Cv"),{S:null,R:null});KUB3V.st().tri=null;KUB3V.st().grd=null;KUB3.version=MVER;kub3Status(KUB3.key==="R"?"Kırmızı üçgen model yok. Önce veri yükle veya siyah yüzeyden üret.":"Siyah üçgen modeli yükle.");kub3Volume();return;}
+ if(!model?.tri?.length){KUB3V.set($("kub3Cv"),{S:null,R:null});KUB3V.st().tri=null;KUB3V.st().grd=null;$("kub3Legend").hidden=true;KUB3.version=MVER;kub3Status(KUB3.key==="R"?"Kırmızı üçgen model yok. Önce veri yükle veya siyah yüzeyden üret.":"Siyah üçgen modeli yükle.");kub3Volume();return;}
  const ex=+$("kub3Ex").value||1,poly=ST.alanlar.find(a=>a.kubaj)?.pts,ax=ST.eksen;
  const zOf=(m,x,y)=>m?K.zAt(m,x,y):null, mx=SD&&SD.ortak?Math.max(.05,Math.abs(SD.fmin),Math.abs(SD.fmax)):1;
- const err=KUB3V.set($("kub3Cv"),{S:model,R:other,mode:"S",sgn:KUB3.key==="R"?-1:1,poly,axis:ax,ex,mx,zOf,wire:$("kub3Wire").checked,uni:$("kub3Color").checked?null:KUB3.key==="R"?[.84,.29,.24]:[.64,.68,.71],key:"kub3-"+KUB3.key+"-"+ex+"-"+KUB3.session});
+ const style = $("kub3Style").value;
+ const volumeColor = style === "volume" && !!other;
+ const err=KUB3V.set($("kub3Cv"),{S:model,R:other,mode:"S",sinir:"S",kubajNavigation:true,sgn:KUB3.key==="R"?-1:1,poly,axis:ax,ex,mx,zOf,wire:$("kub3Wire").checked,heightColor:style==="height",uni:volumeColor?null:KUB3.key==="R"?[.84,.29,.24]:[.64,.68,.71],key:"kub3-"+KUB3.key+"-"+KUB3.session});
+ const legend = $("kub3Legend"), ext = KUB3V.st().ext;
+ legend.hidden = !!err || (style !== "height" && !volumeColor);
+ legend.dataset.view = style;
+ legend.textContent = style === "height" && ext ? `${K.tr(ext[2])} m  ·  Kot  ·  ${K.tr(ext[5])} m` : "Kırmızı kazı · Mavi dolgu";
  if(err)kub3Status(err);KUB3.version=MVER;kub3Volume();kub3Overlay();
 }
 function kub3Mode(m){
@@ -11377,23 +11485,50 @@ function kub3Pick(q,sx,sy,button){
 }
 function kub3Open(){
  if(!$("v-plan").hidden)startMode(null);if(!KUB3V)KUB3V=window.V3Dmake();const dlg=$("kub3Panel");
- const k=$("kub3Target2D").value==="R"?"R":$("kub3Target2D").value==="S"?"S":MR?.tri?.length?"R":"S";
+ const k=$("kub3Target2D").value==="R"?"R":$("kub3Target2D").value==="S"?"S":MS?.tri?.length?"S":MR?.tri?.length?"R":"S";
  KUB3={open:true,key:k,mode:"inspect",session:Date.now(),version:MVER,vertices:[],path:[],face:null,point:null};
- $("kub3Target").value=k;dlg.showModal();KUB3V.on("onPick",kub3Pick);kub3Mode("inspect");requestAnimationFrame(kub3Render);
+ $("kub3Target").value=k;dlg.showModal();KUB3V.st().panMode=false;
+ $("kub3Pan").setAttribute("aria-pressed","false");
+ KUB3V.on("onDraw", () => {
+   const cam = KUB3V.st().cam;
+   if (cam) $("kub3North").style.transform = `rotate(${cam.yaw}rad)`;
+ });
+ KUB3V.on("onPick",kub3Pick);kub3Mode("inspect");requestAnimationFrame(kub3Render);
 }
 function kub3Init(){
  const dlg=document.createElement("dialog");dlg.id="kub3Panel";dlg.innerHTML=`<header class="kub3-head"><div><strong>3B Arazi Modeli</strong><small>Plan, profil ve kübaj aynı modele bağlı</small></div><button id="kub3Close" type="button">Kapat ×</button></header>
- <div class="kub3-controls"><label>Aktif model<select id="kub3Target"><option value="S">Siyah · mevcut arazi</option><option value="R">Kırmızı · proje</option></select></label><label>Düşey abartı<select id="kub3Ex"><option value="1">1×</option><option value="2">2×</option><option value="3">3×</option></select></label><button id="kub3Top" type="button">Üstten</button><button id="kub3Reset" type="button">Sığdır</button><label class="kub3-check"><input id="kub3Wire" type="checkbox" checked> Üçgen ağı</label><label class="kub3-check"><input id="kub3Color" type="checkbox" checked> Kazı/dolgu rengi</label></div>
+ <div class="kub3-controls"><label>Aktif model<select id="kub3Target"><option value="S">Siyah · mevcut arazi</option><option value="R">Kırmızı · proje</option></select></label><label>Düşey abartı<select id="kub3Ex"><option value="1">1×</option><option value="2">2×</option><option value="3">3×</option></select></label><button id="kub3Top" type="button">Kuzey üstte</button><button id="kub3Reset" type="button">Perspektif / sığdır</button><label>Görünüm<select id="kub3Style"><option value="height">Kot renkleri</option><option value="surface">Yüzey rengi</option><option value="volume">Kazı / dolgu</option></select></label><label class="kub3-check"><input id="kub3Wire" type="checkbox"> Üçgen ağı</label></div>
  <div class="kub3-modes"><button data-kub3-mode="inspect">Sorgula</button><button data-kub3-mode="z">Kot düzenle</button><button data-kub3-mode="add">Üçgen ekle</button><button data-kub3-mode="flip">Üçgen döndür</button><button data-kub3-mode="del">Üçgen sil</button><button data-kub3-mode="boundary">Kübaj sınırı</button><button id="kub3Fix">Otomatik düzelt</button><button id="kub3Undo">↶ Geri al</button></div>
- <div class="kub3-view"><canvas id="kub3Cv" aria-label="Düzenlenebilir üç boyutlu arazi"></canvas><span id="kub3Count"></span></div>
+ <div class="kub3-view"><canvas id="kub3Cv" aria-label="Düzenlenebilir üç boyutlu arazi"></canvas><span id="kub3Count"></span>
+ <div class="kub3-compass" role="img" aria-label="Kuzey yönü"><span id="kub3North">↑</span><b>K</b></div>
+ <div class="kub3-nav" role="group" aria-label="Görünüm kontrolleri">
+ <button id="kub3ZoomIn" type="button" aria-label="Yakınlaştır">＋</button><button id="kub3ZoomOut" type="button" aria-label="Uzaklaştır">−</button>
+ <button id="kub3Pan" type="button" aria-pressed="false">Kaydır</button><button id="kub3Wide" type="button" aria-pressed="false">Genişlet</button></div></div>
  <div class="kub3-edit"><label>Yeni nokta kotu (m)<input id="kub3Z" inputmode="decimal"></label><button id="kub3Apply" disabled>Kotu uygula</button><button id="kub3Back" hidden>Son köşeyi geri al</button><button id="kub3Finish" hidden>Bitir</button><button id="kub3CreateR">Siyah modelden kırmızı üret</button></div>
- <div id="kub3Status" role="status"></div><div class="kub3-results"><div>Kazı<b id="kub3Kazi">—</b></div><div>Dolgu<b id="kub3Dolgu">—</b></div><div>Hesap alanı<b id="kub3Alan">—</b></div></div><small id="kub3Scope"></small>`;
+ <p id="kub3Legend" hidden></p><div id="kub3Status" role="status"></div><div class="kub3-results"><div>Kazı<b id="kub3Kazi">—</b></div><div>Dolgu<b id="kub3Dolgu">—</b></div><div>Hesap alanı<b id="kub3Alan">—</b></div></div><small id="kub3Scope"></small>`;
  document.body.appendChild(dlg);$("kub3Open").onclick=kub3Open;$("kub3OpenCalc").onclick=kub3Open;
  $("kub3Close").onclick=()=>dlg.close();dlg.addEventListener("close",()=>{if(KUB3)KUB3.open=false;KUB3V?.on("onPick",null);KUB3V?.overlay([]);if(PROF&&$("profBox"))profLiveRefresh();});
  dlg.querySelectorAll("[data-kub3-mode]").forEach(b=>b.onclick=()=>kub3Mode(b.dataset.kub3Mode));
  $("kub3Target").onchange=e=>{KUB3.key=e.target.value;kub3Mode("inspect");kub3Render();};
- for(const id of ["kub3Ex","kub3Wire","kub3Color"])$(id).onchange=kub3Render;
- $("kub3Top").onclick=()=>{const c=KUB3V.st().cam;if(c){c.pitch=1.55;c.yaw=0;KUB3V.draw();}};$("kub3Reset").onclick=()=>KUB3V.reset();
+ for(const id of ["kub3Ex","kub3Wire","kub3Style"])$(id).onchange=kub3Render;
+ $("kub3Top").onclick=()=>{const c=KUB3V.st().cam;if(c){c.pitch=Math.PI/2-.0001;c.yaw=0;KUB3V.draw();}};
+ $("kub3Reset").onclick=()=>KUB3V.reset();
+ const zoomView = factor => {
+   const {cam,R} = KUB3V.st();
+   if (cam) { cam.dist=Math.max(R*.05,Math.min(R*20,cam.dist*factor)); KUB3V.draw(); }
+ };
+ $("kub3ZoomIn").onclick=()=>zoomView(.8);
+ $("kub3ZoomOut").onclick=()=>zoomView(1.25);
+ $("kub3Pan").onclick=()=>{
+   const engine=KUB3V.st();engine.panMode=!engine.panMode;
+   $("kub3Pan").setAttribute("aria-pressed",String(engine.panMode));
+ };
+ $("kub3Wide").onclick=()=>{
+   const expanded=dlg.classList.toggle("kub3-wide");
+   $("kub3Wide").setAttribute("aria-pressed",String(expanded));
+   $("kub3Wide").textContent=expanded?"Daralt":"Genişlet";
+   KUB3V.draw();
+ };
  $("kub3Undo").onclick=()=>{kub3Mode("inspect");pUndo();kub3Render();kub3Status("Son model/plan işlemi geri alındı.");};
  $("kub3Fix").onclick=()=>{kub3Mode("inspect");kub3Fix(KUB3.key,kub3Status);};
  $("kub3Apply").onclick=()=>{const i=KUB3.point,M=kub3Model(),z=K.num($("kub3Z").value);if(KUB3.version!==MVER||i==null||!Number.isFinite(z))return kub3Status("Geçerli bir nokta ve kot seç.");if(M.pts[i].z===z)return;const P=M.pts.slice();P[i]={...P[i],z};kub3Commit(KUB3.key,{...M,pts:P});kub3Status("Nokta kotu değişti; bağlı üçgenler ve kübaj güncellendi.");};
@@ -12460,6 +12595,7 @@ function kaInit(){
 
 if(document.readyState==="loading")window.addEventListener("DOMContentLoaded",kaInit,{once:true});else queueMicrotask(kaInit);
 function boot() {
+  restoreContourSettings();
   if (!planSectionPanel.hidden) syncPlanSectionInputs();
   PUNDO.length=0;$("tUndoP").hidden=true;if($("profBox")){$("profBox").remove();PROF=null;}if($("kub3Panel")?.open)$("kub3Panel").close();
   $("sdB_alan").checked=ST.set.sdb==="alan";document.querySelector("input[name=sdb][value=ortak]").checked=!$("sdB_alan").checked;
@@ -51676,6 +51812,16 @@ body.wide #v-plan.kub-modern>#planBox{order:-1;grid-row:2/span 80}
 #kub3Panel .kub3-modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(106px,1fr));gap:6px;margin:7px 0}#kub3Panel .kub3-view{position:relative;overflow:hidden;border:1px solid #7894a8;border-radius:11px;background:#f6f8fb}#kub3Cv{width:100%;height:clamp(240px,46dvh,530px);display:block;touch-action:none}#kub3Count{position:absolute;bottom:7px;left:7px;padding:5px 8px;font-size:.75rem;background:#142b3ddf;color:#eef8fe;border-radius:7px;pointer-events:none}
 #kub3Panel .kub3-edit{margin-top:8px}#kub3Panel .kub3-edit label{flex:1 1 125px}.kub3-results{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:8px 0}.kub3-results>div{background:#203d52;border:1px solid #416b83;padding:9px;border-radius:9px;color:#bad3e5;font-size:.75rem}.kub3-results b{display:block;font-size:1rem;margin-top:4px;color:#f4f9ff;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}#kub3Status{font-size:.82rem;line-height:1.4;color:#e4f3fc;min-height:1.2em}#kub3Scope{color:#b6d2e1}
 @media(max-width:650px){#kub3Panel{width:98vw;max-height:95dvh;padding:8px}#kub3Panel .kub3-modes{grid-template-columns:repeat(3,minmax(0,1fr))}#kub3Panel .kub3-modes button{font-size:.74rem;padding:6px 3px}#kub3Cv{height:37dvh;min-height:210px}.kub3-results b{font-size:.82rem}#kub3Panel .kub3-controls label:not(.kub3-check){flex:1 1 95px}}
+#quickContour[aria-pressed=true]{background:#126f77;color:#fff;border-color:#76c5c8}
+#kub3Panel .kub3-compass{position:absolute;right:10px;top:10px;display:grid;justify-items:center;gap:0;padding:4px 9px;border-radius:9px;background:#10273a;color:#f4f9fd;pointer-events:none;font:600 .75rem Arial}
+#kub3North{display:block;font:700 20px/22px Arial;color:#7cdbec}
+#kub3Panel .kub3-nav{position:absolute;bottom:9px;right:9px;display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;max-width:calc(100% - 18px)}
+#kub3Panel .kub3-nav button{min-width:36px;min-height:36px;background:#18374c;color:#f4f9fd}
+#kub3Panel .kub3-nav button[aria-pressed=true]{background:#167fa0}
+#kub3Panel.kub3-wide{width:98vw}
+#kub3Panel.kub3-wide #kub3Cv{height:65dvh}
+#kub3Legend{font-size:.78rem;padding:6px 8px;margin:6px 0;color:#e9f6ff;border-left:4px solid #d77361}
+#kub3Legend[data-view="height"]{border-image:linear-gradient(#38a8ac,#d3ab52) 1}
 </style>
 
 <style id="acad-baz-kotu-visibility">
