@@ -5347,7 +5347,7 @@ window.__DY=window.__DY||function(n){var v=Math.round(n*100)/100;return &#x27;1D
 <label>Tamamlayıcı çizimler (isteğe bağlı)<input id="bpAux" type="file" multiple accept=".ncz"></label>
 <label>Mahallenin malik kaydı (isteğe bağlı KML)<input id="bpKml" type="file" accept=".kml"></label>
 <label>Rulo için eksen (isteğe bağlı)<input id="bpKtb" type="file" accept=".ktb"></label>
-<div class="row"><button id="bpRun" type="button" class="primary">Sınırdan hesapla</button><button id="bpPlan" type="button" disabled>Rulo planı indir (SVG)</button><button id="bpCSV" type="button" disabled>Alan cetvelini indir</button><button id="bpModel" type="button" disabled>Hesap geometrisini indir</button></div><div class="row"><button type="button" id="bpAdd" disabled>Mahalle hesabını projeye ekle</button><button type="button" id="bpWhole" disabled>Birleşik ruloyu indir</button><button type="button" id="bpSheets" disabled>Kroki, beyan ve alan föylerini indir</button><button type="button" id="bpPack" disabled>Projeyi ZIP indir (CAD ve belgeler)</button></div><p id="bpProject" role="status"></p><p id="bpRev" role="status" style="white-space:pre-line"></p><p id="bpNote" role="status" style="white-space:pre-line"></p><div id="bpReview"></div><details><summary>KGM özgün pafta takımı</summary><p>Proje ana klasörünü seçin. Beyanname, ölçü krokisi, alan hesabı ve rulo klasörleri, bağlı rasterlarla birlikte özgün biçimde kaydedilir.</p><label>KGM proje klasörü<input id="bpFormatFiles" type="file" webkitdirectory multiple></label><button id="bpFormatSave" type="button" disabled>Özgün paftaları ZIP indir</button><p>Projeyi ZIP indir komutu, seçilen kaynak paftaları ve eşleşen alan hesabı satırlarını ayrı klasörlere yazar.</p><p id="bpFormatStatus" role="status"></p></details></details>
+<div class="row"><button id="bpRun" type="button" class="primary">Sınırdan hesapla</button><button id="bpPlan" type="button" disabled>Rulo planı indir (SVG)</button><button id="bpCSV" type="button" disabled>Alan cetvelini indir</button><button id="bpModel" type="button" disabled>Hesap geometrisini indir</button></div><div class="row"><button type="button" id="bpAdd" disabled>Mahalle hesabını projeye ekle</button><button type="button" id="bpWhole" disabled>Birleşik ruloyu indir</button><button type="button" id="bpSheets" disabled>Kroki, beyan ve alan föylerini indir</button><button type="button" id="bpPack" disabled>Projeyi ZIP indir (CAD ve belgeler)</button></div><p id="bpProject" role="status"></p><p id="bpRev" role="status" style="white-space:pre-line"></p><p id="bpNote" role="status" style="white-space:pre-line"></p><div id="bpReview"></div><details><summary>KGM kalıbında pafta üret</summary><p>Mahalleleri projeye ekleyin. Boş kalıp rulo yerleşimini, pafta ölçülerini ve kalemleri taşır.</p><label>KGM pafta kalıbı<input id="bpNativeFmt" type="file" accept=".kgmfmt"></label><button id="bpNativeBuild" type="button">KGM paftalarını üret ve indir</button><p id="bpNativeStatus" role="status" aria-live="polite"></p></details><details><summary>KGM özgün pafta takımı</summary><p>Proje ana klasörünü seçin. Beyanname, ölçü krokisi, alan hesabı ve rulo klasörleri, bağlı rasterlarla birlikte özgün biçimde kaydedilir.</p><label>KGM proje klasörü<input id="bpFormatFiles" type="file" webkitdirectory multiple></label><button id="bpFormatSave" type="button" disabled>Özgün paftaları ZIP indir</button><p>Projeyi ZIP indir komutu, seçilen kaynak paftaları ve eşleşen alan hesabı satırlarını ayrı klasörlere yazar.</p><p id="bpFormatStatus" role="status"></p></details></details>
       <details style="margin:8px 0"><summary>KGM tapu, malik ve hisse kayıtları</summary><label>KAP, malik KML ve isteğe bağlı kaynak malik cetveli (XLS / CadSablonu XLSX)<input type="file" multiple accept=".kap,.kml,.xls,.xlsx" id="kmKgmImport"></label><button id="kmApplyRegister" type="button">Kayıtları hesaplanan parsellere işle</button><p id="kmRegisterNote" role="status"></p><div id="kmKgmImportResult" class="scroll" style="max-height:340px;overflow:auto" role="status"></div></details>
       <details data-kgm><summary>Kadastro kontrol ekleri</summary>
         <label>Proje adı veya dosya numarası<input id="kmAnnexProject" type="text"></label>
@@ -53062,7 +53062,7 @@ get("bpRun").onclick=async()=>{
     const total=result.rows.reduce((n,r)=>n+(r.geometry?.enter||0),0);
     const review=result.rows.filter(r=>r.issues.length);
     showIssues(review);
-    saved={result,axis,source:[kap,malik].filter(Boolean)};buttons.forEach(b=>b.disabled=false);
+    saved={result,axis,source:[kap,malik].filter(Boolean),drawings:[primary,...get("bpAux").files]};buttons.forEach(b=>b.disabled=false);
     note.textContent=result.town+" · "+result.rows.filter(r=>r.geometry).length+"/"+result.rows.length+" parsel hesaplandı · "+fmt(total)+" m² giren alan."+
       (review.length?"\n"+review.map(r=>r.id+" · "+r.issues.join(" / ")).join("\n"):"")+
       (result.extra.length?"\nKAP dışında ana parseller: "+result.extra.join(", "):"");
@@ -53188,6 +53188,275 @@ get("bpPack").onclick=async()=>{
   download(window.O.zip(files,{nczYok:true}),"application/zip","Kamulaştırma_Projesi.zip");
  }catch(e){get("bpProject").textContent=e.message||"Proje paketi oluşturulamadı.";}
  finally{button.disabled=project.size===0;}
+};
+/* Populate the blank, user-supplied NCZ masters with the current boundary calculation. */
+const KgmPaper = (() => {
+ const num=(v,n=2)=>Number(v).toFixed(n), coord=p=>p.slice(0,2).map(v=>num(v,5)).join(','), town=s=>s.replace(/\s+(?:M|MAH\.?|MAHALLESİ|KÖYÜ)$/iu,'').trim();
+ const b64=s=>Uint8Array.from(atob(s),v=>v.charCodeAt(0));
+ const cp=new Map(Array.from(new TextDecoder('windows-1254').decode(Uint8Array.from({length:256},(_,i)=>i)),(s,i)=>[s,i]));
+ const enc=s=>Uint8Array.from(String(s),c=>cp.get(c)??63);
+ const cell=s=>'"'+String(s??'').replaceAll('"','""')+'"', csv=rows=>'\uFEFF'+rows.map(row=>row.map(cell).join(';')).join('\r\n');
+ const line=(s,k,p,q)=>s.push(['l',k,[p,q],false,'']);
+ const path=(s,k,p,closed=true,name='')=>{if(p.length>1)s.push(['p',k,p,closed,name]);};
+ const txt=(s,k,x,y,val,h=1.5,rot=0,limit=Infinity)=>{
+  if(val==null||String(val).trim()==='')return;
+  const v=String(val),size=Math.min(h,limit/Math.max(1,v.length*.66));
+  s.push(['t',k,[x,y],v,size,rot,-1,size*v.length*.66]);
+ };
+ const near=(p,q,e=.00001)=>Math.abs(p[0]-q[0])<e&&Math.abs(p[1]-q[1])<e;
+ const open=r=>r.filter((p,i)=>!(i&&near(p,r[i-1]))&&!(i===r.length-1&&near(p,r[0])));
+ function bounds(P){let a=Infinity,b=Infinity,c=-Infinity,d=-Infinity;
+  for(const [x,y] of P){a=Math.min(a,x);b=Math.min(b,y);c=Math.max(c,x);d=Math.max(d,y);}return[a,b,c,d];}
+ function fit(P,box){const [a,b,c,d]=bounds(P),scale=Math.min((box[2]-box[0])/(c-a||1),(box[3]-box[1])/(d-b||1));
+  return p=>[(box[0]+box[2])/2+(p[0]-(a+c)/2)*scale,(box[1]+box[3])/2+(p[1]-(b+d)/2)*scale];}
+ function ncz(f,pages){
+  const blocks=[b64(f.header)],idx=new Map(f.layers.map((n,i)=>[n,i])),cache=new Map(),alts=f.alt.map(b64);
+  const proto=(t,k)=>{const key=t+':'+k;if(!cache.has(key)){const first=f.proto[key]||Object.entries(f.proto).find(([a])=>a.startsWith(t+':'))?.[1];if(!first)throw Error('NCZ nesne stili eksik: '+k);cache.set(key,b64(first));}return cache.get(key);};
+  let count=0,extent=[Infinity,Infinity,-Infinity,-Infinity];
+  const put=(t,b)=>{const h=new Uint8Array(5);h[0]=t;new DataView(h.buffer).setUint32(1,b.length,true);blocks.push(h,b);};
+  if(f.back){const b=b64(f.back);blocks.push(b);const view=new DataView(b.buffer);for(let i=0;i<b.length;i+=5+view.getUint32(i+1,true))if([21,22].includes(b[i])&&b[i+6]!==14)count++;}
+  for(const page of pages){
+   const [ex,ny]=page.origin,abs=p=>[ex+p[0],ny+p[1]],box=f.box;
+   extent=[Math.min(extent[0],ny+box[1]),Math.min(extent[1],ex+box[0]),Math.max(extent[2],ny+box[3]),Math.max(extent[3],ex+box[2])];
+   for(const e of page.items){
+    const [tag,k,p]=e;const li=idx.get(k);if(li===undefined)throw Error('NCZ tabakası bulunamadı: '+k);
+    let data,bb,first;const t={l:2,p:7,t:5,s:6,n:1}[tag];
+    if(tag==='s'){data=b64(e[3]);first=abs(p);bb=e[4].map((v,j)=>v+(j%2?ex:ny));}
+    else if(tag==='n'){first=abs(p);data=proto(1,k).slice();const nm=enc(e[3]).slice(0,17);data[81]=nm.length;data.set(nm,82);bb=[first[1]-.001,first[0]-.001,first[1]+.001,first[0]+.001];}
+    else if(tag==='t'){
+     const [h,ang,style,w]=e.slice(4);let chars=enc(e[3]);
+     if(chars.length>50){const suffix=chars.slice(50);if(suffix.length>255)throw Error('NCZ yazısı çok uzun.');const meta=new Uint8Array(7+suffix.length);new DataView(meta.buffer).setUint32(0,meta.length,true);meta[4]=5;meta[6]=suffix.length;meta.set(suffix,7);put(33,meta);chars=chars.slice(0,50);}
+     data=new Uint8Array(93+chars.length);data.set((e[8]?b64(e[8]):alts[style]||proto(5,k)).subarray(0,93));const d=new DataView(data.buffer);d.setFloat32(81,h,true);d.setFloat32(85,ang,true);data[92]=chars.length;data.set(chars,93);first=abs(p);
+     const co=Math.cos(ang),si=Math.sin(ang),[u,v]=first;
+     const B=bounds([[u,v],[u+w*co,v+w*si],[u-h*si,v+h*co],[u+w*co-h*si,v+w*si+h*co]]);
+     bb=[B[1],B[0],B[3],B[2]];
+    }else{
+     let pts=p.map(abs);if(tag==='p'&&e[3]&&!near(pts[0],pts.at(-1)))pts.push(pts[0]);
+     const B=bounds(pts);bb=[B[1],B[0],B[3],B[2]];first=tag==='l'?pts[0]:[0,0];
+     data=new Uint8Array(tag==='l'?101:108+24*pts.length);data.set((e[5]?b64(e[5]):proto(t,k)).subarray(0,tag==='l'?101:108));const d=new DataView(data.buffer);
+     if(tag==='l'){d.setFloat64(81,pts[1][1],true);d.setFloat64(89,pts[1][0],true);d.setFloat32(97,0,true);}
+     else{const nm=enc(e[4]||'').slice(0,14);data[81]=nm.length;data.set(nm,82);data[96]=(data[96]&254)|(e[3]?1:0);
+      pts.forEach(([x,y],i)=>{d.setFloat64(108+i*24,y,true);d.setFloat64(116+i*24,x,true);});}
+    }
+    const d=new DataView(data.buffer);data[0]=data[1]=t;data[2]=data[30]=li;d.setFloat64(3,first[1],true);d.setFloat64(11,first[0],true);bb.forEach((v,i)=>d.setFloat64(45+i*8,v,true));put(21,data);count++;
+   }
+  }
+  const end=new Uint8Array(81);end[0]=end[1]=14;put(21,end);
+  const size=blocks.reduce((a,b)=>a+b.length,0),out=new Uint8Array(size);let at=0;for(const b of blocks){out.set(b,at);at+=b.length;}
+  const v=new DataView(out.buffer);v.setUint32(5,size,true);v.setUint32(81,count,true);extent.forEach((x,i)=>v.setFloat64(49+8*i,x,true));return out;
+ }
+ function coordTable(scene,x,y,pts,span=2.5){
+  const cols=[0,14,27,41,49.875],width=99.75,rows=Math.ceil(pts.length/2),end=y-6.25-rows*span;
+  for(const [i,off] of [[0,0],[1,49.875]])for(let j=0;j<4;j++){
+   line(scene,'DE_C',[x+off+cols[j],y],[x+off+cols[j],end]);
+   txt(scene,'DE_M',x+off+[3,20.8,35,44.5][j],y-3.75,['NoktaNo','Y','X','MK'][j]);
+  }
+  line(scene,'DE_C',[x+width,y],[x+width,end]);
+  for(const yy of [y,y-5,...Array.from({length:rows},(_,i)=>y-6.25-(i+1)*span)])line(scene,'DE_C',[x,yy],[x+width,yy]);
+  pts.forEach((p,i)=>{const xx=x+(i%2)*49.875,yy=y-6.25-span*.94-Math.floor(i/2)*span;
+   [p.n,num(p.xy[0]),num(p.xy[1]),p.mk].forEach((v,j)=>txt(scene,'DE_R',xx+[.6,17.22,30.28,43.3][j],yy,v,Math.min(1.5,span*.62),0,[13,10,12,5.7][j]));});
+  return end;
+ }
+ function groupNames(parts,max=23){const lines=[];let cur='';
+  for(const n of parts){if(cur&&cur.length+1+n.length>max){lines.push(cur+',');cur=n;}else cur+=(cur?',':'')+n;}
+  if(cur)lines.push(cur);return lines;
+ }
+ function areaTable(s,x,y,r,keys,low,tolerance){
+  const rows=[{name:r.id.replace('/','_'),rings:[r.geometry.parent],area:r.geometry.parentArea,bal:r.main.balanced},...r.pieces.map(p=>({name:r.id.replace('/','_')+'/'+p.name,rings:p.poly,area:p.area,bal:p.ref?.balanced}))];
+  const data=rows.map(a=>({...a,lines:a.rings.flatMap(ring=>groupNames(open(ring).map(p=>keys.get(coord(p)).n)))}));
+  const units=4+data.reduce((n,a)=>n+a.lines.length,0)+7,step=Math.min(2.5,(y-low)/units),h=Math.min(1.5,step*.62);
+  const xc=[0,15.44,44.3,59.5,71.3,84.32],pen='DE_C',str=(a,b,v,w,lay='DE_R')=>txt(s,lay,x+a,b,v,h,0,w);
+  let yy=y; const horizontal=()=>line(s,pen,[x,yy],[x+84.32,yy]);
+  horizontal();yy-=step*1.5;
+  ['Ada/Parsel','Noktalar','HesapAlan','Düzeltme','Deng.Alan'].forEach((v,i)=>str(xc[i]+.6,yy,v,xc[i+1]-xc[i]-1,'DE_M'));
+  yy-=step;horizontal();const start=yy;let sum=0,balanced=0;
+  for(const a of data){yy-=step;str(.6,yy,a.name,14.3);a.lines.forEach((v,i)=>str(16,yy-i*step,v,27));
+   str(44.9,yy,num(a.area),13.7);if(a.bal!=null){const corr=Math.round(a.bal*100)-Math.round(a.area*100);str(60.1,yy,(corr>=0?'+':'')+num(corr/100),10.4);str(71.9,yy,num(a.bal),11.5);}
+   if(a!==data[0]){sum+=a.area;balanced+=a.bal??0;}yy-=step*(a.lines.length-1);yy-=step*.38;horizontal();}
+  yy-=step;str(29,yy,'TOPLAM',14,'DE_M');str(44.9,yy,num(sum),13.8);str(60.1,yy,(balanced>=sum?'+':'')+num(balanced-sum),10.4);str(71.9,yy,num(balanced),11.4);yy-=step*.5;horizontal();
+  for(const c of xc)line(s,pen,[x+c,y],[x+c,yy]);
+  for(const [label,val] of [['TAPU ALANI',num(r.main.balanced)],['HESAPLANAN',num(r.geometry.parentArea)],['FARK',num(r.main.balanced-r.geometry.parentArea)],['Yanılma',tolerance??'']]){yy-=step;str(.6,yy,label,23,'DE_M');str(34.5,yy,val,10);}
+ }
+ function inside(p,r){let yes=false;for(let i=0,j=r.length-1;i<r.length;j=i++){const a=r[i],b=r[j];if((a[1]>p[1])!==(b[1]>p[1])&&p[0]<(b[0]-a[0])*(p[1]-a[1])/(b[1]-a[1])+a[0])yes=!yes;}return yes;}
+ function centre(rings,seed){const r=open(rings[0]),valid=p=>inside(p,r)&&!rings.slice(1).some(h=>inside(p,h));if(seed&&valid(seed))return seed;
+  const B=bounds(r);let best=r[0],bestD=-1;
+  for(let i=0;i<17;i++)for(let j=0;j<17;j++){const p=[B[0]+(i+.5)/17*(B[2]-B[0]),B[1]+(j+.5)/17*(B[3]-B[1])];if(!valid(p))continue;
+   let score=Infinity;for(let k=0;k<r.length;k++){const a=r[k],b=r[(k+1)%r.length],dx=b[0]-a[0],dy=b[1]-a[1],t=Math.min(1,Math.max(0,((p[0]-a[0])*dx+(p[1]-a[1])*dy)/(dx*dx+dy*dy||1)));score=Math.min(score,Math.hypot(p[0]-a[0]-t*dx,p[1]-a[1]-t*dy));}if(score>bestD){bestD=score;best=p;}
+  }return best;
+ }
+ function sketch(s,r,keys,box,neighbours,frame){
+  const project=frame?p=>[(p[0]-frame[0])*frame[2]-(p[1]-frame[1])*frame[3]+frame[4],(p[0]-frame[0])*frame[3]+(p[1]-frame[1])*frame[2]+frame[5]]:fit(r.geometry.parent,[box[0]+7,box[1]+5,box[2]-9,box[3]-5]),seen=new Set(),labels=[];
+  const overlap=(a,b)=>a[0]<b[2]&&b[0]<a[2]&&a[1]<b[3]&&b[1]<a[3];
+  const label=(lay,px,py,v,h,ang=0)=>{
+   const w=Math.max(1.5,v.length*h*.64),co=Math.cos(ang),si=Math.sin(ang);
+   for(const [dx,dy] of [[1,1],[1,-h-1],[-w-1,1],[-w-1,-h-1],[1,3*h],[-w-1,3*h],[1,-3*h],[-w-1,-3*h]]){
+    const x=px+dx,y=py+dy,b=bounds([[x,y],[x+w*co,y+w*si],[x-h*si,y+h*co],[x+w*co-h*si,y+w*si+h*co]]);
+    if(b[0]<box[0]||b[1]<box[1]||b[2]>box[2]||b[3]>box[3]||labels.some(a=>overlap(a,b)))continue;
+    txt(s,lay,x,y,v,h,ang);labels.push([b[0]-.2,b[1]-.2,b[2]+.2,b[3]+.2]);return true;
+   }return false;
+  };
+  const clipbox=[[box[0],box[1]],[box[2],box[1]],[box[2],box[3]],[box[0],box[3]]];
+  for(const other of neighbours){if(!other.nativeName||other.nativeName.replace('_','/')===r.id)continue;const pp=open(other.pts).map(project),B=bounds(pp);if(!overlap(B,box))continue;
+   let count=0;for(let j=0;j<pp.length;j++){const seg=cutSeg(pp[j],pp[(j+1)%pp.length],clipbox);if(seg){line(s,'KAD_HAT',...seg);count++;}}
+   if(count){const c=project(centre([other.pts]));if(c[0]>box[0]+4&&c[0]<box[2]-4&&c[1]>box[1]+3&&c[1]<box[3]-3)label('PAD',...c,other.nativeName.split('_').at(-1),1.55);}
+  }
+  path(s,'KAD_ALN',open(r.geometry.parent).map(project),true,r.id.replace('/','_'));
+  for(const p of r.pieces){for(const ring of p.poly)path(s,'KAD_'+p.name.charAt(0),open(ring).map(project),true,r.id.replace('/','_')+'/'+p.name);}
+  const cn=project(centre([r.geometry.parent],r.main.point));label('AD',...cn,r.id,2.25);
+  for(const p of r.pieces){const q=project(centre(p.poly,p.ref?.point));label('AD',...q,p.name,2.35);}
+  const unique=new Map();for(const p of r.pieces)for(const ring of p.poly)for(const q of open(ring))unique.set(coord(q),q);
+  for(const [key,pt] of unique){const q=project(pt),n=keys.get(key);s.push(['n',n.n.startsWith('ST')?'KAD_ST':'KAD_NOKTA',q,n.n]);const circle=Array.from({length:9},(_,i)=>[q[0]+.24*Math.cos(i*Math.PI/4),q[1]+.24*Math.sin(i*Math.PI/4)]);path(s,'KAD_NOKTA',circle);label('NOKTANO',...q,n.n,1.4);}
+  for(const p of r.pieces)for(const ring of p.poly){const q=open(ring);for(let i=0;i<q.length;i++){
+   const a=q[i],b=q[(i+1)%q.length],id=[coord(a),coord(b)].sort().join(';');if(seen.has(id))continue;seen.add(id);
+   const m=project(a),n=project(b);if(Math.hypot(n[0]-m[0],n[1]-m[1])<4)continue;
+   let rot=Math.atan2(n[1]-m[1],n[0]-m[0]);if(rot>Math.PI/2)rot-=Math.PI;if(rot< -Math.PI/2)rot+=Math.PI;
+   label('ROL_CEPHE',(m[0]+n[0])/2,(m[1]+n[1])/2,num(Math.hypot(b[0]-a[0],b[1]-a[1])),1.28,rot);
+  }}
+ }
+ function page(kind,f,g,r,keys,rows,base,tol,observed){
+  const s=f.static.slice(),id=r.id.split('/'),rr=rows.get(r.id),city=rr[45],county=rr[44],mah=rr[43];
+  const layout=f.layout?.[r.id]||{};const local=new Map();for(const ring of [r.geometry.parent,...r.pieces.flatMap(p=>p.poly)])for(const q of open(ring)){const k=coord(q);local.set(k,keys.get(k));}
+  const pts=[...local.values()].sort((a,b)=>a.n.localeCompare(b.n,'tr',{numeric:true}));
+  if(kind==='kroki'){
+   for(const [x,y,z] of [[-80.14,-155.14,city],[-80.44,-161.12,county],[-80.22,-169.7,mah],[-81.39,-183.78,r.id]])txt(s,'KROKI_CEVAP',x,y,z,2.2,0,24);
+   txt(s,'BEYAN_ROL_CEVAP',-79.27,-177.98,r.sheet,2.5,0,26);
+   txt(s,'BEYAN_YAZI',50,-59,'KOORDİNATLAR ITRF 33-3 KOORDİNAT SİSTEMİNDEDİR.',1.5);
+   coordTable(s,...(layout.coords||[46.09,-62.65]),pts);sketch(s,r,keys,[-101,-142,Math.max(42,(layout.coords?.[0]||46)-2),-8],base,layout.map);
+  }else if(kind==='alan'){
+   [[-54.89,city],[3.85,county],[83.65,mah]].forEach(([x,z])=>txt(s,'ALAN_CEVAP',x,12.07,z,2.6));
+   const bottom=coordTable(s,...(layout.coords||[-18.63,-75.94]),pts);const az=layout.areas||[-6.36,bottom-5.91];areaTable(s,az[0],Math.min(az[1],bottom-2.5),r,keys,-230,tol);
+  }else{
+   [[-270.29,city],[-231.99,county],[-180.64,mah],[-127.46,rr[5]]].forEach(([x,v])=>txt(s,'BEYAN_CEVAP',x,-36.02,v,2.6,0,32));
+   txt(s,'KURUM_NO',-107.12,-14.1,rr[0],2.6);
+   const name=r.owners[0].name+(r.owners.length>1?' ve Müşt.':'');
+   const items=[['',r.main.balanced,rr],...r.pieces.map(p=>[p.name,p.ref?.balanced??p.area,rows.get(r.id+'/'+p.name)])];
+   items.forEach(([part,a,k],i)=>{const y=-68.41-i*8.18,cents=Math.round(a*100),m=Math.floor(cents/100);
+    const values=[i?'':rr[15],r.sheet,id[0],part||id[1],Math.floor(m/10000)||' - ',m%10000,String(cents%100).padStart(2,'0'),k?.[4]||rr[4],name,k?.[27]||''];
+    const xs=[-282.73,-270.97,-255.2,-242.65,-226.85,-218.51,-207.23,-201.11,-179.25,-137.6],limits=[10,15.1,12,12,7,10.4,5.5,20,40,48];
+    values.forEach((v,j)=>txt(s,'BEYAN_CEVAP',xs[j],y,v,2.5,0,limits[j]));});
+   sketch(s,r,keys,[-77,-165,104,-11],base,layout.map);
+   coordTable(s,...(layout.coords||[-80.1,-182.35]),pts,Math.min(2.5,38/Math.ceil(pts.length/2)));areaTable(s,...(layout.areas||[21.74,-181.98]),r,keys,-228,tol);
+  }return {id:r.id,town:mah,items:s};
+ }
+ function cutSeg(p,q,poly){let lo=0,hi=1;const dx=q[0]-p[0],dy=q[1]-p[1];for(let i=0;i<poly.length;i++){
+  const a=poly[i],b=poly[(i+1)%poly.length],ex=b[0]-a[0],ey=b[1]-a[1],v=ex*(p[1]-a[1])-ey*(p[0]-a[0]),d=ex*dy-ey*dx;
+  if(Math.abs(d)<1e-10){if(v< -1e-7)return null;continue;}
+  const t=-v/d;if(d>0)lo=Math.max(lo,t);else hi=Math.min(hi,t);if(lo>=hi-1e-10)return null;
+ }return [[p[0]+lo*dx,p[1]+lo*dy],[p[0]+hi*dx,p[1]+hi*dy]];}
+ function roll(profile,groups,index){
+  const f=profile.forms.rulo,a=profile.projectData,origin=f.origin,scene=[],add=(k,pt,val,h,rot=0,w=Infinity)=>txt(scene,k,...pt,val,h,rot,w);
+  const norm=p=>[p[0]-origin[0],p[1]-origin[1]],cats=['private','official','treasury','stream','road'],totalGroups=groups.map(()=>({count:{},area:{},building:{}}));
+  const stat=(i,k,v)=>{const d=totalGroups[i];d.count[k]=(d.count[k]||0)+1;d.area[k]=(d.area[k]||0)+Math.round(v*100)/100;};
+  const indexTown=id=>groups.findIndex(g=>g.result.rows.some(r=>r.id===id)),roadIndex=new Map();
+  for(const v of a.register){if(v.road){const p=groups[v.town].result.publicShapes.find(p=>p.name===v.native);if(!p)throw Error('Rulodaki kamu alanının kaynak geometrisi eksik: '+v.native);roadIndex.set(v.native,p);}}
+  const axes=groups.map(g=>g.axis).find(x=>x?.pts.length);
+  for(const [idx,M] of profile.maps.maps.entries()){
+   const panel=profile.maps.panels[idx],project=pt=>{const [x,y]=pt.map((v,i)=>v-profile.maps.origin[i]);return [M[0]*x-M[1]*y+M[2],M[1]*x+M[0]*y+M[3]];};
+   function fill(rings,layer,name){const projected=rings.map(r=>r.map(project)),cut=window.polygonClipping.intersection(projected,[panel]);for(const poly of cut)for(const ring of poly)if(BoundaryProject.area([[ring]])>.000001)path(scene,layer,ring.map(norm),true,name);}
+   const done=new Set();function stroke(pts,layer,closed){const ring=closed?open(pts):pts;for(let j=0;j<(closed?ring.length:ring.length-1);j++){const pair=cutSeg(project(ring[j]),project(ring[(j+1)%ring.length]),panel);if(!pair)continue;const key=layer+pair.map(coord).sort().join('|');if(done.has(key))continue;done.add(key);line(scene,layer,...pair.map(norm));}}
+   for(const [id,r] of index){
+    const theme=a.theme[id];if(!theme)continue;
+    for(const p of r.pieces)if(p.inside)fill(p.poly,theme,id.replace('/','_')+'/'+p.name);
+   }
+   for(const [id,p] of roadIndex)for(const poly of p.poly)fill(poly,p.layer,id);
+   for(const [id,r] of index)stroke(r.geometry.parent,'KAD_HAT',true);
+   const rollGroup=groups.find(g=>town(g.result.town)===profile.rollBoundaryTown);if(!rollGroup)throw Error('Ruloya esas mahalle sınırı eksik.');stroke(rollGroup.result.border,'KAM_SINIR',true);
+   if(axes)stroke(axes.pts,'PL_EKSEN',false);
+  }
+  const regRows=[['Rulo sırası','Mahalle','Kimlik','Nitelik','Geometrik giren (m²)','Cetvel alanı (m²)','Dayanak']];
+  const R='TABLO_YAZI_BLACK',slope=-.00665,theta=Math.atan(slope);
+  for(const v of a.register){
+   const base=norm([v.x,v.y]),put=(x,t,w,h=1.85)=>add(R,[base[0]+x,base[1]+slope*x],t,h,theta,w);
+   put(0,String(v.order),7);
+   const fmtKm=x=>{if(x==null||x==='')return '';const v=Math.round(Number(x)*100);return Math.floor(v/100000)+'+'+num((v%100000)/100).padStart(6,'0');};
+   const key=v.id||v.native,assoc=a.rollRights[key];put(97,assoc.actual,23);put(123,assoc.zoning,19);put(334,assoc.doc,22);put(365,assoc.note,34);
+   if(v.id){const r=index.get(v.id),i=indexTown(r.id),source=groups[i].raw.get(v.id),bal=r.pieces.filter(p=>p.inside).reduce((n,p)=>n+(p.ref?.balanced??p.area),0);
+    const classification=a.theme[r.id],cat=classification==='ALN_KAMULAŞTIRMA'?'private':classification==='ALN_RESMİ'?'official':classification==='ALN_MALİYEHAZİNESİ'?'treasury':null;
+    if(!cat)throw Error('Rulo sınıfı tanımlı değil: '+r.id);
+    stat(i,cat,bal);regRows.push([v.order,town(groups[i].result.town),r.id,classification,num(r.geometry.enter),num(bal),'KAP dengeli alanı']);
+    put(9.2,fmtKm(r.station),18);put(27.8,r.sheet,20);put(49.3,r.id.split('/')[0],12);put(65.1,r.id.split('/')[1],10.5);
+    put(77.7,source[4],18);put(144.4,num(r.main.balanced),17);put(163.6,num(r.geometry.parentArea),17);put(182,num(bal),17);
+    for(const [letter,x] of [['A',224],['C',204]]){const pp=r.pieces.filter(p=>p.name[0]===letter);if(pp.length)put(x,num(pp.reduce((n,p)=>n+(p.ref?.balanced??p.area),0)),17);}
+    const slots=v.ownerPositions.length?v.ownerPositions:[base];
+    if(r.owners.length>slots.length)throw Error(r.id+' malik satırları kaynak cetveldeki boşluğa sığmıyor.');
+    r.owners.forEach((o,i)=>{const [x,y]=slots[i];for(const [u,z,w] of [[240.2,o.father,24],[265.4,o.name,47],[314,o.n+'/'+o.d,17]])add(R,[x+u,y+slope*u],z,1.85,theta,w);});
+   }else{const p=roadIndex.get(v.native),area=BoundaryProject.area(p.poly),cat=p.layer==='KAD_DERE'?'stream':'road';stat(v.town,cat,area);
+    put(9.2,v.station,18);put(27.8,v.sheet,20);put(64,v.road,12);put(77.7,v.road.replace(/\d/g,''),18);put(163.6,num(area),16);put(182,num(area),17);
+    regRows.push([v.order,profile.towns[v.town],v.road,p.layer,num(area),num(area),v.native]);}
+  }
+  for(const b of a.inventory){const g=totalGroups[indexTown(b.id)];if(!g)throw Error('Yapı kaydı parselle eşleşmedi.');const k=b.group.startsWith('Özel')?'buildingPrivate':'buildingOther';g.building[k]=(g.building[k]||0)+b.count;}
+  for(const z of a.fixedLabels)add('TABLO_CETVEL',[z[0],z[1]],z[2],z[3],z[4]);
+  for(const [x,y,h,ang,typ,rr,code] of a.summarySlots){
+   const subset=rr==null?totalGroups:[totalGroups[rr]],val=k=>subset.reduce((n,g)=>n+(g[typ]?.[k]||0),0);let s='-';
+   if(code==='town')s=profile.towns[rr];else if(code==='buildingLabel')s=(val('buildingPrivate')+val('buildingOther'))+' adet Bina';else if(code==='areaLabel')s=num(cats.reduce((n,k)=>n+val(k),0))+' m²';else if(code==='privateLabel')s=val('private')+' Adet Parsel';else if(code==='totalLabel')s=cats.reduce((n,k)=>n+val(k),0)+' adet Parsel';else if(code!=='blank'){
+    const n=code==='total'?cats.reduce((n,k)=>n+val(k),0):val(code);s=n?(typ==='area'?num(n):String(n)):'-';}
+   add('TABLO_ENVANTER',[x,y],s,h,ang);
+  }
+  // The project profile supplies the town rows in its original sheet index.
+  const sheetArea=profile.projectData.sheetSlots;
+  for(const [i,g] of groups.entries()){const set=[...new Set(g.result.rows.map(r=>r.sheet))].sort(),split=s=>s.replace(/^(\w\d{2})([A-Z])(\d{2})([A-Z])(\d)([A-Z])$/,'$1-$2-$3-$4-$5-$6');
+   const slot=sheetArea[i];add('TABLO_PAFTA',slot.t,town(g.result.town),1.93,theta);add('TABLO_PAFTA',slot.s,'1/1000',1.69,theta);
+   for(let j=0;j<set.length;j+=2)add('TABLO_PAFTA',[slot.p[0],slot.p[1]-j*1.28],set.slice(j,j+2).map(split).join(',')+(j+2<set.length?',':''),1.69,theta,46);
+  }
+  return {page:{origin,items:scene,id:'Rulo'},register:regRows,totals:totalGroups};
+ }
+ async function create(profile,groups){
+  if(profile.version!==1||!profile.paperVersion||!profile.forms?.rulo?.back)throw Error('KGM pafta kalıbı okunamadı.');
+  const a=profile.projectData;groups=profile.towns.map(t=>groups.find(g=>town(g.result.town)===t));if(groups.some(g=>!g))throw Error('Kalıpta listelenen üç mahalleyi projeye ekleyin.');
+  const index=new Map(groups.flatMap(g=>g.result.rows.map(r=>[r.id,r])));
+  if(index.size!==a.parcels.length||a.parcels.some(id=>!index.has(id)))throw Error('Seçilen proje ile KGM rulo dizini uyuşmuyor.');
+  if([...index.values()].some(r=>!r.geometry||!r.owners?.length||r.issues.some(e=>e.includes('paylarının toplamı'))||r.pieces.some(p=>p.ref?.balanced==null)))throw Error('Geometri, dengeli alan ve malik paylarını tamamlayın.');
+  const fileCache=new Map(),points=new Map(),neigh=new Map(),neighBox=new Map();
+  for(const g of groups){
+   const kap=g.source.find(f=>/\.kap$/i.test(f.name)),raw=await readText(kap);g.raw=new Map(raw.split(/\r?\n/).filter(Boolean).map(l=>l.split(',').map(q=>q.trim().replaceAll('&#44',','))).filter(f=>f.length===52).map(f=>[f[1].replace('_','/'),f]));
+   for(const f of g.drawings){const id=f.name+'|'+f.size+'|'+f.lastModified;if(fileCache.has(id))continue;
+    fileCache.set(id,true);const d=window.K.parseNCZ(await f.arrayBuffer());
+    for(const p of d.points){if(!p.n)continue;const k=Math.floor(p.e*100)+','+Math.floor(p.y*100);if(!points.has(k))points.set(k,[]);points.get(k).push([p.e,p.y,p.n.trim()]);}
+    for(const p of d.polys)if((p.lay==='KAD_ALN'||p.lay==='KAD_KOMŞU')&&p.nativeName&&p.pts?.length>2){const k=p.nativeName+':'+coord(p.pts[0]);if(!neigh.has(k)){neigh.set(k,p);neighBox.set(p,bounds(p.pts));}}
+   }
+  }
+  const keys=new Map(),known=new Set([...[...points.values()].flat().map(p=>p[2]),...Object.values(a.observations).map(r=>r[0])]);let unnamed=1;
+  for(const r of index.values())for(const ring of [r.geometry.parent,...r.pieces.flatMap(p=>p.poly)])for(const xy of open(ring)){
+   const k=coord(xy);if(keys.has(k))continue;const v=xy.slice(0,2).map(x=>num(x,2)).join(','),obs=a.observations[v];
+   let matched,dist=.002;const x=Math.floor(xy[0]*100),y=Math.floor(xy[1]*100);for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++)for(const p of points.get((x+i)+','+(y+j))||[]){const d=Math.hypot(p[0]-xy[0],p[1]-xy[1]);if(d<dist){matched=p[2];dist=d;}}
+   let n=obs?.[0]||matched,source=obs?'Ölçü kaydı':n?'Kaynak çizim':'Sınır kesişimi';
+   if(!n){do{n='H'+String(unnamed++).padStart(3,'0');}while(known.has(n));known.add(n);}
+   keys.set(k,{xy:xy.slice(0,2),n,mk:obs?.[1]||'',source});}
+  const coords=[['Mahalle','Ada/parsel','Parça','Halka','Sıra','Nokta','Y (doğu)','X (kuzey)','MK','Ad dayanağı']],owners=[['Mahalle','Ada/parsel','Adı soyadı','Baba adı','Pay','Payda']],files=[],scenes={};
+  const titles={beyan:['2-BEYANNAME','BEYANNAME'],kroki:['3-ÖLÇÜ KROKİSİ','OLCU_KROKISI'],alan:['4-ALAN HESABI','ALAN_HESABI']};
+  for(const [i,g] of groups.entries()){
+   const rows=g.result.rows.slice().sort((a,b)=>Number(a.order)-Number(b.order)),pref=(i+1)+'-'+profile.towns[i],vicinity=new Map();
+   for(const r of rows){const b=bounds(r.geometry.parent),delta=Math.max(b[2]-b[0],b[3]-b[1])*.65;
+    vicinity.set(r,[...neigh.values()].filter(p=>{const c=neighBox.get(p);return c[0]<b[2]+delta&&c[2]>b[0]-delta&&c[1]<b[3]+delta&&c[3]>b[1]-delta;}));
+    for(const [part,rings] of [['Ana parsel',[r.geometry.parent]],...r.pieces.map(p=>[p.name,p.poly])])for(const [j,ring] of rings.entries())open(ring).forEach((q,h)=>{const z=keys.get(coord(q));coords.push([g.result.town,r.id,part,j+1,h+1,z.n,num(q[0],8),num(q[1],8),z.mk,z.source]);});
+    for(const o of r.owners)owners.push([g.result.town,r.id,o.name,o.father,o.n,o.d]);}
+   for(const [kind,[dir,title]] of Object.entries(titles)){const f=profile.townForms?.[profile.towns[i]]?.[kind]||profile.forms[kind],pages=rows.map((r,j)=>({...page(kind,f,g,r,keys,g.raw,vicinity.get(r),a.tolerance[r.id]),origin:[f.origin[0]+j*458.37,f.origin[1]]}));
+    const data=ncz(f,pages),rd=window.K.parseNCZ(data);if(rd.textList.length!==pages.reduce((n,p)=>n+p.items.filter(i=>i[0]==='t').length,0))throw Error('NCZ geri okuma kontrolü geçmedi: '+title);
+    files.push({name:dir+'/'+pref+'_'+title+'.NCZ',data});(scenes[kind]??=[]).push(...pages);}
+   files.push({name:'1-PROJE/'+pref+'_HESAP.json',data:JSON.stringify({result:g.result,axis:g.axis})});
+   const d=window.O.dxf(),D=g.result;d.poly(d.lay('KAM_SINIR',1),D.border,true);
+   for(const r of rows){d.poly(d.lay('KAD_ALN',8),r.geometry.parent,true);d.text(d.lay('PARSEL_NO',7),...r.main.point,2.2,r.id);for(const p of r.pieces){for(const ring of p.poly)d.poly(d.lay(p.inside?'GIREN':'KALAN',p.inside?1:3),ring,true);const q=centre(p.poly,p.ref?.point);d.text(d.lay('PARCA_ADI',7),...q,1.5,p.name);}}
+   if(g.axis)d.poly(d.lay('PL_EKSEN',4),g.axis.pts,false);
+   const cad=await window.NCZW.build(d.nczM()),decoded=window.K.parseNCZ(cad);if(decoded.polys.filter(p=>p.lay==='KAD_ALN').length!==rows.length)throw Error('Koordinatlı plan geri okunamadı.');
+   files.push({name:'1-PROJE/'+pref+'_PLAN.NCZ',data:cad},{name:'1-PROJE/'+pref+'_PLAN.dxf',data:d.build()});
+   await new Promise(r=>setTimeout(r,0));
+  }
+  const out=roll(profile,groups,index),rul=ncz(profile.forms.rulo,[out.page]),decoded=window.K.parseNCZ(rul);
+  if(!decoded.polys.some(p=>p.lay==='ALN_KAMULAŞTIRMA')||!decoded.textList.some(t=>t.s==='TOPLAM'||t.s?.includes('Genel Toplam')))throw Error('Rulo plan geri okunamadı.');
+  scenes.rulo=[out.page];files.push({name:'5-RULO PLAN/'+profile.rollFilename,data:rul});
+  for(const [name,v] of Object.entries(profile.assets))files.push({name:'5-RULO PLAN/'+name,data:b64(v)});
+  files.push({name:'CETVELLER/Kose_koordinatlari.csv',data:csv(coords)},{name:'CETVELLER/Malik_hisseleri.csv',data:csv(owners)},{name:'CETVELLER/Rulo_cetveli.csv',data:csv(out.register)},{name:'CETVELLER/Mahalle_ozeti.json',data:JSON.stringify(out.totals)},{name:'BASKI/Pafta_yerlesimleri.json',data:JSON.stringify(scenes)});
+  return files;
+ }
+ return {create};
+})();
+const kgmProfile=get('bpNativeFmt'),kgmBuild=get('bpNativeBuild'),nativePaperStatus=get('bpNativeStatus');
+if(kgmBuild)kgmBuild.onclick=async()=>{
+ const f=kgmProfile.files[0];if(!f||!project.size){nativePaperStatus.textContent='Önce mahalleleri projeye ekleyip KGM pafta kalıbını seçin.';return;}
+ kgmBuild.disabled=true;nativePaperStatus.textContent='Güncel sınır hesabından paftalar üretiliyor…';
+ try{const profile=await new Response(f.stream().pipeThrough(new DecompressionStream('gzip'))).json(),files=await KgmPaper.create(profile,[...project.values()]);
+  const pack=window.O.zip(files,{nczYok:true});download(pack,'application/zip','KGM_Sinirdan_Yeni_Proje.zip');nativePaperStatus.textContent='Beyanname, kroki, alan özeti ve rulo plan üretildi. NCZ dosyaları geri okundu.';}
+ catch(e){nativePaperStatus.textContent=e.message||'KGM paftası üretilemedi.';}finally{kgmBuild.disabled=false;}
 };
 })();
 
