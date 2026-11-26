@@ -1399,6 +1399,14 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #planSections .plan-sec-check { display:flex; flex-direction:row; align-items:center; gap:8px }
 #planSections .plan-sec-check input { width:auto }
 #planSectionsChart { display:block; width:100%; max-width:760px; height:auto; border-radius:10px; border:1px solid #c6d6e2 }
+#planSections .plan-sec-legend { display:flex; gap:7px 15px; flex-wrap:wrap; margin:8px 0; font-size:.84rem; font-weight:650 }
+#planSections .plan-sec-legend span { display:inline-flex; align-items:center; gap:5px }
+#planSections .plan-sec-legend span::before { content:""; width:13px; height:10px; border-radius:3px; background:var(--swatch); border:1px solid var(--line) }
+#planSections [data-sec-key="black"] { --swatch:#536477 }
+#planSections [data-sec-key="red"] { --swatch:#c62b46 }
+#planSections [data-sec-key="cut"] { --swatch:#f0a886 }
+#planSections [data-sec-key="fill"] { --swatch:#85c8de }
+#planSectionsProbe { min-height:1.4em }
 #planSectionsValues { font-variant-numeric:tabular-nums; font-weight:650 }
 #planSectionsStatus[data-error="true"] { color:#c56a24; font-weight:650 }
 </style>
@@ -1751,7 +1759,15 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
           <label>Enkesit kilometresi<select id="planSectionsStation"></select></label>
           <button type="button" id="planSectionsNext" aria-label="Sonraki enkesit">›</button>
         </div>
-        <canvas id="planSectionsChart" width="760" height="300" aria-label="Enkesit kot grafiği"></canvas>
+        <div class="plan-sec-legend" aria-label="Grafik renkleri">
+          <span data-sec-key="black">Siyah arazi</span>
+          <span data-sec-key="red">Kırmızı proje</span>
+          <span data-sec-key="cut">Kazı</span>
+          <span data-sec-key="fill">Dolgu</span>
+        </div>
+        <canvas id="planSectionsChart" width="760" height="330" aria-label="Enkesit kot grafiği" aria-describedby="planSectionsProbe planSectionsScale"></canvas>
+        <p class="note" id="planSectionsScale">Yatay ve düşey eksenler ayrı ölçeklidir.</p>
+        <p class="note" id="planSectionsProbe">Kot okumak için grafiğe dokun.</p>
         <p class="note" id="planSectionsValues"></p>
       </div>
     </section>
@@ -11490,51 +11506,128 @@ function selectPlanSection(index, reveal = false) {
     $("planSectionsStation").value = String(index);
     $("planSectionsPrev").disabled = index === 0;
     $("planSectionsNext").disabled = index + 1 === rows.length;
-    $("planSectionsValues").textContent = SECS.length
-      ? `Siyah arazi · Kırmızı proje   |   Kazı ${K.tr(section.kazi)} m² · Dolgu ${K.tr(section.dolgu)} m²`
+    const compare = !!SECS.length;
+    const blackOnly = planSections.singleName === "Siyah arazi";
+    for (const indicator of planSectionPanel.querySelectorAll("[data-sec-key]")) {
+      indicator.hidden = !compare && indicator.dataset.secKey !== (blackOnly ? "black" : "red");
+    }
+    $("planSectionsValues").textContent = compare
+      ? `Kazı ${K.tr(section.kazi)} m² · Dolgu ${K.tr(section.dolgu)} m²`
       : planSections.singleName + " · Tek yüzey";
-    paintPlanSection(section, !!SECS.length);
+    $("planSectionsProbe").textContent = "Kot okumak için grafiğe dokun.";
+    const adjusted = compare && (SYE() > 0 || +ST.set.esik > 0 || +ST.set.kesik > 0);
+    $("planSectionsScale").textContent = adjusted
+      ? "Yatay ve düşey ölçek farklıdır. Alan hesabında proje eşikleri ve sıyırma kuralı uygulanır."
+      : "Yatay ve düşey eksenler ayrı ölçeklidir.";
+    paintPlanSection(section, compare);
     if (reveal) planSectionPanel.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }
   draw();
 }
-function paintPlanSection(section, compare) {
+function planSectionBands(part, paint) {
+  for (let i = 1; i < part.length; i++) {
+    const a = part[i - 1], b = part[i];
+    const da = a[2] - a[1], db = b[2] - b[1];
+    if (da * db < 0) {
+      const fraction = da / (da - db);
+      const level = a[1] + (b[1] - a[1]) * fraction;
+      const meeting = [a[0] + (b[0] - a[0]) * fraction, level, level];
+      paint(a, meeting, da);
+      paint(meeting, b, db);
+    } else if (da || db) paint(a, b, da || db);
+  }
+}
+function planSectionSample(parts, offset) {
+  for (const part of parts) {
+    if (offset < part[0][0] || offset > part.at(-1)[0]) continue;
+    for (let i = 1; i < part.length; i++) {
+      const [x, s, r] = part[i - 1], [next, sn, rn] = part[i];
+      if (offset > next || next <= x) continue;
+      const fraction = (offset - x) / (next - x);
+      return [s + (sn - s) * fraction, r + (rn - r) * fraction];
+    }
+  }
+  return null;
+}
+function paintPlanSection(section, compare, cursor = null) {
   const canvas = $("planSectionsChart");
   const g = canvas.getContext("2d");
   const { width, height } = canvas;
-  const series = compare ? [[1, "#202c3b"], [2, "#bc2840"]]
-    : [[1, planSections.singleName === "Siyah arazi" ? "#202c3b" : "#bc2840"]];
+  const series = compare ? [[1, "#263849"], [2, "#b92b43"]]
+    : [[1, planSections.singleName === "Siyah arazi" ? "#263849" : "#b92b43"]];
   let x0 = 0, x1 = 0, z0 = Infinity, z1 = -Infinity;
   for (const part of section.parts) for (const point of part) {
     x0 = Math.min(x0, point[0]); x1 = Math.max(x1, point[0]);
     for (const [key] of series) { z0 = Math.min(z0, point[key]); z1 = Math.max(z1, point[key]); }
   }
-  if (z1 - z0 < .05) { z0 -= .05; z1 += .05; }
-  const left = 95, top = 22, right = width - 30, bottom = height - 46;
+  const margin = Math.max(.05, (z1 - z0) * .09);
+  z0 -= margin; z1 += margin;
+  const left = 114, top = 47, right = width - 32, bottom = height - 53;
   const x = v => left + (v - x0) / Math.max(.001, x1 - x0) * (right - left);
   const y = v => bottom - (v - z0) / (z1 - z0) * (bottom - top);
-  g.fillStyle = "#f5f9fc"; g.fillRect(0, 0, width, height);
-  g.font = "22px Arial";
-  g.textAlign = "right"; g.textBaseline = "middle";
+  const line = (ax, ay, bx, by) => {
+    g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.stroke();
+  };
+  g.fillStyle = "#f6f9fc"; g.fillRect(0, 0, width, height);
+  g.fillStyle = "#fff"; g.fillRect(left, top, right - left, bottom - top);
+  g.fillStyle = "#324d64"; g.font = "600 21px Arial";
+  g.textAlign = "left"; g.textBaseline = "middle"; g.fillText("Kot (m)", 17, 24);
+  g.textAlign = "right"; g.fillText("Eksene uzaklık (m)", right, 24);
+  g.font = "20px Arial";
   for (let i = 0; i <= 4; i++) {
-    const z = z0 + (z1 - z0) * i / 4;
-    const py = y(z);
-    g.strokeStyle = "#d7e2eb"; g.lineWidth = 1;
-    g.beginPath(); g.moveTo(left, py); g.lineTo(right, py); g.stroke();
-    g.fillStyle = "#41566a"; g.fillText(K.tr(z, 2), left - 8, py);
+    const z = z0 + (z1 - z0) * i / 4, py = y(z);
+    g.strokeStyle = "#dbe6ee"; g.lineWidth = 1;
+    line(left, py, right, py);
+    g.fillStyle = "#41566a"; g.fillText(K.tr(z, 2), left - 10, py);
   }
-  g.strokeStyle = "#8298ac"; g.setLineDash([6, 6]);
-  g.beginPath(); g.moveTo(x(0), top); g.lineTo(x(0), bottom); g.stroke(); g.setLineDash([]);
-  g.textAlign = "left"; g.fillText(K.tr(x0) + " m", left, bottom + 25);
-  g.textAlign = "right"; g.fillText(K.tr(x1) + " m", right, bottom + 25);
+  if (compare) for (const part of section.parts) {
+    planSectionBands(part, (a, b, difference) => {
+      g.fillStyle = difference > 0 ? "#b5e1ee" : "#f5c8ad";
+      g.beginPath();
+      g.moveTo(x(a[0]), y(a[1])); g.lineTo(x(b[0]), y(b[1]));
+      g.lineTo(x(b[0]), y(b[2])); g.lineTo(x(a[0]), y(a[2]));
+      g.closePath(); g.fill();
+    });
+  }
+  g.strokeStyle = "#8ca4b8"; g.lineWidth = 1.5; g.setLineDash([6, 6]);
+  line(x(0), top, x(0), bottom); g.setLineDash([]);
+  g.fillStyle = "#41566a";
+  g.textAlign = "center";
+  if (x(0) - left > 75 && right - x(0) > 75) g.fillText("0", x(0), bottom + 24);
+  g.textAlign = "left"; g.fillText(K.tr(x0), left, bottom + 24);
+  g.textAlign = "right"; g.fillText(K.tr(x1), right, bottom + 24);
   for (const [key, color] of series) {
-    g.strokeStyle = color; g.lineWidth = 4; g.beginPath();
+    g.strokeStyle = color; g.lineWidth = 3.5; g.lineJoin = "round"; g.beginPath();
     for (const part of section.parts) part.forEach((p, i) => {
       if (i) g.lineTo(x(p[0]), y(p[key])); else g.moveTo(x(p[0]), y(p[key]));
     });
     g.stroke();
   }
+  if (cursor === null) return;
+  const offset = x0 + (Math.max(left, Math.min(right, cursor)) - left) / (right - left) * (x1 - x0);
+  const sample = planSectionSample(section.parts, offset);
+  const location = Math.abs(offset) < .005 ? "Eksen" : `${offset < 0 ? "Sol" : "Sağ"} ${K.tr(Math.abs(offset))} m`;
+  const probe = $("planSectionsProbe");
+  g.strokeStyle = "#17688c"; g.lineWidth = 1.5;
+  line(x(offset), top, x(offset), bottom);
+  if (!sample) {
+    probe.textContent = location + " · Kot verisi yok";
+    return;
+  }
+  for (const [key, color] of series) {
+    g.fillStyle = color; g.beginPath();
+    g.arc(x(offset), y(sample[key - 1]), 5, 0, 2 * Math.PI); g.fill();
+  }
+  probe.textContent = compare
+    ? `${location} · Siyah ${K.tz(sample[0])} m · Kırmızı ${K.tz(sample[1])} m`
+    : `${location} · Kot ${K.tz(sample[0])} m`;
 }
+$("planSectionsChart").addEventListener("pointerdown", event => {
+  const section = planSectionRows()[planSections.index];
+  if (!section) return;
+  const { left, width } = event.currentTarget.getBoundingClientRect();
+  if (width) paintPlanSection(section, !!SECS.length, (event.clientX - left) / width * event.currentTarget.width);
+});
 function drawPlanSectionStations(dpr, dark) {
   if (planSectionPanel.hidden || !$("lyX").checked) return;
   const rows = planSectionRows();
