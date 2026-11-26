@@ -1383,6 +1383,26 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 </script>
 <style>.card[data-mod="kam"] input,.card[data-mod="kam"] textarea{font-family:Arial,sans-serif}</style>
+<style id="kub-plan-section-style">
+#kubPlanTools #planSectionsOpen { background:#085675; border-color:#5896b4; color:#f4fbff }
+#planSections { border-top:3px solid #298fb6; min-width:0; scroll-margin:80px }
+#planSections[hidden], #planSections [hidden] { display:none!important }
+#planSections .plan-sec-head { display:flex; align-items:start; justify-content:space-between; gap:12px }
+#planSections h2 { margin:0 0 4px }
+#planSections p { margin:6px 0 }
+#planSections .plan-sec-actions { display:flex; flex-wrap:wrap; align-items:end; gap:8px; margin:12px 0 }
+#planSections button { min-height:42px }
+#planSections .plan-sec-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; max-width:680px; margin:10px 0 }
+#planSections input, #planSections select { min-width:0; width:100% }
+#planSections details { border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin:12px 0 }
+#planSections summary { cursor:pointer; font-weight:650 }
+#planSections .plan-sec-check { display:flex; flex-direction:row; align-items:center; gap:8px }
+#planSections .plan-sec-check input { width:auto }
+#planSectionsChart { display:block; width:100%; max-width:760px; height:auto; border-radius:10px; border:1px solid #c6d6e2 }
+#planSectionsValues { font-variant-numeric:tabular-nums; font-weight:650 }
+#planSectionsStatus[data-error="true"] { color:#c56a24; font-weight:650 }
+</style>
+
 </head>
 <body>
 <script>/* ===== A-CAD kullanıcı girişi (telefon uygulaması sürümü) =====
@@ -1676,7 +1696,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
   <!-- PLAN -->
   <section id="v-plan" class="view kub-modern" hidden style="flex-direction:column;gap:14px">
-    <div id="kubPlanTools" class="tool kub-plan-tools" aria-label="Plan komutları"><div class="kub-plan-main"><label class="filebtn mini" style="margin:0"><span>📂 Dosya aç</span><input type="file" id="tOpen" multiple accept=".dxf,.DXF,.ncz,.NCZ,.ncn,.NCN,.cks,.CKS,.txt,.csv,.xls,.xlsx,.XLS,.XLSX,.geojson,.json,.kml,.kmz"></label><button id="tFit" type="button">Tümünü göster</button><button id="tSorgu" type="button">Kot sorgula</button><button id="tAlan" type="button">Alan çiz</button><button id="tEksen" type="button">Eksen çiz</button><button id="tProf" type="button">Profil çiz</button><button id="tKay" type="button" class="primary">Kaydet</button><button type="button" id="kubAxisProfile">Eksen profili</button><button type="button" id="kub3Open">3B model düzenle</button><button type="button" id="kubBoundary">Kübaj sınırı</button><button type="button" data-ka-open>Akıllı kontrol</button></div><div class="kub3-planbar"><label>Üçgen modeli<select id="kub3Target2D"><option value="auto">Otomatik</option><option value="S">Siyah</option><option value="R">Kırmızı</option></select></label><button type="button" id="kub3Fix2D">Otomatik düzelt</button><button id="tUcEk" type="button">△ Üçgen ekle</button><button id="tUcDon" type="button">⤾ Üçgen döndür</button><button id="tUcSil" type="button" class="danger">✕ Üçgen sil</button><span id="kub3PlanStatus" role="status"></span></div><details class="kub-plan-more"><summary>Diğer işlemler · düzenleme, ölçü, üçgen, altlık</summary><div class="kub-plan-extra"><button id="tEdit" type="button" class="primary">✏️ Düzenle (taşı, döndür, kes…)</button><button id="tEksDel" type="button" class="danger" hidden>Ekseni sil</button><button id="tOlc" type="button">📏 Mesafe</button><button id="tASorgu" type="button">▱ Alanı sorgula</button><button id="tNokta" type="button">Nokta ekle</button><button id="tYazi" type="button">A Yazı</button><button id="tSec" type="button">👆 Seç · Sil · Taşı</button><button id="tSil" type="button" class="danger">🗑 Sil</button><button id="tASil" type="button" class="danger">⬠ Alanla sil</button><button id="tUndoP" type="button" hidden>↶ Geri al</button><button id="tBg" type="button">🛰 Altlık</button><button id="tGmap" type="button">🌍 Google</button><button id="tGps" type="button">📍 Konumum</button><button id="tFol" type="button" hidden>⦿ Takip</button></div></details></div>
+    <div id="kubPlanTools" class="tool kub-plan-tools" aria-label="Plan komutları"><div class="kub-plan-main"><label class="filebtn mini" style="margin:0"><span>📂 Dosya aç</span><input type="file" id="tOpen" multiple accept=".dxf,.DXF,.ncz,.NCZ,.ncn,.NCN,.cks,.CKS,.txt,.csv,.xls,.xlsx,.XLS,.XLSX,.geojson,.json,.kml,.kmz"></label><button id="tFit" type="button">Tümünü göster</button><button id="tSorgu" type="button">Kot sorgula</button><button id="tAlan" type="button">Alan çiz</button><button id="tEksen" type="button">Eksen çiz</button><button id="tProf" type="button">Profil çiz</button><button id="tKay" type="button" class="primary">Kaydet</button><button type="button" id="kubAxisProfile">Eksen profili</button><button type="button" id="planSectionsOpen" aria-expanded="false" aria-controls="planSections">Enkesit</button><button type="button" id="kub3Open">3B model düzenle</button><button type="button" id="kubBoundary">Kübaj sınırı</button><button type="button" data-ka-open>Akıllı kontrol</button></div><div class="kub3-planbar"><label>Üçgen modeli<select id="kub3Target2D"><option value="auto">Otomatik</option><option value="S">Siyah</option><option value="R">Kırmızı</option></select></label><button type="button" id="kub3Fix2D">Otomatik düzelt</button><button id="tUcEk" type="button">△ Üçgen ekle</button><button id="tUcDon" type="button">⤾ Üçgen döndür</button><button id="tUcSil" type="button" class="danger">✕ Üçgen sil</button><span id="kub3PlanStatus" role="status"></span></div><details class="kub-plan-more"><summary>Diğer işlemler · düzenleme, ölçü, üçgen, altlık</summary><div class="kub-plan-extra"><button id="tEdit" type="button" class="primary">✏️ Düzenle (taşı, döndür, kes…)</button><button id="tEksDel" type="button" class="danger" hidden>Ekseni sil</button><button id="tOlc" type="button">📏 Mesafe</button><button id="tASorgu" type="button">▱ Alanı sorgula</button><button id="tNokta" type="button">Nokta ekle</button><button id="tYazi" type="button">A Yazı</button><button id="tSec" type="button">👆 Seç · Sil · Taşı</button><button id="tSil" type="button" class="danger">🗑 Sil</button><button id="tASil" type="button" class="danger">⬠ Alanla sil</button><button id="tUndoP" type="button" hidden>↶ Geri al</button><button id="tBg" type="button">🛰 Altlık</button><button id="tGmap" type="button">🌍 Google</button><button id="tGps" type="button">📍 Konumum</button><button id="tFol" type="button" hidden>⦿ Takip</button></div></details></div>
     <div id="planBox">
       <canvas id="planCv" aria-label="Plan görünümü"></canvas>
       <div id="pKub" hidden style="position:absolute;left:8px;bottom:38px;z-index:5;background:rgba(255,255,255,.93);border:1px solid #ccc;border-radius:8px;padding:5px 9px;font:600 13px Arial;line-height:1.35;pointer-events:none;box-shadow:0 1px 4px rgba(0,0,0,.15)"></div>
@@ -1690,6 +1710,51 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
         <button id="dbCancel" type="button">İptal</button>
       </div>
     </div>
+    <section class="card" id="planSections" aria-labelledby="planSectionsTitle" hidden>
+      <header class="plan-sec-head">
+        <div><h2 id="planSectionsTitle">Enkesit</h2><p class="note" id="planSectionsAxis"></p></div>
+        <button type="button" id="planSectionsClose" aria-label="Enkesiti kapat">Kapat</button>
+      </header>
+      <div class="plan-sec-actions">
+        <button type="button" id="planSectionsDrawAxis">Eksen çiz</button>
+        <button type="button" id="planSectionsPickAxis">Çizgi seç</button>
+        <button type="button" id="planSectionsBoundary">Kübaj sınırı çiz</button>
+      </div>
+      <div class="plan-sec-fields">
+        <label>Enkesit aralığı (m)<input id="planSectionsStep" inputmode="decimal"></label>
+        <label>Kesit sınırı<select id="planSectionsScope">
+          <option value="auto">Kübaj sınırı varsa kullan</option>
+          <option value="width">Sağ / sol genişlik</option>
+        </select></label>
+      </div>
+      <p class="note" id="planSectionsScopeText"></p>
+      <div class="plan-sec-fields" id="planSectionsWidths">
+        <label>Sol (m)<input id="planSectionsLeft" inputmode="decimal"></label>
+        <label>Sağ (m)<input id="planSectionsRight" inputmode="decimal"></label>
+      </div>
+      <details>
+        <summary>Güzergâh ayarları</summary>
+        <div class="plan-sec-fields">
+          <label>Başlangıç km<input id="planSectionsStart" placeholder="0+380"></label>
+          <label>Ara kesitler (başlangıçtan metre)<input id="planSectionsExtra" placeholder="12,5; 35; 78,4"></label>
+        </div>
+        <label class="plan-sec-check"><input type="checkbox" id="planSectionsVertices"> Her eksen köşesinde kesit al</label>
+      </details>
+      <div class="plan-sec-actions">
+        <button type="button" class="primary" id="planSectionsApply">Kesitleri çiz</button>
+        <button type="button" id="planSectionsReport">Kübaj hesabına git</button>
+      </div>
+      <p class="note" id="planSectionsStatus" role="status"></p>
+      <div id="planSectionsResult" hidden>
+        <div class="plan-sec-actions">
+          <button type="button" id="planSectionsPrev" aria-label="Önceki enkesit">‹</button>
+          <label>Enkesit kilometresi<select id="planSectionsStation"></select></label>
+          <button type="button" id="planSectionsNext" aria-label="Sonraki enkesit">›</button>
+        </div>
+        <canvas id="planSectionsChart" width="760" height="300" aria-label="Enkesit kot grafiği"></canvas>
+        <p class="note" id="planSectionsValues"></p>
+      </div>
+    </section>
     <div class="card" id="pKay" hidden style="border-left:5px solid var(--accent)">
       <div class="row" style="justify-content:space-between;align-items:center"><h2 style="margin:0">Planı kaydet</h2><button type="button" id="pkX">Kapat</button></div>
       <p class="note" style="margin:4px 0 8px">Ekranda açık olan her şey kaydedilir: siyah ve kırmızı üçgenler, noktalar, eğriler, alanlar, eksen, kesitler, yazılar ve açtığın dosyalar. Gizlediğin tabakalar (aşağıdaki kutular) dosyaya girmez. Koordinat ve kotlar değiştirilmeden yazılır.</p>
@@ -1810,9 +1875,11 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       <p class="note" style="margin-top:10px">Kesitler kübaj alanının sınırına kadar uzanır. Kübaj alanı seçili değilse eksenden sol ve sağ genişlik kadar alınır. Kurplarda, kurp noktasının bir kesit aralığı önü ve arkası kurp aralığıyla sıklaştırılır. Fark dolgu eşiğini aşmayan kesitlerde dolgu ve sıyırma, kazı eşiğini aşmayan kesitlerde kazı 0 sayılır (örn. dolgu sahasında 2–3 cm'lik kazı izleri).</p>
     </details>
     <div class="card kub-section-result">
-      <h2>En kesit yöntemi</h2>
+      <h2>Enkesit yöntemi</h2>
+      <button type="button" id="planSectionsFromReport" style="margin-bottom:8px">Plan ve Sınır’da enkesit aç</button>
       <div class="row" style="margin-bottom:8px"><button id="calc" class="primary" type="button">Kesitleri hesapla</button><span class="msg" id="kMsg"></span></div>
       <div class="stat" id="tot"></div>
+      <p class="note" id="planSectionsReportScope" hidden></p>
     </div>
     <div class="card kub-section-preview">
       <h2>Kesit önizleme</h2>
@@ -10000,6 +10067,7 @@ async function showTab(t) {
 }
 const shellTitle=document.title;
 function showTabCommit(t) {
+  if (t !== "plan") window.cancelPlanSectionPick?.();
   if($("kub3Panel")?.open)$("kub3Panel").close();
   if(t!=="plan"&&$("profBox")) { $("profBox").remove(); PROF=null; }
   document.title=t==='ifz'?'İfraz':shellTitle;const heading=document.querySelector('header h1')||document.querySelector('h1');if(heading){if(!heading.dataset.title)heading.dataset.title=heading.textContent;heading.textContent=t==='ifz'?'İfraz':heading.dataset.title;}
@@ -10008,7 +10076,7 @@ function showTabCommit(t) {
   { const g = KUBG.has(t); $("kubSub").hidden = !g; $("tabKub").setAttribute("aria-selected", g); if (g) try { localStorage.setItem("acad-kub", t); } catch (e) {} }
   const vt = t === "ifz" || t === "kam" || t === "akr" || t === "trk" ? "apl" : t; document.querySelectorAll(".view").forEach(v => { v.hidden = v.id !== "v-" + vt; if (!v.hidden) v.style.display = "flex"; });
   try { history.replaceState(null, "", "#" + t); localStorage.setItem("acad-tab", t); } catch (e) {}
-  if (t === "plan") { resize(); if (!VIEW.s) fit(); if (window.GPSS && GPSS.on) { $("tGps").classList.add("on"); $("tFol").hidden = false; if (GPSS.last && FOLLOW) { const f = GPSS.last; gpsShow(f.lat, f.lon, f.acc, "gps"); } } draw(); }
+  if (t === "plan") { if (!planSectionPanel.hidden) syncPlanSectionInputs(); refreshPlanSections(); resize(); if (!VIEW.s) fit(); if (window.GPSS && GPSS.on) { $("tGps").classList.add("on"); $("tFol").hidden = false; if (GPSS.last && FOLLOW) { const f = GPSS.last; gpsShow(f.lat, f.lon, f.acc, "gps"); } } draw(); }
   if (t === "kesit") { readiness(); renderTable(); preview(); }
   if ((t === "apl" || t === "ifz" || t === "kam" || t === "akr" || t === "trk") && window.aplShow) window.aplShow(t);
   if (t === "cad" && window.cadShow) window.cadShow();
@@ -10265,6 +10333,7 @@ function drawPlanFrame() {
     if (PMOVE && PMOVE.base) { ctx.fillStyle = "#1f8fff"; ctx.beginPath(); ctx.arc(sx(PMOVE.base[0]), sy(PMOVE.base[1]), 6 * D, 0, Math.PI * 2); ctx.fill(); } }
   // kesitler
   if ($("lyX").checked && SECS.length) { SECS.forEach((s, i) => { ctx.strokeStyle = i === SEL ? "#d07a10" : "rgba(31,95,191,.55)"; ctx.lineWidth = (i === SEL ? 2.5 : 1.2) * D; ctx.beginPath(); s.line.forEach(([a, b]) => { ctx.moveTo(sx(a[0]), sy(a[1])); ctx.lineTo(sx(b[0]), sy(b[1])); }); ctx.stroke(); }); }
+  drawPlanSectionStations(D, dark);
   // eksen
   if (ST.eksen && ST.eksen.length > 1) { ctx.strokeStyle = "#1f5fbf"; ctx.lineWidth = 2.2 * D; ctx.setLineDash([10 * D, 5 * D]); ctx.beginPath(); ST.eksen.forEach((p, i) => i ? ctx.lineTo(sx(p[0]), sy(p[1])) : ctx.moveTo(sx(p[0]), sy(p[1]))); ctx.stroke(); ctx.setLineDash([]);
     const p0 = ST.eksen[0]; ctx.fillStyle = "#1f5fbf"; ctx.font = `700 ${11 * D}px Arial`; ctx.textAlign = "left"; ctx.fillText("km " + K.kmtxt(+ST.set.km0 || 0), sx(p0[0]) + 6 * D, sy(p0[1]) - 6 * D); }
@@ -10325,6 +10394,8 @@ const up = e => { if(kubHoverFrame){cancelAnimationFrame(kubHoverFrame);kubHover
   if (was && ptrs.size === 0 && !moved && MODE === "sil") { pan = null; const o = secHit(e.offsetX, e.offsetY) || katHit(e.offsetX, e.offsetY); if (!o) { $("coord").textContent = "Burada silinecek nesne yok"; return; } delObj(o); return; }
   if (was && ptrs.size === 0 && !moved && window.BGI && BGI.reg) { pan = null; const X = e.offsetX, Y = e.offsetY, odd = BGI.reg.step % 2 === 1, sn = odd ? (nearest(X, Y) || null) : null; BGI.tap(sn ? [sn[0], sn[1]] : [wx(X), wy(Y)]); draw(); return; }
   if (was && ptrs.size === 0 && !moved && !MODE) { const t = Date.now(), q = [e.offsetX, e.offsetY]; if (window.__dtP && t - __dtP.t < 380 && Math.hypot(q[0] - __dtP.q[0], q[1] - __dtP.q[1]) < 30) { window.__dtP = null; pan = null; closePop(); fit(); $("coord").textContent = "Tüm çizim ortalandı (çift dokunuş)"; return; } window.__dtP = { t, q }; }
+  if (was && ptrs.size === 0 && !moved && MODE === "enkesit-eksen") { pan = null; pickPlanSectionAxis(e.offsetX, e.offsetY); return; }
+  if (was && ptrs.size === 0 && !moved && !MODE && tapPlanSectionStation(e.offsetX, e.offsetY)) { pan = null; return; }
   if (was && ptrs.size === 0 && !moved && MODE === "sec") { pan = null; secTap(e.offsetX, e.offsetY); return; }
   if (was && ptrs.size === 0 && !moved && MODE === "asorgu") { pan = null; if (!pickArea(e.offsetX, e.offsetY)) $("coord").textContent = "Burada sorgulanacak alan yok — çevrili bir alanın ya da üçgenlerin içine dokun"; return; }
   if (was && ptrs.size === 0 && !moved && MODE === "yazi") { pan = null; const x = wx(e.offsetX), y = wy(e.offsetY), r = cv.getBoundingClientRect(); QMARK = [x, y]; draw(); const hd = yaziH();
@@ -10831,7 +10902,11 @@ $("tAlan").addEventListener("click", () => startMode(MODE === "alan" ? null : "a
 $("tEksen").addEventListener("click", () => startMode(MODE === "eksen" ? null : "eksen"));
 $("tProf").addEventListener("click", () => { closePop(); startMode(MODE === "profil" ? null : "profil"); });
 $("kubAxisProfile").addEventListener("click",()=>{closePop();if(!ST.eksen||ST.eksen.length<2){startMode("eksen");$("dbTxt").textContent="Önce ekseni çiz: iki veya daha fazla noktaya dokun, Bitir.";return;}startMode(null);profShow(ST.eksen.map(q=>q.slice(0,2)),"Eksen");});
-function drawbar() { $("drawbar").hidden = !MODE; $("coord").hidden = !!MODE; if (!MODE) return;
+function drawbar() { $("drawbar").hidden = !MODE; $("coord").hidden = !!MODE;
+  const pickAxis = MODE === "enkesit-eksen";
+  $("dbUndo").hidden = $("dbDone").hidden = pickAxis;
+  if (!MODE) return;
+  if (pickAxis) { $("dbTxt").textContent = "Plandaki açık çizgiye dokun."; return; }
   if (MODE === "alan") { let v = ""; if (DRAFT.length >= 3) { try { const r = areaCalc(DRAFT); if (r) v = ` · Kazı ${K.tr(r.kazi)} m³ · Dolgu ${K.tr(r.dolgu)} m³`; } catch (e) {} } $("dbTxt").textContent = DRAFT.length < 3 ? `Alan: köşelere dokun (${DRAFT.length} nokta)` : `Alan ${K.tr(K.area(DRAFT))} m²${v}`; }
   else if (MODE === "alansil") $("dbTxt").textContent = `Alanla sil: köşelere dokun (${DRAFT.length}) · sağ tuş / Bitir = içindekileri sil`;
   else if (MODE === "profil") $("dbTxt").textContent = DRAFT.length < 2 ? `Profil: hat boyunca dokun (${DRAFT.length})${ST.eksen ? " · ya da Bitir: eksen boyunca" : ""}` : `Profil hattı ${K.tr(K.perim(DRAFT, false))} m`;
@@ -11179,7 +11254,7 @@ Object.entries(SETF).forEach(([id, k]) => $(id).addEventListener("change", e => 
   if (k === "km0") { e.target.value = K.kmtxt(ST.set.km0); ["eKm0", "vKm0"].forEach(id => $(id).value = e.target.value); } if (k === "olcek") $("vOl").value = ST.set.olcek; save(); renderAlanlar(); recalcIfReady(); }));
 $("sKay").addEventListener("change", e => { ST.set.kaynak = e.target.value; SECS = []; save(); readiness(); recalcIfReady(); });
 function readiness() {
-  const kub = ST.alanlar.find(a => a.kubaj);
+  const kub = ST.set.kesitSinir === "width" ? null : ST.alanlar.find(a => a.kubaj);
   const items = [[!!(MS && MS.tri.length), MS ? `İlk hâl (siyah): ${fmtN(MS.tri.length / 3)} üçgen` : "İlk hâl (siyah) yüklenmedi → 1 · Veri"],
     [!!(MR && (MR.flat !== undefined || MR.tri.length)), MR ? (MR.flat !== undefined ? `Baz kotu: ${K.tr(MR.flat, 3)} m` : `Son hâl (kırmızı): ${fmtN(MR.tri.length / 3)} üçgen`) : "Son hâl (kırmızı) yüklenmedi → 1 · Veri"],
     [true, ST.eksen && ST.eksen.length > 1 ? `Eksen: ${K.tr(K.perim(ST.eksen, false))} m` : "Eksen çizilmedi: otomatik eksen (alanın uzun doğrultusu) kullanılacak"],
@@ -11272,14 +11347,334 @@ function surfDiff() {
   showRes(html, note);
 }
 document.querySelectorAll("input[name=sdb]").forEach(r => r.addEventListener("change",()=>{surfDiff();save();pKubGoster(false);if(KUB3?.open)kub3Render();}));
-function recalcIfReady() { const prior=kubVolumeBatch;kubVolumeBatch=new Map();try { try { surfDiff(); } catch (e) { console.error(e); } try { pKubGoster(false); } catch (e) {} if (readiness()) calc(); else { SECS = []; TOT = { kazi: 0, dolgu: 0, siy: 0 }; SV = null; renderTable(); preview(); totals(); } if (!$("v-plan").hidden) draw(); }finally{kubVolumeBatch=prior;} }
+const planSections = { single: [], singleName: "", index: 0 };
+const sectionBoundary = () => ST.set.kesitSinir === "width" ? null : ST.alanlar.find(a => a.kubaj)?.pts;
+function projectSectionStations(axis) {
+  const s = ST.set;
+  const step = +s.step > 0 ? +s.step : 10;
+  const turns = +s.kurp > 0 ? Math.min(+s.kurp, step) : 0;
+  const stations = K.stations(axis, step, turns, isFinite(+s.ang) ? +s.ang : 2, +s.km0 || 0);
+  if (s.kaynak === "cizgi") return stations;
+  const extra = Array.isArray(s.kesitAra) ? s.kesitAra : [];
+  const more = [...extra, ...(s.kesitKose ? stations.ch.slice(1, -1) : [])];
+  if (more.length) {
+    const distances = new Set(stations.list);
+    for (const distance of more) {
+      if (Number.isFinite(distance) && distance >= 0 && distance <= stations.L + 1e-6) {
+        distances.add(Math.round(Math.min(distance, stations.L) * 1000) / 1000);
+      }
+    }
+    stations.list = [...distances].sort((a, b) => a - b);
+  }
+  return stations;
+}
+function sectionsAlongAxis(first, last, axis, stations, poly, half, wideAuto, withAreas) {
+  const s = ST.set;
+  if (s.kesitSinir === "width") half = Math.max(half, +s.wL || 0, +s.wR || 0);
+  const make = distance => {
+    const section = K.section({
+      S: first, R: last, axis, ch: stations.ch, s: distance, poly,
+      wL: wideAuto ? half : +s.wL || 0, wR: wideAuto ? half : +s.wR || 0, half
+    });
+    if (!section.parts.length) return null;
+    if (withAreas) K.areas(section, SYE(), +s.esik || 0, +s.kesik || 0);
+    section.km = Math.round((distance + (+s.km0 || 0)) * 1000) / 1000;
+    return section;
+  };
+  const distances = stations.list;
+  const sections = distances.map(make);
+  const firstIndex = sections.findIndex(Boolean);
+  if (firstIndex < 0) return [];
+  let lastIndex = sections.length - 1;
+  while (!sections[lastIndex]) lastIndex--;
+  // Keep the existing boundary sections between the first/last usable and unusable stations.
+  const boundarySection = (outside, inside) => {
+    let result = make(inside);
+    if (!result) return null;
+    for (let i = 0; i < 40 && Math.abs(inside - outside) > 2e-4; i++) {
+      const middle = (outside + inside) / 2;
+      const candidate = make(middle);
+      if (candidate) { inside = middle; result = candidate; }
+      else outside = middle;
+    }
+    return result;
+  };
+  const out = sections.filter(Boolean);
+  const start = firstIndex > 0 ? boundarySection(distances[firstIndex - 1], distances[firstIndex]) : null;
+  const end = lastIndex < sections.length - 1 ? boundarySection(distances[lastIndex + 1], distances[lastIndex]) : null;
+  const origin = +s.km0 || 0;
+  if (start && distances[firstIndex] - (start.km - origin) > .005) out.unshift(start);
+  if (end && (end.km - origin) - distances[lastIndex] > .005) out.push(end);
+  return out;
+}
+const planSectionPanel = $("planSections");
+const planSectionStatus = (message, error = false) => {
+  $("planSectionsStatus").textContent = message;
+  $("planSectionsStatus").dataset.error = String(error);
+};
+const planSectionRows = () => SECS.length ? SECS : planSections.single;
+function syncPlanSectionInputs() {
+  const project = ST.set;
+  const fields = {
+    planSectionsStep: project.step || 10, planSectionsStart: K.kmtxt(+project.km0 || 0),
+    planSectionsLeft: project.wL, planSectionsRight: project.wR,
+    planSectionsScope: project.kesitSinir || "auto",
+    planSectionsExtra: Array.isArray(project.kesitAra) ? project.kesitAra.join("; ").replace(/\./g, ",") : ""
+  };
+  for (const [id, value] of Object.entries(fields)) {
+    $(id).value = value ?? "";
+  }
+  $("planSectionsVertices").checked = !!project.kesitKose;
+  updatePlanSectionScope();
+}
+function updatePlanSectionScope() {
+  const area = ST.alanlar.find(a => a.kubaj);
+  const width = $("planSectionsScope").value === "width";
+  $("planSectionsWidths").hidden = !width && !!area;
+  $("planSectionsScopeText").textContent = width
+    ? "Genişlikler eksenin çizim yönüne göre uygulanır."
+    : area ? "Etkin sınır · " + area.ad : "Kübaj sınırı çizilene kadar sağ / sol genişlik kullanılır.";
+}
+function refreshPlanSections() {
+  if (planSectionPanel.hidden || $("v-plan").hidden) return;
+  const old = $("planSectionsStation").selectedOptions[0]?.textContent;
+  const length = ST.eksen?.length > 1 ? K.perim(ST.eksen, false) : 0;
+  $("planSectionsAxis").textContent = length
+    ? `${ST.eksenSrc || "Proje ekseni"} · ${K.tr(length)} m`
+    : SECS.length && AUTOAX ? "Otomatik eksen kullanılıyor" : "Eksen çiz veya plandan bir çizgi seç.";
+  updatePlanSectionScope();
+  planSections.single = [];
+  const black = MS?.tri?.length ? MS : null;
+  const red = MR?.tri?.length ? MR : null;
+  const single = !SECS.length && !(black && (red || MR?.flat !== undefined)) && (black || red);
+  if (single && length && !ST.ornek && ST.set.kaynak !== "cizgi") {
+    try {
+      const axis = ST.eksen;
+      const [x0, y0, x1, y1] = bounds();
+      const half = Math.hypot(x1 - x0, y1 - y0) + 50;
+      if (length / (Math.min(+ST.set.kurp || Infinity, +ST.set.step || 10)) > 10000) {
+        throw Error("Bu eksen için kesit aralığını büyüt.");
+      }
+      planSections.single = sectionsAlongAxis(single, single, axis, projectSectionStations(axis), sectionBoundary(), half, false, false);
+      planSections.singleName = black ? "Siyah arazi" : "Kırmızı proje";
+    } catch (error) {
+      planSectionStatus(error.message, true);
+      renderPlanSectionList(old);
+      return;
+    }
+  }
+  const count = planSectionRows().length;
+  let message;
+  if (count) message = `${count} enkesit · ${SECS.length ? "Kazı / dolgu alanları" : planSections.singleName + " kotları"}`;
+  else if (ST.set.kaynak === "cizgi") message = "Çizimden alınan geçerli kesit yok. Aralıkla üretmek için Kesitleri çiz’i kullan.";
+  else if (!black && !red) message = "Veri / Yüzeyler’den üçgen yüzeyi yükle.";
+  else if (!length) message = "Önce ekseni çiz veya çizgi seç.";
+  else message = "Kesit oluşmadı. Eksenin, sınırın ve modelin örtüşmesini kontrol et.";
+  planSectionStatus(message, !count);
+  renderPlanSectionList(old);
+}
+function renderPlanSectionList(previousKm) {
+  const rows = planSectionRows();
+  const select = $("planSectionsStation");
+  select.replaceChildren(...rows.map((section, i) => new Option(K.kmtxt(section.km), String(i))));
+  const previousIndex = rows.findIndex(section => K.kmtxt(section.km) === previousKm);
+  selectPlanSection(previousIndex >= 0 ? previousIndex : Math.min(SEL, rows.length - 1));
+}
+function selectPlanSection(index, reveal = false) {
+  const rows = planSectionRows();
+  const section = rows[index];
+  $("planSectionsResult").hidden = !section;
+  if (section) {
+    planSections.index = index;
+    if (SECS.length) { SEL = index; markSectionRow(); }
+    $("planSectionsStation").value = String(index);
+    $("planSectionsPrev").disabled = index === 0;
+    $("planSectionsNext").disabled = index + 1 === rows.length;
+    $("planSectionsValues").textContent = SECS.length
+      ? `Siyah arazi · Kırmızı proje   |   Kazı ${K.tr(section.kazi)} m² · Dolgu ${K.tr(section.dolgu)} m²`
+      : planSections.singleName + " · Tek yüzey";
+    paintPlanSection(section, !!SECS.length);
+    if (reveal) planSectionPanel.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+  draw();
+}
+function paintPlanSection(section, compare) {
+  const canvas = $("planSectionsChart");
+  const g = canvas.getContext("2d");
+  const { width, height } = canvas;
+  const series = compare ? [[1, "#202c3b"], [2, "#bc2840"]]
+    : [[1, planSections.singleName === "Siyah arazi" ? "#202c3b" : "#bc2840"]];
+  let x0 = 0, x1 = 0, z0 = Infinity, z1 = -Infinity;
+  for (const part of section.parts) for (const point of part) {
+    x0 = Math.min(x0, point[0]); x1 = Math.max(x1, point[0]);
+    for (const [key] of series) { z0 = Math.min(z0, point[key]); z1 = Math.max(z1, point[key]); }
+  }
+  if (z1 - z0 < .05) { z0 -= .05; z1 += .05; }
+  const left = 95, top = 22, right = width - 30, bottom = height - 46;
+  const x = v => left + (v - x0) / Math.max(.001, x1 - x0) * (right - left);
+  const y = v => bottom - (v - z0) / (z1 - z0) * (bottom - top);
+  g.fillStyle = "#f5f9fc"; g.fillRect(0, 0, width, height);
+  g.font = "22px Arial";
+  g.textAlign = "right"; g.textBaseline = "middle";
+  for (let i = 0; i <= 4; i++) {
+    const z = z0 + (z1 - z0) * i / 4;
+    const py = y(z);
+    g.strokeStyle = "#d7e2eb"; g.lineWidth = 1;
+    g.beginPath(); g.moveTo(left, py); g.lineTo(right, py); g.stroke();
+    g.fillStyle = "#41566a"; g.fillText(K.tr(z, 2), left - 8, py);
+  }
+  g.strokeStyle = "#8298ac"; g.setLineDash([6, 6]);
+  g.beginPath(); g.moveTo(x(0), top); g.lineTo(x(0), bottom); g.stroke(); g.setLineDash([]);
+  g.textAlign = "left"; g.fillText(K.tr(x0) + " m", left, bottom + 25);
+  g.textAlign = "right"; g.fillText(K.tr(x1) + " m", right, bottom + 25);
+  for (const [key, color] of series) {
+    g.strokeStyle = color; g.lineWidth = 4; g.beginPath();
+    for (const part of section.parts) part.forEach((p, i) => {
+      if (i) g.lineTo(x(p[0]), y(p[key])); else g.moveTo(x(p[0]), y(p[key]));
+    });
+    g.stroke();
+  }
+}
+function drawPlanSectionStations(dpr, dark) {
+  if (planSectionPanel.hidden || !$("lyX").checked) return;
+  const rows = planSectionRows();
+  ctx.save();
+  ctx.font = `600 ${11 * dpr}px Arial`;
+  ctx.textAlign = "left"; ctx.textBaseline = "bottom";
+  let lastX = -Infinity, lastY = -Infinity;
+  for (let i = 0; i < rows.length; i++) {
+    const section = rows[i], selected = i === (SECS.length ? SEL : planSections.index);
+    if (!SECS.length) {
+      ctx.strokeStyle = selected ? "#ce831d" : "#3685bf";
+      ctx.lineWidth = (selected ? 2.5 : 1) * dpr;
+      ctx.beginPath();
+      for (const [a, b] of section.line) { ctx.moveTo(sx(a[0]), sy(a[1])); ctx.lineTo(sx(b[0]), sy(b[1])); }
+      ctx.stroke();
+    }
+    const x = sx(section.center[0]), y = sy(section.center[1]);
+    if (x < 0 || x > cv.width || y < 0 || y > cv.height) continue;
+    if (!selected && Math.abs(x - lastX) < 74 * dpr && Math.abs(y - lastY) < 19 * dpr) continue;
+    const label = K.kmtxt(section.km);
+    ctx.lineWidth = 3 * dpr; ctx.strokeStyle = dark ? "#071321" : "#fff";
+    ctx.fillStyle = selected ? (dark ? "#ffcb72" : "#9c570b") : (dark ? "#96d4ee" : "#1b5d89");
+    ctx.strokeText(label, x + 6 * dpr, y - 5 * dpr);
+    ctx.fillText(label, x + 6 * dpr, y - 5 * dpr);
+    lastX = x; lastY = y;
+  }
+  ctx.restore();
+}
+function tapPlanSectionStation(x, y) {
+  if (planSectionPanel.hidden || !$("lyX").checked) return false;
+  let nearest = -1, distance = 12;
+  planSectionRows().forEach((section, index) => {
+    for (const [a, b] of section.line) {
+      const d = segDist(x, y, sx(a[0]) / DPR, sy(a[1]) / DPR, sx(b[0]) / DPR, sy(b[1]) / DPR);
+      if (d < distance) { distance = d; nearest = index; }
+    }
+  });
+  if (nearest < 0) return false;
+  selectPlanSection(nearest, true);
+  return true;
+}
+function pickPlanSectionAxis(x, y) {
+  let chosen = null, distance = 16;
+  for (const layer of ST.katmanlar || []) {
+    if (!layer.show) continue;
+    const lines = [...layer.lines, ...layer.polys.filter(poly => !poly.c).map(poly => poly.p)];
+    for (const line of lines) for (let i = 1; i < line.length; i++) {
+      const a = line[i - 1], b = line[i];
+      const d = segDist(x, y, sx(a[0]) / DPR, sy(a[1]) / DPR, sx(b[0]) / DPR, sy(b[1]) / DPR);
+      if (d < distance) { distance = d; chosen = { line, name: layer.lay }; }
+    }
+  }
+  if (!chosen) { $("dbTxt").textContent = "Açık bir çizgiye dokun veya İptal’e bas."; return; }
+  const axis = chosen.line.filter((p, i, points) => !i || Math.hypot(p[0] - points[i - 1][0], p[1] - points[i - 1][1]) > 1e-6);
+  if (axis.length < 2) { $("dbTxt").textContent = "Çizgi eksen oluşturmak için çok kısa."; return; }
+  psnap();
+  ST.eksen = axis.map(p => p.slice(0, 2));
+  ST.eksenSrc = chosen.name || "Plandan seçilen çizgi";
+  startMode(null); save(); renderAlanlar(); recalcIfReady();
+  planSectionPanel.scrollIntoView({ block: "start", behavior: "smooth" });
+}
+function applyPlanSectionSettings() {
+  try {
+    const axis = ST.eksen?.length > 1 ? ST.eksen : (SECS.length ? AUTOAX : null);
+    const length = axis?.length > 1 ? K.perim(axis, false) : 0;
+    if (!length) throw Error("Önce ekseni çiz veya çizgi seç.");
+    const step = K.num($("planSectionsStep").value);
+    const km0 = K.kmNum($("planSectionsStart").value);
+    const width = $("planSectionsScope").value === "width";
+    const useWidths = width || !ST.alanlar.some(area => area.kubaj);
+    const wL = useWidths ? K.num($("planSectionsLeft").value) : ST.set.wL;
+    const wR = useWidths ? K.num($("planSectionsRight").value) : ST.set.wR;
+    const extra = $("planSectionsExtra").value.trim().split(/[;\s]+/).filter(Boolean).map(K.num);
+    if (!Number.isFinite(step) || step < .1 || length / Math.min(step, +ST.set.kurp || Infinity) > 10000) {
+      throw Error("Kesit aralığını en az 0,10 m yap. Uzun eksenlerde aralığı büyüt.");
+    }
+    if (!Number.isFinite(km0) || km0 < 0) throw Error("Geçerli bir başlangıç kilometresi gir.");
+    if (useWidths && (![wL, wR].every(v => Number.isFinite(v) && v >= 0) || wL + wR <= 0)) {
+      throw Error("Sağ ve sol genişlikler sıfır veya pozitif olmalı; toplam sıfır olamaz.");
+    }
+    if (extra.length > 200 || extra.some(v => !Number.isFinite(v) || v < 0 || v > length + 1e-6)) {
+      throw Error("Eksen içinde en fazla 200 ara kesit mesafesi gir. Değerleri noktalı virgülle ayır.");
+    }
+    Object.assign(ST.set, { step, km0, wL, wR, kaynak: "aralik", kesitSinir: width ? "width" : "auto", kesitAra: extra, kesitKose: $("planSectionsVertices").checked });
+    $("sKay").value = "aralik";
+    $("sStep").value = step;
+    $("sWL").value = wL; $("sWR").value = wR;
+    for (const id of ["sKm0", "vKm0", "eKm0"]) $(id).value = K.kmtxt(km0);
+    syncPlanSectionInputs(); save(); renderAlanlar(); recalcIfReady();
+  } catch (error) { planSectionStatus(error.message, true); }
+}
+function openPlanSections() {
+  planSectionPanel.hidden = false;
+  $("planSectionsOpen").setAttribute("aria-expanded", "true");
+  syncPlanSectionInputs(); refreshPlanSections();
+  planSectionPanel.scrollIntoView({ block: "start", behavior: "smooth" });
+}
+function closePlanSections() {
+  if (MODE === "enkesit-eksen") startMode(null);
+  planSectionPanel.hidden = true;
+  planSections.single = [];
+  $("planSectionsOpen").setAttribute("aria-expanded", "false");
+  draw();
+}
+window.cancelPlanSectionPick = () => { if (MODE === "enkesit-eksen") startMode(null); };
+window.openKubajPlanSections = async () => {
+  if ($("v-plan").hidden) await showTab("plan");
+  if (!$("v-plan").hidden) openPlanSections();
+};
+$("planSectionsOpen").onclick = () => planSectionPanel.hidden ? openPlanSections() : closePlanSections();
+$("planSectionsClose").onclick = closePlanSections;
+$("planSectionsDrawAxis").onclick = () => {
+  closePop(); startMode("eksen"); $("planBox").scrollIntoView({ block: "center", behavior: "smooth" });
+};
+$("planSectionsPickAxis").onclick = () => {
+  closePop(); startMode("enkesit-eksen");
+  $("planBox").scrollIntoView({ block: "center", behavior: "smooth" });
+};
+$("planSectionsBoundary").onclick = () => {
+  $("kubBoundary").click(); $("planBox").scrollIntoView({ block: "center", behavior: "smooth" });
+};
+$("planSectionsScope").onchange = updatePlanSectionScope;
+$("planSectionsApply").onclick = applyPlanSectionSettings;
+$("planSectionsStation").onchange = e => selectPlanSection(+e.target.value);
+$("planSectionsPrev").onclick = () => selectPlanSection(planSections.index - 1);
+$("planSectionsNext").onclick = () => selectPlanSection(planSections.index + 1);
+$("planSectionsFromReport").onclick = window.openKubajPlanSections;
+$("planSectionsReport").onclick = async () => {
+  await showTab("kesit");
+  if (!$("v-kesit").hidden) $("planSectionsFromReport").closest(".card").scrollIntoView({ block: "start", behavior: "smooth" });
+};
+
+function recalcIfReady() { const prior=kubVolumeBatch;kubVolumeBatch=new Map();try { try { surfDiff(); } catch (e) { console.error(e); } try { pKubGoster(false); } catch (e) {} if (readiness()) calc(); else { SECS = []; TOT = { kazi: 0, dolgu: 0, siy: 0 }; SV = null; renderTable(); preview(); totals(); } if (!$("v-plan").hidden) draw(); }finally{kubVolumeBatch=prior;} refreshPlanSections(); }
 let TOT = { kazi: 0, dolgu: 0, siy: 0 }, SV = null;
 function clearSectionResult(){SECS=[];TOT={kazi:0,dolgu:0,siy:0};SV=null;renderTable();preview();totals();}
 function calc() { try { calc0(); } catch (e) { clearSectionResult();msgK("Hesap sırasında hata: " + e.message, true); console.error(e); } readiness(); }
 function calc0() {
-  const t0 = performance.now(); const s = ST.set; const poly = (ST.alanlar.find(a => a.kubaj) || {}).pts;
+  const t0 = performance.now(); const s = ST.set; const poly = sectionBoundary();
   if (!MS) { clearSectionResult();msgK("Önce siyah kot dosyasını yükle.", true); return; } if (!MR) { clearSectionResult();msgK("Kırmızı kotu tanımla.", true); return; } AUTOAX = ST.eksen && ST.eksen.length > 1 ? null : autoAxisNow(); const AX = AUTOAX || ST.eksen; if (!AX) { clearSectionResult();msgK("Eksen kurulamadı: alan ya da model yok.", true); return; }
-  const stp = +s.step > 0 ? +s.step : 10; const st = K.stations(AX, stp, +s.kurp > 0 ? Math.min(+s.kurp, stp) : 0, isFinite(+s.ang) ? +s.ang : 2, +s.km0 || 0);
+  const st = projectSectionStations(AX);
   const [x0, y0, x1, y1] = bounds(); const half = Math.hypot(x1 - x0, y1 - y0) + 50;
   SECS = [];
   const KL = s.kaynak === "cizgi" && ST.kesitLay && (ST.katmanlar || []).find(k => k.lay === ST.kesitLay);
@@ -11295,21 +11690,23 @@ function calc0() {
     run(AX, st.ch);
     // km yazıları eksenin tersine artıyorsa ekseni çevir (sağ = artı, sol = eksi kalsın)
     const kw = SECS.filter(x => x.kmYazi); if (kw.length >= 2 && (kw[kw.length - 1].ch - kw[0].ch) < 0) { const rv = AX.slice().reverse(); const c2 = [0]; for (let i = 1; i < rv.length; i++) c2.push(c2[i - 1] + Math.hypot(rv[i][0] - rv[i - 1][0], rv[i][1] - rv[i - 1][1])); run(rv, c2); } }
-  else { const mk = v => { const sec = K.section({ S: MS, R: MR, axis: AX, ch: st.ch, s: v, poly, wL: AUTOAX && !poly ? half : +s.wL || 0, wR: AUTOAX && !poly ? half : +s.wR || 0, half }); if (!sec.parts.length) return null; K.areas(sec, SYE(), +s.esik || 0, +s.kesik || 0); sec.km = Math.round((v + (+s.km0 || 0)) * 1000) / 1000; return sec; };
-    const LS = st.list, RS = LS.map(mk); let i0 = RS.findIndex(Boolean), i1 = -1; for (let i = RS.length - 1; i >= 0; i--) if (RS[i]) { i1 = i; break; }
-    /* alanın başı/sonu iki kesit arasına (ya da tam kesit çizgisine) düşüyorsa sınırda kesit ekle: uç hacimler kaybolmasın */
-    const sinir = (a, b) => { let ok = mk(b); if (!ok) return null; for (let k = 0; k < 40 && Math.abs(b - a) > 2e-4; k++) { const m = (a + b) / 2, r = mk(m); if (r) { b = m; ok = r; } else a = m; } return ok; };
-    if (i0 >= 0) { const bas = i0 > 0 ? sinir(LS[i0 - 1], LS[i0]) : null, son = i1 < LS.length - 1 ? sinir(LS[i1 + 1], LS[i1]) : null;
-      if (bas && LS[i0] - (bas.km - (+s.km0 || 0)) > 0.005) SECS.push(bas); for (let i = i0; i <= i1; i++) if (RS[i]) SECS.push(RS[i]); if (son && (son.km - (+s.km0 || 0)) - LS[i1] > 0.005) SECS.push(son); } }
+  else {
+    SECS = sectionsAlongAxis(MS, MR, AX, st, poly, half, AUTOAX && !poly && s.kesitSinir !== "width", true);
+  }
   TOT = K.volumes(SECS); SEL = Math.min(SEL, Math.max(0, SECS.length - 1));
-  SV = null; if (SECS.length) try { const r = kubVolume(MS, MR, poly && poly.length > 2 ? poly : null, SYE(), +s.esik || 0, 250000, +s.kesik || 0); const A = poly && poly.length > 2 ? K.area(poly) : r.ortak; SV = { kazi: r.kazi, dolgu: r.dolgu, kesin: r.kesin, kapsama: A ? r.ortak / A : 1 }; } catch (e) { console.error(e); }
+  SV = null; if (SECS.length && s.kesitSinir !== "width") try { const r = kubVolume(MS, MR, poly && poly.length > 2 ? poly : null, SYE(), +s.esik || 0, 250000, +s.kesik || 0); const A = poly && poly.length > 2 ? K.area(poly) : r.ortak; SV = { kazi: r.kazi, dolgu: r.dolgu, kesin: r.kesin, kapsama: A ? r.ortak / A : 1 }; } catch (e) { console.error(e); }
   msgK(SECS.length ? `${SECS.length} kesit hesaplandı${KL ? ` (${esc(KL.lay)} tabakasındaki çizgilerden${SECS.every(x => x.kmYazi) ? ", km'ler yazılardan" : ""})` : AUTOAX ? " (otomatik eksenle)" : ""} (${Math.round(performance.now() - t0)} ms).` : `Kesit çıkmadı: ${st.list.length} kesit noktası denendi ama hiçbirinde iki model ve kübaj alanı birlikte yok. Eksen kübaj alanını kesiyor mu, iki model alanı kapsıyor mu? Plan sekmesinden kontrol et.`, !SECS.length);
   totals(); renderTable(); preview();
 }
 function msgK(t, err) { $("kMsg").className = "msg" + (err ? " err" : ""); $("kMsg").textContent = t; }
-$("calc").addEventListener("click", calc);
+$("calc").addEventListener("click", () => { calc(); refreshPlanSections(); });
 function anyDol() { return SECS.some(s => s.dol || s.siy > 0); }
 function totals() { const d = anyDol();
+  const scope = $("planSectionsReportScope");
+  scope.hidden = !SECS.length || ST.set.kesitSinir !== "width";
+  scope.textContent = ST.set.kaynak === "cizgi" && ST.kesitLay
+    ? "Kesit sınırı, dosyadan alınan çizgilerin uçlarıdır."
+    : `Enkesit koridoru · sol ${K.tr(+ST.set.wL || 0)} m · sağ ${K.tr(+ST.set.wR || 0)} m`;
   $("tot").innerHTML = `<div><div class="k">Kazı</div><div class="v">${K.tr(TOT.kazi)} <small>m³</small></div></div>` + (d ? `<div><div class="k">Dolgu</div><div class="v">${K.tr(TOT.dolgu)} <small>m³</small></div></div><div><div class="k">Sıyırma</div><div class="v">${K.tr(TOT.siy)} <small>m³</small></div></div>` : "") +
     `<div><div class="k">Kesit</div><div class="v">${SECS.length}</div></div>` +
     (SV && SECS.length ? (() => { const fk = Math.abs(SV.kazi - TOT.kazi), fd = Math.abs(SV.dolgu - TOT.dolgu), top = Math.max(1, SV.kazi + SV.dolgu), y = (fk + fd) / top * 100; const cls = y <= 2 ? "ok" : y <= 5 ? "warn" : "bad";
@@ -11671,6 +12068,7 @@ function kaInit(){
 
 if(document.readyState==="loading")window.addEventListener("DOMContentLoaded",kaInit,{once:true});else queueMicrotask(kaInit);
 function boot() {
+  if (!planSectionPanel.hidden) syncPlanSectionInputs();
   PUNDO.length=0;$("tUndoP").hidden=true;if($("profBox")){$("profBox").remove();PROF=null;}if($("kub3Panel")?.open)$("kub3Panel").close();
   $("sdB_alan").checked=ST.set.sdb==="alan";document.querySelector("input[name=sdb][value=ortak]").checked=!$("sdB_alan").checked;
   $("maxE").value = ST.set.maxE; $("maxEK").value = ST.set.maxEK; $("kSabit").value = Number.isFinite(K.num(ST.R.flat)) ? ST.R.flat : "";
@@ -31584,6 +31982,14 @@ function ecOpen(){
       if(action==='generate')ecGenerate();if(action==='csv')ecExportCSV();if(action==='dxf')ecExportDXF();if(action==='diff-csv')ecExportDiffCSV();
       if(action==='prev')ecPage(EC.page-1);if(action==='next')ecPage(EC.page+1);if(action==='place')ecPlace();if(action==='save-json')ecExportJSON();if(action==='open-json')ecEl('ecJsonFile').click();if(action==='merge-json')ecEl('ecMergeFile').click();if(action==='add-stage')ecAddStage();if(action==='refresh-models'){ecRefreshSource();ecStatus('Güncel yüzey listesi yenilendi.');}if(action==='copy-stage')ecCopyStage();if(action==='add-point')ecAddPoint();
     }));
+    const planLink=document.createElement("button");
+    planLink.type="button";
+    planLink.textContent="Plan ve Sınır’da aç";
+    b.querySelector(".ec-actions").appendChild(planLink);
+    planLink.addEventListener("click", async () => {
+      await window.openKubajPlanSections();
+      if (!document.getElementById("v-plan").hidden) ecClose();
+    });
     b.querySelectorAll('input[name="ecMode"]').forEach(el=>el.addEventListener('change',()=>{
       EC.mode=el.value;ecEl('ecWidthControls').hidden=EC.mode!=='width';ecEl('ecAreaControls').hidden=EC.mode!=='area';ecInputsChanged();
     }));
