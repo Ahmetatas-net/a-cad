@@ -1,0 +1,358 @@
+/* KGM controls share the A-CAD workbench palette. Drawing and print surfaces stay paper-toned. */
+:root {
+  --kgm-shell: #233441;
+  --kgm-shell-border: #40566b;
+  --kgm-shell-text: #edf6fa;
+  --kgm-shell-muted: #c2d4df;
+  --kgm-bg: var(--bg, #f2f5f6);
+  --kgm-card: var(--card, #fff);
+  --kgm-ink: var(--ink, #263544);
+  --kgm-muted: var(--muted, #5b6b78);
+  --kgm-line: var(--line, #d4e0e5);
+  --kgm-soft: var(--soft, #eff4f6);
+  --kgm-focus: #2381a9;
+  --kgm-accent: #176784;
+  --kgm-accent-hover: #12546f;
+  --kgm-accent-ink: #fff;
+  --kgm-status: #285e74;
+  --kgm-danger: #973c31;
+  --kgm-danger-bg: #f8efeb;
+  --kgm-paper: #f6f8fa;
+  --kgm-radius: 10px;
+  --kgm-ui: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+}
+
+:root[data-acad-look="night"] {
+  --kgm-shell: #192532;
+  --kgm-shell-border: #344655;
+  --kgm-focus: #8dc5df;
+  --kgm-accent: #176784;
+  --kgm-accent-hover: #237c9a;
+  --kgm-status: #b1d7e6;
+  --kgm-danger: #ffbbad;
+  --kgm-danger-bg: #422f30;
+}
+
+#v-apl[data-active-module="kam"]:not([hidden]) > #kamModeBar {
+  display: flex !important;
+  grid-column: 1 / -1;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 5px;
+  padding: 5px;
+  background: var(--kgm-shell);
+  border: 1px solid var(--kgm-shell-border);
+  border-radius: var(--kgm-radius);
+  scroll-margin-top: 60px;
+}
+
+#kamModeBar button {
+  margin: 0;
+  min-height: 37px;
+  padding: 6px 12px;
+  color: var(--kgm-shell-muted);
+  font: 650 13px/1.25 var(--kgm-ui);
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  touch-action: manipulation;
+}
+
+#kamModeBar button[aria-pressed="true"] {
+  color: var(--kgm-accent-ink);
+  background: var(--kgm-accent);
+  border-color: #5a9eb5;
+}
+
+#kamModeBar button:not([data-mode]) {
+  margin-inline-start: auto;
+  border-color: var(--kgm-shell-border);
+}
+
+#v-apl[data-active-module="kam"]:not(.kgm-advanced) > #kgmWorkspace {
+  background: var(--kgm-bg);
+}
+
+#kgmWorkspace > #kgmOriginalFiles {
+  margin: 0 14px 10px;
+  padding: 11px 14px;
+  color: var(--kgm-ink);
+  background: var(--kgm-card);
+  border: 1px solid var(--kgm-line);
+  border-radius: var(--kgm-radius);
+}
+
+#kgmWorkspace > #kgmOriginalFiles summary { font-weight: 650; cursor: pointer; }
+#kgmWorkspace > #kgmOriginalFiles p { color: var(--kgm-muted); }
+#kgmOther { margin: 0 14px 14px; }
+
+.kgm-page {
+  color-scheme: only light;
+  background: var(--kgm-bg);
+  color: var(--kgm-ink);
+  font: 14px/1.5 var(--kgm-ui);
+  font-variant-numeric: tabular-nums;
+}
+
+.kgm-page[data-acad-look="night"] {
+  color-scheme: dark;
+  --kgm-bg: #141b24;
+  --kgm-card: #202b37;
+  --kgm-ink: #e7edf3;
+  --kgm-muted: #b3c1cd;
+  --kgm-line: #354654;
+  --kgm-soft: #192532;
+}
+
+.kgm-page *, .kgm-page *::before, .kgm-page *::after { box-sizing: border-box; }
+.kgm-page [hidden] { display: none !important; }
+.kgm-page body { margin: 0; }
+.kgm-page main {
+  display: grid;
+  gap: 10px;
+  max-width: 1520px;
+  margin: auto;
+  padding: 14px;
+}
+
+.kgm-page header {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--kgm-line);
+  font-size: 17px;
+  font-weight: 760;
+}
+
+.kgm-page.embedded header { display: none; }
+.kgm-page h1, .kgm-page h2, .kgm-page p { margin: 0; }
+.kgm-page h1 { font-size: clamp(19px, 2.4vw, 25px); font-weight: 720; line-height: 1.2; }
+.kgm-page h2 { font-size: 15px; font-weight: 700; }
+.kgm-page label { display: grid; min-width: 0; gap: 4px; font-size: 13px; font-weight: 600; }
+.kgm-page p { color: var(--kgm-muted); }
+
+.kgm-page .kgm-heading {
+  color: var(--kgm-shell-text);
+  background: var(--kgm-shell);
+  border: 1px solid var(--kgm-shell-border);
+  border-radius: var(--kgm-radius);
+  padding: 12px 15px;
+}
+
+.kgm-page .steps, .kgm-page .files, .kgm-page .kgm-fields, .kgm-page .layer-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.kgm-page .files, .kgm-page .layer-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.kgm-page .steps article,
+.kgm-page .kgm-actions,
+.kgm-page #sourceCard,
+.kgm-page .work,
+.kgm-page #checks,
+.kgm-page #layerSettings,
+.kgm-page .extras {
+  min-width: 0;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--kgm-line);
+  border-radius: var(--kgm-radius);
+  background: var(--kgm-card);
+}
+
+.kgm-page .steps article { display: grid; align-content: start; gap: 6px; }
+.kgm-page .steps article p, .kgm-page #kgmOptions p, .kgm-page .files p { font-size: 12px; }
+.kgm-page .steps :is(#borderFileRow, #layerRow) { margin-top: 2px; }
+.kgm-page #cksRow { display: grid; gap: 6px; }
+.kgm-page #kgmOptions p { margin-top: 8px; }
+
+.kgm-page :is(button, input, select) {
+  min-height: 39px;
+  border-radius: 7px;
+  border: 1px solid var(--kgm-line);
+  color: var(--kgm-ink);
+  font: inherit;
+}
+
+.kgm-page :is(input, select) { display: block; width: 100%; max-width: 100%; min-width: 0; padding: 7px 9px; background: var(--kgm-soft); }
+.kgm-page input::placeholder { color: var(--kgm-muted); }
+.kgm-page button {
+  padding: 7px 10px;
+  background: var(--kgm-soft);
+  font-weight: 650;
+  line-height: 1.25;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.kgm-page button:disabled { opacity: .62; cursor: default; }
+.kgm-page #kgmPrepare, .kgm-page #hitUse, .kgm-page #sourcePick[aria-pressed="true"] {
+  background: var(--kgm-accent);
+  color: var(--kgm-accent-ink);
+  border-color: var(--kgm-accent);
+}
+
+.kgm-page #kgmPrepare { min-height: 44px; padding-inline: 15px; }
+.kgm-page :is(button, input, select, summary):focus-visible,
+#kamModeBar button:focus-visible,
+#kgmWorkspace :is(button, input, select, summary):focus-visible {
+  outline: 2px solid var(--kgm-focus);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  .kgm-page button:not(:disabled):hover { border-color: var(--kgm-focus); }
+  .kgm-page #kgmPrepare:not(:disabled):hover { background: var(--kgm-accent-hover); }
+  #kamModeBar button:not([aria-pressed="true"]):hover { background: #ffffff14; color: var(--kgm-shell-text); }
+}
+
+.kgm-page .picks {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 39px;
+  padding: 4px 6px;
+  min-width: 0;
+  background: var(--kgm-soft);
+  border: 1px solid var(--kgm-line);
+  border-radius: 7px;
+}
+
+.kgm-page .picks input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.kgm-page .picks:focus-within { outline: 2px solid var(--kgm-focus); outline-offset: 2px; }
+.kgm-page .picks strong { flex: none; padding: 3px 6px; border: 1px solid var(--kgm-line); border-radius: 5px; background: var(--kgm-card); }
+.kgm-page .picks small { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--kgm-muted); font-size: 12px; }
+
+.kgm-page .kgm-action-header, .kgm-page .source-head, .kgm-page .report-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+
+.kgm-page .kgm-pending, .kgm-page #sourceCount, .kgm-page #pickInfo, .kgm-page #log,
+.kgm-page #details, .kgm-page #editing, .kgm-page #modeHint, .kgm-page #sheetNote {
+  color: var(--kgm-muted);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.kgm-page .kgm-pending:empty, .kgm-page #log:empty, .kgm-page #kgmResult:empty, .kgm-page #modeHint:empty, .kgm-page #pickInfo:empty { display: none; }
+.kgm-page #kgmResult:not(:empty) {
+  margin-top: 8px;
+  padding: 7px 10px;
+  border-inline-start: 3px solid var(--kgm-focus);
+  border-radius: 4px;
+  background: var(--kgm-soft);
+  color: var(--kgm-status);
+  overflow-wrap: anywhere;
+}
+
+.kgm-page #kgmResult[data-error="true"] { background: var(--kgm-danger-bg); color: var(--kgm-danger); border-inline-start-color: var(--kgm-danger); }
+.kgm-page .kgm-options-row { display: flex; flex-wrap: wrap; gap: 0 16px; margin-top: 8px; border-top: 1px solid var(--kgm-line); }
+.kgm-page .kgm-options-row > details { margin: 0; }
+.kgm-page .kgm-options-row > details[open] { flex-basis: 100%; }
+.kgm-page .kgm-options-row > details > summary { color: var(--kgm-status); }
+.kgm-page summary { padding-block: 7px; cursor: pointer; font-weight: 650; }
+.kgm-page .layer-fields, .kgm-page .files { padding-top: 6px; }
+
+.kgm-page .source-head { margin-bottom: 8px; }
+.kgm-page .source-meta { min-width: 0; max-width: 100%; }
+.kgm-page #sourceTitle { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kgm-page .sourceActions, .kgm-page .source-zoom,
+.kgm-page .actionbar, .kgm-page #hitOptions, .kgm-page .toolrow, .kgm-page #xyArea:not([hidden]), .kgm-page #needsReview {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 6px;
+}
+.kgm-page .sourceActions { justify-content: flex-end; }
+.kgm-page .source-zoom { flex-wrap: nowrap; }
+.kgm-page .source-zoom button { min-width: 39px; font-size: 16px; }
+.kgm-page #hitOptions:not([hidden]) { margin-top: 8px; }
+.kgm-page #hitOptions select { flex: 1 1 175px; }
+.kgm-page #sourceCanvas, .kgm-page #map, .kgm-page #sheetSvg {
+  display: block;
+  width: 100%;
+  background: var(--kgm-paper);
+  border: 1px solid var(--kgm-line);
+  border-radius: 7px;
+}
+
+.kgm-page #sourceCanvas { height: clamp(215px, 29vw, 400px); touch-action: none; border: 0; outline: 1px solid var(--kgm-line); outline-offset: -1px; }
+.kgm-page #pickInfo:not(:empty) { margin-top: 6px; }
+.kgm-page #map { height: clamp(220px, 30vw, 420px); }
+.kgm-page #sheetSvg { max-height: 540px; background: white; }
+.kgm-page .kgm-results { display: grid; min-width: 0; align-items: start; gap: 10px; }
+.kgm-page .kgm-results:not(:has(#editor:not([hidden]), #checks:not([hidden]))),
+.kgm-page .work:has(#editor[hidden]) { display: none; }
+
+.kgm-page .report-head { margin-bottom: 8px; }
+.kgm-page .report-head label { flex: 0 1 300px; }
+.kgm-page .metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 0 0 8px; }
+.kgm-page .metric { background: var(--kgm-soft); border: 1px solid var(--kgm-line); border-radius: 7px; padding: 6px 9px; color: var(--kgm-muted); font-size: 12px; }
+.kgm-page .metric b { display: block; color: var(--kgm-ink); font-size: clamp(13px, 1.4vw, 18px); overflow-wrap: anywhere; }
+.kgm-page .legend { display: flex; flex-wrap: wrap; gap: 3px 14px; margin: 7px 0; color: var(--kgm-muted); font-size: 12px; }
+.kgm-page .key { display: inline-block; width: 12px; height: 9px; border-radius: 2px; margin-right: 4px; }
+.kgm-page [data-edit="sinir"], .kgm-page [data-edit="yazi"] { cursor: grab; }
+.kgm-page #editor { border-top: 1px solid var(--kgm-line); padding-top: 9px; margin-top: 10px; }
+.kgm-page #editor details, .kgm-page #viewSheet { margin-top: 6px; }
+.kgm-page #editor details > summary { border-top: 1px solid var(--kgm-line); }
+.kgm-page .toolrow > label, .kgm-page #xyArea > label { flex: 1 1 115px; }
+
+.kgm-page .ownerRow {
+  display: grid;
+  grid-template-columns: minmax(70px, 2fr) minmax(55px, 1fr) 60px 60px auto;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.kgm-page #audit, .kgm-page #needsReview, .kgm-page #sheetNote { margin: 6px 0; }
+.kgm-page #needsReview:empty { display: none; }
+.kgm-page #needsReview button { background: var(--kgm-danger-bg); color: var(--kgm-danger); }
+.kgm-page .scroll { max-height: 330px; overflow: auto; border: 1px solid var(--kgm-line); border-radius: 7px; }
+.kgm-page table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+.kgm-page :is(td, th) { padding: 6px 8px; border-bottom: 1px solid var(--kgm-line); white-space: nowrap; text-align: right; }
+.kgm-page :is(td, th):first-child { text-align: left; }
+.kgm-page th { position: sticky; top: 0; background: var(--kgm-soft); }
+.kgm-page dialog { width: min(93vw, 1050px); max-height: 90dvh; padding: 12px; border: 1px solid var(--kgm-line); border-radius: var(--kgm-radius); color: var(--kgm-ink); background: var(--kgm-card); }
+.kgm-page dialog::backdrop { background: #0f1d29a0; }
+.kgm-page.embedded #sheetDialog[open] { position: static; width: 100%; max-height: none; margin: 9px 0; }
+.kgm-page .extras > summary { padding-block: 2px; }
+.kgm-page .files label { margin-block: 5px; }
+.kgm-page .files button { margin-top: 4px; }
+
+@media (min-width: 1120px) {
+  .kgm-page .kgm-results:has(#checks:not([hidden])) { grid-template-columns: minmax(0, 1.7fr) minmax(320px, 1fr); }
+}
+
+@media (max-width: 700px) {
+  #kamModeBar button { flex: 1 1 140px; min-height: 40px; padding-inline: 5px; }
+  #kamModeBar button:not([data-mode]) { margin-inline-start: 0; }
+  .kgm-page main { gap: 8px; padding: 8px; }
+  .kgm-page :is(.kgm-heading, .steps article, .kgm-actions, #sourceCard, .work, #checks, #layerSettings, .extras) { padding: 9px 10px; }
+  .kgm-page .steps, .kgm-page .files { grid-template-columns: minmax(0, 1fr); gap: 7px; }
+  .kgm-page .steps article { gap: 4px; }
+  .kgm-page .kgm-fields { grid-template-columns: repeat(auto-fit, minmax(min(145px, 100%), 1fr)); }
+  .kgm-page :is(button, input, select), .kgm-page .picks { min-height: 44px; }
+  .kgm-page :is(input, select) { font-size: 16px; }
+  .kgm-page .kgm-action-header, .kgm-page .source-head { gap: 7px; }
+  .kgm-page #kgmPrepare, .kgm-page .sourceActions, .kgm-page .report-head label { width: 100%; }
+  .kgm-page .sourceActions { justify-content: flex-start; }
+  .kgm-page .ownerRow { grid-template-columns: minmax(55px, 2fr) minmax(45px, 1fr) 40px 40px auto; }
+  .kgm-page .ownerRow input { padding-inline: 4px; }
+  .kgm-page .metric { padding-inline: 5px; }
+  #kgmWorkspace > #kgmOriginalFiles { margin: 0 8px 8px; }
+  #kgmOther { margin: 0 8px 8px; }
+}
+
+@media (max-width: 355px) {
+  .kgm-page .layer-fields { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 440px) {
+  .kgm-page .sourceActions { display: grid; grid-template-columns: auto minmax(0, 1fr); }
+  .kgm-page #sourcePick { grid-column: 1 / -1; }
+}

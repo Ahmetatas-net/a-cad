@@ -1510,11 +1510,10 @@ body.kub-focus.kub-tools-open #v-plan #kubPlanTools{top:var(--plan-tools-top,66p
 #v-apl[data-active-module=kam]:not(.kgm-advanced){display:flex!important;flex-flow:column!important;grid-template-columns:none!important;height:auto!important;max-height:none!important;min-height:0!important;overflow:visible!important}
 #v-apl[data-active-module=kam][hidden]{display:none!important}
 #v-apl[data-active-module=kam]:not(.kgm-advanced)>:not(#kgmWorkspace):not(#kamModeBar){display:none!important}
-#v-apl[data-active-module=kam]:not(.kgm-advanced)>#kgmWorkspace{display:block!important;width:100%;min-width:0;background:#f1f5f5;border-radius:12px;overflow:hidden}
-#kgmWorkspace,#kgmBack{scroll-margin-top:65px}#kgmProjectFrame{display:block;width:100%;border:0;min-height:380px}
-#kgmWorkspace>#kgmOriginalFiles{margin:0 clamp(12px,2vw,30px) 12px;border:1px solid #b1c9c6;border-radius:10px;padding:12px;background:white;color:#244a47}#kgmWorkspace>#kgmOriginalFiles summary{cursor:pointer;font-weight:650}#kgmWorkspace>#kgmOriginalFiles p{color:#395953}#kgmOther{margin:0 16px 16px;background:#f7fbfa;color:#225853;border:1px solid #a7c3be;border-radius:8px;padding:9px 12px}
+#v-apl[data-active-module=kam]:not(.kgm-advanced)>#kgmWorkspace{display:block!important;width:100%;min-width:0;border-radius:12px;overflow:hidden}
+#kgmWorkspace,#kgmBack{scroll-margin-top:65px}#kgmProjectFrame{display:block;width:100%;border:0}#kgmProjectFrame:not([height]){height:360px}
 #v-apl[data-active-module=kam].kgm-advanced>#kgmBack{display:block;grid-column:1/-1;width:fit-content}
-</style></head>
+</style><link rel="stylesheet" href="kgm-arayuz.css"></head>
 <body>
 <script>/* ===== A-CAD kullanıcı girişi (telefon uygulaması sürümü) =====
    Hesaplar sunucudaki users.json dosyasındadır. Dosya yöneticinin özel anahtarıyla imzalıdır;
@@ -53903,7 +53902,7 @@ if(kgmBuild)kgmBuild.onclick=async()=>{
  const section=document.getElementById('v-apl');
  const shell=document.createElement('div');shell.id='kgmWorkspace';
  const frame=document.createElement('iframe');frame.id='kgmProjectFrame';frame.title='Kamulaştırma · Proje, sınır ve tapu kaydı';
- const more=document.createElement('button');more.type='button';more.id='kgmOther';more.textContent='Diğer araçlar · CAD, eksen ve KGM pafta kalıbı';
+ const more=document.createElement('button');more.type='button';more.id='kgmOther';more.textContent='CAD ve pafta araçları';
  const back=document.createElement('button');back.type='button';back.id='kgmBack';back.textContent='← Proje, sınır ve tapu kaydına dön';
  const original=document.getElementById('bpFormatFiles').closest('details'),slot=document.createComment('KGM kaynak paftaları');original.before(slot);
  original.id='kgmOriginalFiles';original.querySelector('summary').textContent='Özgün KGM paftalarını paketle';
@@ -53971,11 +53970,30 @@ if(kgmBuild)kgmBuild.onclick=async()=>{
  };
  document.getElementById('kmFmt').addEventListener('change',e=>{if(section.classList.contains('kgm-advanced')){activeMode=e.target.value==='genel'?'ges':'cad';section.classList.toggle('kgm-ges',activeMode==='ges');selected();}});
  new MutationObserver(sync).observe(section,{attributes:true,attributeFilter:['hidden','data-active-module']});sync();
- frame.addEventListener('load',()=>{const doc=frame.contentDocument;if(!doc?.querySelector('main'))return;doc.documentElement.classList.add('embedded');
- const main=doc.querySelector('main');const resize=()=>{const h=Math.ceil(main.getBoundingClientRect().height);if(h>0&&frame.height!==String(h))frame.height=String(h);};new ResizeObserver(resize).observe(main);resize();});
+ const appRoot=document.documentElement;
+ const syncTheme=()=>{
+   const kgmRoot=frame.contentDocument?.documentElement;
+   if(kgmRoot?.classList.contains('kgm-page'))kgmRoot.dataset.acadLook=appRoot.dataset.acadLook==='night'?'night':'day';
+ };
+ new MutationObserver(syncTheme).observe(appRoot,{attributes:true,attributeFilter:['data-acad-look']});
+ let frameResize;
+ frame.addEventListener('load',()=>{
+   const doc=frame.contentDocument,main=doc?.querySelector('main');
+   if(!main)return;
+   doc.documentElement.classList.add('embedded');
+   syncTheme();
+   frameResize?.disconnect();
+   const resize=()=>{
+     const height=Math.ceil(main.getBoundingClientRect().height);
+     if(height>0&&frame.height!==String(height))frame.height=String(height);
+   };
+   frameResize=new ResizeObserver(resize);
+   frameResize.observe(main);
+   resize();
+ });
 })();
 </script>
-<style>#kamModeBar{display:none}#v-apl[data-active-module=kam]:not([hidden])>#kamModeBar{display:flex!important;grid-column:1/-1;flex-wrap:wrap;gap:6px;padding:7px;border-radius:9px;background:#e3eeec;scroll-margin-top:60px}#kamModeBar button{background:#fff;color:#234a47;border:1px solid #a4c0b9;border-radius:7px;padding:8px 11px}#kamModeBar button[aria-pressed=true]{background:#17645e;color:white}
+<style>#kamModeBar{display:none}
 body.kub-focus #v-plan.kub-modern .plan-workspace{grid-template: auto minmax(0,1fr) / minmax(0,1fr)!important;gap:0;min-height:0;padding:max(6px,env(safe-area-inset-top)) max(6px,env(safe-area-inset-right)) max(6px,env(safe-area-inset-bottom)) max(6px,env(safe-area-inset-left));}
 body.kub-focus #v-plan.kub-modern .plan-map{display:contents!important}
 body.kub-focus #v-plan.kub-modern .plan-mapbar{grid-area:1/1;z-index:2;position:static;min-width:0}body.kub-focus #v-plan.kub-modern .plan-view-actions button{min-height:42px}
@@ -53985,4 +54003,4 @@ body.kub-focus.kub-tools-open #v-plan.kub-modern .plan-workspace>#kubPlanTools{g
 body.kub-focus #v-plan.kub-modern #kubPlanTools>:not(:first-child){margin-top:6px}
 body.kub-focus #v-plan.kub-modern #kubPlanTools .plan-title{display:block}
 @media(min-width:850px){body.kub-focus.kub-tools-open #v-plan.kub-modern .plan-workspace{grid-template-columns:300px minmax(0,1fr)!important}body.kub-focus.kub-tools-open #v-plan.kub-modern .plan-mapbar{grid-column:1/-1}body.kub-focus.kub-tools-open #v-plan.kub-modern .plan-workspace #planBox{grid-column:2}body.kub-focus.kub-tools-open #v-plan.kub-modern .plan-workspace>#kubPlanTools{width:calc(100% - 8px)!important}}
-</style><style>#kmCommandStatus:not(:empty){margin:7px 0;border-inline-start:3px solid #56a8a2;padding:7px 9px;background:var(--panel);font-size:.9rem}#kmCommandStatus[data-error=true]{border-color:#e39c52}#kamModeBar button{touch-action:manipulation}#v-apl.kgm-ges .kgm-quick-prepare{display:none}</style>
+</style><style>#kmCommandStatus:not(:empty){margin:7px 0;border-inline-start:3px solid #56a8a2;padding:7px 9px;background:var(--panel);font-size:.9rem}#kmCommandStatus[data-error=true]{border-color:#e39c52}#v-apl.kgm-ges .kgm-quick-prepare{display:none}</style>
