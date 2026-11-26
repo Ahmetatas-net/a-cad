@@ -1723,6 +1723,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
   <!-- PLAN -->
   <section id="v-plan" class="view kub-modern" hidden style="flex-direction:column;gap:14px">
+    <div id="coverageLegend" class="note" hidden>Eksik yüzey · Mavi-gri siyah arazi · Kırmızı proje <button type="button" data-close-coverage>Kapat</button></div>
     <div id="kubPlanTools" class="tool kub-plan-tools" aria-label="Plan komutları"><div class="kub-plan-main"><label class="filebtn mini" style="margin:0"><span>📂 Dosya aç</span><input type="file" id="tOpen" multiple accept=".dxf,.DXF,.ncz,.NCZ,.ncn,.NCN,.cks,.CKS,.txt,.csv,.xls,.xlsx,.XLS,.XLSX,.geojson,.json,.kml,.kmz"></label><button id="tFit" type="button">Tümünü göster</button><button id="tSorgu" type="button">Kot sorgula</button><button id="tAlan" type="button">Alan çiz</button><button id="tEksen" type="button">Eksen çiz</button><button id="tProf" type="button">Profil çiz</button><button id="tKay" type="button" class="primary">Kaydet</button><button type="button" id="kubAxisProfile">Eksen profili</button><button type="button" id="planSectionsOpen" aria-expanded="false" aria-controls="planSections">Enkesit</button><button type="button" id="quickContour" aria-pressed="false">Hızlı eğri</button><button type="button" id="kub3Open">3B Arazi</button><button type="button" id="kubBoundary">Kübaj sınırı</button><button type="button" data-ka-open>Akıllı kontrol</button></div><div class="kub3-planbar"><label>Üçgen modeli<select id="kub3Target2D"><option value="auto">Otomatik</option><option value="S">Siyah</option><option value="R">Kırmızı</option></select></label><button type="button" id="kub3Fix2D">Otomatik düzelt</button><button id="tUcEk" type="button">△ Üçgen ekle</button><button id="tUcDon" type="button">⤾ Üçgen döndür</button><button id="tUcSil" type="button" class="danger">✕ Üçgen sil</button><span id="kub3PlanStatus" role="status"></span></div><details class="kub-plan-more"><summary>Diğer işlemler · düzenleme, ölçü, üçgen, altlık</summary><div class="kub-plan-extra"><button id="tEdit" type="button" class="primary">✏️ Düzenle (taşı, döndür, kes…)</button><button id="tEksDel" type="button" class="danger" hidden>Ekseni sil</button><button id="tOlc" type="button">📏 Mesafe</button><button id="tASorgu" type="button">▱ Alanı sorgula</button><button id="tNokta" type="button">Nokta ekle</button><button id="tYazi" type="button">A Yazı</button><button id="tSec" type="button">👆 Seç · Sil · Taşı</button><button id="tSil" type="button" class="danger">🗑 Sil</button><button id="tASil" type="button" class="danger">⬠ Alanla sil</button><button id="tUndoP" type="button" hidden>↶ Geri al</button><button id="tBg" type="button">🛰 Altlık</button><button id="tGmap" type="button">🌍 Google</button><button id="tGps" type="button">📍 Konumum</button><button id="tFol" type="button" hidden>⦿ Takip</button></div></details></div>
     <div id="planBox">
       <canvas id="planCv" aria-label="Plan görünümü"></canvas>
@@ -1916,7 +1917,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     <div class="card kub-section-result">
       <h2>Enkesit yöntemi</h2>
       <button type="button" id="planSectionsFromReport" style="margin-bottom:8px">Plan ve Sınır’da enkesit aç</button>
-      <div class="row" style="margin-bottom:8px"><button id="calc" class="primary" type="button">Kesitleri hesapla</button><span class="msg" id="kMsg"></span></div>
+      <div class="row" style="margin-bottom:8px"><button id="calc" class="primary" type="button">Kesitleri hesapla</button><span class="msg" id="kMsg"></span></div><p class="note" id="sectionQuality"></p>
       <div class="stat" id="tot"></div>
       <p class="note" id="planSectionsReportScope" hidden></p>
     </div>
@@ -6159,6 +6160,28 @@ K.tinNoktaSil = (P, T0, ip) => { /* P'den ip çıkarılmadan önceki indekslerle
   /* boşluğu kulak kırparak doldur (halka kapalıysa) */
   const st = halka.keys().next().value; const ring = []; if (st != null) { let c = st, g = 0; do { ring.push(c); c = halka.get(c); } while (c != null && c !== st && g++ < 500); if (c === st && ring.length >= 3) { const R = ring.slice(); let g2 = 0; while (R.length > 3 && g2++ < 1000) { let ok = false; for (let i = 0; i < R.length; i++) { const a = R[(i - 1 + R.length) % R.length], b = R[i], c2 = R[(i + 1) % R.length]; if (or(a, b, c2) <= 1e-9) continue; if (R.some(q => q !== a && q !== b && q !== c2 && or(a, b, q) >= 0 && or(b, c2, q) >= 0 && or(c2, a, q) >= 0)) continue; kalan.push(a, b, c2); R.splice(i, 1); ok = true; break; } if (!ok) break; } if (R.length === 3 && or(R[0], R[1], R[2]) > 1e-9) kalan.push(...R); } }
   return Int32Array.from(kalan.map(i => i > ip ? i - 1 : i)); };
+K.duplicateFace = M => {
+  if (!M?.tri?.length) return null;
+  if (M.grid && Object.hasOwn(M.grid,"duplicateFace")) return M.grid.duplicateFace;
+  const vertices=new Map(), seen=new Set();
+  const ids=M.pts.map(p=>{
+    const xy=p.e+","+p.y;
+    if (!vertices.has(xy)) vertices.set(xy,vertices.size);
+    return vertices.get(xy);
+  });
+  let match=null;
+  for (let i=0;i<M.tri.length;i+=3) {
+    const face=[M.tri[i],M.tri[i+1],M.tri[i+2]];
+    const key=face.map(id=>ids[id]).sort((a,b)=>a-b).join(",");
+    if (seen.has(key)) { match=face; break; }
+    seen.add(key);
+  }
+  if (M.grid) M.grid.duplicateFace=match;
+  return match;
+};
+K.checkVolumeModel = (model,name) => {
+  if (K.duplicateFace(model)) throw Error(name+" modelde üst üste gelen aynı üçgen var. Hesaptan önce üçgeni kontrol et.");
+};
 K.index = M => {
   const P = M.pts, T = M.tri, nt = T.length / 3;
   let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
@@ -6340,7 +6363,7 @@ K.areas = (sec, SY, ES, KES = 0) => { const MOD = SY > 0 ? K.siyMod : "yok", off
     full.push(f);
   }
   const dol = Math.round(fmax * 1000) / 1000 > ES; const kaz = Math.round(-fmin * 1000) / 1000 > KES; if (!kaz) { kz = 0; wk = 0; }
-  sec.full = full; sec.fmax = fmax; sec.dol = dol; sec.tum = MOD === "tum"; sec.siyMod = MOD;
+  sec.kaz=kaz; sec.full = full; sec.fmax = fmax; sec.dol = dol; sec.tum = MOD === "tum"; sec.siyMod = MOD;
   sec.kazi = kz;
   if (MOD === "tum") { sec.siy = SY * wt; sec.dolgu = dol ? dl0 : 0; }
   else if (MOD === "kazi") { sec.siy = SY * wk; sec.dolgu = dol ? dl0 : 0; }
@@ -6351,7 +6374,19 @@ K.areas = (sec, SY, ES, KES = 0) => { const MOD = SY > 0 ? K.siyMod : "yok", off
 K.hacim = (a1, a2, o1, o2, L) => a1 > 5e-4 && a2 > 5e-4 ? (a1 + a2) / 2 * L : a1 > 5e-4 ? a1 * a1 * L / (2 * (a1 + o2)) : a2 > 5e-4 ? a2 * a2 * L / (2 * (a2 + o1)) : 0;
 /* Aynı kuralın Excel formülü (hücre adreslerinden) */
 K.hacimF = (a1, a2, o1, o2, l) => `IF(AND(${a1}>0.0005,${a2}>0.0005),(${a1}+${a2})/2*${l},IF(${a1}>0.0005,${a1}^2*${l}/(2*(${a1}+${o2})),IF(${a2}>0.0005,${a2}^2*${l}/(2*(${a2}+${o1})),0)))`;
-K.volumes = (secs) => { let k = 0, d = 0, s = 0; secs.forEach((x, i) => { if (!i) { x.L = 0; x.kV = x.dV = x.sV = 0; return; } const p = secs[i - 1]; x.L = x.s - p.s;
+K.voidFractions = (S,R,prev,next,poly) => {
+  const midpoint=sec=>sec.line[0][0].map((v,i)=>(v+sec.line[0][1][i])/2);
+  const a=midpoint(prev), b=midpoint(next);
+  const ts=[0,1,...K.edgeHits(S,a,b),...K.edgeHits(R,a,b),...(poly?K.polyHits(poly,a,b):[])].sort((x,y)=>x-y);
+  const probes=[];
+  for(let i=1;i<ts.length;i++){
+    if(ts[i]-ts[i-1]<1e-9)continue;
+    const t=(ts[i]+ts[i-1])/2,x=a[0]+(b[0]-a[0])*t,y=a[1]+(b[1]-a[1])*t;
+    if(K.zAt(S,x,y)==null||K.zAt(R,x,y)==null||(poly&&!K.inPoly(poly,x,y)))probes.push(t);
+  }
+  return probes;
+};
+K.volumes = (secs) => { let k = 0, d = 0, s = 0; secs.forEach((x, i) => { if (!i || x.gapBefore) { x.L = 0; x.kV = x.dV = x.sV = 0; return; } const p = secs[i - 1]; x.L = x.s - p.s;
   x.kV = K.hacim(p.kazi, x.kazi, p.dolgu, x.dolgu, x.L); x.dV = K.hacim(p.dolgu, x.dolgu, p.kazi, x.kazi, x.L); x.sV = (p.siy + x.siy) / 2 * x.L; k += x.kV; d += x.dV; s += x.sV; }); return { kazi: k, dolgu: d, siy: s }; };
 
 /* İki yüzey arası hacim (kontrol): alan içinde ızgara örneklemesi, hücre merkezinde Kırmızı − Siyah */
@@ -6446,8 +6481,8 @@ K.surfDiffExact = (S, R, poly, SY = 0, ES = 0, KES = 0) => {
     const i0 = Math.floor((qb[0] + ox - RG.minx) / RG.cs), i1 = Math.floor((qb[2] + ox - RG.minx) / RG.cs), j0 = Math.floor((qb[1] + oy - RG.miny) / RG.cs), j1 = Math.floor((qb[3] + oy - RG.miny) / RG.cs); const seen = new Set();
     for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) { const l = RG.cells.get(i * RG.ny + j); if (!l) continue; for (const rt of l) { if (seen.has(rt)) continue; seen.add(rt); const tr = rTri(rt); if (!tr || tr.bb[2] < qb[0] || tr.bb[0] > qb[2] || tr.bb[3] < qb[1] || tr.bb[1] > qb[3]) continue; const sub = clipT(pc, tr); if (sub) piece(sub, q => tr.z(q) - ts.z(q)); } } }
   if (!isFinite(fmin)) { fmin = 0; fmax = 0; } return { ortak: ort, kazi: kz, dolgu: dl, siy: TUM ? ort * SY : KAZ ? sk : dA * SY, kaziAlan: kA, dolguAlan: dA, cell: 0, fmin, fmax, kesin: true, tum: TUM }; };
-K.surfDiff = (S, R, poly, SY = 0, ES = 0, maxCells = 250000, KES = 0) => { try { const r = K.surfDiffExact(S, R, poly, SY, ES, KES); if (r) return r; } catch (e) { console.error(e); } return K.surfDiffGrid(S, R, poly, SY, ES, maxCells, KES); };
-K.surfVolume = (S, R, poly, cell, SY = 0) => { try { const r = K.surfDiffExact(S, R, poly, 0, 0, 0); const A = K.area(poly); return { kazi: r.kazi, dolgu: r.dolgu, cell: 0, kapsama: A ? r.ortak / A : 0, alan: A, kesin: true }; } catch (e) { return K.surfVolumeGrid(S, R, poly, cell, SY); } };/* ---------- Şev: baz kotlu platformun kenarından eğimle araziye bağlanan bant ----------
+K.surfDiff = (S, R, poly, SY = 0, ES = 0, maxCells = 250000, KES = 0) => { K.checkVolumeModel(S,"Mevcut"); K.checkVolumeModel(R,"Hedef"); try { const r = K.surfDiffExact(S, R, poly, SY, ES, KES); if (r) return r; } catch (e) { console.error(e); } return K.surfDiffGrid(S, R, poly, SY, ES, maxCells, KES); };
+K.surfVolume = (S, R, poly, cell, SY = 0) => { K.checkVolumeModel(S,"Mevcut"); K.checkVolumeModel(R,"Hedef"); try { const r = K.surfDiffExact(S, R, poly, 0, 0, 0); const A = K.area(poly); return { kazi: r.kazi, dolgu: r.dolgu, cell: 0, kapsama: A ? r.ortak / A : 0, alan: A, kesin: true }; } catch (e) { return K.surfVolumeGrid(S, R, poly, cell, SY); } };/* ---------- Şev: baz kotlu platformun kenarından eğimle araziye bağlanan bant ----------
    mk, mf: 1 düşeye karşı yatay (1D/1,5Y → 1,5). Platform dışındaki her noktada proje yüzeyi = baz ± (kenara uzaklık / m).
    Arazi baz üstündeyse kazı şevi yükselir, altındaysa dolgu şevi alçalır; şev araziyle kesiştiği yerde biter.
    Köşelerde uzaklık alanı koni üretir (gerçek şev köşesi). İnce hücre orta nokta toplamı; yakınsama kontrolü için iki hücre boyunda hesaplanır. */
@@ -10725,6 +10760,35 @@ function tinDrawG(g, M, color, w, X_, Y_, W, H, ppu, Dp) { if (!M || !M.tri || !
   for (let i = 0; i < L.length; i += 2) { const a = P[L[i]], b = P[L[i + 1]], ax = X_(a.e), ay = Y_(a.y), bx = X_(b.e), by = Y_(b.y); if ((ax < 0 && bx < 0) || (ax > W && bx > W) || (ay < 0 && by < 0) || (ay > H && by > H)) continue; g.moveTo(ax, ay); g.lineTo(bx, by); if (++n % 3000 === 0) { g.stroke(); g.beginPath(); } } g.stroke(); }
 function drawTin(M, color, w) { tinDrawG(ctx, M, color, w, sx, sy, cv.width, cv.height, VIEW.s * DPR, DPR); }
 function draw(){if(kubPlanFrame||$("v-plan").hidden)return;kubPlanFrame=requestAnimationFrame(()=>{kubPlanFrame=0;if(!$("v-plan").hidden)drawPlanFrame();});}
+let coverageOverlay=null;
+document.addEventListener("click",async e=>{
+  if(e.target.closest("[data-duplicate-plan]")){
+    const key=K.duplicateFace(MS)?"S":"R", ids=K.duplicateFace(key==="S"?MS:MR);
+    if(!ids)return;
+    await showTab("plan");$("kub3Target2D").value=key;kub3Open();
+    KUB3.face=ids;kub3Overlay();kub3Status("Üst üste gelen üçgen seçildi.");return;
+  }
+  if(e.target.closest("[data-close-coverage]")){coverageOverlay=null;$("coverageLegend").hidden=true;draw();return;}
+  if(!e.target.closest("[data-coverage-plan]") || !SD?.poly)return;
+  const sd=SD,poly=sd.poly,[ox,oy]=poly[0];
+  const bounds=poly.reduce(([a,b,c,d],[x,y])=>[Math.min(a,x),Math.min(b,y),Math.max(c,x),Math.max(d,y)],[Infinity,Infinity,-Infinity,-Infinity]);
+  const boundary=new Path2D();
+  poly.forEach(([x,y],i)=>i?boundary.lineTo(x-ox,y-oy):boundary.moveTo(x-ox,y-oy));boundary.closePath();
+  const masks=[MS,MR].map(model=>{
+    if(model.flat!==undefined)return null;
+    const path=new Path2D(boundary);
+    for(let i=0;i<model.tri.length;i+=3){
+      const a=model.pts[model.tri[i]],b=model.pts[model.tri[i+1]],c=model.pts[model.tri[i+2]];
+      path.moveTo(a.e-ox,a.y-oy);path.lineTo(b.e-ox,b.y-oy);path.lineTo(c.e-ox,c.y-oy);path.closePath();
+    }
+    return path;
+  });
+  coverageOverlay={sd,boundary,masks,ox,oy};
+  await showTab("plan");resize();
+  const [xmin,ymin,xmax,ymax]=bounds;
+  VIEW.cx=(xmin+xmax)/2;VIEW.cy=(ymin+ymax)/2;VIEW.s=.83*Math.min(cv.clientWidth/(xmax-xmin),cv.clientHeight/(ymax-ymin));
+  $("coverageLegend").hidden=false;draw();
+});
 function drawPlanFrame() {
   if (!cv.width) return; kubPlanPaints++; ACAD_PLAN.surface(ctx,cv.width,cv.height,VIEW.s*DPR,VIEW.cx,VIEW.cy,DPR);const D=DPR;try { window.BGI && BGI.draw(ctx, sx, sy); } catch (e) {} const dark=ACAD_PLAN.dark();
   const palette = planTerrainPalette(dark), contours = $("lyE").checked;
@@ -10738,6 +10802,12 @@ function drawPlanFrame() {
     ctx.stroke(); if (k.points.length && k.points.length < 6000) for (const q of k.points) ctx.fillRect(sx(q[0]) - 1.5 * D, sy(q[1]) - 1.5 * D, 3 * D, 3 * D);
     if (k.txt && k.txt.length) { const W_ = cv.width, H_ = cv.height; ctx.textBaseline = "alphabetic"; ctx.textAlign = "left"; for (const t of k.txt) { const fp = (t[3] || 1) * VIEW.s * D * 1.25; if (fp < 5 * D) continue; const X_ = sx(t[0]), Y_ = sy(t[1]); if (X_ < -200 || Y_ < -50 || X_ > W_ + 50 || Y_ > H_ + 50) continue; ctx.save(); ctx.translate(X_, Y_); if (t[4]) ctx.rotate(-t[4] * Math.PI / 180); ctx.font = `${Math.min(fp, 60 * D)}px Arial`; ctx.fillText(t[2], 0, 0); ctx.restore(); } }
     if (k.ref && k.points.length < 3000 && $("lyN").checked) { ctx.font = `${10 * D}px Arial`; ctx.textAlign = "left"; for (const q of k.points) if (q[2]) ctx.fillText(q[2], sx(q[0]) + 4 * D, sy(q[1]) - 3 * D); } }
+  if(coverageOverlay && SD!==coverageOverlay.sd){coverageOverlay=null;$("coverageLegend").hidden=true;}
+  if(coverageOverlay){
+    const {masks,boundary,ox,oy}=coverageOverlay;
+    ctx.save();ctx.translate(sx(ox),sy(oy));ctx.scale(VIEW.s*D,-VIEW.s*D);ctx.clip(boundary);
+    masks.forEach((mask,i)=>{if(mask){ctx.fillStyle=i?"rgba(215,70,61,.53)":"rgba(64,92,137,.58)";ctx.fill(mask,"evenodd");}});ctx.restore();
+  }
   // alanlar
   ST.alanlar.forEach(a => { if (a.pts.length < 2) return; ctx.beginPath(); a.pts.forEach((p, i) => i ? ctx.lineTo(sx(p[0]), sy(p[1])) : ctx.moveTo(sx(p[0]), sy(p[1]))); ctx.closePath();
     ctx.fillStyle = a.kubaj ? "rgba(46,122,73,.13)" : "rgba(163,95,23,.10)"; ctx.fill(); ctx.strokeStyle = a.kubaj ? "#2e7a49" : "#a35f17"; ctx.lineWidth = 2 * D; ctx.stroke();
@@ -10935,6 +11005,8 @@ function modelArea(x, y) { const pick = (M, ad) => { const L = modelLoops(M).fil
    its coordinates and indices. Only transferable copies cross the worker boundary. */
 function terrainJob(S, R, j) {
   K.siyMod = j.mode;
+  const keys=["sections","volume"].includes(j.type)?["S","R"]:[j.surface||"S"];
+  for(const key of keys) K.checkVolumeModel(key==="S"?S:R,key==="S"?"Siyah":"Kırmızı");
   const volume = (model, target, limit) => K.surfDiff(model, target, j.poly, j.depth, j.fillThreshold, limit, j.cutThreshold);
   if (j.type === "sections") return calculateSectionRows(S, R, j);
   if (j.type === "volume") return volume(S, R, j.limit);
@@ -12248,10 +12320,27 @@ function validVolumeResult(r) {
   return !!r && [r.kazi, r.dolgu, r.siy, r.ortak, r.kaziAlan, r.dolguAlan].every(Number.isFinite) &&
     (!r.ortak || [r.fmin, r.fmax].every(Number.isFinite));
 }
+function thresholdText(kind,exact=true) {
+  const limits="Kazı "+K.tr(+ST.set.kesik||0,3)+" m · Dolgu "+K.tr(+ST.set.esik||0,3)+" m";
+  if (kind==="section") return limits+" · Kesitte en büyük fark milimetreye yuvarlanır. Eşiği aşarsa ilgili alan alınır.";
+  return limits+(exact?" · Yüzeyde her konuma uygulanır. Eşiğe eşit fark dahildir.":" · Izgarada hücre merkezindeki fark eşiği aşarsa alınır.");
+}
+function coverageText(sd) {
+  if (!sd?.poly) return "Ortak hesap alanı "+K.tr(sd?.ortak||0)+" m²";
+  const drawn=K.area(sd.poly);
+  return "Çizilen "+K.tr(drawn)+" m² · Ortak "+K.tr(sd.ortak)+" m² · Hesap dışı "+K.tr(Math.max(0,drawn-sd.ortak))+" m²";
+}
+function coverageButton(sd){
+  return sd.poly && K.area(sd.poly)-sd.ortak>.005 ? ' <button type="button" data-coverage-plan>Eksik alanı gör</button>' : "";
+}
+function gapLabel(g){return K.kmtxt(g.from)+" – "+K.kmtxt(g.to)+" · Ortak kesit süreksiz, ara hacim alınmadı.";}
 function showSurfaceCalcError(e) {
   SD = null;
   surfaceCalcError = "Kübaj hesaplanamadı. Yüzeyleri ve hesap sınırını kontrol et.";
-  showRes("", surfaceCalcError);
+  if (/aynı üçgen/.test(e.message)) {
+    surfaceCalcError=e.message;
+    showRes("",surfaceCalcError+' <button type="button" data-duplicate-plan>Üçgeni göster</button>');
+  } else showRes("", surfaceCalcError);
   console.error(e);
 }
 function showRes(html,note){for(const [id,value] of [["sdTot",html],["sdNote",note],["vRes",html],["vResNote",note]]){const e=$(id);if(e&&e.innerHTML!==value)e.innerHTML=value;}
@@ -12276,12 +12365,12 @@ function showSurfaceVolume(result, elapsed = 0) {
   } catch (e) { showSurfaceCalcError(e); return; }
   SD.sinir = useA && kub ? "kübaj alanı" : "üçgen modellerin ortak alanı"; SD.poly = useA && kub ? kub : null;
   const d = SD.dolgu > 0 || SD.siy > 0.0005;
-  if (!SD.ortak) { showRes("", `<span class="pill bad">Ortak alan bulunamadı</span> İki modelin sınır kutuları çakışıyor ama aynı noktada ikisinde de üçgen yok.${useA ? " Seçili kübaj alanı modellerin dışında olabilir." : ""}`); return; }
+  if (!SD.ortak) { showRes("",(SD.poly?coverageText(SD)+coverageButton(SD)+"<br>":"")+ `<span class="pill bad">Ortak alan bulunamadı</span> İki modelin sınır kutuları çakışıyor ama aynı noktada ikisinde de üçgen yok.${useA ? " Seçili kübaj alanı modellerin dışında olabilir." : ""}`); return; }
   const html = `<div><div class="k">Kazı</div><div class="v">${K.tr(SD.kazi)} <small>m³</small></div></div>` + (d ? `<div><div class="k">Dolgu</div><div class="v">${K.tr(SD.dolgu)} <small>m³</small></div></div>` : "") + (SD.siy > 0.0005 ? `<div><div class="k">Sıyırma</div><div class="v">${K.tr(SD.siy)} <small>m³</small></div></div>` : "") +
     `<div><div class="k">Hesap alanı</div><div class="v">${K.tr(SD.ortak)} <small>m²</small></div></div>`;
   const note = useA && !kub ? `<span class="pill bad">Kübaj alanı seçili değil; ortak alan kullanıldı.</span>` :
     `Sınır: ${SD.sinir}. Kazı alanı ${K.tr(SD.kaziAlan)} m²${d ? `, dolgu alanı ${K.tr(SD.dolguAlan)} m²` : ""}. Fark en az ${K.tr(SD.fmin, 3)} m, en çok ${K.tr(SD.fmax, 3)} m. ${SD.kesin ? "Kesin hesap (üçgenlerin kesişim parçaları, ızgara yok)" : "Yaklaşık hesap · " + K.tr(SD.cell, 2) + " m ızgara"}, ${Math.round(elapsed)} ms.${SYE() ? " Sıyırma: " + SYTXT() + "." : ""}`;
-  showRes(html, note);
+  showRes(html, note + "<br>" + coverageText(SD) + coverageButton(SD) + "<br>" + thresholdText("surface",SD.kesin));
 }
 document.querySelectorAll("input[name=sdb]").forEach(r => r.addEventListener("change",()=>{recalcIfReady();save();}));
 const planSections = { single: [], singleName: "", index: 0 };
@@ -12316,8 +12405,19 @@ function sectionsAlongAxis(first, last, axis, stations, poly, half, wideAuto, wi
     section.km = Math.round((distance + (+s.km0 || 0)) * 1000) / 1000;
     return section;
   };
-  const distances = stations.list;
-  const sections = distances.map(make);
+  const samples=stations.list.map(s=>({s,section:make(s)}));
+  const probes=[];
+  for(let i=1;i<samples.length;i++){
+    const a=samples[i-1],b=samples[i];
+    if(!a.section || !b.section) continue;
+    for(const t of K.voidFractions(first,last,a.section,b.section,poly)){
+      const s=a.s+t*(b.s-a.s);
+      if(!make(s)) probes.push({s,section:null});
+    }
+  }
+  for(const p of probes)samples.push(p);
+  samples.sort((a,b)=>a.s-b.s);
+  const distances=samples.map(p=>p.s),sections=samples.map(p=>p.section);
   const firstIndex = sections.findIndex(Boolean);
   if (firstIndex < 0) return [];
   let lastIndex = sections.length - 1;
@@ -12334,12 +12434,23 @@ function sectionsAlongAxis(first, last, axis, stations, poly, half, wideAuto, wi
     }
     return result;
   };
-  const out = sections.filter(Boolean);
-  const start = firstIndex > 0 ? boundarySection(distances[firstIndex - 1], distances[firstIndex]) : null;
-  const end = lastIndex < sections.length - 1 ? boundarySection(distances[lastIndex + 1], distances[lastIndex]) : null;
-  const origin = +s.km0 || 0;
-  if (start && distances[firstIndex] - (start.km - origin) > .005) out.unshift(start);
-  if (end && (end.km - origin) - distances[lastIndex] > .005) out.push(end);
+  const out=[];
+  for(let i=firstIndex;i<=lastIndex;){
+    const begin=i;
+    while(i<lastIndex && sections[i+1]) i++;
+    const run=sections.slice(begin,i+1);
+    if(begin>0){
+      const edge=boundarySection(distances[begin-1],distances[begin]);
+      if(edge && run[0].s-edge.s>.00021)run.unshift(edge);
+    }
+    if(i+1<sections.length){
+      const edge=boundarySection(distances[i+1],distances[i]);
+      if(edge && edge.s-run.at(-1).s>.00021)run.push(edge);
+    }
+    if(out.length)run[0].gapBefore={from:out.at(-1).km,to:run[0].km};
+    for(const section of run)out.push(section);
+    do{i++;}while(i<=lastIndex&&!sections[i]);
+  }
   return out;
 }
 const planSectionPanel = $("planSections");
@@ -12757,14 +12868,34 @@ function calculateSectionRows(MS, MR, j) {
     const run = (AXX, chh) => { SECS = [];
     for (const [A, B] of segs) { const ax = K.onAxis(AXX, chh, A, B); if (!ax) continue; const r = [ax.u[1], -ax.u[0]]; const dl = Math.hypot(B[0] - A[0], B[1] - A[1]); let dir = [(B[0] - A[0]) / dl, (B[1] - A[1]) / dl];
       if (Math.abs(dir[0] * ax.u[0] + dir[1] * ax.u[1]) > 0.7) continue; if (dir[0] * r[0] + dir[1] * r[1] < 0) dir = [-dir[0], -dir[1]];
-      const sec = K.sectionLine({ S: MS, R: MR, A, B, center: ax.c, dir }); if (!sec.parts.length) continue; K.areas(sec, j.depth, +s.esik || 0, +s.kesik || 0);
+      const sec = K.sectionLine({ S: MS, R: MR, A, B, center: ax.c, dir }); if (sec.parts.length) K.areas(sec, j.depth, +s.esik || 0, +s.kesik || 0);
       let best = null; for (const t of kmt) { const d = Math.min(...[A, B, [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2]].map(p => Math.hypot(p[0] - t[0], p[1] - t[1]))); if (d < 15 && (!best || d < best.d)) best = { d, t }; }
-      const m = best && best.t[2].match(KMRE); sec.km = m ? +m[1] * 1000 + parseFloat(m[2].replace(",", ".")) : ax.s + (+s.km0 || 0); sec.kmYazi = !!m; sec.ch = ax.s; sec.s = sec.km; SECS.push(sec); }
+      const m = best && String(best.t[2]).match(KMRE); sec.km = m ? +m[1] * 1000 + parseFloat(m[2].replace(",", ".")) : ax.s + (+s.km0 || 0); sec.kmYazi = !!m; sec.ch = ax.s; sec.s = sec.km; SECS.push(sec); }
     SECS.sort((a, b) => a.km - b.km); };
     run(AX, st.ch);
     // km yazıları eksenin tersine artıyorsa ekseni çevir (sağ = artı, sol = eksi kalsın)
     const kw = SECS.filter(x => x.kmYazi); if (kw.length >= 2 && (kw[kw.length - 1].ch - kw[0].ch) < 0) { const rv = AX.slice().reverse(); const c2 = [0]; for (let i = 1; i < rv.length; i++) c2.push(c2[i - 1] + Math.hypot(rv[i][0] - rv[i - 1][0], rv[i][1] - rv[i - 1][1])); run(rv, c2); } }
-  else {
+  if(segs){
+    const valid=[];
+    let interrupted=false;
+    for(const sec of SECS){
+      if(!sec.parts.length){interrupted=true;continue;}
+      const prev=valid.at(-1);
+      if(prev && !interrupted){
+        for(const t of K.voidFractions(MS,MR,prev,sec,null)){
+          const mix=(p,q)=>p.map((v,i)=>v+(q[i]-v)*t);
+          const endpoints=row=>[row.A,row.B].sort((a,b)=>(a[0]-b[0])*row.dir[0]+(a[1]-b[1])*row.dir[1]);
+          const a=endpoints(prev),b=endpoints(sec);
+          if(!K.sectionLine({S:MS,R:MR,A:mix(a[0],b[0]),B:mix(a[1],b[1]),center:mix(prev.center,sec.center),dir:sec.dir}).parts.length){
+            interrupted=true;break;
+          }
+        }
+      }
+      if(prev && interrupted)sec.gapBefore={from:prev.km,to:sec.km};
+      valid.push(sec);interrupted=false;
+    }
+    SECS=valid;
+  }else{
     SECS = sectionsAlongAxis(MS, MR, AX, st, poly, half, AUTOAX && !poly && s.kesitSinir !== "width", true, s, j.depth);
   }
   return {sections:SECS, totals:K.volumes(SECS), autoAxis:AUTOAX, stations:st.list.length};
@@ -12773,6 +12904,9 @@ function msgK(t, err) { $("kMsg").className = "msg" + (err ? " err" : ""); $("kM
 $("calc").addEventListener("click", recalcIfReady);
 function anyDol() { return SECS.some(s => s.dol || s.siy > 0); }
 function totals() { const d = anyDol();
+  $("sectionQuality").textContent=SECS.length ? thresholdText("section") : "";
+  const gaps=SECS.filter(s=>s.gapBefore);
+  if(gaps.length)$("sectionQuality").textContent+=" "+gaps.map(s=>gapLabel(s.gapBefore)).join(" ");
   const scope = $("planSectionsReportScope");
   scope.hidden = !SECS.length || ST.set.kesitSinir !== "width";
   scope.textContent = ST.set.kaynak === "cizgi" && ST.kesitLay
@@ -12781,7 +12915,7 @@ function totals() { const d = anyDol();
   $("tot").innerHTML = `<div><div class="k">Kazı</div><div class="v">${K.tr(TOT.kazi)} <small>m³</small></div></div>` + (d ? `<div><div class="k">Dolgu</div><div class="v">${K.tr(TOT.dolgu)} <small>m³</small></div></div><div><div class="k">Sıyırma</div><div class="v">${K.tr(TOT.siy)} <small>m³</small></div></div>` : "") +
     `<div><div class="k">Kesit</div><div class="v">${SECS.length}</div></div>` +
     (SV && SECS.length ? (() => { const fk = Math.abs(SV.kazi - TOT.kazi), fd = Math.abs(SV.dolgu - TOT.dolgu), top = Math.max(1, SV.kazi + SV.dolgu), y = (fk + fd) / top * 100; const cls = y <= 2 ? "ok" : y <= 5 ? "warn" : "bad";
-      return `<div style="flex-basis:100%;margin-top:6px;padding:8px;border-radius:8px;background:${y <= 2 ? "#e8f6ec" : y <= 5 ? "#fff7e6" : "#fdecec"}"><b>Doğrulama:</b> aynı sınır ve ayarlarla ${SV.kesin?"kesin üçgen hesabı":"yaklaşık ızgara hesabı"} kazı ${K.tr(SV.kazi)} m³${SV.dolgu > 0 || TOT.dolgu > 0 ? `, dolgu ${K.tr(SV.dolgu)} m³` : ""}. En kesit yöntemiyle fark ${K.tr(fk + fd)} m³ = toplam hacmin <span class="pill ${cls}">%${K.tr(y, 1)}</span>. ${y <= 2 ? "Kesit aralığı yeterli." : y <= 5 ? "Kabul edilebilir; daha yakın sonuç için kesit aralığını sıklaştır." : "Fark büyük: kesit aralığını sıklaştır, eksen ve kübaj alanını kontrol et. Yüzey hesabının yöntem bilgisini kontrol et."}${SV.kapsama < 0.99 ? ` <span class="pill bad">Alanın %${K.tr((1 - SV.kapsama) * 100, 1)}'i bir modelin dışında</span>` : ""}</div>`; })() : ""); }
+      return `<div style="flex-basis:100%;margin-top:6px;padding:8px;border-radius:8px;background:${y <= 2 ? "#e8f6ec" : y <= 5 ? "#fff7e6" : "#fdecec"}"><b>Doğrulama:</b> aynı sınır ve ayarlarla ${SV.kesin?"kesin üçgen hesabı":"yaklaşık ızgara hesabı"} kazı ${K.tr(SV.kazi)} m³${SV.dolgu > 0 || TOT.dolgu > 0 ? `, dolgu ${K.tr(SV.dolgu)} m³` : ""}. En kesit yöntemiyle fark ${K.tr(fk + fd)} m³ = toplam hacmin <span class="pill ${cls}">%${K.tr(y, 1)}</span>. ${y <= 2 ? "Kesit aralığı yeterli." : y <= 5 ? "Kabul edilebilir; daha yakın sonuç için kesit aralığını sıklaştır." : "Farkı incelerken kesit aralığını, veri boşluklarını, eşik kuralını ve sınırı kontrol et."}${SV.kapsama < 0.99 ? ` <span class="pill bad">Alanın %${K.tr((1 - SV.kapsama) * 100, 1)}'i bir modelin dışında</span>` : ""}</div>`; })() : ""); }
 /* ===== Hafriyat ve nakliye: kabarma, sıkışma, kamyon sefer sayısı, kütle (Brückner) eğrisi — hafriyatçı / şantiye şefi için ===== */
 function hafriyat() { let bx = document.getElementById("hfBox"); const tb = $("tot"); if (!tb) return; if (!bx) { bx = document.createElement("div"); bx.id = "hfBox"; bx.className = "card"; bx.style.cssText = "margin-top:10px;padding:10px"; tb.insertAdjacentElement("afterend", bx); }
   if (!SECS.length && !SD) { bx.hidden = true; return; } bx.hidden = false; const s = ST.set; const kab = +s.kab > 0 ? +s.kab : 1.25, sik = +s.sik > 0 ? +s.sik : 0.90, kap = +s.kap > 0 ? +s.kap : 15;
@@ -12906,7 +13040,7 @@ function buildXlsx() {
     const kub = ST.alanlar.find(a => a.kubaj);
     [["Siyah kot (ilk hâl)", ST.S.src || ""], ["Kırmızı kot (son hâl)", ST.R.mode === "sabit" ? `Sabit kot ${K.tr(+ST.R.flat, 3)} m` : (ST.R.src || "")],
      ["Kübaj alanı", kub ? `${kub.ad} · ${K.tr(K.area(kub.pts))} m²` : "Seçilmedi (iki modelin ortak alanı)"], ["Eksen", ST.eksen && ST.eksen.length > 1 ? `${ST.eksenSrc || "Elle çizildi"} · ${K.tr(K.perim(ST.eksen, false))} m` : "Otomatik eksen (alanın uzun doğrultusu)"],
-     ["Kesit aralığı", `${ST.set.step} m (kurplarda ${ST.set.kurp} m)`], ...(SY ? [["Sıyırma", SYTXT()]] : []), ["Eşikler", `${K.tr(es)} m altındaki dolgu ve ${K.tr(+ST.set.kesik || 0)} m altındaki kazı farkları sayılmaz`],
+     ["Kesit aralığı", `${ST.set.step} m (kurplarda ${ST.set.kurp} m)`], ...(SY ? [["Sıyırma", SYTXT()]] : []), ["Eşikler",thresholdText(hasSecs?"section":"surface",!!SD?.kesin)], ["Hesap alanı",SD?coverageText(SD):"—"], ...SECS.filter(s=>s.gapBefore).map(s=>["Kesit arası",gapLabel(s.gapBefore)]),
      ["Formül", "Fark = Kırmızı kot − Siyah kot · eksi: kazı, artı: dolgu" + (SY ? ({ tum: " · kazı ve dolgu sıyırma tabanından (Siyah − sıyırma) ölçülür", kazi: " · kazı sıyırma tabanından ölçülür" }[K.siyMod] || " · dolgu sıyırma tabanından başlar") : "")],
      ["", "Kesit hacmi = (Önceki kesit alanı + Bu kesit alanı) ÷ 2 × Ara uzaklık. Yalnız bir kesitte alan varsa (yarma-dolgu geçişi): A² × Ara uzaklık ÷ (2 × (A + diğer kesitteki karşı tür alanı))"]]
       .forEach(([a, b]) => { W.set("B" + r, a, { b: !!a, h: "left", v: "top" }); W.merge(`B${r}:C${r}`); W.set("D" + r, b, { h: "left", wrap: true, v: "top" }); W.merge(`D${r}:I${r}`); if (String(b).length > 70) W.row(r, 26); r++; });
@@ -12923,31 +13057,33 @@ function buildXlsx() {
   NP.set("A1", "EN KESİT NOKTALARI  (Fark = Kırmızı kot − Siyah kot)", { b: true, sz: 12 }); NP.merge("A1:F1");
   NP.set("H1", d ? ({ tum: "Sıyırma (tamamında) derinliği (m)", kazi: "Sıyırma (kazıda) derinliği (m)" }[K.siyMod] || "Sıyırma (dolguda) derinliği (m)") : "", { b: true, h: "right" }); NP.merge("H1:I1"); NP.set("J1", SY, { c: "0000FF", nf: "0.00", border: "thin" });
   NP.set("K1", "Dolgu eşiği (m)", { b: true, h: "right" }); NP.merge("K1:L1"); NP.set("M1", es, { c: "0000FF", nf: "0.00", border: "thin" });
-  const H = ["Km", "Mesafe (eksenden, m)", "Siyah kot", "Kırmızı kot", "Fark (Kırmızı − Siyah)", "Parça genişliği (m)", "Kazı alanı (m²)", "Sıyırma alanı (m²)", "Dolgu alanı (m²)", "Dolgu sayılır (1/0)"];
+  NP.set("N1","Kazı eşiği (m)",{b:true}); NP.set("O1",+ST.set.kesik||0,{nf:"0.000"});
+  const H = ["Km", "Mesafe (eksenden, m)", "Siyah kot", "Kırmızı kot", "Fark (Kırmızı − Siyah)", "Parça genişliği (m)", "Kazı alanı (m²)", "Sıyırma alanı (m²)", "Dolgu alanı (m²)", "Dolgu sayılır (1/0)","Kazı sayılır (1/0)"];
   H.forEach((h, i) => NP.set(String.fromCharCode(65 + i) + "2", h, Object.assign({ b: true, fill: "E7E9EC" }, th))); NP.row(2, 42);
   [11, 11, 10, 10, 11, 10, 11, 11, 11, 10].forEach((w, i) => NP.col(i, w, !d && i === 7)); NP.page({ freeze: 3 });
   let r = 3; const kmRange = []; const TUMX = K.siyMod === "tum" && SY > 0, KZX = K.siyMod === "kazi" && SY > 0;
-  SECS.forEach(s => { const pts = s.full.flat(); const ra = r, rb = r + pts.length - 1; kmRange.push([ra, rb]); let pf = null;
+  SECS.forEach(s => { const starts=new Set(s.full.map(part=>part[0])); const pts = s.full.flat(); const ra = r, rb = r + pts.length - 1; kmRange.push([ra, rb]); let pf = null;
     const cnt = s.dol ? 1 : 0;
     pts.forEach((p, k) => { const f = p[2] - p[1];
       NP.set("A" + r, K.kmtxt(s.km), { border: "thin", nf: "@" }); NP.set("B" + r, +p[0].toFixed(3), { border: "thin", nf: "0.000" });
-      NP.set("C" + r, +p[1].toFixed(3), { border: "thin", nf: "0.000" }); NP.set("D" + r, +p[2].toFixed(3), { border: "thin", nf: "0.000", c: "C00000" });
-      NP.set("E" + r, +(p[2].toFixed(3) - p[1].toFixed(3)).toFixed(3), { border: "thin", nf: "0.000;-0.000;0.000" }, `D${r}-C${r}`);
+      NP.set("C" + r, p[1], { border: "thin", nf: "0.000" }); NP.set("D" + r, p[2], { border: "thin", nf: "0.000", c: "C00000" });
+      NP.set("E" + r, f, { border: "thin", nf: "0.000;-0.000;0.000" }, `D${r}-C${r}`);
       NP.set("J" + r, cnt, { border: "thin", h: "center" }, TUMX ? `IF(ROUND(MAX($E$${ra}:$E$${rb})+$J$1,3)>$M$1,1,0)` : `IF(ROUND(MAX($E$${ra}:$E$${rb}),3)>$M$1,1,0)`);
-      if (!k) { ["F", "G", "H", "I"].forEach(c => NP.set(c + r, 0, { border: "thin", nf: "0.000" })); }
+      NP.set("K"+r,s.kaz?1:0,{border:"thin"}, "IF(ROUND(-MIN($E$"+ra+":$E$"+rb+")"+(TUMX?"-$J$1":"")+",3)>$O$1,1,0)");
+      if (starts.has(p)) { ["F", "G", "H", "I"].forEach(c => NP.set(c + r, 0, { border: "thin", nf: "0.000" })); }
       else if (KZX) { const q = r - 1, m = (pf + f) / 2, L = p[0] - pts[k - 1][0], M = `(E${q}+E${r})/2`;
         NP.set("F" + r, L, { border: "thin", nf: "0.000" }, `B${r}-B${q}`);
-        NP.set("G" + r, m < 0 ? Math.max(0, -m - SY) * L : 0, { border: "thin", nf: "0.000" }, `IF(${M}<0,MAX(0,-${M}-$J$1)*F${r},0)`);
-        NP.set("H" + r, m < 0 && s.kazi > 0 ? SY * L : 0, { border: "thin", nf: "0.000" }, `IF(${M}<0,$J$1*F${r},0)*${s.kazi > 0 ? 1 : 0}`);
+        NP.set("G" + r, s.kaz && m < 0 ? Math.max(0, -m - SY) * L : 0, { border: "thin", nf: "0.000" }, `IF(${M}<0,MAX(0,-${M}-$J$1)*F${r},0)*K${r}`);
+        NP.set("H" + r, m < 0 && s.kaz ? SY * L : 0, { border: "thin", nf: "0.000" }, `IF(${M}<0,$J$1*F${r},0)*K${r}`);
         NP.set("I" + r, m > 0 ? m * L * cnt : 0, { border: "thin", nf: "0.000" }, `IF(${M}>0,${M}*F${r},0)*J${r}`); }
       else if (TUMX) { const q = r - 1, m = (pf + f) / 2 + SY, L = p[0] - pts[k - 1][0], M = `((E${q}+E${r})/2+$J$1)`;
         NP.set("F" + r, L, { border: "thin", nf: "0.000" }, `B${r}-B${q}`);
-        NP.set("G" + r, m < 0 ? -m * L : 0, { border: "thin", nf: "0.000" }, `IF(${M}<0,-${M}*F${r},0)`);
+        NP.set("G" + r, s.kaz && m < 0 ? -m * L : 0, { border: "thin", nf: "0.000" }, `IF(${M}<0,-${M}*F${r},0)*K${r}`);
         NP.set("H" + r, SY * L, { border: "thin", nf: "0.000" }, `$J$1*F${r}`);
         NP.set("I" + r, m > 0 ? m * L * cnt : 0, { border: "thin", nf: "0.000" }, `IF(${M}>0,${M}*F${r},0)*J${r}`); }
       else { const q = r - 1, m = (pf + f) / 2, L = p[0] - pts[k - 1][0], M = `(E${q}+E${r})/2`;
         NP.set("F" + r, L, { border: "thin", nf: "0.000" }, `B${r}-B${q}`);
-        NP.set("G" + r, m < 0 ? -m * L : 0, { border: "thin", nf: "0.000" }, `IF(${M}<0,-${M}*F${r},0)`);
+        NP.set("G" + r, s.kaz && m < 0 ? -m * L : 0, { border: "thin", nf: "0.000" }, `IF(${M}<0,-${M}*F${r},0)*K${r}`);
         NP.set("H" + r, m > 0 ? SY * L * cnt : 0, { border: "thin", nf: "0.000" }, `IF(${M}>0,$J$1*F${r},0)*J${r}`);
         NP.set("I" + r, m > 0 ? (m + SY) * L * cnt : 0, { border: "thin", nf: "0.000" }, `IF(${M}>0,(${M}+$J$1)*F${r},0)*J${r}`); }
       pf = f; r++; }); });
@@ -12975,7 +13111,7 @@ function buildXlsx() {
       W.set("E" + R, da, num, kind === "kd" ? `SUM(NOKTALAR!I${ra}:I${rb})` : undefined);
       W.set("C" + R, null, num); W.set("F" + R, null, num); W.set("G" + R, null, num);
       if (!i) { W.set("H" + R, 0, num); W.set("I" + R, 0, num); }
-      else { const a = R - 1, p = R - 2, ps = SECS[i - 1]; const pya = kind === "kd" ? ps.kazi : ps.siy, pda = kind === "kd" ? ps.dolgu : 0; const L = s.km - ps.km;
+      else { const a = R - 1, p = R - 2, ps = SECS[i - 1]; const pya = kind === "kd" ? ps.kazi : ps.siy, pda = kind === "kd" ? ps.dolgu : 0; const L = s.L;
         ["B", "D", "E", "H", "I"].forEach(c => W.set(c + a, null, num));
         W.set("C" + a, +L.toFixed(3), num); const fy = kind === "kd" ? K.hacim(pya, ya, pda, da, L) : (pya + ya) / 2 * L, fd = kind === "kd" ? K.hacim(pda, da, pya, ya, L) : (pda + da) / 2 * L; cy += fy; cd += fd;
         W.set("F" + a, fy, num, kind === "kd" ? K.hacimF(`D${p}`, `D${R}`, `E${p}`, `E${R}`, `C${a}`) : `(D${p}+D${R})/2*C${a}`); W.set("G" + a, fd, num, kind === "kd" ? K.hacimF(`E${p}`, `E${R}`, `D${p}`, `D${R}`, `C${a}`) : `(E${p}+E${R})/2*C${a}`);
@@ -12995,10 +13131,10 @@ function buildXlsx() {
     const cols = ["Km", "Ara uzaklık (m)"]; names.forEach(n => cols.push(`${n} kazı alanı (m²)`, `${n} dolgu alanı (m²)`, `${n} kazı (m³)`, `${n} dolgu (m³)`));
     cols.forEach((h, k) => A.set(X_col(k) + "3", h, { b: true, border: "thin", h: "center", wrap: true, fill: "E7E9EC" })); A.row(3, 44); A.col(0, 11); A.col(1, 9); for (let k = 2; k < cols.length; k++) A.col(k, 12);
     const r0 = 4; ayr = names.map(() => ({ k: 0, d: 0 }));
-    SECS.forEach((x, i) => { const R = r0 + i, sp = splitOf(x) || []; A.set("A" + R, K.kmtxt(x.km), { border: "thin" }); A.set("B" + R, i ? +(x.km - SECS[i - 1].km).toFixed(3) : 0, { border: "thin", nf: "0.00" });
+    SECS.forEach((x, i) => { const R = r0 + i, sp = splitOf(x) || []; A.set("A" + R, K.kmtxt(x.km), { border: "thin" }); A.set("B" + R, i ? +x.L.toFixed(3) : 0, { border: "thin", nf: "0.00" });
       names.forEach((n, j) => { const q = sp.find(z => z.ad === n) || { kazi: 0, dolgu: 0 }; const c = 2 + j * 4; const ca = X_col(c), cb = X_col(c + 1), cc = X_col(c + 2), cd = X_col(c + 3);
         A.set(ca + R, q.kazi, { border: "thin", nf: "#,##0.00" }); A.set(cb + R, q.dolgu, { border: "thin", nf: "#,##0.00" });
-        const pq = i ? ((splitOf(SECS[i - 1]) || []).find(z => z.ad === n) || { kazi: 0, dolgu: 0 }) : null, L = i ? x.km - SECS[i - 1].km : 0;
+        const pq = i ? ((splitOf(SECS[i - 1]) || []).find(z => z.ad === n) || { kazi: 0, dolgu: 0 }) : null, L = x.L;
         const vk = i ? K.hacim(pq.kazi, q.kazi, pq.dolgu, q.dolgu, L) : 0, vd = i ? K.hacim(pq.dolgu, q.dolgu, pq.kazi, q.kazi, L) : 0; ayr[j].k += vk; ayr[j].d += vd;
         A.set(cc + R, vk, { border: "thin", nf: "#,##0.00" }, i ? K.hacimF(`${ca}${R - 1}`, `${ca}${R}`, `${cb}${R - 1}`, `${cb}${R}`, `B${R}`) : undefined); A.set(cd + R, vd, { border: "thin", nf: "#,##0.00" }, i ? K.hacimF(`${cb}${R - 1}`, `${cb}${R}`, `${ca}${R - 1}`, `${ca}${R}`, `B${R}`) : undefined); }); });
     const RT = r0 + SECS.length; A.set("A" + RT, "TOPLAM", { b: true, border: "thin" }); A.set("B" + RT, null, { border: "thin" });
@@ -13022,10 +13158,12 @@ function buildXlsx() {
   return X.build();
 }
 // Sayfa sırası: cetveller önce
-$("oX").addEventListener("click", async () => { if (!SECS.length && !SD) { needSecs(); return; } oMsg("Excel hazırlanıyor…"); try { const b = buildXlsx(); await saveFile(fname("xlsx"), b, $("oMsg")); } catch (e) { oMsg("Excel oluşturulamadı: " + e.message, true); } });
+$("oX").addEventListener("click", async () => { if (terrainPending || (!SECS.length && !SD)) { needSecs(); return; } oMsg("Excel hazırlanıyor…"); try { const b = buildXlsx(); await saveFile(fname("xlsx"), b, $("oMsg")); } catch (e) { oMsg("Excel oluşturulamadı: " + e.message, true); } });
 $("oP").addEventListener("click", async () => { if (!needSecs()) return; const cs = []; const pxmm = 180 / 25.4;
   for (let i = 0; i < SECS.length; i++) { oMsg(`PDF sayfası ${i + 1}/${SECS.length} çiziliyor…`); await new Promise(r => setTimeout(r, 0));
     const G_ = O.sheet(SECS[i], i + 1, SECS.length, projFor(SECS[i]), SHEETSET()), px = pxmm / G_.Gs * Math.min(G_.Gs, 1.6); const c = document.createElement("canvas"); c.width = Math.round(G_.W * px); c.height = Math.round(G_.H * px); O.paint(c.getContext("2d"), G_, px, G_.W, G_.H);
+    const quality=c.getContext("2d");quality.fillStyle="#222";quality.font="12px Arial";
+    quality.fillText(thresholdText("section")+(SECS[i].gapBefore?" · "+gapLabel(SECS[i].gapBefore):""),12,c.height-3,c.width-24);
     c.pw = 841.89 * G_.Gs; c.ph = 595.28 * G_.Gs; cs.push(c); }
   try { const b = await O.pdf(cs); await saveFile(fname("pdf"), b, $("oMsg")); } catch (e) { oMsg("PDF oluşturulamadı: " + e.message, true); } });
 $("oD").addEventListener("click", async () => { if (!needSecs()) return; oMsg("DXF hazırlanıyor…"); await new Promise(r => setTimeout(r, 0));
@@ -13056,7 +13194,7 @@ function kaAuditModel(M,key){
  for(const p of P){if(!kub3ValidPoint(p)){invalid++;if(!bad)bad=p;continue;}const k=p.e+":"+p.y,old=coords.get(k);if(old&&Math.abs(old.z-p.z)>1e-6){conf++;confP??=p;}else if(!old)coords.set(k,p);const n=String(p.n||"").trim();if(n){const q=names.get(n);if(q&&(q.e!==p.e||q.y!==p.y||q.z!==p.z)){dupNames++;dupNameP??=p;}else if(!q)names.set(n,p);}}
  for(let i=0;i<T.length;i+=3){const ids=Array.from(T.slice(i,i+3));if(ids.length!==3||ids.some(j=>!Number.isInteger(j)||!kub3ValidPoint(P[j]))){invalid++;bad??=ids.map(j=>P[j]).find(kub3ValidPoint);continue;}const pts=ids.map(j=>P[j]),f=ids.slice().sort((a,b)=>a-b).join(":");if(faces.has(f)){duplicate++;dup??=pts[0];continue;}faces.add(f);if(Math.abs(kub3Cross(...pts))<1e-10){zero++;zeroP??=pts[0];continue;}ids.forEach(j=>used.add(j));for(let j=0;j<3;j++){const k=kub3Key(ids[j],ids[(j+1)%3]),r=edges.get(k)||0;edges.set(k,r+1);if(r===2){nonMan++;nonP??=pts[j];}}}
  unused=P.length-used.size;
- for(const [n,msg,p,kind] of [[invalid,"geçersiz nokta veya üçgen kaydı",bad,"bad"],[duplicate,"mükerrer üçgen",dup,"warn"],[zero,"sıfır alanlı üçgen",zeroP,"bad"],[nonMan,"ikiden fazla üçgene bağlı kenar",nonP,"bad"],[conf,"aynı Y/X konumunda farklı kot",confP,"bad"],[dupNames,"farklı koordinatta aynı nokta adı",dupNameP,"warn"],[unused,"üçgene bağlı olmayan nokta",P.find((_,i)=>!used.has(i)),"warn"],[M.kotsuz?.length||0,"üçgenlemeye alınmamış / kontrol edilecek saha noktası",M.kotsuz?.[0],"warn"]])if(n)add(kind,name+": "+n+" "+msg+".",p);
+ for(const [n,msg,p,kind] of [[invalid,"geçersiz nokta veya üçgen kaydı",bad,"bad"],[duplicate,"mükerrer üçgen",dup,"bad"],[zero,"sıfır alanlı üçgen",zeroP,"bad"],[nonMan,"ikiden fazla üçgene bağlı kenar",nonP,"bad"],[conf,"aynı Y/X konumunda farklı kot",confP,"bad"],[dupNames,"farklı koordinatta aynı nokta adı",dupNameP,"warn"],[unused,"üçgene bağlı olmayan nokta",P.find((_,i)=>!used.has(i)),"warn"],[M.kotsuz?.length||0,"üçgenlemeye alınmamış / kontrol edilecek saha noktası",M.kotsuz?.[0],"warn"]])if(n)add(kind,name+": "+n+" "+msg+".",p);
  return {points:P.length,triangles:Math.floor(T.length/3),issues};
 }
 function kaCoverage(SD,poly){
@@ -13072,7 +13210,13 @@ function kaReadReport(){
  else issues.push({kind:"info",msg:"Kübaj sınırı seçilmemiş; ortak alan hesabı kullanılabilir."});
  const cov=SD?.poly?kaCoverage(SD,SD.poly):null;
  if(SD?.ortak){if(!SD.kesin)issues.push({kind:"warn",msg:"Hacim ızgara yaklaşımıyla hesaplandı; kesin üçgen hesabı değil."});if(cov!==null){if(cov<99.99)issues.push({kind:"warn",msg:"Kübaj sınırının %"+kaFormat(Math.max(0,100-cov),2)+" kısmı hesap kapsamı dışında.",xy:poly?.[0]});if(cov>100.01)issues.push({kind:"bad",msg:"Hesap alanı sınır alanını aşıyor; üçgen örtüşmesini kontrol et."});}}
- else issues.push({kind:"wait",msg:"İki geçerli yüzey ve ortak hesap alanı gerekli."});
+ else {
+   for(const [key,model] of [["S",MS],["R",MR]]){
+     const face=K.duplicateFace(model);
+     if(face){const p=model.pts[face[0]];issues.push({kind:"bad",key,msg:(key==="S"?"Siyah":"Kırmızı")+" modelde çakışan üçgen. Hesap kontrol bekliyor.",xy:[p.e,p.y]});}
+   }
+   issues.push({kind:"wait",msg:"İki geçerli yüzey ve ortak hesap alanı gerekli."});
+ }
  let diff=null;if(SV&&SECS.length){const k=Math.abs(SV.kazi-TOT.kazi),d=Math.abs(SV.dolgu-TOT.dolgu);diff=100*(k+d)/Math.max(1,SV.kazi+SV.dolgu);if(!SV.kesin)issues.push({kind:"warn",msg:"Kesit doğrulamasında karşılaştırma yaklaşık yöntemle yapıldı."});if(diff>5)issues.push({kind:"warn",msg:"Kesit ve yüzey hesabı farkı %"+kaFormat(diff,2)+". Kesit aralığını ve sınırı kontrol et."});}
  if(!ST.eksen?.length)issues.push({kind:"info",msg:"Elle çizilmiş eksen yok; en kesit için otomatik eksen kullanılabilir."});
  return {s,r,issues,coverage:cov,diff,volume:SD?.ortak?{kazi:SD.kazi,dolgu:SD.dolgu,siy:SD.siy,area:SD.ortak,exact:!!SD.kesin,scope:SD.sinir}:null,stamp:kaModelStamp(),date:new Date().toISOString()};
@@ -13110,16 +13254,30 @@ async function kaBalance(auto){
 async function kaDigest(value){if(!window.crypto?.subtle)return null;const data=new TextEncoder().encode(JSON.stringify(value)),buf=await window.crypto.subtle.digest("SHA-256",data);return Array.from(new Uint8Array(buf),x=>x.toString(16).padStart(2,"0")).join("");}
 function kaFullCoverage(S,sd){if(!sd||!S?.tri?.length)return false;let area=0;if(sd.poly){try{area=kub3Polygon(sd.poly);}catch(_){return false;}}else for(let i=0;i<S.tri.length;i+=3){const [a,b,c]=Array.from(S.tri.slice(i,i+3)).map(j=>S.pts[j]);if(!a||!b||!c)return false;area+=Math.abs(kub3Cross(a,b,c))/2;}return area>0&&Math.abs(sd.ortak-area)<=Math.max(.0001,area*1e-8);}
 async function kaRecord(){
- if(KA.busy)return;if(!SD?.ortak)return kaStatus("Önce arazi kübaj hesabını tamamla.");const label=$("kaStageName").value.trim();if(!label)return kaStatus("Ölçüm / hakediş adı gir.");
+ if(KA.busy)return;if(terrainPending||!SD?.ortak)return kaStatus("Önce arazi kübaj hesabını tamamla.");const label=$("kaStageName").value.trim();if(!label)return kaStatus("Ölçüm / hakediş adı gir.");
  KA.busy=true;$("kaRecord").disabled=true;try{const start=kaModelStamp(),base=MS,cur=MR,sd=SD,reference=await kaDigest([base.pts.map(p=>[p.e,p.y,p.z]),Array.from(base.tri),SD.poly||null,ST.set.sdb,ST.set.siyMod,ST.set.siy,ST.set.esik,ST.set.kesik]),target=await kaDigest(cur.flat!==undefined?["baz",cur.flat]:[cur.pts.map(p=>[p.e,p.y,p.z]),Array.from(cur.tri)]);if(kaModelStamp()!==start||MS!==base||MR!==cur||SD!==sd)throw Error("Model değişti; yeniden kaydet.");
- const item={ad:label,time:new Date().toISOString(),reference,target,fullCoverage:kaFullCoverage(base,sd)&&!kaAuditModel(ST.S,"S").issues.some(i=>i.kind==="bad")&&(ST.R.mode==="sabit"||!kaAuditModel(ST.R,"R").issues.some(i=>i.kind==="bad")),exact:!!SD.kesin,kazi:SD.kazi,dolgu:SD.dolgu,siy:SD.siy,alan:SD.ortak,scope:SD.sinir};(ST.kaHistory??=[]).push(item);save();$("kaStageName").value="";kaHistoryRender();kaStatus("Tarihli metraj kaydı eklendi.");}catch(e){kaStatus(e.message);}finally{KA.busy=false;$("kaRecord").disabled=false;}
+ const work=$("kaWork").value.trim(),poz=$("kaPoz").value.trim(),stage=$("kaStage").value;
+ const stationRef=await kaDigest([ST.eksen||AUTOAX,ST.set.km0,ST.set.kaynak,ST.set.wL,ST.set.wR,ST.set.kesitSinir,ST.kesitLay,SECS.map(s=>[s.km,s.A,s.B,!!s.gapBefore])]);
+ const intervals=SECS.flatMap((s,i)=>i&&!s.gapBefore?[[SECS[i-1].km,s.km,s.kV,s.dV,s.sV]]:[]);
+ if(kaModelStamp()!==start||SD!==sd||terrainPending)throw Error("Veri değişti. Güncel sonucu tekrar kaydet.");
+ const item={work,poz,stage,stationRef,intervals,ad:label,time:new Date().toISOString(),reference,target,fullCoverage:kaFullCoverage(base,sd)&&!kaAuditModel(ST.S,"S").issues.some(i=>i.kind==="bad")&&(ST.R.mode==="sabit"||!kaAuditModel(ST.R,"R").issues.some(i=>i.kind==="bad")),exact:!!SD.kesin,kazi:SD.kazi,dolgu:SD.dolgu,siy:SD.siy,alan:SD.ortak,scope:SD.sinir};(ST.kaHistory??=[]).push(item);save();$("kaStageName").value="";kaHistoryRender();kaStatus("Tarihli metraj kaydı eklendi.");}catch(e){kaStatus(e.message);}finally{KA.busy=false;$("kaRecord").disabled=false;}
 }
-function kaCompare(a,b){if(!a||!b||!a.reference||a.reference!==b.reference||!a.exact||!b.exact||!a.fullCoverage||!b.fullCoverage||Math.abs(a.alan-b.alan)>Math.max(.0001,a.alan*1e-8))return null;return {kazi:b.kazi-a.kazi,dolgu:b.dolgu-a.dolgu,siy:b.siy-a.siy};}
+function sameWork(a,b){return ["work","poz","stage"].every(k=>(a[k]||"")===(b[k]||""));}
+function previousWork(rows,j){for(let i=j-1;i>=0;i--)if(sameWork(rows[i],rows[j]))return rows[i];return null;}
+function kaCompare(a,b){if(!a||!b||!sameWork(a,b)||!a.reference||a.reference!==b.reference||!a.exact||!b.exact||!a.fullCoverage||!b.fullCoverage||Math.abs(a.alan-b.alan)>Math.max(.0001,a.alan*1e-8))return null;return {kazi:b.kazi-a.kazi,dolgu:b.dolgu-a.dolgu,siy:b.siy-a.siy};}
 function kaHistoryRender(){const rows=ST.kaHistory||[],root=$("kaHistoryRows");root.replaceChildren();if(!rows.length){root.textContent="Henüz kayıt yok.";return;}
- for(let j=rows.length-1;j>=0;j--){const a=rows[j],d=kaCompare(rows[j-1],a),el=document.createElement("div");el.className="ka-record";const b=document.createElement("b");b.textContent=a.ad+" · "+new Date(a.time).toLocaleString("tr-TR");const p=document.createElement("div");p.textContent="Kazı "+kaFormat(a.kazi)+" m³ · Dolgu "+kaFormat(a.dolgu)+" m³ · "+(a.exact?"Kesin":"Yaklaşık");const small=document.createElement("small");small.textContent=j?(d?"Önceki kümülatif kayda göre fark: kazı "+kaFormat(d.kazi)+" m³, dolgu "+kaFormat(d.dolgu)+" m³.":"Önceki kayıtla referans, sınır, kapsam veya yöntem aynı değil; fark üretilmedi."):"İlk kayıt";el.append(b,p,small);root.append(el);}
+ for(let j=rows.length-1;j>=0;j--){const a=rows[j],prev=previousWork(rows,j),d=kaCompare(prev,a),el=document.createElement("div");el.className="ka-record";const b=document.createElement("b");b.textContent=[a.work,a.poz,a.stage,a.ad].filter(Boolean).join(" · ")+" · "+new Date(a.time).toLocaleString("tr-TR");const p=document.createElement("div");p.textContent="Kazı "+kaFormat(a.kazi)+" m³ · Dolgu "+kaFormat(a.dolgu)+" m³ · "+(a.exact?"Kesin":"Yaklaşık");const small=document.createElement("small");small.textContent=prev?(d?"Önceki kümülatif ("+prev.ad+") · Kazı "+kaFormat(prev.kazi)+" · Dolgu "+kaFormat(prev.dolgu)+" m³. Dönem farkı · Kazı "+kaFormat(d.kazi)+" m³, dolgu "+kaFormat(d.dolgu)+" m³.":"Önceki kayıtla referans, sınır, kapsam veya yöntem aynı değil; fark üretilmedi."):"İlk kayıt";el.append(b,p,small);
+ if(d && a.intervals?.length && a.stationRef && a.stationRef===prev.stationRef && a.intervals.length===prev.intervals?.length){
+   const details=document.createElement("details"),summary=document.createElement("summary");summary.textContent="Değişen kesit aralıkları";details.append(summary);
+   const list=document.createElement("div");list.style.whiteSpace="pre-line";
+   details.addEventListener("toggle",()=>{if(!details.open||list.textContent)return;
+     const lines=[];a.intervals.forEach((v,i)=>{const p=prev.intervals[i];if(v.slice(2).some((n,j)=>Math.abs(n-p[j+2])>=.005))lines.push(K.kmtxt(v[0])+" – "+K.kmtxt(v[1])+" · Kazı "+kaFormat(v[2]-p[2])+" · Dolgu "+kaFormat(v[3]-p[3])+" · Sıyırma "+kaFormat(v[4]-p[4])+" m³");});
+     list.textContent=lines.join("\n")||"Kesit hacimlerinde değişim yok.";});details.append(list);el.append(details);
+ }
+ root.append(el);}
 }
-function kaCsv(){const rows=ST.kaHistory||[];const q=v=>'"'+String(v??"").replace(/"/g,'""').replace(/^[=+@-]/,"'$&")+'"';return ["Ölçüm;Tarih;Yöntem;Kazı m³;Dolgu m³;Sıyırma m³;Alan m²;Sınır",...rows.map(x=>[q(x.ad),q(x.time),q(x.exact?"Kesin":"Yaklaşık"),x.kazi,x.dolgu,x.siy,x.alan,q(x.scope)].join(";"))].join("\r\n");}
-function kaReportText(){const r=kaReadReport();return ["A-CAD · ARAZİ KÜBAJ KONTROL ÖZETİ",new Date().toLocaleString("tr-TR"),"Proje: "+(ST.proj.is||""),"Parsel: "+(ST.proj.parsel||""),"Siyah nokta/üçgen: "+r.s.points+"/"+r.s.triangles,"Kırmızı nokta/üçgen: "+r.r.points+"/"+r.r.triangles,r.volume?"Yöntem: "+(r.volume.exact?"Kesin üçgen":"Yaklaşık ızgara")+" · Kazı "+kaFormat(r.volume.kazi)+" m³ · Dolgu "+kaFormat(r.volume.dolgu)+" m³ · Alan "+kaFormat(r.volume.area)+" m²":"Hacim hesabı yok",...r.issues.map(x=>x.kind.toUpperCase()+": "+x.msg),"Otomatik kontrol özeti; mühendislik ve saha onayı yerine geçmez."].join("\r\n");}
+function kaCsv(){const rows=ST.kaHistory||[];const q=v=>'"'+String(v??"").replace(/"/g,'""').replace(/^[=+@-]/,"'$&")+'"';return ["Ölçüm;Tarih;Yöntem;Kümülatif kazı m³;Kümülatif dolgu m³;Kümülatif sıyırma m³;Alan m²;Sınır;İmalat;Poz;Aşama;Önceki kazı;Önceki dolgu;Dönem kazı;Dönem dolgu;Dönem sıyırma",...rows.map((x,i)=>{const p=previousWork(rows,i),d=kaCompare(p,x);return [q(x.ad),q(x.time),q(x.exact?"Kesin":"Yaklaşık"),x.kazi,x.dolgu,x.siy,x.alan,q(x.scope),q(x.work),q(x.poz),q(x.stage),p?.kazi,p?.dolgu,d?.kazi,d?.dolgu,d?.siy].join(";")})].join("\r\n");}
+function kaReportText(){const r=kaReadReport();return ["A-CAD · ARAZİ KÜBAJ KONTROL ÖZETİ",new Date().toLocaleString("tr-TR"),"Proje: "+(ST.proj.is||""),"Parsel: "+(ST.proj.parsel||""),"Siyah nokta/üçgen: "+r.s.points+"/"+r.s.triangles,"Kırmızı nokta/üçgen: "+r.r.points+"/"+r.r.triangles,r.volume?"Yöntem: "+(r.volume.exact?"Kesin üçgen":"Yaklaşık ızgara")+" · Kazı "+kaFormat(r.volume.kazi)+" m³ · Dolgu "+kaFormat(r.volume.dolgu)+" m³ · Alan "+kaFormat(r.volume.area)+" m²":"Hacim hesabı yok",...(SD?[coverageText(SD),thresholdText("surface",SD.kesin)]:[]),...(SECS.length?[thresholdText("section"),...SECS.filter(x=>x.gapBefore).map(x=>gapLabel(x.gapBefore))]:[]),...r.issues.map(x=>x.kind.toUpperCase()+": "+x.msg),"Otomatik kontrol özeti; mühendislik ve saha onayı yerine geçmez."].join("\r\n");}
 async function kaPackage(){if(KA.busy)return;KA.busy=true;$("kaPack").disabled=true;
  try{const start=kaModelStamp(),C=window.KUBRAP?.ctx("sd");if(!C||C.err)throw Error(C?.err||"Önce geçerli kübaj hesabı gerekli.");kaStatus("Teslim paketi hazırlanıyor…");await new Promise(r=>setTimeout(r,0));
  const asData=async v=>typeof v==="string"?v:v instanceof Blob?new Uint8Array(await v.arrayBuffer()):v instanceof ArrayBuffer?new Uint8Array(v):v;
@@ -13133,7 +13291,7 @@ function kaInit(){
  <nav class="ka-tabs"><button data-ka-tab="check">Kontrol</button><button data-ka-tab="design">Kot senaryosu</button><button data-ka-tab="history">Metraj geçmişi</button><button data-ka-tab="delivery">Teslim</button></nav>
  <section data-ka-page="check"><div class="ka-stats"><div>Noktalar<b id="kaPoints">—</b></div><div>Üçgenler<b id="kaTriangles">—</b></div><div>Sınır kapsamı<b id="kaCoverage">—</b></div></div><p id="kaMethod" class="ka-method"></p><p id="kaBrief"></p><div id="kaIssues"></div><button id="kaRefresh">Kontrolü yenile</button></section>
  <section data-ka-page="design" hidden><h3>Baz kotu senaryosu</h3><p>Mevcut siyah arazi üzerinde farklı baz kotlarını hesapla. Denge önerisi kazı ve dolgu hacmini yaklaştırır; nakliye, şev ve sıkışma ayrı değerlendirilir.</p><div class="ka-actions"><label>Baz kotu (m)<input id="kaTryZ" inputmode="decimal" placeholder="915.50"></label><button id="kaTry">Dene</button><button id="kaBalance" class="ka-primary">Dengeli kot öner</button><button id="kaApply" disabled>Baz kotuna uygula</button></div><div id="kaScenarioResult" class="ka-method">—</div><button id="kaSlope">Şev ve baz kotu ayarları</button></section>
- <section data-ka-page="history" hidden><h3>Tarihli metraj kayıtları</h3><p>Kümülatif hesapları sakla. Yalnız aynı referans, kapsam ve kesin hesap yöntemi doğrulandığında önceki kayıtla fark çıkarılır.</p><div class="ka-actions"><label>Ölçüm / hakediş adı<input id="kaStageName" placeholder="Örn. Hakediş 04"></label><button id="kaRecord" class="ka-primary">Güncel metrajı kaydet</button><button id="kaExportHistory">CSV indir</button></div><div id="kaHistoryRows"></div></section>
+ <section data-ka-page="history" hidden><h3>Tarihli metraj kayıtları</h3><p>Kümülatif hesapları sakla. Yalnız aynı referans, kapsam ve kesin hesap yöntemi doğrulandığında önceki kayıtla fark çıkarılır.</p><div class="ka-actions"><label>İmalat<input id="kaWork" placeholder="Yol 8 veya 261/1"></label><label>Poz<input id="kaPoz" placeholder="Sözleşmedeki poz"></label><label>Yüzey aşaması<select id="kaStage"><option value="">Genel</option><option>Siyah arazi → yol</option><option>Yol sonrası → parsel</option></select></label><label>Ölçüm / hakediş adı<input id="kaStageName" placeholder="Örn. Hakediş 04"></label><button id="kaRecord" class="ka-primary">Güncel metrajı kaydet</button><button id="kaExportHistory">CSV indir</button></div><div id="kaHistoryRows"></div></section>
  <section data-ka-page="delivery" hidden><h3>Projeden sahaya ve teslime</h3><p>Çalışan araçlara doğrudan geç. Hesap ve raporlar mevcut proje verilerinden üretilir.</p><div class="ka-delivery"><button id="kaField">Saha kot sorgusu</button><button id="kaReport">Kontrol özeti indir</button><button id="kaPdf">Kübaj PDF raporu</button><button id="kaExcel">Kübaj Excel raporu</button><button id="kaArchive">Proje verisini kaydet</button><button id="kaOutputs">Kesitler ve hakediş</button><button id="kaPack" class="ka-primary">Teslim paketi (ZIP)</button></div></section>
  <div id="kaStatus" role="status"></div>`;document.body.append(d);
  const open=()=>{if(!d.open){d.showModal();kaTab("check");}};document.querySelectorAll("[data-ka-open]").forEach(b=>b.onclick=open);
@@ -13211,7 +13369,7 @@ function ctx(kind) {
     mevAd: `Siyah kot (ilk hâl) üçgen modeli (${fsrc(ST.S.src) || "model"}) · ${triN(MS).toLocaleString("tr-TR")} üçgen`,
     hedAd: flat ? `Sabit kırmızı kot ${tr(+MR.flat, 2)} m` : `Kırmızı kot (son hâl) üçgen modeli (${fsrc(ST.R.src) || "model"}) · ${triN(MR).toLocaleString("tr-TR")} üçgen`,
     exact:!!SD.kesin, yontem: (SD.kesin?"Kesin üçgen hesabı: yüzey kesişim parçaları.":"Yaklaşık ızgara hesabı: "+tr(SD.cell,2)+" m.") +
-      (KES || ES || SY ? ` Eşikler: kazı ${tr(KES, 2)} m, dolgu ${tr(ES, 2)} m altı sayılmaz; dolguya ${tr(SY, 2)} m sıyırma eklenir.` : ""),
+      thresholdText("surface",SD.kesin),
     kazi: SD.kazi, dolgu: SD.dolgu, siy: SD.siy, kaziAlan: SD.kaziAlan, dolguAlan: SD.dolguAlan, alan: SD.ortak, SY, ES, KES, tum: TUM, smod: SMOD };
 }
 
@@ -13276,6 +13434,11 @@ function cellsRow(g, px, y, h, xs, vals, o = {}) { g.lineWidth = 0.3 * px; g.str
     g.fillStyle = "#000"; g.font = `${(o.b && o.b[i]) ? "bold " : ""}${(o.sz || 3.1) * px}px Arial`; g.textBaseline = "middle"; const right = o.r && o.r[i]; g.textAlign = right ? "right" : "left";
     lines.forEach((l, k) => g.fillText(l, (right ? xs[i + 1] - 1.5 : xs[i] + 1.5) * px, (y + h / 2 + (k - (lines.length - 1) / 2) * (o.sz || 3.1) * 1.3) * px)); } }
 
+function reportControlLines(C){
+  const poly=C.kind==="baz"?C.poly:C.ortakMod?null:C.poly;
+  return [coverageText({poly,ortak:C.alan}),thresholdText("surface",C.exact),
+    ...(C.kind==="baz"?[]:SECS.length?[thresholdText("section"),...SECS.filter(s=>s.gapBefore).map(s=>gapLabel(s.gapBefore))]:[])];
+}
 function pageOne(C, full, KS) { const px = 6, W = 210, H = 297; const c = document.createElement("canvas"); c.width = W * px; c.height = H * px; c.pw = 595.28; c.ph = 841.89; const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height);
   header(g, px, C, W, "Sayfa 1 / 2", "KÜBAJ RAPORU");
   const xs = [15, 62, W - 15]; let y = 33;
@@ -13294,6 +13457,8 @@ function pageOne(C, full, KS) { const px = 6, W = 210, H = 297; const c = docume
   if (C.siy > 0.005) rows.push(C.tum ? [`Sıyırma (${C.smod === "kazi" ? "kazıda" : "tamamında"}, ${tr(C.SY, 2)} m)`, tr(C.siy), tr(C.smod === "kazi" ? C.kaziAlan : C.alan)] : [`  dolgu içindeki sıyırma (${tr(C.SY, 2)} m)`, tr(C.siy), ""]);
   rows.push([`Net (${net < 0 ? "malzeme artar" : net > 0 ? "malzeme gerekir" : "denk"})`, tr(net), tr(C.alan)]);
   for (const r of rows) { const bold = /^Net/.test(r[0]); cellsRow(g, px, y, rh, rx, r, { b: [1, bold, 0], r: [0, 1, 1], sz: 3.3 }); y += rh; }
+  g.fillStyle="#283747";g.font=(2.7*px)+"px Arial";g.textAlign="left";
+  for(const line of reportControlLines(C).slice(0,2)){y+=4;g.fillText(line,15*px,y*px,180*px);}
   // harita
   y += 9; g.fillStyle = "#000"; g.font = `bold ${4.4 * px}px Arial`; g.textAlign = "left"; g.textBaseline = "alphabetic"; g.fillText("KAZI / DOLGU HARİTASI", 15 * px, y * px); y += 2.5;
   const kh = 44, mapH = Math.max(45, 279 - y - 10 - kh - 14); const V = view(C.poly, 15, y, W - 30, mapH, 3);
@@ -13354,6 +13519,8 @@ async function pdf(kind) { const el = kind === "baz" ? "bzMsg" : "sdMsg"; const 
 const fname2 = (kind, ext) => `${(ST.proj && ST.proj.dosya) || "KUBAJ"}_${kind === "baz" ? "BAZ_KOTU" : "IKI_MODEL"}_RAPOR.${ext}`;
 
 function xlsx(C) { const X = O.xlsx(), th = { b: true, border: "thin", h: "center", v: "center", fill: "E7E9EC", wrap: true }, tx = { border: "thin", h: "left", wrap: true }, txb = { border: "thin", h: "left", b: true }, n2 = { border: "thin", nf: "#,##0.00", h: "right" }, n3 = { border: "thin", nf: "0.000", h: "right" }, n2b = { border: "thin", nf: "#,##0.00", h: "right", b: true }, inp = { border: "thin", nf: "0.000", h: "right", fill: "FFF2CC" };
+  const info=X.sheet("HESAP KONTROLÜ");info.col(0,110);
+  reportControlLines(C).forEach((line,i)=>info.set("A"+(i+1),line,tx));
   const P = C.mevcut.pts, sev = C.sev;
   // NOKTALAR
   const N = X.sheet("NOKTALAR"); [10, 14, 14, 11, 11, 11, 9].forEach((w, i) => N.col(i, w)); N.set("A1", "NOKTA KOTLARI (sınır içi)", { b: true, sz: 12 }); N.set("A2", "Δ = hedef − mevcut · artı dolgu, eksi kazı", {});
