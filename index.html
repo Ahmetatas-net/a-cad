@@ -10453,7 +10453,13 @@ const IDB = (() => {
     transaction.oncomplete = () => {clearTimeout(timer);resolve(write ? undefined : request.result);};
     transaction.onabort = transaction.onerror = () => {clearTimeout(timer);reject(transaction.error || request.error || new Error("Veritabanı işlemi iptal edildi"));};
   }));
-  return { get: key => run(key, undefined, false), has: key => db().then(connection => new Promise((resolve,reject)=>{ const request=connection.transaction("kv","readonly").objectStore("kv").count(key); request.onsuccess=()=>resolve(request.result>0); request.onerror=()=>reject(request.error); })), set: (key, value) => run(key, value, true) };
+  const keys = prefix => db().then(connection => new Promise((resolve,reject) => {
+    const request=connection.transaction("kv","readonly").objectStore("kv")
+      .getAllKeys(IDBKeyRange.bound(prefix,prefix+"\uffff"));
+    request.onsuccess=()=>resolve(request.result);
+    request.onerror=()=>reject(request.error);
+  }));
+  return { get: key => run(key, undefined, false), keys, has: key => db().then(connection => new Promise((resolve,reject)=>{ const request=connection.transaction("kv","readonly").objectStore("kv").count(key); request.onsuccess=()=>resolve(request.result>0); request.onerror=()=>reject(request.error); })), set: (key, value) => run(key, value, true) };
 })();
 let IDBOK = false, IDBPEND = false;
 let coreSavePending = Promise.resolve(true);let planMeshPaths=new WeakMap(),planAreaCache=null;
@@ -27117,7 +27123,8 @@ const CAD_SHEETS_KEY = "acad-v102-active-sheets";
 const CAD_LEGACY_SHEETS_KEY = "acad-v610-sheets";
 const CAD_RECOVERY_KEY = "acad-v102-previous-session";
 const CAD_SINGLE_RECOVERY_KEY = "acad-v102-previous-single";
-const cadHasData = payload => !!(payload?.sheets?.some(s => (s?.data?.ents?.length||0)+(s?.data?.faces?.length||0)>0 || (s?.data?.doc?.name||'').trim()));
+const CAD_CLOSED_PREFIX = "acad-cad-closed:";
+const cadHasData = payload => !!(payload?.sheets?.some(s => (s?.data?.ents?.length||0)+(s?.data?.faces?.length||0)>0 || (s?.data?.doc?.name||'').trim() || s?.data?.raster));
 /* Snapshot the last session BEFORE a new session can overwrite it. If quota prevents
    the snapshot, block destructive session writes rather than risking the old work. */
 let CAD_STARTUP_PREVIOUS=null;
@@ -27148,8 +27155,8 @@ try { CAD_RECOVERY_READY.then(ok=>{CIDB=!!ok;if(ok&&CPEND){CPEND=false;persist()
 let CAD_RASTER=null, CAD_RASTER_IMAGE=null, CAD_RASTER_PICK=0, CAD_RASTER_TRACE="", CAD_RASTER_VERT=[], CAD_RASTER_BLOCK_CLICK=false;
 const cadRasterForSave=()=>CAD_RASTER?{...CAD_RASTER,pts:(CAD_RASTER.pts||[null,null]).map(p=>p?[...p]:null),controlPoints:cadRasterControls(CAD_RASTER).map(c=>({...c,pixel:c.pixel?[...c.pixel]:null})),pose:{...CAD_RASTER.pose}}:null;
 
-const cadSheetSnap = () => ({ ents:clone(ents), lays:clone(lays), cur, nid, V:clone(V), faces:clone(FACES), doc:clone(CDOC), raster:cadRasterForSave() });
-const cadSheetRestore = d => { const panel=$("tsDeg");if(panel){panel.hidden=true;panel.style.display="none";}$("cadBulkFind")?.remove(); ents=clone(d.ents); lays=clone(d.lays); cur=d.cur; nid=d.nid; Object.assign(V,d.V); FACES=clone(d.faces||[]); CDOC=clone(d.doc||{name:"",fmt:""}); cadRasterRestore(d.raster||null); sel.clear(); U=[]; RD=[]; IDX=null; FC=null; cmd=null; renderLays(); draw(); try { docInfo(); } catch (e) {} try { if (typeof PAF_GEZ !== "undefined" && PAF_GEZ && !(cadSheets[cadSheetIndex] || {}).onizleme) setTimeout(() => { if (PAF_GEZ && !(cadSheets[cadSheetIndex] || {}).onizleme) pafGezBitir(false); }, 0); } catch (e) {} };
+const cadSheetSnap = () => ({ ents:clone(ents), lays:clone(lays), cur, nid, V:clone(V), faces:clone(FACES), doc:clone(CDOC), dirty:DIRTY, raster:cadRasterForSave() });
+const cadSheetRestore = d => { const panel=$("tsDeg");if(panel){panel.hidden=true;panel.style.display="none";}$("cadBulkFind")?.remove(); ents=clone(d.ents); lays=clone(d.lays); cur=d.cur; nid=d.nid; Object.assign(V,d.V); FACES=clone(d.faces||[]); CDOC=clone(d.doc||{name:"",fmt:""}); DIRTY=d.dirty===true; cadRasterRestore(d.raster||null); sel.clear(); U=[]; RD=[]; IDX=null; FC=null; cmd=null; renderLays(); draw(); try { docInfo(); } catch (e) {} try { if (typeof PAF_GEZ !== "undefined" && PAF_GEZ && !(cadSheets[cadSheetIndex] || {}).onizleme) setTimeout(() => { if (PAF_GEZ && !(cadSheets[cadSheetIndex] || {}).onizleme) pafGezBitir(false); }, 0); } catch (e) {} };
 /* V103: commit immutable, synchronously captured sheet snapshots in strictly
    ordered writes. Never read the *next* tab after an awaited storage operation. */
 let cadSaveTimer=null, cadSaveWarned=false, cadWriteTail=Promise.resolve(), cadWriteSerial=0;
@@ -27264,10 +27271,17 @@ window.ACAD_SESSION_LIBRARY = Object.freeze({
   if(!raw){try{raw=localStorage.getItem(KEYC)}catch(_){ }}
   if(raw)try{const p=JSON.parse(raw);if(p?.ents?.length || p?.faces?.length)
    result.push({key:CAD_SINGLE_RECOVERY_KEY,label:'Eski tek CAD çizimi',at:Number(p._t)||0,pages:[{index:0,name:String(p.doc?.name||'Eski çizim'),objects:(p.ents?.length||0)+(p.faces?.length||0)}]});}catch(_){ }
-  const seen=new Set();return result.filter(s=>{const fp=s.at+'|'+s.pages.map(p=>p.name+':'+p.objects).join('|');if(seen.has(fp))return false;seen.add(fp);return true;});
+  try{
+   const closed=(await IDB.keys(CAD_CLOSED_PREFIX)).reverse().map(key=>{
+    const [at,,name,objects]=JSON.parse(key.slice(CAD_CLOSED_PREFIX.length));
+    return {key,at:Number(at),label:"Kapatılan çizim",pages:[{index:0,name,objects}]};
+   });
+   result.push(...closed);
+  }catch(error){console.warn("Kapatılan CAD çizimleri listelenemedi",error);}
+  const seen=new Set();return result.filter(s=>{const fp=s.key.startsWith(CAD_CLOSED_PREFIX)?s.key:s.at+'|'+s.pages.map(p=>p.name+':'+p.objects).join('|');if(seen.has(fp))return false;seen.add(fp);return true;});
  },
  async open(key,index){
-  if(![CAD_RECOVERY_KEY,CAD_SHEETS_KEY,CAD_LEGACY_SHEETS_KEY,CAD_SINGLE_RECOVERY_KEY].includes(key))throw Error('Bilinmeyen çalışma kaynağı');
+  if(!key.startsWith(CAD_CLOSED_PREFIX)&&![CAD_RECOVERY_KEY,CAD_SHEETS_KEY,CAD_LEGACY_SHEETS_KEY,CAD_SINGLE_RECOVERY_KEY].includes(key))throw Error('Bilinmeyen çalışma kaynağı');
   let raw=null;try{raw=await IDB.get(key)}catch(_){}
   if(!raw){try{raw=localStorage.getItem(key)}catch(_){}}
   if(!raw && key===CAD_SINGLE_RECOVERY_KEY){try{raw=await IDB.get(KEYC)}catch(_){}if(!raw)try{raw=localStorage.getItem(KEYC)}catch(_){}}
@@ -32569,7 +32583,7 @@ function cadConfirmReplace(file){
   });
 }
 async function cadOpenDrawing(source,{append=false,syncParcels=true}={}){
-  if(!source||cadOpenInProgress)return false;
+  if(!source||cadOpenInProgress||cadClosing)return false;
   const file=acadV97NormalizeCadFilename(source);
   const raster=/\.(pdf|png|jpe?g|webp)$/i.test(file.name);
   cadOpenInProgress=true;
@@ -32782,14 +32796,68 @@ $("ckGo").addEventListener("click", () => { const sl = $("ckS").value, rl = $("c
   if (typeof buildModels === "function") buildModels(); if (typeof SECS !== "undefined") SECS = []; save(); try { info(); renderAlanlar(); } catch (e) {} $("cadKub").hidden = true;
   if (typeof recalcIfReady === "function") recalcIfReady(); if (typeof showTab === "function") showTab(rl && P ? "plan" : "veri");
   say(`Kübaja gönderildi: siyah ${S_.tri ? (S_.tri.length / 3) + " üçgen" : S_.pts.length + " nokta"}${rl === "#sabit" ? ", kırmızı sabit kot" : rl ? `, kırmızı ${ST.R.pts.length} nokta` : ""}${P ? ", sınır seçili alan" : ""}`); });
-function closeProj(b) { if (!b.dataset.arm) { b.dataset.arm = 1; b.textContent = "Eminim, kapat"; b.classList.add("primary"); say("Açık proje kapatılır: CAD çizimi, yapı apl / ifraz, kübaj verileri temizlenir (ayarlar ve antet kalır). Onay için tekrar bas."); setTimeout(() => { if (b.dataset.arm) { delete b.dataset.arm; b.textContent = "✕ Kapat"; b.classList.remove("primary"); } }, 5000); return; }
-  if(DIRTY && !confirm('KAYDEDİLMEMİŞ CAD DEĞİŞİKLİKLERİ VAR.\n\nKapatırsan son düzenlemeler kaybolabilir. Önce kaynak-korumalı NCZ/DXF yedeği indirmen önerilir.\n\nProjeyi yine de kapat?'))return;
-  delete b.dataset.arm; b.textContent = "✕ Kapat"; b.classList.remove("primary"); if (PLAN) editExit();
-  // V95: üçgenler, dosya kimliği ve kaynak koruma kayıtları da proje kapsamındadır.
-  ents = []; FACES=[]; CDOC={name:'',fmt:''}; DIRTY=false; FVER++;
-  if(typeof NCZ_ORIGINAL_FILES!=='undefined')NCZ_ORIGINAL_FILES.clear();
-  lays = { "0": { c: "#ffffff", on: true } }; cur = "0"; nid = 1; U = []; RD = []; sel.clear(); IDX = null; cmd = null; PEND = null;
-  try { window.closeProject && window.closeProject(); } catch (e) {} try { window.APLT.closeAll(); } catch (e) {} $("cadKub").hidden = true; propClose(); renderLays(); persist(); V.s = 1; draw(); ctxBar(); say("Proje kapatıldı. 📂 Dosya aç ile yeni projeyi yükle."); }
+document.addEventListener("click",async event=>{
+  const button=event.target.closest?.("#cadSaveLocal");
+  if(!button||button.disabled||cadClosing||cadOpenInProgress)return;
+  button.disabled=true;
+  cadOpenFeedback("Çalışma kaydediliyor…");
+  try{
+    if(!await cadSheetsFlush())throw Error("Açık çizim bulunamadı.");
+    cadOpenFeedback("Çalışma bu cihaza kaydedildi.","success");
+  }catch(error){cadOpenFeedback("Çalışma kaydedilemedi: "+error.message,"error");}
+  finally{button.disabled=false;}
+});
+let cadClosing=false;
+async function closeProj(b) {
+  if(cadClosing||cadOpenInProgress)return;
+  if(PAF_GEZ&&cadSheets[cadSheetIndex]?.onizleme){pafGezBitir(false);return;}
+  const sheet=cadSheets[cadSheetIndex];
+  if(!sheet)return;
+  const hasDrawing=!!(ents.length||FACES.length||CDOC.name||CAD_RASTER||sheet.manualName);
+  if(!hasDrawing&&cadSheets.length===1){
+    cadOpenFeedback("Kapatılacak çizim yok.","cancel");
+    return;
+  }
+  cadClosing=true;
+  b.disabled=true;
+  try{
+    const version=FVER;
+    if(hasDrawing){
+      cadOpenFeedback("Çizim saklanıyor…");
+      const data=cadSheetSnap();
+      const key=CAD_CLOSED_PREFIX+JSON.stringify([Date.now(),crypto.randomUUID(),sheet.name,data.ents.length+data.faces.length]);
+      await IDB.set(key,JSON.stringify({sheets:[{...sheet,data}]}));
+      if(cadOpenInProgress||cadSheets[cadSheetIndex]!==sheet||FVER!==version){
+        cadOpenFeedback("Çizim bu cihaza kaydedildi. Kapatmak için tekrar bas.","success");
+        return;
+      }
+    }
+    if(PLAN)editExit();
+    cadContextHide();
+    propClose();
+    $("cadKub").hidden=true;
+    cadSheets.splice(cadSheetIndex,1);
+    if(!cadSheets.length)cadSheets.push({
+      name:"Yeni çizim",crs:"TUREF_TM33",crsConfirmed:false,
+      data:{ents:[],lays:{"0":{c:"#ffffff",on:true}},cur:"0",nid:1,V:{cx:0,cy:0,s:1},faces:[],doc:{name:"",fmt:""}}
+    });
+    cadSheetIndex=Math.min(cadSheetIndex,cadSheets.length-1);
+    cadSheetRestore(cadSheets[cadSheetIndex].data);
+    FVER++;
+    cadTabsRender();
+    ctxBar();
+    window.dispatchEvent(new CustomEvent("acad:cad-changed",{detail:{version:FVER,pageSwitch:true}}));
+    clearTimeout(svT);
+    if(CIDB)persistNow();
+    cadSheetsSave();
+    cadOpenFeedback(hasDrawing?"Çizim kapatıldı. Son dosyalar → Kayıtlı çalışma sekmelerinden aç.":"Sayfa kapatıldı.","success");
+  }catch(error){
+    cadOpenFeedback("Çizim kapatılamadı: "+error.message,"error");
+  }finally{
+    cadClosing=false;
+    b.disabled=false;
+  }
+}
 document.querySelectorAll("#cadFlow [data-f]").forEach(b => b.addEventListener("click", () => { const f = b.dataset.f; if (f === "kapat") return closeProj(b); if (f === "pdf") return pvOpen(); if (f === "kub") return kubOpen(); if (f === "geri") return $("cadFromApl").click(); flowTo(f); }));
 /* ---------- hızlı düzenleme çubuğu: adım adım kaydır, kopyala, döndür, ötele ---------- */
 let PST = 0.1, PAN_ = 5, PCP = false; try { const q = JSON.parse(localStorage.getItem("acad-pad") || "{}"); if (q.s > 0) PST = q.s; if (q.a > 0) PAN_ = q.a; } catch (e) {}
@@ -35607,7 +35675,7 @@ body.acad57-cad #cadFileStatus[data-tone="error"]{border-color:var(--bad)}
     $("rfX2").onclick = () => b.hidden = true; b.querySelectorAll("[data-t]").forEach(x => x.onclick = () => { const [id, , tab] = TGT[+x.dataset.t]; try { if (typeof showTab === "function") showTab(tab); } catch (e) {} openTo($(id), it); }); }
   /* her "dosya seç" düğmesinin yanına küçük 🕘 */
   document.querySelectorAll('input[type=file]:not(.kaseIn)').forEach(inp => { const host = inp.closest(".filebtn") || inp.parentElement; if (inp.closest('#v-cad') && !inp.closest('.filebtn'))return;
-    if (inp.id==="planDeviceFile" || !host || host.nextElementSibling && host.nextElementSibling.classList && host.nextElementSibling.classList.contains("rfBtn")) return;
+    if (["planDeviceFile","acadSafeOpen"].includes(inp.id) || !host || host.nextElementSibling && host.nextElementSibling.classList && host.nextElementSibling.classList.contains("rfBtn")) return;
     const bt = document.createElement("button"); bt.type = "button"; bt.className = "rfBtn"; bt.textContent = "🕘"; bt.title = "Son açılan dosyalardan seç"; bt.style.cssText = "padding:4px 8px;margin-left:4px;vertical-align:middle"; bt.onclick = () => show(inp); host.insertAdjacentElement("afterend", bt); });
   const top = $("openUrl"); if (top) { const b2 = document.createElement("button"); b2.type = "button"; b2.id = "rfTop"; b2.textContent = "🕘 Son dosyalar"; b2.style.cssText = "padding:6px 12px"; b2.onclick = () => show($("v-cad")?.hidden ? null : $("cadF2")); top.parentElement.appendChild(b2); }
   /* üstte konum düğmesi: Plan'ı açar, canlı konumu gösterir ve takip eder */ if (top) { const b3 = document.createElement("button"); b3.type = "button"; b3.id = "gpsTop"; b3.textContent = "📍 Konumum"; b3.style.cssText = "padding:6px 12px"; b3.onclick = () => { try { showTab("plan"); } catch (e) {} setTimeout(() => { const t = $("tGps"); if (t && !(window.GPSS && GPSS.on)) t.click(); else if (t) t.click(); }, 120); }; top.parentElement.appendChild(b3);
@@ -37654,8 +37722,18 @@ const refresh=ensureResize();
  const bar=document.createElement('div');bar.className='acad-file-ribbon';bar.setAttribute('role','group');bar.setAttribute('aria-label','CAD dosya işlemleri');
  const openSpan=open.querySelector('span');if(openSpan)openSpan.textContent='📂 Aç';
  open.title='Mevcut çizim yerine yeni dosya aç';
- close.textContent='✕ Kapat';close.classList.add('acad-file-close');close.title='Açık projeyi kapat · iki kez onay';
- save.textContent='💾 Kaydet';save.classList.add('acad-file-save');save.title='Projeyi uygun biçimde bu cihaza indir; NCZ kaynak varsa korumalı ZIP paketi';
+ close.id="cadCloseDrawing";
+ close.textContent="Kapat";
+ close.classList.add("acad-file-close");
+ close.title="Açık çizimi yerelde sakla ve kapat";
+ save.textContent="İndir";
+ save.title="Çizim dosyasını indir; özgün NCZ kaynakları varsa korumalı ZIP paketi";
+ const keep=document.createElement("button");
+ keep.type="button";
+ keep.id="cadSaveLocal";
+ keep.className="acad-file-save";
+ keep.textContent="Kaydet";
+ keep.title="Çalışmayı bu cihazda sakla";
  const option=saveAs.querySelector('option[value=""]');if(option)option.textContent='▾ Farklı Kaydet';
  saveAs.title='Kaydetme biçimi: DWG, DXF, NCZ, NCN, TXT, Excel, PDF, LandXML ve bölge';
  print.textContent='🖨 Yazdır';print.title='Ölçekli PDF önizleme ve çıktı';
@@ -37668,7 +37746,7 @@ const refresh=ensureResize();
  const openButton=document.createElement("button");
  openButton.type="button";
  openButton.id="cadOpenDevice";
- openButton.textContent="📂 Aç";
+ openButton.textContent="Aç";
  openButton.setAttribute("aria-label","CAD dosyası aç");
  openButton.onclick=()=>file.click();
  open.querySelector(":scope > span")?.replaceWith(openButton);
@@ -37681,14 +37759,8 @@ const refresh=ensureResize();
  recent.setAttribute("aria-label","Son açılan CAD dosyalarını göster");
  recent.classList.add("rfBtn","acad-recent-visible");
  recent.onclick=()=>window.RECENT?.show(file);
- bar.append(recent,close,save,saveAs,print,append);
+ bar.append(recent,close,keep,save,saveAs,print,append);
  actions.prepend(bar);
- // Birincil beş komut tek basamakta ve yan yana. Eski iki asamali kapatma uyarisini ust butona yansit.
- close.addEventListener('click',()=>{
-   const confirm=!!close.dataset.arm;
-   close.classList.toggle('acad-file-confirm',confirm);
-   if(confirm){setTimeout(()=>close.classList.remove('acad-file-confirm'),5200)}
- });
  // Eski Dosya sekmesi gizlendi; ileri veri araclari ayri, tercihe bagli dugmede korunuyor.
  const nav=$('cadNav')?.querySelector('button[data-m="dos"]');
  const advanced=document.createElement('button');advanced.type='button';advanced.className='acad-ribbon-more';advanced.textContent='⋯ Veri araçları';advanced.title='Kaynak NCZ, DXF, nokta, pafta ve dosya aktarma araçları';
@@ -39089,14 +39161,21 @@ if(!root||!tabs||!wrap||root.dataset.acad57)return;root.dataset.acad57='1';root.
 const byId=id=>document.getElementById(id),fileRibbon=root.querySelector('.acad-file-ribbon'),finalBar=root.querySelector('.acad-finalbar'),actions=finalBar?.querySelector('.acad-final-actions');
 if(!fileRibbon||!finalBar||!actions)return;
 // Top row, outside CAD viewport but displayed only while CAD tab is active.
-const host=document.createElement('div');host.id='acad57Quickfiles';host.setAttribute('role','toolbar');host.setAttribute('aria-label','CAD dosya işlemleri — Aç, Kapat, Kaydet, Farklı Kaydet, Yazdır');tabs.parentNode.insertBefore(host,tabs);
+const host=document.createElement('div');host.id='acad57Quickfiles';host.setAttribute('role','toolbar');host.setAttribute('aria-label','CAD dosya işlemleri');tabs.parentNode.insertBefore(host,tabs);
 const fileStatus=document.createElement("div");
 fileStatus.id="cadFileStatus";
 fileStatus.setAttribute("role","status");
 fileStatus.hidden=true;
 host.after(fileStatus);
 const input=byId('cadF3')?.closest('.filebtn');
-for(const el of [...fileRibbon.children])if(el!==input)host.append(el);
+const extras=document.createElement("div");
+extras.id="cadFileExtras";
+extras.setAttribute("role","group");
+extras.setAttribute("aria-label","Diğer CAD dosya araçları");
+for(const el of [...fileRibbon.children]){
+  if(el!==input)(el===byId("cadSvAs")||el.dataset.f==="pdf"?extras:host).append(el);
+}
+host.append(extras);
 fileRibbon.remove();
 // Existing native Ekle remains the same input. Place native touch actions between Ekle and Sorgu.
 const searchBtn=[...actions.children].find(el=>el.tagName==='BUTTON'&&/Sorgu/.test(el.textContent));
@@ -39459,9 +39538,8 @@ body.acad65-panel-adjusting #cadCv{image-rendering:auto}
  const place=()=>{
   const btn=document.getElementById('cadRasterAdd');
   const root=document.getElementById('v-cad');
-  const bar=document.getElementById('acad57Quickfiles')||root?.querySelector('.acad-file-ribbon');
-  const recent=document.getElementById('acadRecentBesideOpen');
-  if(btn&&bar&&btn.parentElement!==bar)bar.insertBefore(btn,recent?.nextSibling||bar.firstChild);
+  const bar=document.getElementById("cadFileExtras")||root?.querySelector(".acad-file-ribbon");
+  if(btn&&bar&&btn.parentElement!==bar)bar.insertBefore(btn,bar.querySelector("#acadSvAs"));
  };
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(place,20),{once:true});
  else setTimeout(place,20);
@@ -53249,7 +53327,12 @@ body:not(.cadmasa) #cadLayerPanel h2{position:sticky;top:-10px;background:inheri
 
 <style id="acad-compact-module-controls">
 body #acadSafeBar#acadSafeBar{display:inline-flex!important;align-items:center;align-self:center;flex:0 0 auto;flex-wrap:nowrap!important;gap:4px!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;margin:0!important;padding:0!important}
-body #acad57Quickfiles>#acadSafeBar#acadSafeBar{margin-left:auto!important}
+#cadFileExtras{display:flex;align-items:center;gap:5px;min-width:0;flex:1 1 auto;overflow-x:auto}
+#cadFileExtras>#acadSafeBar#acadSafeBar{margin:0 0 0 auto!important}
+#cadFileExtras>button,#cadFileExtras>select{flex:none;height:32px;min-height:32px;max-width:145px;padding:4px 9px;border:1px solid #536e84;border-radius:7px;background:#304c60;color:#f0f6fa;font:650 12px system-ui;white-space:nowrap}
+#cadFileExtras>select{appearance:auto}
+body #acad57Quickfiles>.filebtn:has(#cadOpenDevice){padding:0!important}
+#cadOpenDevice:focus-visible,#acad57Quickfiles>#acadRecentBesideOpen:focus-visible{outline-offset:-3px}
 body #acadSafeBar #acadSafeGo,body #acadSafeBar #acadBackupMenu{box-sizing:border-box;width:auto!important;min-width:0!important;max-width:8.4rem!important;min-height:28px!important;height:28px!important;margin:0;padding:3px 7px!important;border:1px solid #597384;border-radius:5px;color:#f0f6fa;background:#304c60;font:600 12px/1.15 system-ui;cursor:pointer}
 body #acadSafeBar #acadSafeGo{width:8.2rem!important;text-overflow:ellipsis}
 body #acadSafeBar #acadBackupMenu.needs-attention{color:#ffcf82;border-color:#cd9246}
@@ -53258,7 +53341,16 @@ body #acadBackupTools:popover-open{display:grid!important;gap:8px}
 body #acadBackupTools::backdrop{background:#17243240}
 body #acadBackupTools #acadSafeStatus{display:block!important;min-width:0!important;font-size:12px}
 body #acadBackupTools button{width:100%;text-align:start}
-@media(max-width:760px){body #acad57Quickfiles>#acadSafeBar#acadSafeBar{order:-1;margin-left:0!important;margin-right:2px!important}body #acadSafeBar #acadSafeGo{width:6.5rem!important}body #acad57Quickfiles #acadRecentBesideOpen{width:32px!important;font-size:0!important}body #acadRecentBesideOpen::before{content:"◷";font:20px/1 system-ui}}
+@media(max-width:760px){
+ body.acad57-cad #acad57Quickfiles#acad57Quickfiles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));max-height:none!important;overflow:visible!important}
+ body.acad57-cad #acad57Quickfiles>button,body.acad57-cad #acad57Quickfiles>.filebtn{height:42px!important;min-height:42px!important;min-width:0!important;margin:0;padding:0 2px!important;font-size:inherit}
+ body.acad57-cad #acad57Quickfiles>.filebtn{padding:0!important}
+ body.acad57-cad #acad57Quickfiles>#acadRecentBesideOpen{width:auto!important;font-size:0!important}
+ body #acadRecentBesideOpen::before{content:"◷";font:20px/1 system-ui}
+ body #acadSafeBar #acadSafeGo{width:6.5rem!important}
+ #cadFileExtras{grid-column:1/-1;padding-bottom:1px;overscroll-behavior-x:contain;scrollbar-width:thin}
+ #cadFileExtras>#acadSafeBar#acadSafeBar{margin-left:0!important}
+}
 </style>
 <script id="acad-update-resume-start">
 addEventListener('load',async()=>{
@@ -53271,11 +53363,13 @@ addEventListener('load',async()=>{
 </script>
 <script id="acad-compact-module-placement">
 (()=>{
- const bar=document.getElementById('acadSafeBar'), filebar=document.getElementById('acad57Quickfiles');
+ const bar=document.getElementById('acadSafeBar'), filebar=document.getElementById('cadFileExtras');
  const header=document.querySelector('.wrap > header');
  function place(){
    const host=!document.getElementById('v-cad').hidden&&filebar?filebar:header?.lastElementChild;
-   if(host&&bar.parentElement!==host)host.append(bar);
+   if(host&&bar.parentElement!==host){
+     if(host===filebar)host.prepend(bar);else host.append(bar);
+   }
  }
  place();window.addEventListener('acad:tab',place);
 })();
