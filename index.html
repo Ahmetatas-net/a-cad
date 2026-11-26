@@ -1505,7 +1505,16 @@ body.kub-focus #profBox{z-index:9600}#profBox{overscroll-behavior:contain}#profB
 body.kub-focus .plan-mapbar{position:relative;z-index:13}
 body.kub-focus.kub-tools-open #v-plan #kubPlanTools{top:var(--plan-tools-top,66px);max-height:calc(100dvh - var(--plan-tools-top,66px) - 12px)}
 
-#v-apl:not([data-active-module="apl"]) #acad48-workhead{display:none!important}</style></head>
+#v-apl:not([data-active-module="apl"]) #acad48-workhead{display:none!important}</style><style>
+#kgmWorkspace,#kgmBack{display:none}
+#v-apl[data-active-module=kam]:not(.kgm-advanced){display:flex!important;flex-flow:column!important;grid-template-columns:none!important;height:auto!important;max-height:none!important;min-height:0!important;overflow:visible!important}
+#v-apl[data-active-module=kam][hidden]{display:none!important}
+#v-apl[data-active-module=kam]:not(.kgm-advanced)>:not(#kgmWorkspace){display:none!important}
+#v-apl[data-active-module=kam]:not(.kgm-advanced)>#kgmWorkspace{display:block!important;width:100%;min-width:0;background:#f1f5f5;border-radius:12px;overflow:hidden}
+#kgmWorkspace,#kgmBack{scroll-margin-top:65px}#kgmProjectFrame{display:block;width:100%;border:0;min-height:380px}
+#kgmWorkspace>#kgmOriginalFiles{margin:0 clamp(12px,2vw,30px) 12px;border:1px solid #b1c9c6;border-radius:10px;padding:12px;background:white;color:#244a47}#kgmWorkspace>#kgmOriginalFiles summary{cursor:pointer;font-weight:650}#kgmWorkspace>#kgmOriginalFiles p{color:#395953}#kgmOther{margin:0 16px 16px;background:#f7fbfa;color:#225853;border:1px solid #a7c3be;border-radius:8px;padding:9px 12px}
+#v-apl[data-active-module=kam].kgm-advanced>#kgmBack{display:block;grid-column:1/-1;width:fit-content}
+</style></head>
 <body>
 <script>/* ===== A-CAD kullanıcı girişi (telefon uygulaması sürümü) =====
    Hesaplar sunucudaki users.json dosyasındadır. Dosya yöneticinin özel anahtarıyla imzalıdır;
@@ -53491,7 +53500,11 @@ kgmFiles.addEventListener("change",()=>{
  const names=new Set(formatEntries.map(e=>e.name));
  if(names.size!==formatEntries.length){kgmStatus.textContent="Aynı yolda birden çok dosya var. Tek proje klasörü seçin.";return;}
  if(!formatEntries.some(e=>/\.NCZ$/i.test(e.name))){kgmStatus.textContent="NCZ paftası içeren proje ana klasörünü seçin.";return;}
+ const expected=[[2,'Beyanname'],[3,'Ölçü krokisi'],[4,'Alan hesabı'],[5,'Rulo plan']];
+ const missing=expected.filter(([n])=>!formatEntries.some(e=>e.name.startsWith(String(n))&&/\.ncz$/i.test(e.name)));
  kgmSave.disabled=false;
+ kgmSave.textContent=missing.length?'Seçilen kaynakları ZIP indir':'Özgün paftaları ZIP indir';
+ if(missing.length){kgmStatus.textContent='Eksik NCZ paftaları: '+missing.map(x=>x[1]).join(', ')+'. Seçilen kaynakları kısmi arşiv olarak alabilirsiniz.';return;}
  kgmStatus.textContent=formatEntries.length+" kaynak dosya seçildi. NCZ paftaları ve aynı klasörlerdeki bağlı dosyalar özgün adlarıyla saklanır.";
 });
 kgmSave.addEventListener("click",async()=>{
@@ -53499,7 +53512,7 @@ kgmSave.addEventListener("click",async()=>{
  try{
    const entries=[];
    for(const item of formatEntries){entries.push({name:item.name,data:new Uint8Array(await item.file.arrayBuffer())});if(ticket!==formatVersion)return;}
-   const data=window.O.zip(entries,{nczYok:true});download(data,"application/zip","KGM_Ozgun_Pafta_Takimi.zip");
+   const data=window.O.zip(entries,{nczYok:true});download(data,"application/zip",kgmSave.textContent.startsWith("Seçilen")?"KGM_Kismi_Kaynak_Arsivi.zip":"KGM_Ozgun_Pafta_Takimi.zip");
    kgmStatus.textContent=entries.length+" özgün dosya ZIP paketine yazıldı.";
  }catch(err){if(ticket===formatVersion)kgmStatus.textContent=err.message||"Kaynak paftalar kaydedilemedi.";}
  finally{if(ticket===formatVersion)kgmSave.disabled=!formatEntries.length;}
@@ -54001,5 +54014,26 @@ if(kgmBuild)kgmBuild.onclick=async()=>{
 };
 })();
 
+})();
+</script>
+
+<script>(()=>{
+ const section=document.getElementById('v-apl');
+ const shell=document.createElement('div');shell.id='kgmWorkspace';
+ const frame=document.createElement('iframe');frame.id='kgmProjectFrame';frame.title='Kamulaştırma · Proje, sınır ve tapu kaydı';
+ const more=document.createElement('button');more.type='button';more.id='kgmOther';more.textContent='Diğer araçlar · CAD, eksen ve KGM pafta kalıbı';
+ const back=document.createElement('button');back.type='button';back.id='kgmBack';back.textContent='← Proje, sınır ve tapu kaydına dön';
+ const original=document.getElementById('bpFormatFiles').closest('details'),slot=document.createComment('KGM kaynak paftaları');original.before(slot);
+ original.id='kgmOriginalFiles';original.querySelector('summary').textContent='Özgün KGM paftalarını paketle';
+ shell.append(frame,original,more);section.prepend(shell,back);
+ function sync(){
+  if(section.dataset.activeModule!=='kam'||section.hidden)return;
+  if(!frame.hasAttribute('src'))frame.src='kgm-sinir-projesi.html';
+ }
+ function advanced(on){if(on)slot.after(original);else more.before(original);section.classList.toggle('kgm-advanced',on);(on?back:shell).scrollIntoView({block:'start'});}
+ more.onclick=()=>advanced(true);back.onclick=()=>advanced(false);
+ new MutationObserver(sync).observe(section,{attributes:true,attributeFilter:['hidden','data-active-module']});sync();
+ frame.addEventListener('load',()=>{const doc=frame.contentDocument;if(!doc?.querySelector('main'))return;doc.documentElement.classList.add('embedded');
+ const main=doc.querySelector('main');const resize=()=>{const h=Math.ceil(main.getBoundingClientRect().height);if(h>0&&frame.height!==String(h))frame.height=String(h);};new ResizeObserver(resize).observe(main);resize();});
 })();
 </script>
