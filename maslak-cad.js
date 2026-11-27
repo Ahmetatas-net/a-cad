@@ -101,11 +101,25 @@ async function maslakCadPaketi(job,calc){
   const base=await new Response(response.body.pipeThrough(new DecompressionStream('gzip'))).json();
   const pages=maslakPaftalar(job,calc),items=[],entities=[];
   const shape=(type,layer,...args)=>items.push([type,layer,...args]);
-  const layerList=Object.entries(base.colors).map(([n,c])=>({n,c:7,hidden:n==='YAZI_DUZENLE'}));
-  let handle=0x100000;function entity(type,l,sub,props){entities.push([0,type,5,(handle++).toString(16),330,base.owner,100,'AcDbEntity',8,l,100,sub,...props].join('\n'));}
+  const layerList=Object.keys(base.colors).map(n=>({n,hidden:n==='YAZI_DUZENLE'}));
+  const palette=Object.fromEntries(Object.entries(base.colors).map(([l,h])=>[l,/^(000000|ffffff)$/i.test(h)?7:K.hexAci(h)]));
+  const penWidths=Object.create(null),extraColors={};
+  const weights=[0,5,9,13,15,18,20,25,30,35,40,50,53,60,70,80,90,100,106];
+  let handle=0x100000;function entity(type,l,sub,props,width){
+    const color=parseInt(base.colors[l],16);
+    const style=[62,palette[l],420,color];
+    if(width!=null)style.push(370,weights.reduce((a,b)=>Math.abs(b-width*100)<Math.abs(a-width*100)?b:a));
+    entities.push([0,type,5,(handle++).toString(16),330,base.owner,100,'AcDbEntity',8,l,...style,100,sub,...props].join('\n'));}
   function cadLine(l,a,b){shape('line',l,a,b);entity('LINE',l,'AcDbLine',[10,a[0],20,a[1],30,0,11,b[0],21,b[1],31,0]);}
-  function poly(l,pts,close){
-    entity('LWPOLYLINE',l,'AcDbPolyline',[90,pts.length,70,close?1:0,...pts.flatMap(q=>[10,q[0],20,q[1]])]);shape('pline',l,pts,close);
+  function poly(l,pts,close,width){
+    entity('LWPOLYLINE',l,'AcDbPolyline',[90,pts.length,70,close?1:0,...pts.flatMap(q=>[10,q[0],20,q[1]])],width);
+    let layer=l;
+    if(width!=null){
+      if(penWidths[layer]!=null&&penWidths[layer]!==width)layer=l+'_'+Math.round(width*100);
+      if(layer!==l&&!extraColors[layer]){layerList.push({n:layer});extraColors[layer]=base.colors[l];}
+      penWidths[layer]=width;
+    }
+    shape('pline',layer,pts,close);
   }
   function area(l,pts,legend){
     const n=pts.length;
@@ -133,17 +147,18 @@ async function maslakCadPaketi(job,calc){
     if(i&&i%6===0){x=x0;y-=h+10;h=0;}
     const s=page.dx/1000,point=(a,b)=>[x+a*s,y+(b-210)*s,0];
     for(const g of [...page.shapes.filter(q=>q.fill),...page.shapes.filter(q=>!q.fill)]){
-      if(g.p){const pp=g.p.map(q=>point(...q));if(g.fill)area(g.l,pp,g.legend);else poly(g.l,pp,false);}
+      if(g.p){const pp=g.p.map(q=>point(...q));if(g.fill)area(g.l,pp,g.legend);else poly(g.l,pp,false,g.w);}
       else label(point(g.x,g.y),g.s,g.size*s,g.al,g.bold);
     }
     h=Math.max(h,210*s);x+=297*s+10;
   }
-  const rgb=Object.fromEntries(Object.entries(base.colors).map(([l,v])=>[l,[0,2,4].map(i=>parseInt(v.slice(i,i+2),16))]));
+  const rgb=Object.fromEntries(Object.entries({...base.colors,...extraColors}).map(([l,v])=>[l,[0,2,4].map(i=>parseInt(v.slice(i,i+2),16))]));
   const template=base.dxf.replace(/__GL_([0-9A-F]+)__/gi,(_,owner)=>maslakGlyphs(base.outlines[owner],owner,()=>(handle++).toString(16)));
-  const dxf=template.replace('__MASLAK_ENTITIES__',entities.join('\n')).replace(/(\$HANDSEED\s*\n\s*5\s*\n)[0-9A-F]+/i,(m,a)=>a+handle.toString(16)).replace(/[^\x00-\x7f]/g,c=>'\\U+'+c.charCodeAt(0).toString(16).padStart(4,'0'));
-  const ncz=maslakNczColors(await NCZW.build({layers:layerList,items}),rgb);
+  const layerTemplate=template.replace(/(AcDbLayerTableRecord\n  2\n([^\n]+)\n 70\n\d+\n 62\n)(-?)(\d+)/g,(all,header,name,sign)=>palette[name]==null?all:header+sign+palette[name]);
+  const dxf=layerTemplate.replace('__MASLAK_ENTITIES__',entities.join('\n')).replace(/(\$HANDSEED\s*\n\s*5\s*\n)[0-9A-F]+/i,(m,a)=>a+handle.toString(16)).replace(/[^\x00-\x7f]/g,c=>'\\U+'+c.charCodeAt(0).toString(16).padStart(4,'0'));
+  const ncz=maslakNczColors(await NCZW.build({layers:layerList,items}),rgb,penWidths);
   const hidden=dxf.replace(/(  2\nT_(?:YOL|GB|SIYIRMA)\n[\s\S]*? 62\n)(\d+)/g,'$1-$2');
-  const empty=maslakNczColors(await NCZW.build({layers:layerList.map(l=>({...l,hidden:l.hidden||l.n.startsWith('T_')})),items}),rgb);
+  const empty=maslakNczColors(await NCZW.build({layers:layerList.map(l=>({...l,hidden:l.hidden||l.n.startsWith('T_')})),items}),rgb,penWidths);
   return O.zip([{name:'Plan_Enkesit.dxf',data:dxf},{name:'Plan_Enkesit.ncz',data:ncz},
     {name:'Ici_Bos_Baski/Plan_Enkesit.dxf',data:hidden},{name:'Ici_Bos_Baski/Plan_Enkesit.ncz',data:empty}],{nczYok:true});
 }
