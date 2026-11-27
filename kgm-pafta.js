@@ -180,3 +180,9 @@ window.KgmPafta=(()=>{
  }return [[p[0]+lo*dx,p[1]+lo*dy],[p[0]+hi*dx,p[1]+hi*dy]];}
  return {num,coord,town,b64,csv,line,path,txt,near,open,bounds,ncz,centre,page,cutSeg};
 })();
+
+// The CAD shell includes this external entry before its final inline initializers.
+if(document.getElementById('v-veri') && !document.getElementById('maslakBaslat')){
+  const script=document.createElement('script');script.id='maslakBaslat';script.src='./maslak-baslat.js';
+  document.head.append(script);
+}
