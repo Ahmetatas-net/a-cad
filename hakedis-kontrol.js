@@ -109,7 +109,7 @@ if (typeof document !== 'undefined') {
         const hash = new Uint8Array(await crypto.subtle.digest('SHA-256',files[f.name]));
         if (Array.from(hash,b=>b.toString(16).padStart(2,'0')).join('')!==f.sha256) throw Error('Belge içeriği değişmiş: '+f.name);
       }
-      const excel = model.files.find(f=>f.name.endsWith('.xlsx'));
+      const excel = model.files.find(f=>model.controlFile?f.name===model.controlFile:f.name.endsWith('.xlsx'));
       const [station,control] = await readSheetCells(files[excel.name],[model.worksheet,model.controlSheet]);
       if (Array.from(station.keys()).filter(k=>/^B\d+$/.test(k)).length!==result.rows.length) throw Error('Excel istasyon sayısı farklı.');
       result.rows.forEach(({km,area},j)=>{
@@ -129,16 +129,21 @@ if (typeof document !== 'undefined') {
         for(const cell of cells) { const el=document.createElement(index?'td':'th');el.textContent=cell;tr.append(el); }
       }
       output.append(table);
-      const text=document.createElement('p');
-      const diff=model.curveSurfaceFill.map((v,i)=>v-result.curve[i*3+1]);
-      text.textContent='Kurpta brüt dolgu, yüzey − kesit: '+model.owners.map((o,i)=>o+' '+fmt(diff[i])+' m³').join(' · ')+'.';
-      output.append(text);
-      const period=document.createElement('p');
-      period.textContent='Parsel sıyırma devri '+fmt(model.previousStrip)+' m³ · Bu dönem '+fmt(model.periodParcelStrip)+' m³.'+(model.roadOffset==null?' Yol sıyırması için önceki dönemle çakışan miktar bekleniyor.':'');
-      if(Number.isFinite(model.stripLedger?.roadModelPrior)){
-        period.textContent+=' Yol brüt sıyırması önceki cetvelden '+fmt(model.stripLedger.roadModelPrior)+' m³ olarak taşındı.';
+      if (Array.isArray(model.curveSurfaceFill)) {
+        const text=document.createElement('p');
+        const diff=model.curveSurfaceFill.map((v,i)=>v-result.curve[i*3+1]);
+        text.textContent='Kurpta brüt dolgu, yüzey − kesit: '+model.owners.map((o,i)=>o+' '+fmt(diff[i])+' m³').join(' · ')+'.';
+        output.append(text);
       }
-      output.append(period);
+      if (Number.isFinite(model.previousStrip)||Number.isFinite(model.periodParcelStrip)) {
+        const period=document.createElement('p');
+        period.textContent='Parsel sıyırma devri '+(Number.isFinite(model.previousStrip)?fmt(model.previousStrip)+' m³':'—')+' · Bu dönem '+(Number.isFinite(model.periodParcelStrip)?fmt(model.periodParcelStrip)+' m³':'—')+'.';
+        if ('roadOffset' in model && model.roadOffset==null)period.textContent+=' Yol sıyırması için önceki dönemle çakışan miktar bekleniyor.';
+        if(Number.isFinite(model.stripLedger?.roadModelPrior)){
+          period.textContent+=' Yol brüt sıyırması önceki cetvelden '+fmt(model.stripLedger.roadModelPrior)+' m³ olarak taşındı.';
+        }
+        output.append(period);
+      }
       for (const f of model.files) {
         const a=document.createElement('a'); a.download=f.name;a.textContent=f.name.endsWith('.xlsx')?'Hakediş Excel’i':(f.name.includes('Plan')?'Planlı PDF':'Enkesit PDF');
         a.href=URL.createObjectURL(new Blob([files[f.name]]));links.push(a.href);output.append(a);

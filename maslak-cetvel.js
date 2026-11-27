@@ -60,3 +60,17 @@ function maslakCetvel(job, calculated) {
   }
   return book.build();
 }
+
+function maslakKontrolCetveli(calc) {
+  const book=O.xlsx(), stations=book.sheet('Kesit kontrolü'), totals=book.sheet('Model toplamları');
+  const fields=['Yol kazı','Yol brüt dolgu','Yol sıyırma','Parsel kazı','Parsel brüt dolgu','Parsel sıyırma'];
+  ['KM',...fields].forEach((name,i)=>stations.set('BCDEFGH'[i]+'1',name,{b:true}));
+  calc.rows.forEach(({km,area},i)=>{
+    const row=i+2;
+    stations.set('B'+row,km);
+    area.forEach((v,j)=>stations.set('CDEFGH'[j]+row,v));
+  });
+  totals.set('A1','İmalat',{b:true});totals.set('B1','Hacim (m³)',{b:true});
+  calc.totals.forEach((v,i)=>{totals.set('A'+(i+2),fields[i]);totals.set('B'+(i+2),v);});
+  return book.build();
+}

@@ -13,10 +13,11 @@
   <label>Kurp başlangıç–bitiş KM (isteğe bağlı)<input name="curveLimits" placeholder="0+460–0+493"></label><label>Sıyırma (m)<input type="number" name="depth" value=".25" min="0" step=".01"></label><label>Özel kilometreler (m, noktalı virgülle)<input name="extras" placeholder="460,24; 463,47"></label>
   <label>Netcad birleşik dolgu (m³, sıyırmasız)<input type="number" min="0" step="any" name="netcad"></label></div>
   <table><thead><tr><th>Önceki onaylı (m³)</th><th>Kazı</th><th>Brüt dolgu</th><th>Sıyırma</th><th>Bu dönem sıyırma</th></tr></thead><tbody>${['Yol','Parsel'].map((n,i)=>'<tr><th>'+n+'</th>'+[0,1,2,3].map(j=>'<td><input aria-label="'+n+' '+['önceki kazı','önceki dolgu','önceki sıyırma','bu dönem sıyırma'][j]+'" type="number" min="0" step="any" name="ledger'+(i*4+j)+'"></td>').join('')+'</tr>').join('')}</tbody></table></details>
-  <div class="row"><button name="run" type="button" class="primary">Hesapla ve karşılaştır</button><button name="excel" type="button" disabled>Maslak Excel</button><select name="pdfPart" aria-label="Enkesit PDF sayfaları" hidden></select><button name="pdf" type="button" disabled>Enkesit PDF</button><button name="mobile" type="button" disabled>Telefon PDF</button><button name="cad" type="button" disabled>Plan ve enkesit CAD</button></div>`;
+  <div class="row"><button name="run" type="button" class="primary">Hesapla ve karşılaştır</button><button name="excel" type="button" disabled>Maslak Excel</button><select name="pdfPart" aria-label="Enkesit PDF sayfaları" hidden></select><button name="pdf" type="button" disabled>A4 enkesit PDF</button><button name="exact" type="button" disabled>Gerçek 1/150 PDF</button><button name="mobile" type="button" disabled>Telefon PDF</button><button name="cad" type="button" disabled>Plan ve enkesit CAD</button><button name="bundle" type="button" disabled>Teslim ZIP</button></div>`;
+  const formats=['excel','pdf','exact','mobile','cad','bundle'];
   let sepFaces=null, fileGeneration=0;
   const numbers=field=>{const v=get(field).value;return v===''?null:Number(v);};
-  function cancel(){get('pdfPart').hidden=true;version++;if(worker)worker.terminate();worker=null;completed=null;results.textContent='';status.textContent='';get('mobile').disabled=get('pdf').disabled=get('cad').disabled=get('excel').disabled=true;}
+  function cancel(){get('pdfPart').hidden=true;version++;if(worker)worker.terminate();worker=null;completed=null;results.textContent='';status.textContent='';formats.forEach(n=>{get(n).disabled=true;});}
   function saveSettings(){
     if(!ST)return;
     ST.maslak={...Object.fromEntries(keys.filter(k=>get(k)).map(k=>[k,get(k).value])),ledger:Array.from({length:8},(_,i)=>get('ledger'+i).value)};
@@ -95,7 +96,7 @@
         for(let first=0;!selector.hidden && first<count;first+=maslakBolumBoyu){
           selector.add(new Option('Sayfa '+(first+1)+'–'+Math.min(first+maslakBolumBoyu,count),String(first/maslakBolumBoyu+1)));
         }
-        get('mobile').disabled=get('pdf').disabled=get('cad').disabled=get('excel').disabled=false;
+        formats.forEach(n=>{get(n).disabled=false;});
       }catch(e){status.textContent=e.message;}};
       worker.onerror=e=>{cancel();status.textContent='Hesap açılamadı. '+e.message;};worker.postMessage(job);
     }catch(e){status.textContent=e.message;}
@@ -103,14 +104,14 @@
   async function download(kind){
     try{
       const result=completed;if(!result||stamp()!==result.current){cancel();throw Error('Girdiler değişti. Yeniden hesaplayın.');}
-      const formats={excel:[maslakCetvel,'.xlsx'],pdf:[maslakEnkesitPdf],mobile:[maslakTelefonPdf],cad:[maslakCadPaketi,'_CAD.zip']};
-      const [build,suffix]=formats[kind];
-      const part=Number(get('pdfPart').value)||0;
-      const isPdf=kind==='pdf'||kind==='mobile';
-      const blob=isPdf?await build(result.job,result.calc,part):await build(result.job,result.calc);
+      const builders={excel:[maslakCetvel,'.xlsx'],pdf:[maslakEnkesitPdf],exact:[maslakEnkesitPdf],
+        mobile:[maslakTelefonPdf],cad:[maslakCadPaketi,'_CAD.zip'],bundle:[maslakTeslimPaketi,'_Teslim.zip']};
+      const [build,suffix]=builders[kind];
+      const part=Number(get('pdfPart').value)||0, isPdf=['pdf','exact','mobile'].includes(kind);
+      const blob=isPdf?await build(result.job,result.calc,part,kind==='exact'):await build(result.job,result.calc);
       if(completed!==result||stamp()!==result.current)throw Error('Proje değişti. Yeniden hesaplayın.');
-      const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=isPdf?maslakPdfAdi(result.job,part).replace(/\.pdf$/,kind==='mobile'?' - Telefon.pdf':'.pdf'):'Maslak_Hakedis_'+String(result.job.project.no||'').replace(/[^\w-]/g,'')+suffix;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),60000);
+      const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=isPdf?maslakPdfAdi(result.job,part).replace(/\.pdf$/,kind==='mobile'?' - Telefon.pdf':kind==='exact'?' - Gerçek 150.pdf':'.pdf'):'Maslak_Hakedis_'+String(result.job.project.no||'').replace(/[^\w-]/g,'')+suffix;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),60000);
     }catch(e){status.textContent=e.message;}
   }
-  for(const kind of ['excel','pdf','mobile','cad'])get(kind).onclick=()=>download(kind);
+  for(const kind of formats)get(kind).onclick=()=>download(kind);
 })();

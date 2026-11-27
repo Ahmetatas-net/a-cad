@@ -9,10 +9,14 @@
   const check=document.createElement('details');check.className='card';check.id='hkPanel';
   check.innerHTML='<summary><strong>Yol ve parsel hakediş kontrolü</strong></summary><label>Teslim paketi (ZIP)<input id="hkDosya" type="file" accept=".zip"></label><p id="hkDurum" role="status"></p><div id="hkSonuc"></div>';
   reports.prepend(check);
+  const sampleLink=document.createElement('a');
+  sampleLink.href='./ornekler/index.html';
+  sampleLink.textContent='Yol 2 ve 267/1 GB örnek teslim ZIP’i';
+  check.querySelector('label').before(sampleLink);
   let ready;
   function load(){
     return ready??=Promise.resolve().then(async()=>{
-      for(const file of ['hakedis-kontrol.js','maslak-cetvel.js','maslak-ncz.js','maslak-cad.js','maslak-modul.js']){
+      for(const file of ['hakedis-kontrol.js','maslak-cetvel.js','maslak-ncz.js','maslak-kirik.js','maslak-cad.js','maslak-modul.js']){
         await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='./'+file;s.onload=resolve;s.onerror=()=>reject(Error(file+' yüklenemedi.'));document.head.append(s);});
       }
       if(panel.open)panel.ontoggle?.();
