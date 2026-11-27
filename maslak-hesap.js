@@ -65,7 +65,7 @@ const MaslakHesap = (() => {
     }
     return {km,center,normal,earth,strip,profiles,missing};
   }
-  function frames(K,axis,baseKm,step,curveStep,angle,extras) {
+  function frames(K,axis,baseKm,step,curveStep,angle,extras,curveLimits=[]) {
     if(!axis||axis.length<2||axis.some((p,i)=>!p.slice(0,2).every(Number.isFinite)||(i&&Math.hypot(p[0]-axis[i-1][0],p[1]-axis[i-1][1])<eps)))throw Error('Eksen boş veya ardışık köşeleri çakışıyor.');
     const chain=[0],ranges=[];
     for(let j=1;j<axis.length;j++)chain.push(chain[j-1]+Math.hypot(axis[j][0]-axis[j-1][0],axis[j][1]-axis[j-1][1]));
@@ -76,16 +76,30 @@ const MaslakHesap = (() => {
       stations.add(l);stations.add(r);
     }
     if(last/Math.min(step,curveStep)>100000)throw Error('Eksen uzunluğunu ve kesit aralığını kontrol edin.');
-    insertRange(0,last,step);
+    const bends=[];
     for(let j=1;j<axis.length-1;j++){
       const v=axis[j-1],c=axis[j],w=axis[j+1];
       const ax=c[0]-v[0],ay=c[1]-v[1],bx=w[0]-c[0],by=w[1]-c[1];
       const turn=Math.abs(Math.atan2(ax*by-ay*bx,ax*bx+ay*by))*180/Math.PI;
-      if(turn<angle)continue;
-      const l=Math.max(0,chain[j]-step),r=Math.min(last,chain[j]+step);
-      insertRange(l,r,curveStep);stations.add(chain[j]);
-      if(ranges.length&&l<=ranges.at(-1)[1])ranges.at(-1)[1]=Math.max(r,ranges.at(-1)[1]);else ranges.push([l,r]);
+      if(turn>=angle)bends.push([Math.max(0,chain[j]-step),Math.min(last,chain[j]+step)]);
     }
+    const candidates=curveLimits.length?curveLimits.map(([a,b])=>{
+      const l=a-baseKm,r=b-baseKm;
+      if(!Number.isFinite(l)||!Number.isFinite(r)||l<-eps||r>last+eps||r-l<=eps)throw Error('Kurp başlangıcı ve bitişi eksen üzerinde olmalıdır.');
+      return [Math.max(0,l),Math.min(last,r)];
+    }).sort(([a],[b])=>a-b):bends;
+    for(const [l,r] of candidates){
+      const previous=ranges.at(-1);
+      if(previous && l<=previous[1]+eps)previous[1]=Math.max(r,previous[1]);
+      else ranges.push([l,r]);
+    }
+    let boundary=0;
+    for(const [l,r] of ranges){
+      insertRange(boundary,l,step);
+      insertRange(l,r,curveStep);
+      boundary=r;
+    }
+    insertRange(boundary,last,step);
     for(const km of extras){const v=km-baseKm;if(v<0||v>last)throw Error('Özel kilometre eksen dışında: '+km);stations.add(v);}
     const list=[...stations].sort((a,b)=>a-b).filter((v,i,all)=>i===0||v-all[i-1]>eps);
     return {frames:list.map(s=>{const {p,u}=K.pointAt(axis,chain,s);return {km:baseKm+s,center:p,normal:[u[1],-u[0]]};}),ranges:ranges.map(r=>r.map(s=>s+baseKm))};

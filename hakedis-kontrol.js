@@ -135,6 +135,9 @@ if (typeof document !== 'undefined') {
       output.append(text);
       const period=document.createElement('p');
       period.textContent='Parsel sıyırma devri '+fmt(model.previousStrip)+' m³ · Bu dönem '+fmt(model.periodParcelStrip)+' m³.'+(model.roadOffset==null?' Yol sıyırması için önceki dönemle çakışan miktar bekleniyor.':'');
+      if(Number.isFinite(model.stripLedger?.roadModelPrior)){
+        period.textContent+=' Yol brüt sıyırması önceki cetvelden '+fmt(model.stripLedger.roadModelPrior)+' m³ olarak taşındı.';
+      }
       output.append(period);
       for (const f of model.files) {
         const a=document.createElement('a'); a.download=f.name;a.textContent=f.name.endsWith('.xlsx')?'Hakediş Excel’i':(f.name.includes('Plan')?'Planlı PDF':'Enkesit PDF');
