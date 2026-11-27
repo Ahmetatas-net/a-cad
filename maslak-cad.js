@@ -20,6 +20,9 @@ function maslakPaftalar(job,calc){
     for(const [j,[name,layer]] of [[job.owners[0],'T_YOL'],[job.owners[1],'T_GB'],['Sıyırma','T_SIYIRMA']].entries()){
       const x=8+70*j;shapes.push({l:layer,p:[[x,159],[x+5,159],[x+5,162],[x,162]],fill:true,legend:true});text(x+7,160.5,name,2.1);
     }
+    dash('GB_SIYAH',[78,155],[85,155]);
+    text(87,155,'Parsel siyah kot',2.4,'l',true);
+    text(87,151.7,'(Yol Proje çizgisi)',2.2);
     frame(18,74,288,146);
     const offsets=[...new Set([lo,hi,0,...Array.from({length:7},(_,j)=>lo+(j+1)*(hi-lo)/8)])].sort((a,b)=>a-b);
     const sample=(list,o,top=false)=>{const q=list.find(q=>o>=q[0]-1e-7&&o<=q[1]+1e-7);if(!q)return null;const j=top?4:2;return q[j]+(q[j+1]-q[j])*(o-q[0])/(q[1]-q[0]);};
@@ -96,9 +99,25 @@ function maslakGlyphs(rings,owner,handle){
   }
   return out.join('\n');
 }
-async function maslakCadPaketi(job,calc){
+async function maslakPaftaSablonu(){
   const response=await fetch(new URL('maslak-cad.json.gz',document.baseURI));if(!response.ok)throw Error('CAD pafta şablonu açılamadı.');
-  const base=await new Response(response.body.pipeThrough(new DecompressionStream('gzip'))).json();
+  return new Response(response.body.pipeThrough(new DecompressionStream('gzip'))).json();
+}
+async function maslakEnkesitPdf(job,calc){
+  const pages=maslakPaftalar(job,calc);
+  if(!pages.length)throw Error('Yazdırılacak enkesit bulunamadı.');
+  const {colors}=await maslakPaftaSablonu();
+  const sheets=pages.map(({shapes})=>({
+    W:297,H:210,G:shapes.map(g=>{
+      const color='#'+colors[g.l];
+      if(g.p)return {t:g.fill?'f':'l',p:g.p,w:g.w,color};
+      return {...g,t:'x',size:g.size/1.32,color};
+    })
+  }));
+  return new Blob([window.APLGEO.vectorPdf(sheets)],{type:'application/pdf'});
+}
+async function maslakCadPaketi(job,calc){
+  const base=await maslakPaftaSablonu();
   const pages=maslakPaftalar(job,calc),items=[],entities=[];
   const shape=(type,layer,...args)=>items.push([type,layer,...args]);
   const layerList=Object.keys(base.colors).map(n=>({n,hidden:n==='YAZI_DUZENLE'}));

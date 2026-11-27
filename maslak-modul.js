@@ -13,10 +13,10 @@
   <label>Sıyırma (m)<input type="number" name="depth" value=".25" min="0" step=".01"></label><label>Özel kilometreler (m, noktalı virgülle)<input name="extras" placeholder="460,24; 463,47"></label>
   <label>Netcad birleşik dolgu (m³, sıyırmasız)<input type="number" min="0" step="any" name="netcad"></label></div>
   <table><thead><tr><th>Önceki onaylı (m³)</th><th>Kazı</th><th>Brüt dolgu</th><th>Sıyırma</th><th>Bu dönem sıyırma</th></tr></thead><tbody>${['Yol','Parsel'].map((n,i)=>'<tr><th>'+n+'</th>'+[0,1,2,3].map(j=>'<td><input aria-label="'+n+' '+['önceki kazı','önceki dolgu','önceki sıyırma','bu dönem sıyırma'][j]+'" type="number" min="0" step="any" name="ledger'+(i*4+j)+'"></td>').join('')+'</tr>').join('')}</tbody></table></details>
-  <div class="row"><button name="run" type="button" class="primary">Hesapla ve karşılaştır</button><button name="excel" type="button" disabled>Maslak Excel</button><button name="cad" type="button" disabled>Plan ve enkesit CAD</button></div>`;
+  <div class="row"><button name="run" type="button" class="primary">Hesapla ve karşılaştır</button><button name="excel" type="button" disabled>Maslak Excel</button><button name="pdf" type="button" disabled>Enkesit PDF</button><button name="cad" type="button" disabled>Plan ve enkesit CAD</button></div>`;
   let sepFaces=null, fileGeneration=0;
   const numbers=field=>{const v=get(field).value;return v===''?null:Number(v);};
-  function cancel(){version++;if(worker)worker.terminate();worker=null;completed=null;results.textContent='';status.textContent='';get('cad').disabled=get('excel').disabled=true;}
+  function cancel(){version++;if(worker)worker.terminate();worker=null;completed=null;results.textContent='';status.textContent='';get('pdf').disabled=get('cad').disabled=get('excel').disabled=true;}
   function saveSettings(){
     if(!ST)return;
     ST.maslak={...Object.fromEntries(keys.filter(k=>get(k)).map(k=>[k,get(k).value])),ledger:Array.from({length:8},(_,i)=>get('ledger'+i).value)};
@@ -82,7 +82,7 @@
         completed={...data,current};const {raw,surface,calc}=data,fill=raw.totals[1]+raw.totals[4],delta=fill-surface.fill;
         status.textContent=calc.rows.length+' hesap istasyonu · Sıyırmasız enkesit '+fmt(fill)+' m³ · Birleşik yüzey '+fmt(surface.fill)+' m³';
         results.textContent='Enkesit − yüzey '+fmt(delta)+' m³.'+(job.netcad!==null?' Netcad farkı '+fmt(fill-job.netcad)+' m³'+(job.netcad>0?' (%'+fmt(100*(fill-job.netcad)/job.netcad)+', hedef ±%2).':'.'):'');
-        get('cad').disabled=get('excel').disabled=false;
+        get('pdf').disabled=get('cad').disabled=get('excel').disabled=false;
       }catch(e){status.textContent=e.message;}};
       worker.onerror=e=>{cancel();status.textContent='Hesap açılamadı. '+e.message;};worker.postMessage(job);
     }catch(e){status.textContent=e.message;}
@@ -90,10 +90,12 @@
   async function download(kind){
     try{
       const result=completed;if(!result||stamp()!==result.current){cancel();throw Error('Girdiler değişti. Yeniden hesaplayın.');}
-      const blob=kind==='excel'?await maslakCetvel(result.job,result.calc):await maslakCadPaketi(result.job,result.calc);
+      const formats={excel:[maslakCetvel,'.xlsx'],pdf:[maslakEnkesitPdf,'_Enkesit.pdf'],cad:[maslakCadPaketi,'_CAD.zip']};
+      const [build,suffix]=formats[kind];
+      const blob=await build(result.job,result.calc);
       if(completed!==result||stamp()!==result.current)throw Error('Proje değişti. Yeniden hesaplayın.');
-      const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Maslak_Hakedis_'+String(result.job.project.no||'').replace(/[^\w-]/g,'')+(kind==='excel'?'.xlsx':'_CAD.zip');a.click();setTimeout(()=>URL.revokeObjectURL(a.href),60000);
+      const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Maslak_Hakedis_'+String(result.job.project.no||'').replace(/[^\w-]/g,'')+suffix;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),60000);
     }catch(e){status.textContent=e.message;}
   }
-  get('excel').onclick=()=>download('excel');get('cad').onclick=()=>download('cad');
+  for(const kind of ['excel','pdf','cad'])get(kind).onclick=()=>download(kind);
 })();
