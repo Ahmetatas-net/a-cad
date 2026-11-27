@@ -1,8 +1,7 @@
 {
-  "filename": "YOL2_HKDS4_267-1_GB_5m_Teslim.zip",
+  "filename": "YOL2_HKDS4_267-1_GB_Enkesit_Teslim.zip",
   "parts": [
-    "YOL2_HKDS4_267-1_GB_5m_Teslim.zip.01",
-    "YOL2_HKDS4_267-1_GB_5m_Teslim.zip.02"
+    "YOL2_HKDS4_267-1_GB_Enkesit_Teslim.zip"
   ],
-  "sha256": "dd9d8d2c0854bec5f46b416e3b373e899c33bf58299f5878319a3e0e7752366e"
+  "sha256": "a91d6173b647bf42250bdf8d24c43c6a4d656ada669c8fd8e1f10f8206113dc9"
 }
