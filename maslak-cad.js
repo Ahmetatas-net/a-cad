@@ -8,6 +8,26 @@ function maslakPdfAdi(job,part=0){
   const period=clean(job.project.no).replace(/^0+(?=\d+$)/,'');
   return road+(period?'-HKDS-'+period:'')+' -'+parcel+' Enkesitleri'+(part?' - Bölüm '+part:'')+'.pdf';
 }
+// Very narrow, tall cut remnants can obscure the road boundary at print scale.
+function maslakParselCizimAraliklari(parts){
+  const hidden=new Set();
+  let run=[];
+  function close(){
+    if(!run.length)return;
+    const width=run.at(-1)[1]-run[0][0];
+    const height=Math.max(...run.map(q=>Math.max(q[2]-q[4],q[3]-q[5])));
+    if(width<=.15 && height>=2 && height/width>=12)run.forEach(q=>hidden.add(q));
+    run=[];
+  }
+  for(const q of parts){
+    const prev=run.at(-1);
+    if(prev && (Math.abs(prev[1]-q[0])>1e-6 || Math.abs(prev[3]-q[2])>1e-5 || Math.abs(prev[5]-q[4])>1e-5))close();
+    if(q[2]+q[3]>q[4]+q[5]+1e-8)run.push(q);
+    else close();
+  }
+  close();
+  return hidden;
+}
 function maslakPaftalar(job,calc,part=0){
   const pages=[],km=n=>Math.floor(n/1000)+'+'+(n%1000).toFixed(2).padStart(6,'0').replace('.',','),f=(n,d=2)=>n.toLocaleString('tr-TR',{minimumFractionDigits:d,maximumFractionDigits:d});
   let pageNo=0;
@@ -17,7 +37,9 @@ function maslakPaftalar(job,calc,part=0){
     if(part && Math.ceil(pageNo/maslakBolumBoyu)!==part)continue;
     const shapes=[],line=(l,p,w=.2)=>shapes.push({l,p,w}),text=(x,y,s,size=2.5,al='l',bold=false)=>shapes.push({l:'YAZI',x,y,s:String(s),size,al,bold});
     const frame=(x,y,X,Y)=>line('PAFTA',[[x,y],[X,y],[X,Y],[x,Y],[x,y]],.15);
-    const qs=st.earth.flat(),xs=[0],zs=[];for(const q of qs){xs.push(q[0],q[1]);zs.push(...q.slice(2));}
+    const hidden=maslakParselCizimAraliklari(st.earth[1]);
+    const qs=st.earth.flat(),xs=[0],zs=[];
+    for(const q of qs){xs.push(q[0],q[1]);zs.push(...q.slice(hidden.has(q)?4:2));}
     for(const q of st.strip.flat())zs.push(q[2],q[3]);
     const extent=v=>v.reduce(([a,b],z)=>[Math.min(a,z),Math.max(b,z)],[Infinity,-Infinity]);
     const [lo,hi]=extent(xs),[bot,top]=extent(zs);
@@ -28,7 +50,7 @@ function maslakPaftalar(job,calc,part=0){
       const y=196-5.5*n;line('PAFTA',[[6,y+2.5],[291,y+2.5]],.15);text(8,y,label,1.9);text(39,y,value||'',2);
     }
     text(7,169,'KM '+km(st.km),3.2,'l',true);text(148.5,169,job.owners.join(' VE ')+' BİRLEŞİK ENKESİTİ',2.8,'c',true);
-    text(289,169,String(pageNo),2.4,'r');text(290,161,'A4   Yatay 1/'+dx+'   Düşey 1/'+dy,2,'r');
+    text(290,161,'A4   Yatay 1/'+dx+'   Düşey 1/'+dy,2,'r');
     for(const [j,[name,layer]] of [[job.owners[0],'T_YOL'],[job.owners[1],'T_GB'],['Sıyırma','T_SIYIRMA']].entries()){
       const x=8+70*j;shapes.push({l:layer,p:[[x,159],[x+5,159],[x+5,162],[x,162]],fill:true,legend:true});text(x+7,160.5,name,2.1);
     }
@@ -38,8 +60,9 @@ function maslakPaftalar(job,calc,part=0){
     frame(18,74,288,146);
     const offsets=[...new Set([lo,hi,0,...Array.from({length:7},(_,j)=>lo+(j+1)*(hi-lo)/8)])].sort((a,b)=>a-b);
     const sample=(list,o,top=false)=>{const q=list.find(q=>o>=q[0]-1e-7&&o<=q[1]+1e-7);if(!q)return null;const j=top?4:2;return q[j]+(q[j+1]-q[j])*(o-q[0])/(q[1]-q[0]);};
+    const visibleParcel=st.earth[1].filter(q=>!hidden.has(q));
     for(const o of offsets){
-      let z=sample(st.earth[0],o)??sample(st.earth[1],o);
+      let z=sample(st.earth[0],o)??sample(visibleParcel,o);
       if(z!==null&&Math.abs(o)>.001)line('OFSET',[[X(o),74],[X(o),Y(z)]],.12);
     }
     function dash(layer,a,b,stroke=1.5,gap=.8){
@@ -62,17 +85,22 @@ function maslakPaftalar(job,calc,part=0){
       }
       close();
     }
-    st.earth.forEach((parts,i)=>regions(parts,i?'T_GB':'T_YOL'));
+    regions(st.earth[0],'T_YOL');
+    regions(visibleParcel,'T_GB');
     for(const group of st.strip){
       regions(group,'T_SIYIRMA');
       for(const [l,r,a,b] of group)line('SIYIRMA_TABANI',[[X(l),Y(a)],[X(r),Y(b)]]);
     }
     for(const [owner,parts] of st.earth.entries()){
       let last=null;
-      for(const [l,r,a,b,c,d] of parts){
+      for(const [index,[l,r,a,b,c,d]] of parts.entries()){
         const bottom=[[X(l),Y(a)],[X(r),Y(b)]], roof=[[X(l),Y(c)],[X(r),Y(d)]];
-        if(owner){if(last&&Math.abs(last[0]-l)<1e-6&&Math.abs(last[1]-a)>1e-5)line('GB_SIYAH',[[X(l),Y(last[1])],bottom[0]]);
-          dash('GB_SIYAH',...bottom);last=[r,b];}else line('YOL_SIYAH',bottom,.32);
+        if(!owner)line('YOL_SIYAH',bottom,.32);
+        else if(hidden.has(parts[index]))last=null;
+        else{
+          if(last&&Math.abs(last[0]-l)<1e-6&&Math.abs(last[1]-a)>1e-5)line('GB_SIYAH',[[X(l),Y(last[1])],bottom[0]]);
+          dash('GB_SIYAH',...bottom);last=[r,b];
+        }
         if(Math.abs(a-c)+Math.abs(b-d)<1e-8)continue;
         const topOwner=st.profiles.find(v=>Math.abs(v[0]-l)<1e-7&&Math.abs(v[1]-r)<1e-7);
         if(topOwner&&Math.abs(c-topOwner[4])+Math.abs(d-topOwner[5])<1e-6){
@@ -84,7 +112,6 @@ function maslakPaftalar(job,calc,part=0){
     const bands=[['Ofset (m)',null],['Parsel kırmızı kot',o=>sample(st.earth[1],o,true)],['Yol siyah kot',o=>sample(st.earth[0],o)],['Yol kırmızı kot',o=>sample(st.earth[0],o,true)],['Parsel siyah kot',o=>sample(st.earth[1],o)],['Yol sıyırma tabanı',o=>sample(st.strip[0],o)],['Parsel sıyırma tabanı',o=>sample(st.strip[1],o)]];
     const cell=246/offsets.length;
     bands.forEach(([name,fn],j)=>{const y=68-4.5*j;frame(7,y-2,290,y+2.5);text(8,y,name,2);offsets.forEach((o,k)=>{const v=fn?fn(o):o;text(44+(k+.5)*cell,y,v==null?'—':f(v,fn?3:2),1.9,'c');});});
-    for(let j=0;j<2;j++){const v=calc.rows[i].area.slice(3*j,3*j+3);text(8+142*j,36,job.owners[j]+'   Kazı '+f(v[0])+'   Brüt dolgu '+f(v[1])+'   Sıyırma '+f(v[2])+' m²',2.1);}
     text(8,30,'Eksen   Y '+f(st.center[0],3)+' m     X '+f(st.center[1],3)+' m',2);
     frame(7,5,290,25);for(const [j,v] of ['MÜTEAHHİT','HARİTA MÜHENDİSİ','KONTROL MÜHENDİSİ'].entries()){
       const x=54+j*93;text(x,22,v,2.2,'c',true);text(x,16,job.project['s'+(j+1)]||'',2.2,'c');text(x,10,job.project.tarih||'',2,'c');
@@ -127,6 +154,38 @@ async function maslakEnkesitPdf(job,calc,part=0){
     })
   }));
   return new Blob([window.APLGEO.vectorPdf(sheets)],{type:'application/pdf'});
+}
+async function maslakTelefonPdf(job,calc,part=0){
+  const pages=maslakPaftalar(job,calc,part);
+  if(!pages.length)throw Error('Yazdırılacak enkesit bulunamadı.');
+  const {colors}=await maslakPaftaSablonu();
+  const paper=[297,210],scale=7;
+  const canvas=document.createElement('canvas');
+  canvas.width=paper[0]*scale;canvas.height=paper[1]*scale;
+  const ctx=canvas.getContext('2d',{alpha:false});
+  if(!ctx)throw Error('Telefon PDF çizimi başlatılamadı.');
+  ctx.scale(scale,scale);
+  const pdf=new globalThis.jspdf.jsPDF({unit:'mm',orientation:'landscape',format:paper,compress:true,putOnlyUsedFonts:true});
+  for(const [i,{shapes}] of pages.entries()){
+    ctx.fillStyle='#fff';ctx.fillRect(0,0,...paper);
+    for(const g of [...shapes.filter(g=>g.fill),...shapes.filter(g=>!g.fill)]){
+      const color='#'+colors[g.l];
+      if(g.p){
+        ctx.beginPath();ctx.moveTo(g.p[0][0],paper[1]-g.p[0][1]);
+        for(const [x,y] of g.p.slice(1))ctx.lineTo(x,paper[1]-y);
+        if(g.fill){ctx.closePath();ctx.fillStyle=color;ctx.fill();}
+        else{ctx.strokeStyle=color;ctx.lineWidth=g.w;ctx.stroke();}
+      }else{
+        ctx.fillStyle=color;ctx.font=(g.bold?'bold ':'')+g.size+'px Arial, sans-serif';
+        ctx.textAlign=g.al==='c'?'center':g.al==='r'?'right':'left';ctx.textBaseline='middle';
+        ctx.fillText(g.s,g.x,paper[1]-g.y);
+      }
+    }
+    if(i)pdf.addPage(paper,'landscape');
+    pdf.addImage(canvas.toDataURL('image/jpeg',.88),'JPEG',0,0,...paper);
+    if((i+1)%6===0)await new Promise(resolve=>setTimeout(resolve,0));
+  }
+  return pdf.output('blob');
 }
 async function maslakCadPaketi(job,calc){
   const base=await maslakPaftaSablonu();
