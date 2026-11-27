@@ -13,7 +13,7 @@ Kübaj içindeki **Maslak hakediş formatı** ortak ekseni, yol alanını ve par
 
 - **A4 enkesit PDF** her kesiti ayrı yatay A4’e yerleştirir. Başlangıç ölçeği yatay ve düşey 1/150. A4’e sığmayan profilde kullanılan ölçek paftada yazılır.
 - **Gerçek 1/150 PDF** her iki ekseni 1/150 tutar ve kesite uygun kâğıt boyutunu seçer. %100 / Gerçek boyut ile basılır.
-- Şev altı, şev üstü ve belirgin eğim değişimlerinin kot ve ofsetleri temel profilden gelir. Kotlar Türkçe ondalık gösterimle 3, ofsetler 2 hane yazılır. Rakam yüksekliği kâğıtta en az 1,5 mm, ofset rakamları kotlardan ayrı bir banttadır. Yakın noktalar kendi sütunlarına ince bağlantıyla gider. Sayfa sayacı paftaya basılmaz.
+- Şev altı, şev üstü ve belirgin eğim değişimlerinin kot ve ofsetleri temel profilden gelir. Kotlar Türkçe ondalık gösterimle 3, ofsetler 2 hane yazılır. Rakam yüksekliği kâğıtta en az 1,5 mm, ofset rakamları kotlardan ayrı bir banttadır. Yakın noktalar kendi sütunlarına ince bağlantıyla gider. Ofset dikmesinin ucu aynı ofsette görünen en üst profile oturur. Teslim PDF, DXF ve NCZ paftaları aynı 1/150 çiziminden hazırlanır. Sayfa sayacı paftaya basılmaz.
 - Yol açık kırmızı, parsel açık turkuaz, sıyırma açık yeşildir. Yol siyah kotu düz siyah, parsel siyah kotu kesikli siyahtır. Lejantta **Parsel siyah kot** altında **(Yol Proje çizgisi)** bulunur.
 - **Teslim ZIP** planlı ve plansız paftaları, telefon PDF’ini, gerçek 1/150 PDF’yi, formüllü hakediş Excel’ini, plan ve enkesit DXF/NCZ’lerini ve içi boş baskı seçeneklerini içerir. **Yol ve parsel hakediş kontrolü** paketteki imalat dilimleri ile kontrol Excel’ini karşılaştırır.
 

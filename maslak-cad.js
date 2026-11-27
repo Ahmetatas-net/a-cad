@@ -129,6 +129,7 @@ function maslakPaftalar(job,calc,part=0,standard=false){
       regions(group,'T_SIYIRMA');
       for(const [l,r,a,b] of group)line('SIYIRMA_TABANI',[[X(l),Y(a)],[X(r),Y(b)]]);
     }
+    const profilesStart=shapes.length, guides=[];
     for(const [owner,parts] of st.earth.entries()){
       let last=null;
       for(const [index,[l,r,a,b,c,d]] of parts.entries()){
@@ -159,7 +160,7 @@ function maslakPaftalar(job,calc,part=0,standard=false){
     labels.forEach((q,i)=>{
       const x=labelsX[i], anchor=q.anchor, start=[anchor,Y(q.guideTop)];
       const path=Math.abs(anchor-x)<.001?[start,[x,tableBottom]]:[start,[anchor,plotBottom],[x,tableTop],[x,tableBottom]];
-      line('OFSET',path,.105);
+      guides.push({l:'OFSET',p:path,w:.105});
       [q.x,...q.values].forEach((z,j)=>{
         if(z===null)return;
         const ofset=j===0, value=f(Math.abs(z)<.000005?0:z,ofset?2:3).replace(/\./g,'');
@@ -167,6 +168,7 @@ function maslakPaftalar(job,calc,part=0,standard=false){
         text(x+.26,tableTop-rowH*(j+1)+baseline,value,MaslakKirik.minText,'l',false,90,bands[j][1]);
       });
     });
+    shapes.splice(profilesStart,0,...guides);
     text(8,20,'Eksen   Y '+f(st.center[0],3)+' m     X '+f(st.center[1],3)+' m',2);
     frame(7,4,W-7,17);for(const [j,v] of ['MÜTEAHHİT','HARİTA MÜHENDİSİ','KONTROL MÜHENDİSİ'].entries()){
       const x=7+(W-14)*(j+.5)/3;
@@ -237,43 +239,12 @@ async function maslakEnkesitPdf(job,calc,part=0,standard=false,plan=false){
   }));
   return new Blob([window.APLGEO.vectorPdf(sheets)],{type:'application/pdf'});
 }
-async function maslakTelefonPdf(job,calc,part=0){
-  const pages=maslakPaftalar(job,calc,part);
-  if(!pages.length)throw Error('Yazdırılacak enkesit bulunamadı.');
-  const {colors}=await maslakPaftaSablonu();
-  const paper=[297,210],scale=7;
-  const canvas=document.createElement('canvas');
-  canvas.width=paper[0]*scale;canvas.height=paper[1]*scale;
-  const ctx=canvas.getContext('2d',{alpha:false});
-  if(!ctx)throw Error('Telefon PDF çizimi başlatılamadı.');
-  ctx.scale(scale,scale);
-  const pdf=new globalThis.jspdf.jsPDF({unit:'mm',orientation:'landscape',format:paper,compress:true,putOnlyUsedFonts:true});
-  for(const [i,{shapes}] of pages.entries()){
-    ctx.fillStyle='#fff';ctx.fillRect(0,0,...paper);
-    for(const g of [...shapes.filter(g=>g.fill),...shapes.filter(g=>!g.fill)]){
-      const color='#'+colors[g.l];
-      if(g.p){
-        ctx.beginPath();ctx.moveTo(g.p[0][0],paper[1]-g.p[0][1]);
-        for(const [x,y] of g.p.slice(1))ctx.lineTo(x,paper[1]-y);
-        if(g.fill){ctx.closePath();ctx.fillStyle=color;ctx.fill();}
-        else{ctx.strokeStyle=color;ctx.lineWidth=g.w;ctx.stroke();}
-      }else{
-        ctx.fillStyle=color;ctx.font=(g.bold?'bold ':'')+g.size+'px Arial, sans-serif';
-        ctx.textAlign=g.al==='c'?'center':g.al==='r'?'right':'left';ctx.textBaseline='middle';
-        ctx.save();ctx.translate(g.x,paper[1]-g.y);
-        if(g.rot)ctx.rotate(-g.rot*Math.PI/180);
-        ctx.fillText(g.s,0,0);ctx.restore();
-      }
-    }
-    if(i)pdf.addPage(paper,'landscape');
-    pdf.addImage(canvas.toDataURL('image/jpeg',.88),'JPEG',0,0,...paper);
-    if((i+1)%6===0)await new Promise(resolve=>setTimeout(resolve,0));
-  }
-  return pdf.output('blob');
+function maslakTelefonPdf(job,calc,part=0){
+  return maslakEnkesitPdf(job,calc,part,true);
 }
 async function maslakCadDosyalari(job,calc){
   const base=await maslakPaftaSablonu();
-  const pages=maslakPaftalar(job,calc),items=[],entities=[];
+  const pages=maslakPaftalar(job,calc,0,true),items=[],entities=[];
   const shape=(type,layer,...args)=>items.push([type,layer,...args]);
   const layerList=Object.keys(base.colors).map(n=>({n,hidden:n==='YAZI_DUZENLE'}));
   const palette=Object.fromEntries(Object.entries(base.colors).map(([l,h])=>[l,/^(000000|ffffff)$/i.test(h)?7:K.hexAci(h)]));
@@ -298,7 +269,22 @@ async function maslakCadDosyalari(job,calc){
   function area(l,pts,legend){
     const n=pts.length;
     entity('HATCH',l,'AcDbHatch',[10,0,20,0,30,0,210,0,220,0,230,1,2,'SOLID',70,1,71,0,91,1,92,3,72,0,73,1,93,n,...pts.flatMap(q=>[10,q[0],20,q[1]]),97,0,75,0,76,1,98,0]);
-    shape('pline',l,pts,true);
+    const bottom=Math.min(...pts.map(p=>p[1])), top=Math.max(...pts.map(p=>p[1]));
+    // Native NCZ pen widths are paper millimetres. 1/150 turns the band
+    // spacing into .0405 m in the coordinate-based sheet layout.
+    penWidths[l]=.29;
+    const bands=Math.max(1,Math.ceil((top-bottom)/.0405));
+    for(let row=0;row<bands;row++){
+      const y=bottom+(top-bottom)*(row+.5)/bands, intersections=[];
+      for(const [i,[ax,ay]] of pts.entries()){
+        const [bx,by]=pts[(i+1)%n];
+        if((ay<=y&&y<by)||(by<=y&&y<ay))intersections.push(ax+(bx-ax)*(y-ay)/(by-ay));
+      }
+      intersections.sort((a,b)=>a-b);
+      for(let i=0;i+1<intersections.length;i+=2){
+        if(intersections[i+1]-intersections[i]>1e-8)shape('line',l,[intersections[i],y,0],[intersections[i+1],y,0]);
+      }
+    }
     if(!legend){const lay=l.replace(/^T_/,'ALAN_');entity('LWPOLYLINE',lay,'AcDbPolyline',[90,pts.length,70,1,...pts.flatMap(q=>[10,q[0],20,q[1]])]);shape('pline',lay,pts.concat([pts[0]]),false);}
   }
   function label(point,text,height,align,bold,rot=0,layer='YAZI'){
@@ -352,13 +338,14 @@ async function maslakTeslimPaketi(job,calc){
   };
   const name=maslakPdfAdi(job), plan='Plan_ve_Enkesitler.pdf';
   const control='ACAD/Kontrol/Kesit_Kontrol.xlsx';
+  const sectionPdf=await bytes(maslakEnkesitPdf(job,calc,0,true));
   const files=[
     {name:'Maslak_Hakedis.xlsx',data:await bytes(maslakCetvel(job,calc))},
     {name:control,data:await bytes(maslakKontrolCetveli(calc))},
-    {name,data:await bytes(maslakEnkesitPdf(job,calc))},
-    {name:plan,data:await bytes(maslakEnkesitPdf(job,calc,0,false,true))},
-    {name:name.replace(/\.pdf$/,' - Gerçek 150.pdf'),data:await bytes(maslakEnkesitPdf(job,calc,0,true))},
-    {name:'Telefon/'+name,data:await bytes(maslakTelefonPdf(job,calc))},
+    {name,data:sectionPdf},
+    {name:plan,data:await bytes(maslakEnkesitPdf(job,calc,0,true,true))},
+    {name:name.replace(/\.pdf$/,' - Gerçek 150.pdf'),data:sectionPdf},
+    {name:'Telefon/'+name,data:sectionPdf},
     ...await maslakCadDosyalari(job,calc)
   ];
   const manifest={
