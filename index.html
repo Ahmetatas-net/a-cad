@@ -10548,6 +10548,29 @@ function info() {
   $("kInfo").innerHTML = m === "sabit" ? (Number.isFinite(K.num(ST.R.flat)) ? `Baz kotu: <b>${K.tr(K.num(ST.R.flat), 3)}</b> m · tüm hesap bölgesinde sabit.` : "Hesap için baz kotunu gir.") : ST.R.pts ? `<span class="pill ok">${fmtN(ST.R.pts.length)} nokta · ${fmtN((ST.R.tri || []).length / 3)} üçgen</span> ${esc(ST.R.src || "")}${kzNote(ST.R)}` : "Henüz dosya yok.";
 }
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function packCadFaces(faces,check=false) {
+  const xyz=new Float64Array(faces.length*9), layerIds=new Uint32Array(faces.length);
+  const names=[], ids=new Map();
+  let offset=0;
+  for(let i=0;i<faces.length;i++){
+    const {lay,p}=faces[i];
+    if(check&&(!Object.hasOwn(faces[i],"lay")||Object.keys(faces[i]).length!==2||!Array.isArray(p)||p.length!==3||
+      p.some(q=>!Array.isArray(q)||q.length!==3||q.some(v=>typeof v!=="number"))))return null;
+    if(!ids.has(lay)){ids.set(lay,names.length);names.push(lay);}
+    layerIds[i]=ids.get(lay);
+    for(const q of p){xyz[offset++]=q[0];xyz[offset++]=q[1];xyz[offset++]=q[2];}
+  }
+  return {xyz,layerIds,names};
+}
+function unpackCadFaces({xyz,layerIds,names}) {
+  const faces=new Array(layerIds.length);
+  for(let i=0,j=0;i<faces.length;i++,j+=9){
+    faces[i]={lay:names[layerIds[i]],p:[
+      [xyz[j],xyz[j+1],xyz[j+2]],[xyz[j+3],xyz[j+4],xyz[j+5]],[xyz[j+6],xyz[j+7],xyz[j+8]]
+    ]};
+  }
+  return faces;
+}
 function readBuf(file) { return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(new Uint8Array(r.result)); r.onerror = rej; r.readAsArrayBuffer(file); }); }
 const toText = buf => { try { return new TextDecoder("utf-8", { fatal: true }).decode(buf); } catch (e) { return new TextDecoder("windows-1254").decode(buf); } };
 async function readFile(file) { return toText(await readBuf(file)); }
@@ -17101,27 +17124,6 @@ const msg = (id, t, bad) => { const e = $(id); e.className = "msg" + (bad ? " er
 
 /* ---------- dosya okuma ---------- */
 // büyük DXF arka planda (Web Worker) okunur: sayfa donmaz; olmazsa ana iş parçacığında okunur
-function packNczFaces(faces) {
-  const xyz=new Float64Array(faces.length*9), layerIds=new Uint32Array(faces.length);
-  const names=[], ids=new Map();
-  let offset=0;
-  for(let i=0;i<faces.length;i++){
-    const {lay,p}=faces[i];
-    if(!ids.has(lay)){ids.set(lay,names.length);names.push(lay);}
-    layerIds[i]=ids.get(lay);
-    for(const q of p){xyz[offset++]=q[0];xyz[offset++]=q[1];xyz[offset++]=q[2];}
-  }
-  return {xyz,layerIds,names};
-}
-function unpackNczFaces({xyz,layerIds,names}) {
-  const faces=new Array(layerIds.length);
-  for(let i=0,j=0;i<faces.length;i++,j+=9){
-    faces[i]={lay:names[layerIds[i]],p:[
-      [xyz[j],xyz[j+1],xyz[j+2]],[xyz[j+3],xyz[j+4],xyz[j+5]],[xyz[j+6],xyz[j+7],xyz[j+8]]
-    ]};
-  }
-  return faces;
-}
 function parseWorker(buf, opt, ncz=false, audit=null) {
   return new Promise((resolve, reject) => {
     let worker, url, timer;
@@ -17139,7 +17141,7 @@ function parseWorker(buf, opt, ncz=false, audit=null) {
       const inspect = audit ? 'D.dwgSourceAudit=('+audit.toString()+')(bytes);' : '';
       const transfer = ncz && opt?.transferFaces ? `
         if(D.faces.length>=20000){
-          const tin=(${packNczFaces.toString()})(D.faces);
+          const tin=(${packCadFaces.toString()})(D.faces);
           delete D.faces;
           postMessage({ok:true,D,tin},[tin.xyz.buffer,tin.layerIds.buffer]);
           return;
@@ -17153,7 +17155,7 @@ function parseWorker(buf, opt, ncz=false, audit=null) {
       timer = setTimeout(() => finish(Error('DXF okuma zaman aşımı.')), 240000);
       worker.onmessage = ({data}) => {
         try {
-          if(data.tin)data.D.faces=unpackNczFaces(data.tin);
+          if(data.tin)data.D.faces=unpackCadFaces(data.tin);
           finish(data.ok?null:Error(data.m),data.D);
         }catch(error){finish(error);}
       };
@@ -23994,10 +23996,26 @@ const V = { cx: 0, cy: 0, s: 1 }; let dpr = 1;
 /* çizim kaydı: IndexedDB (büyük dosyalar sığar) + sığarsa localStorage; açılan dosyanın adı/biçimi ve değişiklik işareti de saklanır */
 let FACES = [], BOLGE_NOARZ = false; /* dosyadaki üçgen yüzeyler (3DFACE / NCZ üçgenleri): olduğu gibi korunur, kaydederken geri yazılır */
 let CDOC = { name: "", fmt: "" }, DIRTY = false, CIDB = false, CPEND = false, CT = 0;
-let svT = null; const persistNow = () => { svT = null; CT = Date.now(); let j; try { j = JSON.stringify({ ents, lays, cur, nid, V, grad, ofd: OFD, doc: CDOC, dirty: DIRTY, faces: FACES, _t: CT }); } catch (e) { return; } try { IDB.set(KEYC, j).catch(e => {
-    console.error('A-CAD CAD otomatik kaydı başarısız',e);
-    window.dispatchEvent(new CustomEvent('acad:storage-error',{detail:{module:'CAD',message:String(e?.message||e)}}));
-  }); } catch (e) {} try { if (j.length > 3e6) throw 0; localStorage.setItem(KEYC, j); } catch (e) { try { localStorage.setItem(KEYC, JSON.stringify({ _t: CT, _idb: 1, ofd: OFD })); } catch (e2) {} } };
+let svT=null, cadLegacyWrite=Promise.resolve();
+function persistNow(useWorker=false){
+  svT=null;
+  CT=Date.now();
+  const data={ents,lays,cur,nid,V:{...V},grad,ofd:OFD,doc:CDOC,dirty:DIRTY,faces:FACES,_t:CT};
+  const job=cadEncodeSheets({sheets:[{data}]},useWorker,true);
+  job.catch(()=>{});
+  const write=cadLegacyWrite.then(async()=>{
+    const json=await job;
+    await IDB.set(KEYC,json);
+    try{
+      if(json.length<=3e6)localStorage.setItem(KEYC,json);
+      else localStorage.setItem(KEYC,JSON.stringify({_t:data._t,_idb:1,ofd:data.ofd}));
+    }catch(_){}
+  });
+  cadLegacyWrite=write.catch(error=>{
+    console.error("A-CAD CAD otomatik kaydı başarısız",error);
+    window.dispatchEvent(new CustomEvent("acad:storage-error",{detail:{module:"CAD",message:String(error?.message||error)}}));
+  });
+}
 /* kübaj bağlantısı: kübaja bağlı üçgen tabakası CAD'de değişirse Plan ve hesap da güncellensin */
 let KUBNOSYNC = false, kubT = null; const KUBSIG = new Map();
 // CAD→Kübaj yüzey revizyonu: bütün üçgen XYZ köşelerini kapsar.
@@ -24099,8 +24117,15 @@ const persist = () => { FVER++; kubHook(); egriOto();
   // Halihazır bağlantısı yalnızca değişiklik bildirir; büyük model burada kopyalanmaz.
   try { window.dispatchEvent(new CustomEvent("acad:cad-changed", { detail: { version: FVER } })); } catch (e) {} if (typeof PLAN !== "undefined" && PLAN) return; if (!CIDB) { CPEND = true; return; } clearTimeout(svT);
   const size=ents.length+FACES.length;
-  svT=setTimeout(persistNow,size>30000?4000:size>8000?1500:400);
+  svT=setTimeout(persistCadWhenIdle,size>30000?4000:size>8000?1500:400);
 };
+function persistCadWhenIdle(){
+ if(!$("v-cad").hidden&&busy()){
+  svT=setTimeout(persistCadWhenIdle,180);
+  return;
+ }
+ persistNow(true);
+}
 // Görünüm kaydı; geometri / kübaj sürümü değiştirilmez ve maliyetli yüzey taramaları tetiklenmez.
 /* V7.1.15.68: view-only persistence is constant-size for every project.
    Moving the viewport must never serialize or mutate the engineering document.
@@ -24391,7 +24416,7 @@ function zoomAll(list) {
   IDX=null;draw();persistView();
 }
 /* dosya üçgenleri: büyük ağlarda kaydırma/yakınlaştırma sırasında hazır görüntü taşınır, el çekilince tam çizilir */
-let FC = null, FCT = null, lastWheel = 0; const busy = () => ptr.size > 0 || Date.now() - lastWheel < 160;
+let FC = null, FCT = null, lastWheel = 0; const busy = () => ptr.size > 0 || !!MPAN || Date.now() - lastWheel < 160;
 /* ---------- hızlı eğri: açık üçgen yüzeylerden ekranda anlık eş yükselti eğrileri (çizime yazılmaz; bozuk kotlar sivri halka olarak hemen görünür) ---------- */
 let HE = { on: true, adim: 0, k: "", L: null, st: 0 }; try { const h = JSON.parse(localStorage.getItem("acad_he") || "null"); if (h) { HE.on = h.on !== false; HE.adim = +h.adim || 0; } } catch (e) {}
 const heKay = () => { try { localStorage.setItem("acad_he", JSON.stringify({ on: HE.on, adim: HE.adim })); } catch (e) {} };
@@ -24475,7 +24500,10 @@ function tinVisibleGroups(idx,W,H,D) {
 function drawFaces(W, H, D) { const key = FACES.length + "|" + (HE.on ? "e" + HE.adim : "") + "|" + W + "|" + H + "|" + Object.entries(lays).map(([k, l]) => k + (l.on ? 1 : 0) + l.c).join(",");
   if (FC && FC.key === key && FC.s === V.s && FC.cx === V.cx && FC.cy === V.cy) { cx.drawImage(FC.img, 0, 0); return; }
   if (FC && FC.key === key && FACES.length > 8000 && busy()) { const k = V.s / FC.s, dx = W / 2 - k * W / 2 + (FC.cx - V.cx) * V.s * dpr, dy = H / 2 - k * H / 2 + (V.cy - FC.cy) * V.s * dpr; cx.drawImage(FC.img, dx, dy, W * k, H * k); clearTimeout(FCT); FCT = setTimeout(() => { if (!busy()) draw(); else FCT = setTimeout(draw, 200); }, 180); return; }
-  const img = FC && FC.img && FC.img.width === W && FC.img.height === H ? FC.img : document.createElement("canvas"); img.width = W; img.height = H; const g0 = cx; const c2 = img.getContext("2d"); c2.clearRect(0, 0, W, H);
+  const img=FC?.img||document.createElement("canvas");
+  if(img.width!==W)img.width=W;
+  if(img.height!==H)img.height=H;
+  const g0=cx; const c2 = img.getContext("2d"); c2.clearRect(0, 0, W, H);
   ((cx) => { const fast = FACES.length > 5000, by = fast ? tinVisibleGroups(tinViewIndex(),W,H,D) : (()=>{ const g=new Map(); for(let i=0;i<FACES.length;i++){const f=FACES[i];if(!lays[f.lay]?.on)continue;if(!g.has(f.lay))g.set(f.lay,[]);g.get(f.lay).push(i);}return g;})();
     for (const [l, F] of by) { cx.strokeStyle = lays[l].c; cx.globalAlpha = HE.on ? 0.3 : 0.55; cx.lineWidth = 0.7 * D; let k = 0; cx.beginPath(); for (const i of F) { const f=FACES[i],a = f.p[0], b = f.p[1], c = f.p[2], ax = X(a[0]), ay = Y(a[1]), bx = X(b[0]), by_ = Y(b[1]), qx = X(c[0]), qy = Y(c[1]);
         if (Math.max(ax, bx, qx) < 0 || Math.min(ax, bx, qx) > W || Math.max(ay, by_, qy) < 0 || Math.min(ay, by_, qy) > H) continue; /* ekran dışı */
@@ -27180,14 +27208,16 @@ let CAD_STARTUP_PREVIOUS=null;
 const CAD_RECOVERY_READY = (async()=>{
   try{
     const old = await IDB.get(CAD_SHEETS_KEY);
-    if(old){let p;try{p=JSON.parse(old)}catch(_){}
-      if(cadHasData(p)){CAD_STARTUP_PREVIOUS=old;await IDB.set(CAD_RECOVERY_KEY,old);}
+    if(old){
+      let summary;try{summary=await cadStoredSummary(old);}catch(_){}
+      if(summary){CAD_STARTUP_PREVIOUS=old;await IDB.set(CAD_RECOVERY_KEY,old);}
     }
     // Compatibility with pre-V102 single-page recoveries, without reopening them.
     let single=await IDB.get(KEYC);
     if(!single){try{single=localStorage.getItem(KEYC)}catch(_){}}
-    if(single){let p;try{p=JSON.parse(single)}catch(_){}
-      if(p?.ents?.length || p?.faces?.length) {
+    if(single){
+      let summary;try{summary=await cadStoredSummary(single,true);}catch(_){}
+      if(summary) {
         const existing=await IDB.get(CAD_SINGLE_RECOVERY_KEY);
         if(!existing)await IDB.set(CAD_SINGLE_RECOVERY_KEY,single);
       }
@@ -27204,11 +27234,121 @@ try { CAD_RECOVERY_READY.then(ok=>{CIDB=!!ok;if(ok&&CPEND){CPEND=false;persist()
 let CAD_RASTER=null, CAD_RASTER_IMAGE=null, CAD_RASTER_PICK=0, CAD_RASTER_TRACE="", CAD_RASTER_VERT=[], CAD_RASTER_BLOCK_CLICK=false;
 const cadRasterForSave=()=>CAD_RASTER?{...CAD_RASTER,pts:(CAD_RASTER.pts||[null,null]).map(p=>p?[...p]:null),controlPoints:cadRasterControls(CAD_RASTER).map(c=>({...c,pixel:c.pixel?[...c.pixel]:null})),pose:{...CAD_RASTER.pose}}:null;
 
-const cadSheetSnap = () => ({ ents:clone(ents), lays:clone(lays), cur, nid, V:clone(V), faces:clone(FACES), doc:clone(CDOC), dirty:DIRTY, raster:cadRasterForSave() });
-const cadSheetRestore = d => { const panel=$("tsDeg");if(panel){panel.hidden=true;panel.style.display="none";}$("cadBulkFind")?.remove(); ents=clone(d.ents); lays=clone(d.lays); cur=d.cur; nid=d.nid; Object.assign(V,d.V); FACES=clone(d.faces||[]); CDOC=clone(d.doc||{name:"",fmt:""}); DIRTY=d.dirty===true; cadRasterRestore(d.raster||null); sel.clear(); U=[]; RD=[]; IDX=null; FC=null; cmd=null; renderLays(); draw(); try { docInfo(); } catch (e) {} try { if (typeof PAF_GEZ !== "undefined" && PAF_GEZ && !(cadSheets[cadSheetIndex] || {}).onizleme) setTimeout(() => { if (PAF_GEZ && !(cadSheets[cadSheetIndex] || {}).onizleme) pafGezBitir(false); }, 0); } catch (e) {} };
+const cadSheetData=()=>({ents,lays,cur,nid,V:{...V},faces:FACES,doc:CDOC,dirty:DIRTY,raster:cadRasterForSave()});
+const cadSheetSnap=()=>clone(cadSheetData());
+const cadSheetRestore = (d,owned=false) => { const panel=$("tsDeg");if(panel){panel.hidden=true;panel.style.display="none";}$("cadBulkFind")?.remove();
+ const snapshot=owned?d:clone(d);
+ ({ents,lays,cur,nid}=snapshot);
+ Object.assign(V,snapshot.V);
+ FACES=snapshot.faces||[];
+ CDOC=snapshot.doc||{name:"",fmt:""};
+ DIRTY=snapshot.dirty===true; cadRasterRestore(d.raster||null); sel.clear(); U=[]; RD=[]; IDX=null; FC=null; cmd=null; renderLays(); draw(); try { docInfo(); } catch (e) {} try { if (typeof PAF_GEZ !== "undefined" && PAF_GEZ && !(cadSheets[cadSheetIndex] || {}).onizleme) setTimeout(() => { if (PAF_GEZ && !(cadSheets[cadSheetIndex] || {}).onizleme) pafGezBitir(false); }, 0); } catch (e) {} };
 /* V103: commit immutable, synchronously captured sheet snapshots in strictly
    ordered writes. Never read the *next* tab after an awaited storage operation. */
 let cadSaveTimer=null, cadSaveWarned=false, cadWriteTail=Promise.resolve(), cadWriteSerial=0;
+function cadPackStoredSheet(sheet,transfer) {
+ const data=sheet.data;
+ if(!Array.isArray(data.faces)||data.faces.length<20000)return sheet;
+ const packed=packCadFaces(data.faces,true);
+ if(!packed)return sheet;
+ transfer.push(packed.xyz.buffer,packed.layerIds.buffer);
+ return {...sheet,data:{...data,faces:null,packedFaces:packed}};
+}
+function cadUnpackStoredSheet(sheet) {
+ const {data}=sheet;
+ if(data.packedFaces){
+  data.faces=unpackCadFaces(data.packedFaces);
+  delete data.packedFaces;
+ }
+ return sheet;
+}
+function cadStorageWorker(payload,transfer=[]) {
+ let worker,url;
+ try{
+  url=URL.createObjectURL(new Blob([`
+   ${packCadFaces.toString()}
+   ${unpackCadFaces.toString()}
+   ${cadPackStoredSheet.toString()}
+   ${cadUnpackStoredSheet.toString()}
+   const cadHasData=${cadHasData.toString()};
+   ${cadStoredSummaryFromRecord.toString()}
+   self.onmessage=({data})=>{
+    try{
+     if(data.kind==="summary"){
+      self.postMessage({value:cadStoredSummaryFromRecord(JSON.parse(data.raw),data.single)});
+     }else if(data.kind==="sheet"){
+      const sheet=JSON.parse(data.raw).sheets?.[data.index];
+      if(!sheet)throw Error("Çalışma sekmesi bulunamadı.");
+      const transfer=[];
+      self.postMessage({value:cadPackStoredSheet(sheet,transfer)},transfer);
+     }else{
+      const record=data.record;
+      record.sheets.forEach(cadUnpackStoredSheet);
+      self.postMessage({value:JSON.stringify(data.single?record.sheets[0].data:record)});
+     }
+    }catch(error){self.postMessage({error:String(error.message||error)});}
+   };
+  `],{type:"text/javascript"}));
+  worker=new Worker(url);
+  // Posting captures this revision before another tab or edit can change it.
+  worker.postMessage(payload,transfer);
+ }catch(error){
+  worker?.terminate();
+  return null;
+ }finally{if(url)URL.revokeObjectURL(url);}
+ return new Promise((resolve,reject)=>{
+  const timer=setTimeout(()=>finish(Error("CAD kaydı zaman aşımına uğradı.")),60000);
+  function finish(error,value){
+   clearTimeout(timer);
+   worker.terminate();
+   if(error)reject(error);else resolve(value);
+  }
+  worker.onmessage=({data})=>finish(data.error?Error(data.error):null,data.value);
+  worker.onerror=()=>finish(Error("Yerel CAD kaydı işlenemedi."));
+  worker.onmessageerror=()=>finish(Error("Yerel CAD kaydı okunamadı."));
+ });
+}
+function cadEncodeSheets(record,useWorker=true,single=false){
+ const count=record.sheets.reduce((n,{data})=>n+(data.ents?.length||0)+(data.faces?.length||0),0);
+ if(!useWorker||count<20000||typeof Worker!=="function"){
+  try{return Promise.resolve(JSON.stringify(single?record.sheets[0].data:record));}
+  catch(error){return Promise.reject(error);}
+ }
+ try{
+  const transfer=[];
+  const sheets=record.sheets.map(sheet=>cadPackStoredSheet(sheet,transfer));
+  const job=cadStorageWorker({kind:"encode",record:{...record,sheets},single},transfer);
+  if(job)return job;
+  return Promise.resolve(JSON.stringify(single?record.sheets[0].data:record));
+ }catch(error){return Promise.reject(error);}
+}
+function cadStoredSummaryFromRecord(record,single=false) {
+ if(single){
+  const objects=(record?.ents?.length||0)+(record?.faces?.length||0);
+  return objects?{at:Number(record._t)||0,pages:[{index:0,name:String(record.doc?.name||"Eski çizim"),objects}]}:null;
+ }
+ if(!cadHasData(record))return null;
+ return {at:Number(record.savedAt)||0,pages:record.sheets.map((sheet,index)=>({
+  index,name:String(sheet.name||"Sayfa "+(index+1)),
+  objects:(sheet.data?.ents?.length||0)+(sheet.data?.faces?.length||0)
+ })).filter(sheet=>sheet.objects>0||sheet.name!=="Sayfa 1")};
+}
+async function cadStoredSummary(raw,single=false){
+ if(raw.length>=3e6&&typeof Worker==="function"){
+  const job=cadStorageWorker({kind:"summary",raw,single});
+  if(job)try{return await job;}catch(_){}
+ }
+ return cadStoredSummaryFromRecord(JSON.parse(raw),single);
+}
+async function cadReadStoredSheet(raw,index){
+ if(raw.length>=3e6&&typeof Worker==="function"){
+  const job=cadStorageWorker({kind:"sheet",raw,index});
+  if(job)try{return cadUnpackStoredSheet(await job);}catch(_){}
+ }
+ const sheet=JSON.parse(raw).sheets?.[index];
+ if(!sheet)throw Error("Çalışma sekmesi bulunamadı.");
+ return sheet;
+}
 const cadSaveState=document.createElement('span');
 cadSaveState.id='cad103SaveState';
 cadSaveState.setAttribute('role','status');
@@ -27216,19 +27356,22 @@ cadSaveState.setAttribute('aria-live','polite');
 cadSaveState.style.cssText='margin-left:auto;flex-shrink:0;padding:3px 7px;font-size:11px;color:#a5bfd0;white-space:nowrap;max-width:175px;overflow:hidden;text-overflow:ellipsis';
 cadSaveState.textContent='';
 function cadStorageState(text,isError){cadSaveState.textContent=text;cadSaveState.style.color=isError?'#f4af96':'#a5bfd0';cadSaveState.title=text;}
-const cadSheetsFlush = () => {
+const cadSheetsFlush = ({copyActive=true,useWorker=true}={}) => {
  if(cadSaveTimer!==null){clearTimeout(cadSaveTimer);cadSaveTimer=null;}
- let serialized,serial;
+ let encoded,serial;
  try{
-  if(!cadSheets[cadSheetIndex])return Promise.resolve(false);
-  // Capture BEFORE yielding to IndexedDB. The user may change tabs meanwhile.
-  const index=cadSheetIndex;
-  cadSheets[index].data=cadSheetSnap();
-  serialized=JSON.stringify({active:index,sheets:cadSheets,savedAt:Date.now()});
+  const index=cadSheetIndex, active=cadSheets[index];
+  if(!active)return Promise.resolve(false);
+  const data=copyActive?cadSheetSnap():cadSheetData();
+  if(copyActive)active.data=data;
+  const sheets=cadSheets.map((sheet,i)=>i===index?{...sheet,data}:sheet);
   serial=++cadWriteSerial;
   cadStorageState('Kaydediliyor…',false);
+  encoded=cadEncodeSheets({active:index,sheets,savedAt:Date.now()},useWorker);
+  encoded.catch(()=>{}); // A failed encoder may finish before this write reaches the queue.
  }catch(e){cadStorageState('Kayıt hazırlanamadı',true);return Promise.reject(e);}
  const commit=async()=>{
+  const serialized=await encoded;
   if(!await CAD_RECOVERY_READY)throw Error('Önceki çalışma güvenceye alınamadı; kayıt engellendi.');
   await IDB.set(CAD_SHEETS_KEY,serialized);
   // Persist small snapshots to localStorage only AFTER IndexedDB succeeds.
@@ -27250,10 +27393,11 @@ const cadSheetsFlush = () => {
 
 const cadSheetsSave = () => {
  if(cadSaveTimer!==null)clearTimeout(cadSaveTimer);
- cadSaveTimer=setTimeout(()=>{cadSheetsFlush().catch(()=>{});},650);
+ cadSaveTimer=setTimeout(()=>{cadSheetsFlush({copyActive:false}).catch(()=>{});},650);
 };
-document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")cadSheetsFlush().catch(()=>{});});
-window.addEventListener("pagehide",()=>{cadSheetsFlush().catch(()=>{});});
+function cadSaveBeforeHide(){cadSheetsFlush({copyActive:false,useWorker:false}).catch(()=>{});}
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")cadSaveBeforeHide();});
+window.addEventListener("pagehide",cadSaveBeforeHide);
 const cadTabs = document.createElement("div"); cadTabs.style.cssText="display:flex;gap:5px;align-items:center;flex-wrap:wrap;padding:4px;background:#182b39;border-radius:6px";
 cv.parentElement.parentElement.insertBefore(cadTabs,cv.parentElement);
 function cadProjectTitle(name){return String(name||"").replace(/\.[^.]+$/, "").trim();}
@@ -27278,72 +27422,90 @@ function cadSheetSwitch(i){if(i===cadSheetIndex)return;if(typeof PAF_GEZ!=="unde
 function cadSheetNew(){cadSheetsFlush().catch(()=>{});const i=cadSheets.length;const next=1+Math.max(0,...cadSheets.map(sh=>{const m=/^Sayfa (\d+)$/.exec(sh.name);return m?Number(m[1]):0}));cadSheets.push({name:"Sayfa "+next,crs:"TUREF_TM33",crsConfirmed:false,data:{ents:[],lays:{"0":{c:"#ffffff",on:true}},cur:"0",nid:1,V:{cx:0,cy:0,s:1},faces:[],doc:{name:"",fmt:""}}});cadSheetIndex=i;cadSheetRestore(cadSheets[i].data);FVER++;window.dispatchEvent(new CustomEvent("acad:cad-changed",{detail:{version:FVER,newPage:true}}));cadTabsRender();cadSheetsSave();say("Yeni boş sayfa açıldı · Kopyalanan nesneler panoda korunuyor");}
 /* V102: no localStorage session auto-open; last work remains in the explicit recovery list. */
 if(!cadSheets.length)cadSheets=[{name:"Yeni çizim",crs:"TUREF_TM33",crsConfirmed:false,data:cadSheetSnap()}];cadTabsRender();
+function cadValidateStoredSheet(sheet){
+ const data=sheet?.data;
+ if(!data||!Array.isArray(data.ents)||!Array.isArray(data.faces)||!data.lays||!data.V)
+  throw Error("Eksik CAD sayfa geometrisi");
+ return sheet;
+}
+function cadApplyStoredSheets(sheets,active){
+ cadSheets=sheets;
+ cadSheetIndex=active;
+ FVER++;
+ UVER++;
+ cadSheetRestore(sheets[active].data,true);
+ cadTabsRender();
+ window.dispatchEvent(new CustomEvent("acad:cad-changed",{detail:{version:FVER,recovery:true}}));
+ cadSheetsSave();
+}
 /* V70: side-effect-free module switch snapshot and explicit, user-confirmed recovery. */
 window.ACAD_TRANSITION_CAD=Object.freeze({
  snapshot:()=>{
   const sheets=cadSheets.map((sh,i)=>({...sh,data:i===cadSheetIndex?cadSheetSnap():sh.data}));
   return {schema:'acad-cad-pages-v1',active:cadSheetIndex,sheets,at:Date.now()};
  },
- flush:()=>cadSheetsFlush(),
+ flush:()=>cadSheetsFlush({copyActive:false}),
  version:()=>FVER+':'+cadSheetIndex+':'+cadSheets.length,
  restore:payload=>{
   if(!payload||payload.schema!=='acad-cad-pages-v1'||!Array.isArray(payload.sheets)||!payload.sheets.length||payload.sheets.length>200)throw Error('Kurtarma dosyası CAD sayfası değil');
-  const checked=payload.sheets.map(sh=>{
-   if(!sh||!sh.data||!Array.isArray(sh.data.ents)||!Array.isArray(sh.data.faces)||!sh.data.lays||!sh.data.V)throw Error('Eksik CAD sayfa geometrisi');
-   return clone(sh);
-  });
-  cadSheets=checked;
-  cadSheetIndex=Math.max(0,Math.min(checked.length-1,Number(payload.active)||0));
-  cadSheetRestore(cadSheets[cadSheetIndex].data);
-  cadTabsRender();
-  FVER++;try{window.dispatchEvent(new CustomEvent('acad:cad-changed',{detail:{version:FVER,recovery:true}}))}catch(e){}
-  cadSheetsSave();
+  const checked=payload.sheets.map(sh=>clone(cadValidateStoredSheet(sh)));
+  cadApplyStoredSheets(checked,Math.max(0,Math.min(checked.length-1,Math.trunc(Number(payload.active)||0))));
   return {pages:cadSheets.length,points:cadSheets.reduce((n,p)=>n+(p.data.ents||[]).length,0)};
  }
 });
 
 /* V102: do not auto-load IndexedDB pages. Saved sessions are opened only on tap. */
 window.ACAD_SESSION_LIBRARY = Object.freeze({
- async list(){
-  const result=[];
+ async list(onClosed){
+  let closed=[];
+  try{
+   closed=(await IDB.keys(CAD_CLOSED_PREFIX)).reverse().map(key=>{
+    const [at,,name,objects]=JSON.parse(key.slice(CAD_CLOSED_PREFIX.length));
+    return {key,at:Number(at),label:"Kapatılan çizim",pages:[{index:0,name,objects}]};
+   });
+  }catch(error){console.warn("Kapatılan CAD çizimleri listelenemedi",error);}
+  onClosed?.(closed);
+  const result=[...closed];
   for(const [key,label] of [[CAD_RECOVERY_KEY,'Önceki çalışma'],[CAD_SHEETS_KEY,'Son çalışma'],[CAD_LEGACY_SHEETS_KEY,'V101 ve öncesi']]){
    let raw=null;try{raw=await IDB.get(key)}catch(_){ }
    if(!raw){try{raw=localStorage.getItem(key)}catch(_){}}
    if(!raw)continue;
-   try{const p=JSON.parse(raw);if(!cadHasData(p))continue;
-    result.push({key,label,at:Number(p.savedAt)||0,pages:p.sheets.map((sh,i)=>({index:i,name:String(sh.name||'Sayfa '+(i+1)),objects:(sh.data?.ents?.length||0)+(sh.data?.faces?.length||0)})).filter(sh=>sh.objects>0||sh.name!=='Sayfa 1')});
+   try{
+    const summary=await cadStoredSummary(raw);
+    if(summary)result.push({key,label,...summary});
    }catch(_){ }
   }
   // A very old CAD state that was stored as one model, not tabbed pages.
   let raw=null;try{raw=await IDB.get(CAD_SINGLE_RECOVERY_KEY)}catch(_){ }
   if(!raw){try{raw=await IDB.get(KEYC)}catch(_){ }}
   if(!raw){try{raw=localStorage.getItem(KEYC)}catch(_){ }}
-  if(raw)try{const p=JSON.parse(raw);if(p?.ents?.length || p?.faces?.length)
-   result.push({key:CAD_SINGLE_RECOVERY_KEY,label:'Eski tek CAD çizimi',at:Number(p._t)||0,pages:[{index:0,name:String(p.doc?.name||'Eski çizim'),objects:(p.ents?.length||0)+(p.faces?.length||0)}]});}catch(_){ }
-  try{
-   const closed=(await IDB.keys(CAD_CLOSED_PREFIX)).reverse().map(key=>{
-    const [at,,name,objects]=JSON.parse(key.slice(CAD_CLOSED_PREFIX.length));
-    return {key,at:Number(at),label:"Kapatılan çizim",pages:[{index:0,name,objects}]};
-   });
-   result.push(...closed);
-  }catch(error){console.warn("Kapatılan CAD çizimleri listelenemedi",error);}
+  if(raw)try{
+   const summary=await cadStoredSummary(raw,true);
+   if(summary)result.push({key:CAD_SINGLE_RECOVERY_KEY,label:"Eski tek CAD çizimi",...summary});
+  }catch(_){}
   const seen=new Set();return result.filter(s=>{const fp=s.key.startsWith(CAD_CLOSED_PREFIX)?s.key:s.at+'|'+s.pages.map(p=>p.name+':'+p.objects).join('|');if(seen.has(fp))return false;seen.add(fp);return true;});
  },
- async open(key,index){
+ async open(key,index,isCurrent=()=>true){
   if(!key.startsWith(CAD_CLOSED_PREFIX)&&![CAD_RECOVERY_KEY,CAD_SHEETS_KEY,CAD_LEGACY_SHEETS_KEY,CAD_SINGLE_RECOVERY_KEY].includes(key))throw Error('Bilinmeyen çalışma kaynağı');
   let raw=null;try{raw=await IDB.get(key)}catch(_){}
   if(!raw){try{raw=localStorage.getItem(key)}catch(_){}}
   if(!raw && key===CAD_SINGLE_RECOVERY_KEY){try{raw=await IDB.get(KEYC)}catch(_){}if(!raw)try{raw=localStorage.getItem(KEYC)}catch(_){}}
   if(!raw)throw Error('Seçilen çalışma bu cihazda bulunamadı');
-  const p=JSON.parse(raw);let sh;
-  if(key===CAD_SINGLE_RECOVERY_KEY){if(!Array.isArray(p.ents))throw Error('Eski çizim geometrisi eksik');
+  let sh;
+  if(key===CAD_SINGLE_RECOVERY_KEY){
+   const p=JSON.parse(raw);
+   if(!Array.isArray(p.ents))throw Error('Eski çizim geometrisi eksik');
    sh={name:p.doc?.name||'Eski çizim',data:{ents:p.ents,lays:p.lays||{'0':{c:'#ffffff',on:true}},cur:p.cur||'0',nid:p.nid||p.ents.length+1,V:p.V||{cx:0,cy:0,s:1},faces:p.faces||[],doc:p.doc||{name:'',fmt:''}},crs:'TUREF_TM33',crsConfirmed:false};
-  }else{if(!Array.isArray(p.sheets)||!p.sheets[index]?.data)throw Error('Çalışma sekmesi bulunamadı');sh=p.sheets[index];}
-  const current=window.ACAD_TRANSITION_CAD.snapshot();
-  const hasCurrent=cadHasData(current);
-  const sheets=hasCurrent?[...current.sheets,sh]:[sh];
-  const q={schema:'acad-cad-pages-v1',active:sheets.length-1,sheets};
-  window.ACAD_TRANSITION_CAD.restore(q);
+  }else sh=await cadReadStoredSheet(raw,index);
+  cadValidateStoredSheet(sh);
+  if(!isCurrent())return false;
+  if(cadOpenInProgress||cadClosing)throw Error("Açık çizim işleniyor. İşlem bitince yeniden seç.");
+  const current=cadSheets.map((sheet,i)=>i===cadSheetIndex?{...sheet,data:cadSheetData()}:sheet);
+  const keep=cadHasData({sheets:current});
+  if(keep&&current.length>=200)throw Error("En fazla 200 CAD sayfası açılabilir.");
+  const sheets=keep?[...current,sh]:[sh];
+  // Parsed storage belongs to this editor. Transferring ownership avoids another geometry copy.
+  cadApplyStoredSheets(sheets,sheets.length-1);
   return true;
  }
 });
@@ -27862,8 +28024,7 @@ function cadContextShow(ev){cadContextHide();const menu=document.createElement("
 for(const [name,fn] of [["Tümünü seç",()=>{ents.forEach(e=>{if(lays[e.lay]?.on)sel.add(e.id)});draw();say(sel.size+" nesne seçildi")}],["Kopyala (Ctrl+C)",cadClipCopy],["Yeni sayfa",cadSheetNew],["Koordinatında yapıştır",()=>cadClipPaste()],["Fareyle istediğim yere yapıştır",cadClipAtMouse],["Y,X koordinatı girerek yapıştır",cadClipAtCursor],["Seçili nesnelere zoom",()=>zoomAll(selEnts())]]){const b=document.createElement("button");b.type="button";b.textContent=name;b.style.cssText="display:block;width:100%;text-align:left;padding:8px;margin:2px 0";b.onclick=()=>{cadContextHide();fn()};menu.appendChild(b);}document.body.appendChild(menu);cadMenu=menu;}
 document.addEventListener("pointerdown",e=>{if(cadMenu&&!cadMenu.contains(e.target))cadContextHide()},true);
 document.addEventListener("keydown",e=>{if($("v-cad").hidden||!(e.ctrlKey||e.metaKey)||!["c","v"].includes(e.key.toLowerCase()))return;if(["INPUT","TEXTAREA","SELECT"].includes(e.target.tagName)&&e.target.id!=="cadIn")return;e.preventDefault();if(e.repeat)return;if(e.key.toLowerCase()==="c")cadClipCopy();else cadClipPaste();},true);
-window.addEventListener("pagehide",cadSheetsSave);
-const cadSheetAutosave=setInterval(()=>{if(!$("v-cad").hidden && cadSheets.length && cadSheets[cadSheetIndex].data && ents.length<10000)cadSheetsSave();},15000);
+setInterval(()=>{if(!$("v-cad").hidden&&cadSheets[cadSheetIndex]?.data&&ents.length+FACES.length<10000)cadSheetsSave();},15000);
 
 
 cv.addEventListener("contextmenu", e => { e.preventDefault(); if (window.BGI && BGI.reg) { BGI.cancelReg(); draw(); return; } if(cmd){
@@ -27898,15 +28059,22 @@ function liveHeight77(q){
  }
  return z===null?'—':z.toFixed(2)+' (çizgi)';
 }
-let liveEvent77=null,liveFrame77=0;
+let liveEvent77=null,liveFrame77=0,liveHeightTimer=0;
+function drawCursor77(){
+ liveFrame77=0;
+ clearTimeout(liveHeightTimer);
+ const r=cv.getBoundingClientRect();
+ if(!r.width||!r.height||$("v-cad").hidden)return;
+ const q=[WX((liveEvent77[0]-r.left)*cv.width/dpr/r.width),WY((liveEvent77[1]-r.top)*cv.height/dpr/r.height)];
+ const moving=!!MPAN||ptr.size>1||(ptr.size>0&&!!pan&&mv)||Date.now()-lastWheel<160;
+ const line='Y '+q[0].toFixed(2)+'   X '+q[1].toFixed(2)+'   Z '+(moving?'…':liveHeight77(q));
+ const label=$("cadCursor77");
+ if(label.textContent!==line)label.textContent=line;
+ if(moving)liveHeightTimer=setTimeout(()=>{liveHeightTimer=0;if(!liveFrame77)liveFrame77=requestAnimationFrame(drawCursor77);},165);
+}
 function scheduleLive77(e){
  liveEvent77=[e.clientX,e.clientY];
- if(liveFrame77)return;
- liveFrame77=requestAnimationFrame(()=>{
-  liveFrame77=0;const r=cv.getBoundingClientRect();if(!r.width||!r.height)return;
-  const q=[WX((liveEvent77[0]-r.left)*cv.width/dpr/r.width),WY((liveEvent77[1]-r.top)*cv.height/dpr/r.height)];
-  $('cadCursor77').textContent='Y '+q[0].toFixed(2)+'   X '+q[1].toFixed(2)+'   Z '+liveHeight77(q);
- });
+ if(!liveFrame77)liveFrame77=requestAnimationFrame(drawCursor77);
 }
 for(const type of ['pointermove','pointerdown','pointerup','wheel'])cv.addEventListener(type,scheduleLive77,{capture:true,passive:true});
 
@@ -27929,7 +28097,7 @@ cv.addEventListener("pointermove", e => { const r = [e.offsetX, e.offsetY];
   if (pan) { const dx = r[0] - pan.x, dy = r[1] - pan.y; if (Math.abs(dx) + Math.abs(dy) > 6) mv = true; if (mv) { V.cx = pan.cx - dx / V.s; V.cy = pan.cy + dy / V.s; hizliFrame(); } } });
 const up = e => { const was = ptr.has(e.pointerId); ptr.delete(e.pointerId); if (ptr.size < 2) pin = null; if (!was || ptr.size) return;
   if(cmd&&cmd.traceState&&cmd.gestureEnd){const handled=cmd.gestureEnd([WX(e.offsetX),WY(e.offsetY)],mv,e.type==='pointercancel');pan=null;if(handled)return;}
-  if (pan && mv) { clearTimeout(QT); setTimeout(() => draw(), 0); } pan = null;
+  pan = null;
   if (drag) { const d_ = drag; drag = null; SNX = null; snapMk = null; if (mv) { IDX = null; persist(); say("Sürükleyerek taşındı — Geri al: U"); draw(); ctxBar(); return; } }
   if (winBox) { const [a, b] = winBox; winBox = null; if (mv) { const x0 = WX(Math.min(a[0], b[0])), x1 = WX(Math.max(a[0], b[0])), y0 = WY(Math.max(a[1], b[1])), y1 = WY(Math.min(a[1], b[1])), inside = b[0] >= a[0]; let n = 0;
       if(cadSelectionType==="triangle")n=cadSelectRegion([[x0,y0],[x1,y0],[x1,y1],[x0,y1]],!inside).length;
@@ -27938,7 +28106,7 @@ const up = e => { const was = ptr.has(e.pointerId); ptr.delete(e.pointerId); if 
       if (cmd && cmd.name === "Sil" && n) { snap0(); const k_ = sel.size; ents = ents.filter(e2 => !sel.has(e2.id)); sel.clear(); IDX = null; persist(); say(`${k_} nesne silindi — Geri al: U`); draw(); prompt_("Sil: dokun ya da pencere çiz · sağ tuş bitir"); return; }
       if (cmd && cmd.win) { cmd.win(n); draw(); return; } say(`${n} nesne seçildi${n ? " — silmek için Delete" : ""}`); if (cmd && cmd.name === "Sil") { draw(); return; } idle(); return; } }
   if(e.type==="pointercancel"&&cmd?.polygonPick)return;
-  if (mv) { IDX = null; persist(); return; } const sx = e.offsetX, sy = e.offsetY;
+  if (mv) { persistView(); drawFrame(); return; } const sx = e.offsetX, sy = e.offsetY;
   if (grip) { const p = pickPt(sx, sy); snap0(); const g = grip; grip = null; if (g.e.t === "circle") g.e.c = p; else g.e.pts[g.i] = [p[0], p[1], g.e.pts[g.i][2] || 0]; IDX = null; persist(); say("Köşe taşındı"); idle(); return; }
   if (window.BGI && BGI.reg) { const odd = BGI.reg.step % 2 === 1; const p = odd ? pickPt(sx, sy) : [WX(sx), WY(sy)]; BGI.tap([p[0], p[1]]); draw(); return; }
   if(cadSelectionType==="triangle"&&(!cmd||cmd.name==="Toplu sorgu")){
@@ -27955,9 +28123,18 @@ cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
 let ZRAF = 0; const zoomAt = (ox, oy, f) => { const w = [WX(ox), WY(oy)]; V.s = Math.min(1e5, Math.max(1e-5, V.s * f)); V.cx = w[0] - (ox * dpr - cv.width / 2) / (V.s * dpr); V.cy = w[1] + (oy * dpr - cv.height / 2) / (V.s * dpr); if (!ZRAF) ZRAF = requestAnimationFrame(() => { ZRAF = 0; hizli(); }); persistView(); };
 cv.addEventListener("wheel", e => { e.preventDefault(); lastWheel = Date.now(); const dy = e.deltaY * (e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 400 : 1); zoomAt(e.offsetX, e.offsetY, Math.exp(-dy * (e.ctrlKey ? 0.01 : 0.0018))); }, { passive: false });
 /* orta tuş (tekerlek basılı) sürükle = kaydır; çift tıkla orta tuş = tümünü göster */
-let MPAN = null; cv.addEventListener("pointerdown", e => { if (e.button !== 1) return; e.preventDefault(); MPAN = { x: e.offsetX, y: e.offsetY, cx: V.cx, cy: V.cy, t: Date.now() }; cv.setPointerCapture(e.pointerId); });
-cv.addEventListener("pointermove", e => { if (!MPAN) return; V.cx = MPAN.cx - (e.offsetX - MPAN.x) / V.s; V.cy = MPAN.cy + (e.offsetY - MPAN.y) / V.s; if (!ZRAF) ZRAF = requestAnimationFrame(() => { ZRAF = 0; hizli(); }); });
-cv.addEventListener("pointerup", e => { if (e.button === 1 && MPAN) { MPAN = null; persist(); } }); cv.addEventListener("auxclick", e => { if (e.button === 1) e.preventDefault(); }); cv.addEventListener("dblclick", e => { /* çift tıkla zaten pointerup içinde ortalar */ });
+let MPAN = null; cv.addEventListener("pointerdown", e => { if (e.button !== 1) return; e.preventDefault(); MPAN = { id:e.pointerId,x:e.offsetX,y:e.offsetY,cx:V.cx,cy:V.cy }; cv.setPointerCapture(e.pointerId); });
+cv.addEventListener("pointermove", e => { if (!MPAN||MPAN.id!==e.pointerId) return; V.cx = MPAN.cx - (e.offsetX - MPAN.x) / V.s; V.cy = MPAN.cy + (e.offsetY - MPAN.y) / V.s; if (!ZRAF) ZRAF = requestAnimationFrame(() => { ZRAF = 0; hizli(); }); });
+function finishMiddlePan(e){
+  if(!MPAN||MPAN.id!==e.pointerId)return;
+  MPAN=null;
+  persistView();
+  drawFrame();
+}
+cv.addEventListener("pointerup",finishMiddlePan);
+cv.addEventListener("pointercancel",finishMiddlePan);
+cv.addEventListener("lostpointercapture",finishMiddlePan);
+cv.addEventListener("auxclick", e => { if (e.button === 1) e.preventDefault(); }); cv.addEventListener("dblclick", e => { /* çift tıkla zaten pointerup içinde ortalar */ });
 function info(e) { const s = { line: "Çizgi", pline: e.closed ? "Kapalı çoklu çizgi" : "Çoklu çizgi", point: "Nokta", text: "Yazı", circle: "Daire" }[e.t];
   say(`${s} · tabaka ${e.lay}${e.t === "point" ? ` · ${e.n || ""} Y ${fmt(e.pts[0][0])} X ${fmt(e.pts[0][1])} Z ${(+e.pts[0][2] || 0).toFixed(3)}` : e.t === "text" ? ` · "${e.s}"` : e.t === "circle" ? ` · r ${fmt(e.r)}` : ` · uzunluk ${fmt(lenOf(e))} m${e.closed ? ` · alan ${fmt(areaOf(e.pts))} m²` : ""}`}`); }
 
@@ -32873,13 +33050,19 @@ $("ckGo").addEventListener("click", () => { const sl = $("ckS").value, rl = $("c
   if (typeof buildModels === "function") buildModels(); if (typeof SECS !== "undefined") SECS = []; save(); try { info(); renderAlanlar(); } catch (e) {} $("cadKub").hidden = true;
   if (typeof recalcIfReady === "function") recalcIfReady(); if (typeof showTab === "function") showTab(rl && P ? "plan" : "veri");
   say(`Kübaja gönderildi: siyah ${S_.tri ? (S_.tri.length / 3) + " üçgen" : S_.pts.length + " nokta"}${rl === "#sabit" ? ", kırmızı sabit kot" : rl ? `, kırmızı ${ST.R.pts.length} nokta` : ""}${P ? ", sınır seçili alan" : ""}`); });
+function cadPaintStorageFeedback(){
+ return new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)));
+}
 document.addEventListener("click",async event=>{
   const button=event.target.closest?.("#cadSaveLocal");
   if(!button||button.disabled||cadClosing||cadOpenInProgress)return;
   button.disabled=true;
   cadOpenFeedback("Çalışma kaydediliyor…");
+  const sheet=cadSheets[cadSheetIndex];
   try{
-    if(!await cadSheetsFlush())throw Error("Açık çizim bulunamadı.");
+    if(ents.length+FACES.length>=20000)await cadPaintStorageFeedback();
+    if(cadSheets[cadSheetIndex]!==sheet)throw Error("Etkin çizim değişti. Yeni çizimden Kaydet'i seç.");
+    if(!await cadSheetsFlush({copyActive:false}))throw Error("Açık çizim bulunamadı.");
     cadOpenFeedback("Çalışma bu cihaza kaydedildi.","success");
   }catch(error){cadOpenFeedback("Çalışma kaydedilemedi: "+error.message,"error");}
   finally{button.disabled=false;}
@@ -32898,13 +33081,17 @@ async function closeProj(b) {
   cadClosing=true;
   b.disabled=true;
   try{
-    const version=FVER;
+    const version=FVER, undoVersion=UVER;
+    const sameDrawing=()=>!cadOpenInProgress&&cadSheets[cadSheetIndex]===sheet&&FVER===version&&UVER===undoVersion&&!drag;
     if(hasDrawing){
       cadOpenFeedback("Çizim saklanıyor…");
-      const data=cadSheetSnap();
+      if(ents.length+FACES.length>=20000)await cadPaintStorageFeedback();
+      if(!sameDrawing())throw Error("Açık çizim değişti. Kapat'a tekrar bas.");
+      const data=cadSheetData();
       const key=CAD_CLOSED_PREFIX+JSON.stringify([Date.now(),crypto.randomUUID(),sheet.name,data.ents.length+data.faces.length]);
-      await IDB.set(key,JSON.stringify({sheets:[{...sheet,data}]}));
-      if(cadOpenInProgress||cadSheets[cadSheetIndex]!==sheet||FVER!==version){
+      const encoded=await cadEncodeSheets({sheets:[{...sheet,data}]});
+      await IDB.set(key,encoded);
+      if(!sameDrawing()){
         cadOpenFeedback("Çizim bu cihaza kaydedildi. Kapatmak için tekrar bas.","success");
         return;
       }
@@ -32919,8 +33106,9 @@ async function closeProj(b) {
       data:{ents:[],lays:{"0":{c:"#ffffff",on:true}},cur:"0",nid:1,V:{cx:0,cy:0,s:1},faces:[],doc:{name:"",fmt:""}}
     });
     cadSheetIndex=Math.min(cadSheetIndex,cadSheets.length-1);
-    cadSheetRestore(cadSheets[cadSheetIndex].data);
     FVER++;
+    UVER++;
+    cadSheetRestore(cadSheets[cadSheetIndex].data,true);
     cadTabsRender();
     ctxBar();
     window.dispatchEvent(new CustomEvent("acad:cad-changed",{detail:{version:FVER,pageSwitch:true}}));
@@ -35641,6 +35829,11 @@ body.acad57-cad #cadFileStatus[data-tone="error"]{border-color:#b7776b}
 }
 #rfBox>.rf-sheet .rf-heading{display:flex;align-items:center;gap:8px;margin-bottom:8px}
 #rfBox>.rf-sheet .rf-heading strong{flex:1;font-size:15px}
+#rfSessionStatus:empty{display:none}
+#rfSessionStatus{padding:7px 9px;border-inline-start:2px solid #4794a1;overflow-wrap:anywhere;margin:0 0 8px}
+#rfSessionRows[aria-busy="true"] button{cursor:wait}
+#rfBox>.rf-sheet .rf-session-row{display:block;width:100%;text-align:left;margin:4px 0;padding:9px;overflow-wrap:anywhere}
+#rfBox>.rf-sheet .rf-session-row:disabled{opacity:.6}
 #rfBox>.rf-sheet .rf-entry{display:flex;align-items:center;gap:6px;margin-bottom:5px}
 #rfBox>.rf-sheet button{
  border:1px solid #c5d5e0;border-radius:7px;background:#fff;color:#193249;
@@ -35767,28 +35960,42 @@ html[data-acad-look="night"] #rfBox>.rf-sheet .rf-meta{color:#b6cada}
   async function showSavedSheets(){
     const b=$("rfBox");if(!b)return;
     b.hidden=false;
-    b.innerHTML='<div style="background:#fff;color:#172839;width:min(600px,100vw);max-height:80vh;overflow:auto;border-radius:14px 14px 0 0;padding:14px"><div style="display:flex;align-items:center;gap:8px"><b style="flex:1">📁 Kayıtlı CAD çalışmaları</b><button type="button" id="rfSessionBack">Geri</button></div><div id="rfSessionRows" style="padding-top:12px">Kayıtlar aranıyor…</div></div>';
+    b.innerHTML='<div class="rf-sheet"><div class="rf-heading"><strong>Kayıtlı CAD çalışmaları</strong><button type="button" id="rfSessionBack">Geri</button></div><p id="rfSessionStatus" role="status"></p><div id="rfSessionRows">Kayıtlar aranıyor…</div></div>';
     $("rfSessionBack").onclick=()=>show(null);
-    try{
-      const sessions=await window.ACAD_SESSION_LIBRARY?.list?.()||[];
-      const rows=$("rfSessionRows");if(!rows)return;
-      rows.replaceChildren();
-      if(!sessions.length){rows.textContent='Bu cihazda kayıtlı eski CAD çalışması yok. Aç düğmesiyle bir dosya seçebilirsin.';return;}
-      sessions.forEach((s)=>{
+    const rows=$("rfSessionRows"), rendered=new Set();
+    const active=()=>!b.hidden&&$("rfSessionRows")===rows;
+    function appendRows(sessions){
+      if(!active()||!sessions.length)return;
+      if(!rendered.size)rows.replaceChildren();
+      sessions.forEach(s=>{
+        if(rendered.has(s.key))return;
+        rendered.add(s.key);
         const head=document.createElement('div');head.style.cssText='font-weight:700;margin:12px 0 4px;border-bottom:1px solid #d1d5db;padding-bottom:5px';
         head.textContent=s.label+(s.at?' · '+new Date(s.at).toLocaleDateString('tr-TR'):'');rows.append(head);
         s.pages.forEach(sh=>{
-          const bt=document.createElement('button');bt.type='button';bt.style.cssText='display:block;width:100%;text-align:left;margin:4px 0;padding:10px;background:#e9f2f8;color:#18354c;border:1px solid #bccbd7;border-radius:9px';
+          const bt=document.createElement('button');bt.type='button';bt.className="rf-session-row";
           bt.textContent='📐 '+sh.name+' · '+sh.objects.toLocaleString('tr-TR')+' nesne';
           bt.onclick=async()=>{
+            if(rows.getAttribute("aria-busy")==="true")return;
+            const status=$("rfSessionStatus");
+            rows.setAttribute("aria-busy","true");
             bt.disabled=true;
-            try{const opened=await window.ACAD_SESSION_LIBRARY.open(s.key,sh.index);if(opened){b.hidden=true;try{showTab('cad')}catch(_){}}}
-            catch(e){alert('Kayıtlı çizim açılamadı: '+String(e.message||e))}
-            finally{bt.disabled=false;}
+            status.textContent=sh.name+" açılıyor…";
+            try{
+              const opened=await window.ACAD_SESSION_LIBRARY.open(s.key,sh.index,active);
+              if(opened){b.hidden=true;await showTab("cad");}
+            }
+            catch(e){status.textContent="Kayıtlı çizim açılamadı. "+String(e.message||e);}
+            finally{rows.removeAttribute("aria-busy");bt.disabled=false;}
           };rows.append(bt);
         });
       });
-    }catch(e){const rows=$("rfSessionRows");if(rows)rows.textContent='Önceki çalışmalar okunamadı: '+String(e.message||e);}
+    }
+    try {
+      const sessions=await window.ACAD_SESSION_LIBRARY?.list?.(appendRows)||[];
+      appendRows(sessions);
+      if(active()&&!rendered.size)rows.textContent="Bu cihazda kayıtlı CAD çalışması yok.";
+    }catch(e){if(active()&&!rendered.size)rows.textContent="Önceki çalışmalar okunamadı. "+String(e.message||e);}
   }
   /* üstteki genel düğme: önce dosya, sonra nereye açılacağı */
   const TGT = [["cadF2", "✏️ CAD'de aç", "cad"], ["hubF", "🏁 Sahadan İş (saha ölçüsü)", "is"], ["hS", "⛰ Kübaj · siyah (ilk hâl)", "kesit"], ["hK", "⛰ Kübaj · kırmızı (son hâl)", "kesit"], ["tOpen", "🗺 Plan'da aç (kontrol)", "plan"], ["aF", "🏠 Yapı APL · parsel / plankote", "apl"], ["aM", "🏠 Yapı APL · mimari", "apl"], ["aPK", "🏠 Yapı APL · ayrı plankote", "apl"]];
