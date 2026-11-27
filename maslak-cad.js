@@ -157,7 +157,7 @@ function maslakPaftalar(job,calc,part=0,standard=false){
     });
     line('PAFTA',[[7,tableTop],[7,tableBottom],[W-7,tableBottom],[W-7,tableTop]],.12);
     labels.forEach((q,i)=>{
-      const x=labelsX[i], anchor=q.anchor, start=[anchor,Y(q.z)];
+      const x=labelsX[i], anchor=q.anchor, start=[anchor,Y(q.guideTop)];
       const path=Math.abs(anchor-x)<.001?[start,[x,tableBottom]]:[start,[anchor,plotBottom],[x,tableTop],[x,tableBottom]];
       line('OFSET',path,.105);
       [q.x,...q.values].forEach((z,j)=>{

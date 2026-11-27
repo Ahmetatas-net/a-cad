@@ -88,22 +88,25 @@ const MaslakKirik = (() => {
       if (same) {
         if (!same.matched.has(q.slot)) {
           same.values[q.slot] = q.z;
-          same.z = Math.max(same.z,q.z);
           same.matched.add(q.slot);
         }
         continue;
       }
       const nearest = q.score >= 3 ? .36 : q.score >= 2.5 ? 1.95 : spacing;
       if (taken.length >= capacity || taken.some(p => Math.abs(p.anchor-key)<nearest)) continue;
+      let guideTop = q.z;
       const values = profiles.map(profile => {
+        let firstLevel = null;
         for (const p of profile) {
           const z = level(p,q.x);
-          if (z !== null) return z;
+          if (z === null) continue;
+          firstLevel ??= z;
+          guideTop = Math.max(guideTop,z);
         }
-        return null;
+        return firstLevel;
       });
       values[q.slot] = q.z;
-      taken.push({...q,anchor:key,values,matched:new Set([q.slot])});
+      taken.push({...q,anchor:key,guideTop,values,matched:new Set([q.slot])});
     }
     return taken.sort((a,b) => a.x-b.x);
   }
