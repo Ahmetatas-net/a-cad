@@ -203,7 +203,7 @@ function maslakPaftalar(job,calc,part=0,standard=false){
     text(W/2,169+shift,title,job.terrain?Math.min(2.8,(W-110)/Math.max(1,title.length*.6)):2.8,'c',true);
     text(W-7,161+shift,paperName+'   Yatay 1/'+dx+'   Düşey 1/'+dy,2,'r');
     const fills = job.terrain
-      ? [['Kazı','T_KAZI'],['Dolgu','T_DOLGU'],['Sıyırma','T_SIYIRMA']].filter(([,layer])=>st.regions.some(q=>q.l===layer))
+      ? (st.ownerFills||[['Kazı','T_KAZI'],['Dolgu','T_DOLGU'],['Sıyırma','T_SIYIRMA']]).filter(([,layer])=>st.regions.some(q=>q.l===layer))
       : [[job.owners[0],'T_YOL'],[job.owners[1],'T_GB'],['Sıyırma','T_SIYIRMA']];
     for(const [j,[name,layer]] of fills.entries()){
       const x=8+62*j,y=159+shift;shapes.push({l:layer,p:[[x,y],[x+5,y],[x+5,y+3],[x,y+3]],fill:true,legend:true});text(x+7,y+1.5,name,2.1);
@@ -533,7 +533,7 @@ async function maslakTeslimPaketi(job,calc){
 const ortakPaftaRenkleri = Object.freeze({
   PAFTA:'#a9b1b3', YAZI:'#111111', OFSET:'#666d70', EKSEN:'#485d6c',
   YOL_SIYAH:'#111111', YOL_KIRMIZI:'#ae2428', SIYIRMA_TABANI:'#25814a',
-  T_KAZI:'#f5cfd1', T_DOLGU:'#c4e8e7', T_SIYIRMA:'#bad8c3'
+  T_YOL:'#f5cfd1', T_GB:'#c4e8e7', T_KAZI:'#f5cfd1', T_DOLGU:'#c4e8e7', T_SIYIRMA:'#bad8c3'
 });
 function ortakPaftaProfilRengi(color) {
   if(!/^#[0-9a-f]{6}$/i.test(color))return '#111111';

@@ -10485,7 +10485,7 @@ window.V3D = window.V3Dmake();
 
 </script>
 <script src="maslak-kirik.js?v=ortak-pafta-16"></script>
-<script src="maslak-cad.js?v=ortak-pafta-16"></script>
+<script src="maslak-cad.js?v=ortak-pafta-18"></script>
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
@@ -32999,8 +32999,16 @@ function surfs() { const out = []; [...new Set(FACES.map(f => f.lay))].filter(l 
   out.forEach((s_, i) => s_.col = /Kırmızı/.test(s_.ad) ? "#ff5050" : /Siyah/.test(s_.ad) ? "#e8e8e8" : SCOL[i % SCOL.length]); return out; }
 const zOn = (M, x, y) => { if (M.flat !== undefined && !(M.tri && M.tri.length)) return +M.flat; try { const z = K.zAt(M, x, y); return z == null ? null : z; } catch (e) { return null; } };
 /* kesin profil: her parçada bütün yüzeylerin üçgen kenarlarını kestiği yerler + köşeler */
-function profC(L, S) { const rows = []; let d0 = 0; for (let i = 1; i < L.length; i++) { const A_ = L[i - 1], B_ = L[i], len = Math.hypot(B_[0] - A_[0], B_[1] - A_[1]); if (len < 1e-9) continue; let ts = [0, 1]; for (const s_ of S) if (s_.M.tri && s_.M.tri.length) ts = ts.concat(K.edgeHits(s_.M, A_, B_));
-    ts = [...new Set(ts.map(t => Math.round(t * 1e9) / 1e9))].filter(t => t >= 0 && t <= 1).sort((a, b) => a - b); for (const t of ts) { if (i > 1 && t === 0) continue; const x = A_[0] + (B_[0] - A_[0]) * t, y = A_[1] + (B_[1] - A_[1]) * t; rows.push({ d: d0 + len * t, x, y, z: S.map(s_ => zOn(s_.M, x, y)), v: t === 0 || t === 1 }); } d0 += len; } return { rows, L: d0 }; }
+function profC(L, S, checkGaps=false) { const rows = []; let d0 = 0; for (let i = 1; i < L.length; i++) { const A_ = L[i - 1], B_ = L[i], len = Math.hypot(B_[0] - A_[0], B_[1] - A_[1]); if (len < 1e-9) continue; let ts = [0, 1]; for (const s_ of S) if (s_.M.tri && s_.M.tri.length) ts = ts.concat(K.edgeHits(s_.M, A_, B_));
+    ts = [...new Set(ts.map(t => Math.round(t * 1e9) / 1e9))].filter(t => t >= 0 && t <= 1).sort((a, b) => a - b); if(checkGaps){
+      const gaps=[];
+      for(let j=1;j<ts.length;j++){
+        const t=(ts[j-1]+ts[j])/2,at=f=>[A_[0]+(B_[0]-A_[0])*f,A_[1]+(B_[1]-A_[1])*f];
+        if(S.some(s=>zOn(s.M,...at(t))==null&&zOn(s.M,...at(ts[j-1]))!=null&&zOn(s.M,...at(ts[j]))!=null))gaps.push(t);
+      }
+      if(gaps.length)ts=ts.concat(gaps).sort((a,b)=>a-b);
+    }
+    for (const t of ts) { if (i > 1 && t === 0) continue; const x = A_[0] + (B_[0] - A_[0]) * t, y = A_[1] + (B_[1] - A_[1]) * t; rows.push({ d: d0 + len * t, x, y, z: S.map(s_ => zOn(s_.M, x, y)), v: t === 0 || t === 1 }); } d0 += len; } return { rows, L: d0 }; }
 let PF = null; /* son profil: {line, S, rows, L} */
 function pfBox() { let b = $("cadPfBox"); if (!b) { b = document.createElement("div"); b.id = "cadPfBox"; b.style.cssText = "position:fixed;z-index:9991;left:0;right:0;bottom:0;max-height:46vh;overflow:auto;background:#fff;color:#1b2430;border-top:3px solid #7a2fd0;box-shadow:0 -8px 24px rgba(0,0,0,.25);padding:8px 10px;font-size:13px"; document.body.appendChild(b); } return b; }
 function pfShow(L, live) { const S = surfs(); if (!S.length) { say("Profil için yüzey yok: önce ◬ Noktaları üçgenle ya da Arazi/Kübaj'da siyah/kırmızı yükle", true); return null; } if (L.length < 2) return null;
@@ -35108,7 +35116,9 @@ function ecOpen(){
       </div></details>
 
 
-      <div id="ecResults" class="ec-results" hidden><div id="ecSummary" class="ec-summary"></div><div class="ec-pager"><button type="button" data-ec="prev">‹ Önceki</button><span id="ecPage"></span><button type="button" data-ec="next">Sonraki ›</button></div><div id="ecChart"></div><details id="ecPaftaGorunum"><summary>Kesit paftası · 1/150</summary><div class="ec-row" style="margin-top:8px"><button id="ecPaftaOlc" type="button" aria-pressed="false" disabled>İki nokta ölç</button><small id="ecPaftaOlcumSonuc" role="status"></small></div><canvas id="ecPaftaKanvas" aria-label="1/150 enkesit paftası"></canvas><div id="ecPaftaDurum" class="ec-note" role="status"></div></details><div id="ecSectionTable"></div>
+      <details id="ecAreas"><summary>Yol ve parsel sınırları</summary><div class="ec-fields"><label>Yol alanı<select id="ecRing0"></select></label><label>Parsel alanı<select id="ecRing1"></select></label></div><div class="ec-row"><button type="button" data-ec="pick-road">Yol sınırını planda seç</button><button type="button" data-ec="pick-parcel">Parsel sınırını planda seç</button></div><small>CAD’deki kapalı alanları tabaka ve alan büyüklüğüyle seç. Enkesitleri çizdiğinde ölçü genişliği seçilen iki alanı kapsar.</small></details>
+      <div id="ecResults" class="ec-results" hidden><div id="ecSummary" class="ec-summary"></div><div class="ec-pager"><button type="button" data-ec="prev">‹ Önceki</button><span id="ecPage"></span><button type="button" data-ec="next">Sonraki ›</button></div><div id="ecChart"></div><details id="ecPaftaGorunum"><summary>Kesit paftası · 1/150</summary><div class="ec-row" style="margin-top:8px"><button id="ecPaftaOlc" type="button" aria-pressed="false" disabled>İki nokta ölç</button><small id="ecPaftaOlcumSonuc" role="status"></small></div><canvas id="ecPaftaKanvas" aria-label="1/150 enkesit paftası"></canvas><div id="ecPaftaDurum" class="ec-note" role="status"></div></details><div id="ecSectionTable"></div><section class="ec-vol"><div class="ec-row"><b>Enkesit kübajı</b><button type="button" class="ec-primary" data-ec="volume">Hesapla</button></div>
+      <details id="ecVolumeSettings"><summary>Yüzey eşleştirme ve KM aralığı</summary><div class="ec-fields">${ecRoles.map((r,i)=>'<label>'+r+'<select id="ecRole'+i+'"></select></label>').join('')}<label>Başlangıç KM<input id="ecVolFrom" placeholder="İlk kesit"></label><label>Bitiş KM<input id="ecVolTo" placeholder="Son kesit"></label></div><label class="ec-check"><input id="ecPriority" type="checkbox" checked> Aynı kazı veya dolgu iki imalata giriyorsa yol önce</label></details><div id="ecVolumeOut" aria-live="polite"></div></section>
        <details class="ec-compare-controls"><summary>Aşama farkı ve kesit alanı</summary>
          <div class="ec-compare-picks"><label>Referans / ilk ölçüm<select id="ecBaseLayer"></select></label><label>Karşılaştırılacak aşama<select id="ecCompareLayer"></select></label><button type="button" data-ec="diff-csv">📊 Fark raporu CSV</button></div>
          <div id="ecDiffSummary" role="status" aria-live="polite"></div><small>Üst/alt fark, iki yüzeyin ortak kotlu aralığından hesaplanır. Kesit alanıdır (m²); tek başına kübaj (m³) değildir. Eksik kot bulunan bölüm tahmin edilmez.</small>
@@ -35117,8 +35127,6 @@ function ecOpen(){
        <div class="ec-stages"><div id="ecLayerList" class="ec-layer-list"></div>
        <div class="ec-stage-actions"><select id="ecSource" aria-label="Aşama için üçgen yüzeyi"></select><button type="button" data-ec="refresh-models">↻ Yüzeyleri yenile</button><button type="button" data-ec="add-stage">+ Güncel yüzeyden aşama ekle</button><button type="button" data-ec="copy-stage">+ Seçili aşamayı kopyala</button></div>
        <div class="ec-stage-actions"><label class="ec-check"><input type="checkbox" id="ecAllPaste"> Bütün kesitleri çizime yerleştir (en fazla 25)</label><span class="ec-note">DXF ve çizime yerleştirme 1/150</span></div>
-       <div class="ec-stage-actions ec-import-controls"><label>Dosya etiketi / tarih<input id="ecMergeLabel" type="text" maxlength="60" placeholder="Örn. 19.11.2026 son durum"></label><button type="button" data-ec="merge-json">📥 Kesitleri Ekle · JSON / CSV</button><input id="ecMergeFile" type="file" accept=".json,.csv,application/json,text/csv" multiple hidden></div>
-       <div id="ecMergeReport" class="ec-note" role="status" aria-live="polite">Önce ana kesit setini aç veya çiz; sonra eski/yeni tarih dosyalarını ekle. Eşleştirme KM + eksen koordinatı + yön kontrolüyle yapılır. Farklı eksenler birleştirilmez.</div>
        <div class="ec-editor-head">Seçili aşamanın bu kilometredeki kotlarını düzenle (yüzey modelini değiştirmez)</div><div id="ecPointTable" class="ec-point-table"></div>
        <div class="ec-stage-actions"><label>Ara mesafe (m)<input id="ecNewOff" placeholder="-5.00" inputmode="decimal"></label><label>Yeni kot (m)<input id="ecNewZ" placeholder="912.350" inputmode="decimal"></label><button type="button" data-ec="add-point">+ Ara kot noktası</button></div>
        </div></details></div>
@@ -35129,9 +35137,13 @@ function ecOpen(){
          <label class="ec-check"><input type="checkbox" id="ecKotTags" checked> Kot tablolarını çiz</label>
          <label class="ec-check"><input type="checkbox" id="ecShadeAll"> Tüm görünür aşamaları referansa göre tara</label>
        </div></details><details class="kesit-sablon"><summary>Pafta şablonu ve imzalar</summary><p>Buradaki değişiklikler bu projenin tüm enkesitlerine uygulanır.</p><div class="kesit-antet-alanlari" id="ecAntet"></div></details></div>
-      <details class="ec-file-group"><summary>Proje ve dosya aktarımı</summary><div class="ec-file-actions"><button type="button" class="ec-primary" data-ec="merge-json" title="Aynı eksenin farklı tarihlerdeki JSON/CSV kesitlerini birleştir">Kesitleri ekle</button><button type="button" data-ec="save-json" disabled>Projeyi kaydet</button><button type="button" data-ec="dxf" disabled>DXF pafta al</button><button type="button" data-ec="overlay" disabled title="Seçili kilometre · koordinatlar ofset ve mutlak kot">Çakıştırma DXF</button><button type="button" data-ec="csv" disabled>CSV al</button><button type="button" data-ec="place" disabled>Çizime yerleştir</button><input id="ecJsonFile" type="file" accept=".json,application/json" hidden></div></details>
+      <details class="ec-file-group"><summary>Proje ve dosya aktarımı</summary>       <div class="ec-stage-actions ec-import-controls"><label>Ekleme biçimi<select id="ecMergeMode"><option value="auto">Otomatik · KM / yüzey</option><option value="km">Kilometreleri birleştir</option><option value="stage">Ölçüm aşaması ekle</option></select></label><label>Dosya etiketi / tarih<input id="ecMergeLabel" type="text" maxlength="60" placeholder="Örn. 19.11.2026 son durum"></label><button type="button" data-ec="merge-json">Kesitleri ekle · JSON / CSV</button><input id="ecMergeFile" type="file" accept=".json,.csv,application/json,text/csv" multiple hidden></div>
+       <div id="ecMergeReport" class="ec-note" role="status" aria-live="polite">Aynı KM’deki yüzeyler işaretli ofsetleriyle eşleşir. Yeni kilometreler sıraya eklenir.</div>
+<div class="ec-file-actions"><button type="button" data-ec="save-json" disabled>Projeyi kaydet</button><button type="button" data-ec="dxf" disabled>DXF pafta al</button><button type="button" data-ec="overlay" disabled title="Seçili kilometre · koordinatlar ofset ve mutlak kot">Çakıştırma DXF</button><button type="button" data-ec="csv" disabled>CSV al</button><button type="button" data-ec="place" disabled>Çizime yerleştir</button><input id="ecJsonFile" type="file" accept=".json,application/json" hidden></div></details>
     </div>`;
-    document.body.appendChild(b);
+    const style=document.createElement('style');
+    style.textContent='#acadEnkesitBox .ec-vol,#acadEnkesitBox #ecAreas{padding:10px 12px;margin:8px 0;border:1px solid #49647766;border-radius:10px}#acadEnkesitBox .ec-vol summary,#acadEnkesitBox #ecAreas summary{cursor:pointer;padding:5px 0}#acadEnkesitBox .ec-vol .ec-row{justify-content:space-between}#acadEnkesitBox .ec-vol select,#acadEnkesitBox #ecAreas select{width:100%;min-width:0}#ecVolumeOut{overflow-wrap:anywhere}';
+    b.appendChild(style);document.body.appendChild(b);
     if(typeof ResizeObserver==='function'){
       const chart=ecEl('ecChart');
       new ResizeObserver(()=>{
@@ -35144,7 +35156,7 @@ function ecOpen(){
     ortakEnkesitOlcumBagla(ecEl("ecPaftaKanvas"),ecEl("ecPaftaOlc"),ecEl("ecPaftaOlcumSonuc"));
     ecEl("ecPaftaGorunum").addEventListener("toggle",ecPaftaOnizleme);
     b.querySelector(".ec-export-tools").addEventListener("change",()=>{EC.outputRevision++;ecPaftaOnizleme();});
-    if(!EC.project)ecSetProject({});
+    ecGroupWire(b);if(!EC.project)ecSetProject({});
     EC.syncAntet=enkesitAntetEditor(ecEl('ecAntet'),()=>EC.project,(key,value)=>{
       EC.project[key]=value;
       EC.outputRevision++;
@@ -35155,7 +35167,7 @@ function ecOpen(){
       const action=btn.dataset.ec;
       if(action==='close')ecClose();if(action==='mini')ecCompact(!b.classList.contains('ec-mini'));
       if(action==='axis')ecSelect('axis');if(action==='two')ecSelect('two');if(action==='poly')ecSelect('poly');if(action==='area')ecSelect('area');if(action==='finish')ecFinishAxis();if(action==='undo-point')ecUndoAxisPoint();
-      if(action==='generate')ecGenerate();if(action==='pdf')ecExportPDF();if(action==='csv')ecExportCSV();if(action==='dxf')ecExportDXF();if(action==='overlay')ecExportOverlay();if(action==='diff-csv')ecExportDiffCSV();
+      if(action==='pick-road'||action==='pick-parcel')ecSelect(action);if(action==='volume')ecCalculateVolumes();if(action==='generate')ecGenerate();if(action==='pdf')ecExportPDF();if(action==='csv')ecExportCSV();if(action==='dxf')ecExportDXF();if(action==='overlay')ecExportOverlay();if(action==='diff-csv')ecExportDiffCSV();
       if(action==='prev')ecPage(EC.page-1);if(action==='next')ecPage(EC.page+1);if(action==='place')ecPlace();if(action==='save-json')ecExportJSON();if(action==='open-json')ecEl('ecJsonFile').click();if(action==='merge-json')ecEl('ecMergeFile').click();if(action==='add-stage')ecAddStage();if(action==='refresh-models'){ecRefreshSource();ecStatus('Güncel yüzey listesi yenilendi.');}if(action==='copy-stage')ecCopyStage();if(action==='add-point')ecAddPoint();
     }));
     const planLink=document.createElement("button");
@@ -35219,6 +35231,16 @@ function ecSelect(what){
         if(ecSetAxis(e,true))finish();else{this.pts.length=0;prompt_('Farklı iki nokta seç');}
       },prev(g,X_,Y_,D){if(this.pts.length&&!hover)return; if(this.pts.length){g.save();g.strokeStyle='#3be3ff';g.lineWidth=2*D;g.beginPath();g.moveTo(X_(this.pts[0][0]),Y_(this.pts[0][1]));g.lineTo(X_(hover[0]),Y_(hover[1]));g.stroke();g.restore();}}};
     prompt_('Enkesit ekseni: başlangıç noktasına dokun');
+  }else if(what==='pick-road'||what==='pick-parcel'){
+    const owner=what==='pick-road'?0:1;
+    const choose=(e,p)=>{
+      let found=ecIsArea(e)?[e]:ents.filter(o=>ecIsArea(o)&&lays[o.lay]?.on!==false&&EG.pointInPoly(o.pts,p));
+      if(found.length===1){ecSetOwnerRing(owner,found[0]);finish();ecStatus(ecOwners[owner]+' sınırı seçildi: '+ecRingLabel(found[0]));}
+      else if(found.length>1){finish();ecStatus('Bu noktada birden fazla alan var. '+ecOwners[owner]+' alanını listeden seç.');ecEl('ecRing'+owner).focus();}
+      else say('Kapalı alanın sınırına veya içine dokun.',true);
+    };
+    cmd={name:'Enkesit imalat alanı seç',rcExit:true,ent:choose,pt:p=>choose(null,p)};
+    prompt_(ecOwners[owner]+' için kapalı sınırı seç');
   }else{
     cmd={name:what==='axis'?'Enkesit ekseni seç':'Enkesit alanı seç',rcExit:true,
       ent(e,p){
@@ -35276,13 +35298,16 @@ async function ecGenerate(){
     const station=opt.stations[i];let left=opt.left,right=opt.right;
     if(EC.mode==='area'){
       const bounds=EG.areaBounds(EC.area.pts,station.p,station.right);
-      if(!bounds){skipped++;continue;}
-      left=bounds.left;right=bounds.right;
+      if(!bounds&&!EC.rings?.some(Boolean)){skipped++;continue;}
+      left=bounds?.left||0;right=bounds?.right||0;
+    }
+    for(const ring of EC.rings||[])if(ring){
+      for(const [l,r] of ecRingIntervals(ring.pts,station.p,station.right)){left=Math.max(left,-l);right=Math.max(right,r);}
     }
     if(left+right<=1e-7){skipped++;continue;}
     const {a,b}=EG.endpoints(station,left,right);
     let computed;
-    try{computed=profC([a,b],S);}catch(err){failed++;continue;}
+    try{computed=profC([a,b],S,true);}catch(err){failed++;computed={rows:[]};}
     const blackIdx=S.findIndex(surface=>/^Siyah/.test(surface.ad));
     const flatIdx=S.map((surface,k)=>/Kırmızı \(sabit/.test(surface.ad)?k:-1).filter(k=>k>=0);
     const rows=computed.rows.map(row=>{
@@ -35298,7 +35323,7 @@ async function ecGenerate(){
   if(serial!==EC.serial)return false;
   EC.busy=false;const valid=out.filter(x=>x.data).length;
   if(!out.length||!valid){ecEl('ecResults').hidden=!EC.sections.length;ecStatus(!out.length?`Seçilen alan içinde kesit oluşmadı (${skipped} istasyon alan dışında). Önceki kesitler korundu.`:'Yeni ayarlarda gerçek yüzey kotu yok. Önceki kesitler korundu.',true);return false;}
-  EC.sections=out;EC.surfaces=S;EC.page=0;EC.inputsDirty=false;ecInitLayers(S,out);
+  ecClearVolume();EC.sections=out;EC.surfaces=S;EC.page=0;EC.inputsDirty=false;ecInitLayers(S,out);
   ecEl('ecResults').hidden=false;
   ecEl('ecSummary').textContent=`${out.length} kesit · ${valid} kotlu · ${withoutKot} kot verisi yok · ${skipped} alan dışında${failed?' · '+failed+' hesap hatası':''}`;
   document.querySelector('#acadEnkesitBox [data-ec="csv"]').disabled=!valid;
@@ -35309,7 +35334,7 @@ async function ecGenerate(){
 function ecPage(i){
   if(!EC.sections.length)return;
   EC.page=Math.max(0,Math.min(EC.sections.length-1,i));
-  const s=EC.sections[EC.page];ecEl('ecPage').textContent=`KM ${EG.km(s.station)} · ${EC.page+1}/${EC.sections.length}`;
+  ecRolesSync();const s=EC.sections[EC.page];ecEl('ecPage').textContent=`KM ${EG.km(s.station)} · ${EC.page+1}/${EC.sections.length}`;
   ecEl('ecChart').innerHTML=ecSvg(s,EC.surfaces);
   ecEl('ecSectionTable').innerHTML=`<div class="ec-info">Sol ${s.left.toFixed(2)} m · Sağ ${s.right.toFixed(2)} m${s.rows.length?' · '+s.rows.length+' hesap noktası':''} ${s.data?'':'· kot verisi yok'}</div>`;ecRenderEditor();ecUpdateDifference();ecPaftaOnizleme();
   // Show the matching section as a temporary annotation; do not mutate survey entities.
@@ -35358,8 +35383,8 @@ function ecInitLayers(S,secs){
   const kept=S.map((s,i)=>({s,i})).sort((a,b)=>{
     const rank=v=>/Siyah/i.test(v.s.ad)?0:/Kırmızı/i.test(v.s.ad)?1:2;
     return rank(a)-rank(b)||a.i-b.i;
-  }).slice(0,8);
-  EC.layers=kept.map(({s,i},j)=>({id:'s'+Date.now().toString(36)+'_'+j,name:ecLayerName(s.ad),color:ecHex(s.col),visible:true,edited:false,origin:'Gerçek üçgen yüzeyi',profiles:secs.map(sec=>sec.rows.map(row=>({off:+row.off,z:Number.isFinite(row.z[i])?row.z[i]:null})))}));
+  }).slice(0,32);
+  EC.layers=kept.map(({s,i},j)=>({id:'s'+Date.now().toString(36)+'_'+j,name:ecLayerName(s.ad),color:ecHex(['#252f3a','#af3235','#426579','#985b25'][ecGuessRole(s.ad)]||s.col),visible:j<8,edited:false,origin:'Gerçek üçgen yüzeyi',profiles:secs.map(sec=>sec.rows.map(row=>({off:+row.off,z:Number.isFinite(row.z[i])?row.z[i]:null})))}));
   EC.activeLayer=0;
 }
 function ecGetProfile(l,i){return l&&l.profiles&&Array.isArray(l.profiles[i])?l.profiles[i]:[];}
@@ -35384,6 +35409,16 @@ function ecSvg(section){
   out+=`<text x="8" y="18" fill="#4a636f" font-size="12">Kot (m)</text>`;
   for(let k=0;k<=5;k++){const z=zmin+(zmax-zmin)*k/5,py=y(z);out+=`<line x1="${x0}" y1="${py}" x2="${x1}" y2="${py}" stroke="#cbd6d9" stroke-dasharray="3 6"/><text x="${x0-8}" y="${py+4}" text-anchor="end" fill="#435963" font-size="12">${z.toFixed(2)}</text>`;}
   for(const off of [-section.left,0,section.right]){const xx=x(off);out+=`<line x1="${xx}" y1="${yt}" x2="${xx}" y2="${yb}" stroke="${off===0?'#758a92':'#bdcbd1'}" stroke-dasharray="${off===0?'':'4 5'}"/>`;}
+  const pairs=ecChosenPairs(),assigned=ecAssignedSections(pairs,EC.page);
+  for(const [j,pair] of pairs.entries()){
+    if(!EC.layers[pair.b]?.visible||!EC.layers[pair.c]?.visible)continue;
+    for(const [l,r,a,b,c,d] of assigned[j].strips){
+      for(const region of ortakKesisimBolgesi([l,a],[r,b],c,d)){
+        const points=region.p.map(([off,z])=>x(off).toFixed(2)+','+y(z).toFixed(2)).join(' ');
+        out+='<polygon points="'+points+'" fill="'+(pair.owner===0?'#dc937f':'#74b7bb')+'" opacity=".35"><title>'+pair.label+'</title></polygon>';
+      }
+    }
+  }
   for(const l of active){const points=ecGetProfile(l,EC.page);let d='',open=false;
     for(const q of points){if(!Number.isFinite(q.z)){open=false;continue;}d+=(open?' L':' M')+`${x(q.off).toFixed(2)} ${y(q.z).toFixed(2)}`;open=true;}
     if(!d)continue;const stroke=ortakPaftaProfilRengi(ecHex(l.color));
@@ -35398,6 +35433,11 @@ function ecSvg(section){
   for(const off of offs){const xx=x(off),val=ecProfileVal(p,off);out+=`<line x1="${xx}" y1="211" x2="${xx}" y2="271" stroke="#c4d2d8"/><text x="${xx}" y="233" text-anchor="middle" fill="#233d48" font-size="12">${off>0?'+':''}${off.toFixed(2)}</text>`;if(Number.isFinite(val))out+=`<text x="${xx}" y="258" text-anchor="middle" fill="${ortakPaftaProfilRengi(ecHex(primary.color))}" font-weight="700" font-size="12">${val.toFixed(2)}</text>`;}
   out+='</svg>';
   out+='<div class="ec-legend">'+active.map(l=>`<span><i style="background:${ortakPaftaProfilRengi(ecHex(l.color))}"></i>${ecHtml(l.name)}${l.edited?' ✎':''}</span>`).join('')+'</div>';
+  if(pairs.length){
+    out+='<div class="ec-note">'+pairs.map((r,i)=>{const v=assigned[i];
+      return '<div><b>'+r.label+'</b> · '+(v.valid?'Kazı '+v.negative.toLocaleString('tr-TR',{maximumFractionDigits:2})+' m² · Dolgu '+v.positive.toLocaleString('tr-TR',{maximumFractionDigits:2})+' m²':'Seçili alan içinde eksik kot')+'</div>';
+    }).join('')+'</div>';
+  }
   return out;
 }
 function ecThinLabels(offsets,spacing=1.2,maximum=70){
@@ -35421,10 +35461,10 @@ function ecRefreshSource(){
   const idx=models.findIndex(s=>s.ad===old);if(idx>=0)src.value=String(idx);
 }
 function ecWireEditor(b){
-  b.querySelector('#ecSource').addEventListener('focus',ecRefreshSource);for(const id of ['ecBaseLayer','ecCompareLayer'])b.querySelector('#'+id).addEventListener('change',()=>{EC.outputRevision++;ecUpdateDifference();ecPaftaOnizleme();});
+  b.querySelector('#ecSource').addEventListener('focus',ecRefreshSource);for(const id of ['ecBaseLayer','ecCompareLayer'])b.querySelector('#'+id).addEventListener('change',()=>{ecClearVolume();EC.outputRevision++;ecUpdateDifference();ecPaftaOnizleme();});
   b.querySelector('#ecSource').addEventListener('pointerdown',ecRefreshSource);
-  b.querySelector('#ecJsonFile').addEventListener('change',e=>ecReadProject(e.target.files?.[0],false).finally(()=>e.target.value=''));
-  b.querySelector('#ecMergeFile').addEventListener('change',e=>ecReadBatch([...e.target.files]).finally(()=>e.target.value=''));
+  b.querySelector('#ecJsonFile').addEventListener('change',e=>ecQueueFiles(e.target,true));
+  b.querySelector('#ecMergeFile').addEventListener('change',e=>ecQueueFiles(e.target,false));
   b.addEventListener('change',e=>{
     const t=e.target;
     if(t.hasAttribute('data-layer-active')){EC.activeLayer=+t.dataset.layerActive;ecRefreshPlot();return;}
@@ -35440,7 +35480,7 @@ function ecWireEditor(b){
   });
   b.querySelector('#ecEditorWrap').addEventListener('toggle',e=>{if(e.target.open)ecRenderEditor();});
 }
-function ecRefreshPlot(){EC.outputRevision++;if(!EC.sections.length)return;const s=EC.sections[EC.page];ecEl('ecChart').innerHTML=ecSvg(s);ecRenderEditor();ecUpdateDifference();ecPaftaOnizleme();}
+function ecRefreshPlot(){ecClearVolume();EC.outputRevision++;if(!EC.sections.length)return;ecRolesSync();const s=EC.sections[EC.page];ecEl('ecChart').innerHTML=ecSvg(s);ecRenderEditor();ecUpdateDifference();ecPaftaOnizleme();}
 function ecRenderEditor(){
   if(!EC.sections.length || !ecEl('ecEditorWrap').open)return;
   const list=ecEl('ecLayerList');if(!list)return;
@@ -35479,14 +35519,14 @@ function ecRemovePoint(i){const l=EC.layers[EC.activeLayer],p=ecGetProfile(l,EC.
 function ecRemoveLayer(i){if(EC.layers.length<=1)return;EC.layers.splice(i,1);EC.activeLayer=Math.min(EC.activeLayer,EC.layers.length-1);ecRefreshPlot();}
 async function ecAddStage(){
   if(!EC.sections.length)return ecStatus('Önce enkesit oluştur veya kayıtlı kesit projesi aç.',true);
-  if(EC.layers.length>=8)return ecStatus('Aynı anda en çok 8 kesit aşaması saklanabilir.',true);
+  if(EC.layers.length>=32)return ecStatus('Aynı anda en çok 32 kesit aşaması saklanabilir.',true);
   const chosenName=ecEl('ecSource').selectedOptions[0]?.textContent;const models=ecRealModels(true),model=models.find(s=>s.ad===chosenName);if(!model){ecRefreshSource();return ecStatus('Üçgen yüzey listesi yenilendi. Eklemek istediğin yüzeyi seç.',true);}
   if(EC.busy)return;
   const profiles=[],serial=++EC.serial;EC.busy=true;ecStatus(`${model.ad} yüzeyinden yeni aşama kotları okunuyor…`);
   try{
     for(let i=0;i<EC.sections.length;i++){
       if(serial!==EC.serial)return;
-      const s=EC.sections[i],computed=profC([s.a,s.b],[model]);
+      const s=EC.sections[i],computed=profC([s.a,s.b],[model],true);
       profiles.push(computed.rows.map(r=>({off:r.d-s.left,z:Number.isFinite(r.z[0])?r.z[0]:null})));
       if(i%5===4)await new Promise(r=>setTimeout(r,0));
     }
@@ -35499,7 +35539,7 @@ async function ecAddStage(){
 }
 function ecCopyStage(){
   const src=EC.layers[EC.activeLayer];if(!src||!EC.sections.length)return;
-  if(EC.layers.length>=8)return ecStatus('En çok 8 aşama kaydedilebilir.',true);
+  if(EC.layers.length>=32)return ecStatus('En çok 32 aşama kaydedilebilir.',true);
   EC.layers.push({...src,id:'copy_'+Date.now().toString(36),name:ecLayerName(src.name+' · Kopya'),origin:'Kesit editöründe kopyalandı',profiles:src.profiles.map(p=>p.map(q=>({...q})))});
   EC.activeLayer=EC.layers.length-1;ecStatus('Kesit kopyası oluşturuldu; ayrı kot ve renk düzenleyebilirsin.');ecRefreshPlot();
 }
@@ -35507,12 +35547,13 @@ function ecDoc(){return {schema:'ACAD-CROSS-SECTIONS-1',version:'7.1.15.37',crea
 function ecExportJSON(){if(!EC.sections.length)return;ecDownload('Enkesit_Projesi.json',JSON.stringify(ecDoc(),null,2),'application/json;charset=utf-8');}
 function ecValidatedDoc(doc){
   if(!doc||doc.schema!=='ACAD-CROSS-SECTIONS-1'||!Array.isArray(doc.sections)||!Array.isArray(doc.layers))throw Error('Geçerli A-CAD enkesit projesi değil.');
-  if(!doc.sections.length||doc.sections.length>201||!doc.layers.length||doc.layers.length>8)throw Error('Kesit veya aşama sayısı sınır dışında.');
+  if(!doc.sections.length||doc.sections.length>201||!doc.layers.length||doc.layers.length>32)throw Error('Kesit veya aşama sayısı sınır dışında.');
   const safeP=(p,n=2)=>Array.isArray(p)&&p.length>=n&&p.slice(0,n).every(Number.isFinite);
   const sections=doc.sections.map(s=>{
     if(!Number.isFinite(s.station)||!Number.isFinite(s.left)||!Number.isFinite(s.right)||s.left<0||s.right<0||s.left+s.right<=1e-8||!safeP(s.p)||!safeP(s.a)||!safeP(s.b))throw Error('Kesit geometri bilgisi hatalı.');
     return {station:s.station,left:s.left,right:s.right,p:s.p.slice(0,2),a:s.a.slice(0,2),b:s.b.slice(0,2),rows:[],data:true};
   });
+  if(new Set(sections.map(s=>Math.round(s.station*100))).size!==sections.length)throw Error('Dosyada aynı KM birden fazla kesit olarak kayıtlı.');
   const axis=Array.isArray(doc.axis)&&doc.axis.length>=2&&doc.axis.length<=250&&doc.axis.every(q=>Array.isArray(q)&&q.length>=2&&Number.isFinite(q[0])&&Number.isFinite(q[1]))?doc.axis.map(q=>q.slice(0,2)):null;
   if(doc.axis!=null&&!axis)throw Error('Kaydedilmiş eksen koordinatları geçersiz.');
   const layers=doc.layers.map((l,i)=>{
@@ -35528,115 +35569,170 @@ function ecValidatedDoc(doc){
   });
   return {sections,layers,axis,project:doc.project};
 }
-async function ecReadProject(file,merge){
-  if(!file)return;try{
-    if(file.size>12*1024*1024)throw Error('12 MB üzerindeki enkesit projesi açılmaz.');
-    const data=ecValidatedDoc(JSON.parse(await file.text()));
-    if(!merge){ecInvalidate();EC.axis=data.axis?{t:'pline',closed:false,lay:'KAYITLI_ENKESIT_EKSENI',pts:data.axis.map(q=>[q[0],q[1],0])}:null;EC.axisTransient=!!data.axis;EC.area=null;EC.sections=data.sections;EC.layers=data.layers;EC.page=0;EC.activeLayer=0;EC.surfaces=[];ecSetProject(data.project);ecUpdateLabels();}
-    else{
-      if(!EC.sections.length)throw Error('Önce ana kesit projesini aç veya enkesit üret.');
-      if(EC.layers.length+data.layers.length>8)throw Error('Toplam en fazla 8 aşama olabilir.');
-      const index=data.sections.map(s=>{
-        return EC.sections.findIndex(a=>Math.abs(a.station-s.station)<.02&&Math.hypot(a.p[0]-s.p[0],a.p[1]-s.p[1])<.2);
-      });
-      if(!index.some(i=>i>=0))throw Error('Eşleşen KM ve eksen koordinatı bulunamadı. Başka eksene ait kesitler üst üste getirilemez.');
-      for(const layer of data.layers){const profiles=EC.sections.map(()=>[]);for(let j=0;j<index.length;j++)if(index[j]>=0)profiles[index[j]]=layer.profiles[j];EC.layers.push({...layer,profiles,id:layer.id+'_m'+Date.now()});}
-      ecStatus(`${data.layers.length} aşama eklendi; ${index.filter(i=>i>=0).length}/${data.sections.length} istasyon aynı eksenle eşleşti.`);
-    }
-    EC.sections.forEach((s,i)=>s.data=EC.layers.some(l=>ecGetProfile(l,i).some(q=>Number.isFinite(q.z))));
-    ecEl('ecResults').hidden=false;ecEl('ecSummary').textContent=`${EC.sections.length} kesit · ${EC.layers.length} karşılaştırma aşaması`;
-    for(const k of ['csv','dxf','overlay','pdf','place','save-json'])ecEl('acadEnkesitBox').querySelector(`[data-ec="${k}"]`).disabled=false;
-    ecPage(0);if(!merge){ecEl('ecInputs').open=false;ecStatus('Kesit projesi açıldı. Kaynak arazi üçgenlemesi değiştirilmedi.');}
-  }catch(e){ecStatus('Kesit dosyası açılamadı: '+e.message,true);}
-}
-/* V7.1.15.36: atomic, georeferenced import of multiple dated cross-section sets.
-   Only A-CAD JSON and the A-CAD semicolon XYZ/offset CSV format are accepted.
-   Legacy Netpro KSE/KSP binaries are NOT silently treated as supported. */
 function ecMergeKeyStation(v){
   const s=String(v??'').trim().replace(',','.');const km=s.match(/^(\d+)\+(\d+(?:\.\d+)?)$/);
   if(km)return Number(km[1])*1000+Number(km[2]);
   return /^[-+]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(s)?Number(s):NaN;
 }
-function ecMatchingSection(s){
-  if(!EC.sections.length)return -1;
-  return EC.sections.findIndex(t=>Math.abs(t.station-s.station)<.015&&
-    Math.hypot(t.p[0]-s.p[0],t.p[1]-s.p[1])<.05&&
-    (()=>{const adx=s.b[0]-s.a[0],ady=s.b[1]-s.a[1],bdx=t.b[0]-t.a[0],bdy=t.b[1]-t.a[1];
-      const al=Math.hypot(adx,ady),bl=Math.hypot(bdx,bdy);return al>1e-7&&bl>1e-7&&(adx*bdx+ady*bdy)/(al*bl)>.9999;})());
+function ecSectionDirection(section){
+  const dx=section.b[0]-section.a[0],dy=section.b[1]-section.a[1],n=Math.hypot(dx,dy);
+  if(!n)throw Error('Kesit yönü belirlenemedi.');
+  return [dx/n,dy/n];
 }
-function ecImportCsvData(txt,filename){
-  txt=String(txt).replace(/^\uFEFF/,'');const lines=txt.split(/\r?\n/).filter(x=>x.trim());
-  if(lines.length<2||lines.length>250000)throw Error('CSV boş veya satır sayısı sınırı aşıldı.');
-  const delimiter=lines[0].includes(';')?';':lines[0].includes('\t')?'\t':',';
-  const header=lines[0].split(delimiter).map(s=>s.trim().replace(/^"|"$/g,''));
-  const index=(names)=>header.findIndex(h=>names.some(n=>h.toLowerCase().replace(/\s+/g,'')===n));
-  const kmI=index(['km','kilometre']),offI=index(['ofset_m','ofset','mesafe_m']),yI=index(['y']),xI=index(['x']);
-  if(Math.min(kmI,offI,yI,xI)<0)throw Error('CSV içinde KM, Ofset_m, Y, X sütunları bulunmalı.');
-  const used=new Set([kmI,offI,yI,xI]);const column=header.map((name,i)=>({name,i})).filter(v=>!used.has(v.i)&&v.name.trim());
-  if(!column.length||column.length>8)throw Error('CSV içinde en az bir, en fazla 8 kot sütunu bulunmalı.');
-  const groups=column.map(c=>({name:c.name,profiles:EC.sections.map(()=>[])}));
-  const duplicate=groups.map(()=>new Set()),stations=new Set();let matched=0,skipped=0;
-  for(let rowIndex=1;rowIndex<lines.length;rowIndex++){
-    const c=lines[rowIndex].split(delimiter);if(c.length<header.length)throw Error(`CSV satır ${rowIndex+1}: eksik sütun.`);
-    const station=ecMergeKeyStation(c[kmI]),off=ecNumText(c[offI]),Y=ecNumText(c[yI]),X=ecNumText(c[xI]);
-    if(!Number.isFinite(station)||!Number.isFinite(off)||!Number.isFinite(Y)||!Number.isFinite(X))throw Error(`CSV satır ${rowIndex+1}: KM/ofset/koordinat geçersiz.`);
-    const j=EC.sections.findIndex(s=>Math.abs(s.station-station)<.015);
-    if(j<0){skipped++;continue;}
-    const s=EC.sections[j];
-    if(off < -s.left-.01||off > s.right+.01){skipped++;continue;}
-    const [expectedY,expectedX]=ecWorld(s,off);
-    if(Math.hypot(expectedY-Y,expectedX-X)>.05)throw Error(`CSV satır ${rowIndex+1}: KM aynı, koordinat başka eksene ait. Birleştirme iptal edildi.`);
-    for(let k=0;k<groups.length;k++){
-      const raw=c[column[k].i]?.trim()??'';if(!raw)continue;
-      const z=ecNumText(raw);if(!Number.isFinite(z)||z < -15000||z>100000)throw Error(`CSV satır ${rowIndex+1}: kot geçersiz.`);
-      const key=j+':'+off.toFixed(6);if(duplicate[k].has(key))throw Error(`CSV satır ${rowIndex+1}: yinelenen KM / ofset.`);
-      duplicate[k].add(key);groups[k].profiles[j].push({off,z});
-    }
-    matched++;stations.add(j);
+function ecCsvDocument(txt,known,axis){
+  const lines=txt.replace(/^\uFEFF/,'').split(/\r?\n/).filter(x=>x.trim());
+  if(lines.length<2||lines.length>250000)throw Error('CSV satır sayısı geçersiz.');
+  const sep=lines[0].includes(';')?';':lines[0].includes('\t')?'\t':',';
+  const header=lines[0].split(sep).map(s=>s.trim().replace(/^"|"$/g,''));
+  const index=names=>header.findIndex(h=>names.includes(h.toLowerCase().replace(/\s+/g,'')));
+  const coords=[index(['km','kilometre']),index(['ofset_m','ofset','mesafe_m']),index(['y']),index(['x'])];
+  if(coords[0]<0||coords[1]<0)throw Error('CSV için KM ve Ofset_m sütunları gerekir.');
+  const cols=header.map((name,i)=>({name,i})).filter(c=>c.name&&!coords.includes(c.i));
+  const byKm=new Map();
+  for(const line of lines.slice(1)){
+    const cells=line.split(sep);
+    if(cells.length!==header.length)throw Error('CSV sütun sayısı uyuşmuyor.');
+    const [km,off,Y,X]=coords.map((j,i)=>i===0?ecMergeKeyStation(cells[j]):ecNumText(cells[j]));
+    if(![km,off].every(Number.isFinite))throw Error('CSV kilometre, ofset veya koordinat değeri geçersiz.');
+    const z=cols.map(c=>cells[c.i].trim()?ecNumText(cells[c.i]):null);
+    if(z.some(v=>v!==null && (!Number.isFinite(v)||v < -15000||v>100000)))throw Error('CSV kotu geçersiz.');
+    if(!byKm.has(km))byKm.set(km,[]);
+    byKm.get(km).push({off,p:[Y,X],z});
   }
-  if(!stations.size||!groups.some(g=>g.profiles.some(p=>p.length)))throw Error('Mevcut enkesitlerle aynı KM ve koordinatta veri bulunamadı.');
-  return {layers:groups.map(g=>({...g,profiles:g.profiles.map(p=>p.sort((a,b)=>a.off-b.off))})),matched:stations.size,total:EC.sections.length,skipped,source:filename};
-}
-async function ecReadBatch(files){
-  if(!files?.length)return;
-  try{
-    if(EC.busy)throw Error('Başka hesap devam ediyor.');
-    if(!EC.sections.length)throw Error('Önce ana enkesitleri çiz veya “Proje aç” ile enkesit dosyasını yükle.');
-    if(files.length>8)throw Error('Tek seferde en fazla 8 dosya eklenebilir.');
-    const tag=ecEl('ecMergeLabel')?.value.trim().slice(0,60)||'';
-    const pending=[],reports=[];
-    for(const f of files){
-      if(f.size>12*1024*1024)throw Error(f.name+': dosya 12 MB üzerinde.');
-      const ext=f.name.toLowerCase().split('.').pop();let added;
-      if(ext==='json'){
-        const data=ecValidatedDoc(JSON.parse(await f.text()));
-        const matches=data.sections.map(ecMatchingSection),success=matches.filter(j=>j>=0).length;
-        if(!success)throw Error(f.name+': aynı eksende KM + koordinat + kesit yönü eşleşmedi.');
-        const seen=new Set();for(const j of matches)if(j>=0){if(seen.has(j))throw Error(f.name+': yinelenen istasyon.');seen.add(j);}
-        added={layers:data.layers.map(layer=>({...layer,profiles:EC.sections.map((sec,j)=>{
-          const src=matches.indexOf(j);if(src<0)return [];
-          return layer.profiles[src].filter(q=>q.off>=-sec.left-1e-7&&q.off<=sec.right+1e-7).map(q=>({...q}));
-        })})),matched:success,total:data.sections.length,skipped:data.sections.length-success,source:f.name};
-      }else if(ext==='csv'){added=ecImportCsvData(await f.text(),f.name);}
-      else throw Error(f.name+': yalnız A-CAD JSON ve KM/Ofset/Y/X içeren CSV kabul edilir (Netpro KSE/KSP bu sürümde desteklenmiyor).');
-      if(!added.layers.some(l=>l.profiles.some(p=>p.some(q=>Number.isFinite(q.z)))))throw Error(f.name+': eşleşen kot bulunamadı.');
-      for(const l of added.layers){
-        const stem=f.name.replace(/\.(json|csv)$/i,'').replace(/[_-]+/g,' ').slice(0,35),prefix=tag||stem;
-        pending.push({id:'batch_'+Date.now().toString(36)+'_'+pending.length,name:ecLayerName(prefix+' · '+l.name),color:ecHex(l.color||['#f97316','#56c1f0','#a3e635','#e879f9'][pending.length%4]),visible:true,edited:!!l.edited,origin:ecLayerName('İçe aktarıldı: '+f.name),profiles:l.profiles.map(p=>p.map(q=>({...q})))});
+  const sections=[],layers=cols.map(c=>({name:c.name,profiles:[]}));
+  for(const [station,rows] of byKm){
+    rows.sort((a,b)=>a.off-b.off);
+    const first=rows[0],last=rows.at(-1),span=last.off-first.off;
+    let sec=known.find(s=>Math.round(s.station*100)===Math.round(station*100));
+    if(!sec&&axis&&known.length&&![...first.p,...last.p].every(Number.isFinite)){
+      const anchor=known[0],chain=station-anchor.station;
+      let cumulative=0,dist=Infinity,at=0;
+      for(let i=1;i<axis.length;i++){
+        const a=axis[i-1],b=axis[i],dx=b[0]-a[0],dy=b[1]-a[1],len=Math.hypot(dx,dy);
+        if(!len)continue;
+        const t=Math.max(0,Math.min(1,((anchor.p[0]-a[0])*dx+(anchor.p[1]-a[1])*dy)/(len*len)));
+        const d=Math.hypot(anchor.p[0]-a[0]-t*dx,anchor.p[1]-a[1]-t*dy);
+        if(d<dist){dist=d;at=cumulative+t*len;}cumulative+=len;
       }
-      reports.push(`${f.name}: ${added.matched}/${added.total} KM eşleşti${added.skipped?', '+added.skipped+' kayıt atlandı':''}`);
+      if(dist<.05&&at+chain>=0&&at+chain<=cumulative){
+        const frame=EG.pointOnAxis(axis,at+chain),left=Math.max(0,-first.off),right=Math.max(0,last.off);
+        sec={station,p:frame.p,left,right,...EG.endpoints(frame,left,right)};
+      }
     }
-    if(EC.layers.length+pending.length>8)throw Error(`Mevcut ${EC.layers.length}, eklenecek ${pending.length} aşama var. Üst sınır 8; gereksiz aşamaları kaldırıp tekrar dene. Hiçbir dosya eklenmedi.`);
-    // Commit only after *all* files passed validation. Original stages are never mutated.
-    EC.layers.push(...pending);EC.activeLayer=EC.layers.length-1;
-    EC.sections.forEach((s,i)=>s.data=EC.layers.some(l=>ecGetProfile(l,i).some(q=>Number.isFinite(q.z))));
-    ecEl('ecMergeReport').textContent=reports.join(' | ');
-    ecEl('ecSummary').textContent=`${EC.sections.length} kesit · ${EC.layers.length} karşılaştırma aşaması`;
-    ecStatus(`${pending.length} aşama eklendi; eski kotlar korunuyor. `+reports.join(' | '));ecRefreshPlot();
-  }catch(e){ecEl('ecMergeReport').textContent='Birleştirme iptal: '+e.message;ecStatus('Kesit ekleme başarısız: '+e.message,true);}
+    if(!sec){
+      if(![...first.p,...last.p].every(Number.isFinite)||span<.001)throw Error('Yeni KM için iki farklı koordinatlı ofset gerekir: '+EG.km(station));
+      const dx=(last.p[0]-first.p[0])/span,dy=(last.p[1]-first.p[1])/span;
+      if(Math.abs(Math.hypot(dx,dy)-1)*span>.05)throw Error('CSV koordinatları ofset uzunluğuyla uyuşmuyor.');
+      const p=[first.p[0]-dx*first.off,first.p[1]-dy*first.off];
+      const left=Math.max(0,-first.off),right=Math.max(0,last.off);
+      sec={station,p,left,right,...EG.endpoints({p,right:[dx,dy]},left,right)};
+    }
+    const left=Math.max(sec.left,-first.off),right=Math.max(sec.right,last.off);
+    sec={...sec,left,right,...EG.endpoints({p:sec.p,right:ecSectionDirection(sec)},left,right)};
+    sections.push(sec);
+    layers.forEach((l,i)=>l.profiles.push(rows.filter(r=>r.off>=-sec.left-1e-5&&r.off<=sec.right+1e-5).map(r=>({off:r.off,z:r.z[i]}))));
+  }
+  return ecValidatedDoc({schema:'ACAD-CROSS-SECTIONS-1',sections,layers});
 }
-/* A-CAD 7.1.15.37 — independent differential sections and safe presentation filters.
-   No volume claim: differences are 2D cross-section areas (m²), not m³. */
+function ecSameProfile(a,b){
+  return a.length===b.length&&a.every((q,i)=>Math.abs(q.off-b[i].off)<1e-8&&q.z===b[i].z);
+}
+function ecCombineDocument(set,data,filename,mode,tag){
+  const lookup=s=>set.sections.findIndex(t=>Math.round(t.station*100)===Math.round(s.station*100));
+  const indices=data.sections.map(lookup),count=indices.filter(i=>i>=0).length;
+  const append=mode==='km'||(mode==='auto'&&count<data.sections.length);
+  if(!append && !count)throw Error('Bu aşama için eşleşen kilometre yok.');
+  for(const [i,s] of data.sections.entries()){
+    const j=indices[i];
+    if(j>=0){
+      const t=set.sections[j],left=Math.max(t.left,s.left),right=Math.max(t.right,s.right);
+      if(left!==t.left||right!==t.right)set.sections[j]={...t,left,right,...EG.endpoints({p:t.p,right:ecSectionDirection(t)},left,right)};
+    }else if(append){
+      if(set.sections.length>=201)throw Error('En fazla 201 kilometre kaydedilebilir.');
+      indices[i]=set.sections.length;set.sections.push(s);
+      for(const l of set.layers)l.profiles.push([]);
+    }
+  }
+  let added=0,filled=0;
+  for(const l of data.layers){
+    const prefix=tag||filename.replace(/\.(csv|json)$/i,'').replace(/[_-]+/g,' ').slice(0,35);
+    const dated=ecLayerName(prefix+' · '+l.name);
+    const existing=set.layers.find(x=>x.name===l.name);
+    const sameSource=!!existing;
+    const completes=existing&&!tag&&mode==='auto'&&indices.every((j,i)=>j<0||!existing.profiles[j].some(q=>q.z!==null)||ecSameProfile(l.profiles[i],existing.profiles[j]));
+    const name=(append||completes||!sameSource&&!tag)?l.name:dated;
+    const profiles=set.sections.map(()=>[]);
+    indices.forEach((j,i)=>{
+      if(j<0)return;
+      const t=set.sections[j];
+      profiles[j]=l.profiles[i].filter(q=>q.off>=-t.left-1e-5&&q.off<=t.right+1e-5);
+    });
+    if(!profiles.some(p=>p.some(q=>q.z!==null)))continue;
+    if(set.layers.some(old=>(old.name===name||(!tag&&old.name===l.name&&mode!=='stage'))&&profiles.every((p,i)=>!p.length||ecSameProfile(p,old.profiles[i]))))continue;
+    const matches=set.layers.filter(old=>old.name===name);
+    if((append||completes) && matches.length){
+      if(matches.length>1)throw Error('Aynı adlı yüzeyleri önce ayırt et: '+name);
+      profiles.forEach((p,i)=>{
+        if(!p.length)return;
+        const old=matches[0].profiles[i];
+        if(old.some(q=>q.z!==null)&&!ecSameProfile(old,p))throw Error('Aynı KM ve yüzeyde farklı kot var. Yeni tarih için “Ölçüm aşaması” seç: '+name);
+        matches[0].profiles[i]=p;filled++;
+      });
+    }else{
+      if(set.layers.length>=32)throw Error('Bir projede en fazla 32 yüzey saklanabilir.');
+      let unique=name,n=2;while(set.layers.some(x=>x.name===unique))unique=name.slice(0,61)+' ('+(n++)+')';
+      set.layers.push({...l,name:unique,visible:l.visible&&set.layers.length<8,profiles,origin:ecLayerName('İçe aktarıldı: '+filename)});
+      added++;
+    }
+  }
+  if(!data.layers.some(l=>l.profiles.some((p,i)=>indices[i]>=0&&p.some(q=>Number.isFinite(q.z)&&q.off>=-set.sections[indices[i]].left-1e-5&&q.off<=set.sections[indices[i]].right+1e-5))))throw Error('Eşleşen kot bulunamadı.');
+  return filename+': '+count+'/'+data.sections.length+' KM eşleşti · '+(append?data.sections.length-count:0)+' yeni KM · '+added+' yeni aşama'+(filled?' · yüzey tamamlandı':'')+(!append&&count<data.sections.length?' · '+(data.sections.length-count)+' KM dahil edilmedi':'');
+}
+let ecFileQueue=Promise.resolve();
+function ecQueueFiles(input,open){
+  const files=Array.from(input.files||[]);input.value='';
+  const mode=ecEl('ecMergeMode').value,tag=ecEl('ecMergeLabel').value.trim();
+  if(files.length)ecFileQueue=ecFileQueue.then(()=>ecReadBatch(files,open,mode,tag)).catch(error=>ecStatus(error.message,true));
+}
+async function ecReadBatch(files,open,mode,tag){
+  try{
+    if(EC.busy)throw Error('Önce devam eden hesap tamamlanmalı.');
+    const serial=EC.serial,revision=EC.outputRevision,reset=open||!EC.sections.length;
+    const set={sections:reset?[]:EC.sections.slice(),layers:reset?[]:EC.layers.map(l=>({...l,profiles:l.profiles.slice()})),axis:reset?null:EC.axis?.pts,project:null};
+    const reports=[];
+    for(const file of files){
+      if(file.size>12*1024*1024)throw Error(file.name+': 12 MB sınırı aşıldı.');
+      const txt=await file.text();
+      let data;
+      if(/\.json$/i.test(file.name))data=ecValidatedDoc(JSON.parse(txt));
+      else if(/\.csv$/i.test(file.name))data=ecCsvDocument(txt,set.sections,set.axis);
+      else throw Error('A-CAD kesit JSON veya KM ve ofset içeren CSV seç.');
+      if(!set.sections.length){
+        if(!data.layers.some(l=>l.profiles.some(p=>p.some(q=>q.z!==null))))throw Error('Dosyada ölçülü kot bulunamadı.');
+        Object.assign(set,data);
+        reports.push(file.name+': '+data.sections.length+' kesit açıldı');
+      }else reports.push(ecCombineDocument(set,data,file.name,mode,tag));
+    }
+    if(serial!==EC.serial||revision!==EC.outputRevision||EC.busy)throw Error('Dosya okunurken proje değişti. Dosyaları tekrar ekle.');
+    const selected=reset?null:EC.sections[EC.page],order=set.sections.map((_,i)=>i).sort((a,b)=>set.sections[a].station-set.sections[b].station);
+    if(reset){ecInvalidate();EC.area=null;EC.surfaces=[];ecSetProject(set.project);}
+    if(reset||(!EC.axis&&set.axis)){
+      EC.axis=set.axis?{t:'pline',closed:false,lay:'KAYITLI_ENKESIT_EKSENI',pts:set.axis.map(p=>[p[0],p[1],0])}:null;
+      EC.axisTransient=!!EC.axis;
+    }
+    EC.layers=set.layers.map(l=>({...l,profiles:order.map(i=>l.profiles[i])}));
+    EC.sections=order.map((j,i)=>({...set.sections[j],data:EC.layers.some(l=>l.profiles[i].some(q=>Number.isFinite(q.z)))}));
+    EC.activeLayer=reset?0:Math.min(EC.activeLayer,EC.layers.length-1);
+    EC.outputRevision++;
+    ecClearVolume();ecUpdateLabels();ecEl('ecResults').hidden=false;ecEl('ecInputs').open=false;
+    for(const k of ['csv','dxf','overlay','pdf','place','save-json'])ecEl('acadEnkesitBox').querySelector('[data-ec="'+k+'"]').disabled=false;
+    ecEl('ecSummary').textContent=EC.sections.length+' kesit · '+EC.layers.length+' karşılaştırma aşaması';
+    if(reset){ecEl('ecVolFrom').value='';ecEl('ecVolTo').value='';ecEl('ecBaseLayer').replaceChildren();ecEl('ecCompareLayer').replaceChildren();}
+    ecPage(Math.max(0,EC.sections.findIndex(s=>s.station===selected?.station)));
+    ecEl('ecMergeReport').textContent=reports.join(' | ');ecStatus(reports.join(' | '));
+  }catch(e){ecEl('ecMergeReport').textContent='Dosya eklenmedi: '+e.message;ecStatus('Kesit dosyası eklenmedi: '+e.message,true);}
+}
+
 function ecExportIndices(){
   if(!EC.sections.length)return [];
   const rawFrom=ecEl('ecKmFrom')?.value.trim()||'',rawTo=ecEl('ecKmTo')?.value.trim()||'';
@@ -35657,25 +35753,200 @@ function ecProfileSegments(profile){
   for(let i=1;i<profile.length;i++)if(ecValidSegment(profile[i-1],profile[i]))segments.push([profile[i-1],profile[i]]);
   return segments;
 }
-function ecCompareProfileArea(ref,cur){
-  // Determine strictly overlapping source segments; never bridge a null or an unsurveyed gap.
-  const A=ecProfileSegments(ref),B=ecProfileSegments(cur);
+const ecOwners=['Yol','Parsel'];
+const ecRoles=['Yol siyah','Yol kırmızı','Parsel siyah','Parsel kırmızı'];
+function ecGuessRole(name){
+  const n=name.toLocaleLowerCase('tr').replace(/ı/g,'i').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const road=n.includes('yol'),parcel=/parsel|(?:^|[^a-z])gb(?:[^a-z]|$)/.test(n);
+  const black=n.includes('siyah'),red=n.includes('kirmizi');
+  return road!==parcel&&black!==red?(parcel?2:0)+(red?1:0):-1;
+}
+function ecRingLabel(e){return (e.ad||e.name||e.lay||'Alan')+' · '+Math.abs(areaOf(e.pts)).toLocaleString('tr-TR',{maximumFractionDigits:1})+' m²';}
+function ecSetOwnerRing(owner,e){
+  EC.rings[owner]=e?{name:ecRingLabel(e),pts:e.pts.map(p=>p.slice(0,2))}:null;
+  ecRingOptions(owner);EC.outputRevision++;ecClearVolume();ecDrawBands();
+}
+function ecDrawBands(){
+  if(!EC.sections.length)return;
+  ecEl('ecChart').innerHTML=ecSvg(EC.sections[EC.page]);ecPaftaOnizleme();
+}
+function ecRingOptions(owner){
+  const el=ecEl('ecRing'+owner),ring=EC.rings?.[owner];
+  el.replaceChildren(new Option('Kesit genişliğini kullan',''));
+  if(ring)el.add(new Option(ring.name,'saved',true,true));
+  for(const e of ents)if(ecIsArea(e)&&lays[e.lay]?.on!==false)el.add(new Option(ecRingLabel(e),String(e.id)));
+}
+function ecRolesSync(){
+  const names=EC.layers.map(l=>l.name);
+  ecRoles.forEach((role,i)=>{
+    const el=ecEl('ecRole'+i),choice=EC.roleNames?.[i];
+    const matches=names.filter(n=>ecGuessRole(n)===i);
+    const name=choice===undefined?(matches.length===1?matches[0]:''):choice;
+    el.replaceChildren(new Option('Yüzey seç',''));
+    EC.layers.forEach((l,k)=>el.add(new Option(l.name,String(k))));
+    const k=names.indexOf(name);
+    el.value=k>=0?String(k):'';
+  });
+}
+function ecChosenPairs(){
+  const pairs=[];
+  for(let k=0;k<2;k++){
+    const a=ecEl('ecRole'+(2*k)).value,b=ecEl('ecRole'+(2*k+1)).value;
+    if(a!==''&&b!==''&&a!==b)pairs.push({owner:k,b:+a,c:+b,label:ecOwners[k]});
+  }
+  return pairs;
+}
+function ecRingIntervals(ring,p,dir){
+  const hits=[],side=q=>(q[0]-p[0])*dir[1]-(q[1]-p[1])*dir[0],offset=q=>(q[0]-p[0])*dir[0]+(q[1]-p[1])*dir[1];
+  for(let i=0;i<ring.length;i++){
+    const a=ring[i],b=ring[(i+1)%ring.length],u=side(a),v=side(b);
+    if(Math.abs(u)<1e-8)hits.push(offset(a));
+    if(u*v<0)hits.push(offset(a)+(offset(b)-offset(a))*u/(u-v));
+  }
+  const sorted=hits.sort((a,b)=>a-b).filter((v,i,a)=>!i||v-a[i-1]>1e-7),intervals=[];
+  for(let i=1;i<sorted.length;i++){
+    const t=(sorted[i]+sorted[i-1])/2;
+    if(EG.pointInPoly(ring,[p[0]+dir[0]*t,p[1]+dir[1]*t]))intervals.push([sorted[i-1],sorted[i]]);
+  }
+  return intervals;
+}
+function ecBand(ref,cur,ranges){
+  const A=ecProfileSegments(ref),B=ecProfileSegments(cur),strips=[];
+  let i=0,j=0,k=0;
+  const z=(a,b,x)=>a.z+(b.z-a.z)*(x-a.off)/(b.off-a.off);
+  while(i<A.length&&j<B.length&&k<ranges.length){
+    const [a,b]=A[i],[c,d]=B[j],[l,r]=ranges[k];
+    const lo=Math.max(a.off,c.off,l),hi=Math.min(b.off,d.off,r);
+    if(hi-lo>1e-8)strips.push([lo,hi,z(a,b,lo),z(a,b,hi),z(c,d,lo),z(c,d,hi)]);
+    const end=Math.min(b.off,d.off,r);
+    if(b.off<=end)i++;if(d.off<=end)j++;if(r<=end)k++;
+  }
+  return strips;
+}
+function ecBandArea(strips){
   let positive=0,negative=0,covered=0;
-  for(const [a0,a1] of A)for(const [b0,b1] of B){
-    const lo=Math.max(a0.off,b0.off),hi=Math.min(a1.off,b1.off);
-    if(hi-lo<1e-9)continue;
-    const za=t=>a0.z+(a1.z-a0.z)*(t-a0.off)/(a1.off-a0.off);
-    const zb=t=>b0.z+(b1.z-b0.z)*(t-b0.off)/(b1.off-b0.off);
-    const d0=zb(lo)-za(lo),d1=zb(hi)-za(hi),w=hi-lo;
-    covered+=w;
-    if(d0>=0&&d1>=0){positive+=(d0+d1)*w*.5;continue;}
-    if(d0<=0&&d1<=0){negative+=-(d0+d1)*w*.5;continue;}
-    const cross=w*Math.abs(d0)/(Math.abs(d0)+Math.abs(d1));
-    if(d0>0){positive+=d0*cross*.5;negative+=-d1*(w-cross)*.5;}
-    else{negative+=-d0*cross*.5;positive+=d1*(w-cross)*.5;}
+  for(const [l,r,a,b,c,d] of strips){
+    const u=c-a,v=d-b,w=r-l;covered+=w;
+    if(u*v<0){
+      const t=w*Math.abs(u)/(Math.abs(u)+Math.abs(v));
+      positive+=(Math.max(0,u)*t+Math.max(0,v)*(w-t))/2;
+      negative+=(Math.max(0,-u)*t+Math.max(0,-v)*(w-t))/2;
+    }else{
+      const area=w*(u+v)/2;positive+=Math.max(0,area);negative+=Math.max(0,-area);
+    }
   }
   return {positive,negative,covered};
 }
+// Clip parcel bands only where the road occupies the same offset, elevation and earthwork direction.
+function ecParcelRemainder(road,parcel){
+  const result=[];
+  const line=(s,i)=>x=>s[i]+(s[i+1]-s[i])*(x-s[0])/(s[1]-s[0]);
+  const put=(l,r,a,b)=>{
+    if(r-l>1e-9)result.push([l,r,a(l),a(r),b(l),b(r)]);
+  };
+  let start=0;
+  for(const p of parcel){
+    const base=line(p,2),top=line(p,4);let cursor=p[0];
+    while(start<road.length&&road[start][1]<=cursor)start++;
+    for(let j=start;j<road.length&&road[j][0]<p[1];j++){
+      const s=road[j],lo=Math.max(cursor,s[0]),hi=Math.min(p[1],s[1]);
+      if(hi<=lo)continue;
+      put(cursor,lo,base,top);
+      const rb=line(s,2),rt=line(s,4),lines=[base,top,rb,rt],xs=[lo,hi];
+      for(let k=1;k<4;k++)for(let n=0;n<k;n++){
+        const u=lines[k](lo)-lines[n](lo),v=lines[k](hi)-lines[n](hi);
+        if(u*v<0)xs.push(lo+(hi-lo)*u/(u-v));
+      }
+      xs.sort((a,b)=>a-b);
+      for(let k=1;k<xs.length;k++){
+        const l=xs[k-1],r=xs[k],x=(l+r)/2,sign=Math.sign(top(x)-base(x));
+        if(!sign||sign!==Math.sign(rt(x)-rb(x))||sign*(rt(x)-base(x))<=0||sign*(top(x)-rb(x))<=0){put(l,r,base,top);continue;}
+        if(sign*(rb(x)-base(x))>0)put(l,r,base,rb);
+        if(sign*(top(x)-rt(x))>0)put(l,r,rt,top);
+      }
+      cursor=hi;
+    }
+    put(cursor,p[1],base,top);
+  }
+  return result;
+}
+function ecPairSection(pair,i){
+  const s=EC.sections[i],ring=EC.rings?.[pair.owner];
+  const ranges=ring?ecRingIntervals(ring.pts,s.p,ecSectionDirection(s)):[[-s.left,s.right]];
+  const strips=ecBand(ecGetProfile(EC.layers[pair.b],i),ecGetProfile(EC.layers[pair.c],i),ranges);
+  const area=ecBandArea(strips),width=ranges.reduce((sum,[l,r])=>sum+r-l,0);
+  // A selected polygon outside a station has a genuine zero area. Missing observations inside it are unknown.
+  return {...area,strips,ranges,valid:ring?area.covered>=width-.0001:area.covered>1e-8,partial:area.covered<width-.0001};
+}
+function ecAssignedSections(pairs,i){
+  const samples=pairs.map(p=>ecPairSection(p,i));
+  if(pairs.length===2 && ecEl('ecPriority').checked){
+    const [road,parcel]=samples;
+    const strips=ecParcelRemainder(road.strips,parcel.strips),net=ecBandArea(strips);
+    parcel.shared={positive:Math.max(0,parcel.positive-net.positive),negative:Math.max(0,parcel.negative-net.negative)};
+    if(!road.valid&&road.partial&&parcel.strips.some(([l,r])=>road.ranges.some(([a,b])=>Math.min(b,r)>Math.max(a,l))))parcel.valid=false;
+    Object.assign(parcel,{strips,positive:net.positive,negative:net.negative});
+  }
+  return samples;
+}
+function ecVolumeRows(pairs,indices){
+  const stations=indices.map(i=>ecAssignedSections(pairs,i));
+  const results=pairs.map((p,k)=>({label:p.label,rows:[],samples:stations.map(s=>s[k])}));
+  for(const result of results){
+    let cut=0,fill=0,used=0,partial=0,sharedCut=0,sharedFill=0;
+    for(let n=1;n<indices.length;n++){
+      const a=result.samples[n-1],b=result.samples[n],from=EC.sections[indices[n-1]].station,to=EC.sections[indices[n]].station;
+      const ok=a.valid&&b.valid&&to>from;
+      const k=ok?(a.negative+b.negative)*(to-from)/2:null,f=ok?(a.positive+b.positive)*(to-from)/2:null;
+      result.rows.push({from,to,k,f,partial:a.partial||b.partial});
+      if(ok){sharedCut+=((a.shared?.negative||0)+(b.shared?.negative||0))*(to-from)/2;sharedFill+=((a.shared?.positive||0)+(b.shared?.positive||0))*(to-from)/2;cut+=k;fill+=f;used++;if(a.partial||b.partial)partial++;}
+    }
+    Object.assign(result,{cut,fill,used,partial,sharedCut,sharedFill});
+  }
+  return results;
+}
+function ecCalculateVolumes(){
+  const out=ecEl('ecVolumeOut'),format=v=>v.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  try{
+    const from=ecEl('ecVolFrom').value.trim(),to=ecEl('ecVolTo').value.trim(),lo=from?ecMergeKeyStation(from):-Infinity,hi=to?ecMergeKeyStation(to):Infinity;
+    if(isNaN(lo)||isNaN(hi)||lo>hi)throw Error('Geçerli bir başlangıç ve bitiş KM gir.');
+    const indices=EC.sections.map((s,i)=>i).filter(i=>EC.sections[i].station>=lo-1e-7&&EC.sections[i].station<=hi+1e-7);
+    if(!indices.length)throw Error('Bu aralıkta kesit yok.');
+    let pairs=ecChosenPairs();
+    const picks=ecRoles.map((_,i)=>ecEl('ecRole'+i).value);
+    for(let i=0;i<4;i+=2)if((picks[i]||picks[i+1])&&(picks[i]===''||picks[i+1]===''||picks[i]===picks[i+1]))throw Error(ecRoles[i].split(' ')[0]+' için iki farklı siyah ve kırmızı yüzey seç.');
+    if(!pairs.length){const r=ecComparisonRefs();if(!r)throw Error('Hesap için iki yüzey seç.');pairs=[{...r,label:'Seçili yüzey çifti',owner:-1}];}
+    const results=ecVolumeRows(pairs,indices);
+    const km=x=>EG.km(x).replace('.',',');
+    out.innerHTML=results.map((r,j)=>{
+      const header='<b>'+ecHtml(r.label)+'</b> · '+ecHtml(EC.layers[pairs[j].b].name)+' → '+ecHtml(EC.layers[pairs[j].c].name);
+      if(indices.length===1){const s=r.samples[0];return '<p>'+header+'<br>KM '+km(EC.sections[indices[0]].station)+' · '+(s.valid?'Kazı '+format(s.negative)+' m² · Dolgu '+format(s.positive)+' m²':'Eksik kot')+'<br>Hacim için ikinci bir KM gerekir.</p>';}
+      const shared=r.sharedCut+r.sharedFill>1e-6?'<br><small>Yola yazılan ortak imalat · Kazı '+format(r.sharedCut)+' m³ · Dolgu '+format(r.sharedFill)+' m³</small>':'';
+      const summary=r.used?'Kazı <b>'+format(r.cut)+' m³</b> · Dolgu <b>'+format(r.fill)+' m³</b>':'Hesaplanabilir aralık yok.';
+      return '<div style="margin:10px 0">'+header+'<br>'+summary+shared+'<br><small>'+r.used+'/'+r.rows.length+' KM aralığı'+(r.partial?' · '+r.partial+' aralıkta yalnız ölçülü genişlik':'')+'</small><details><summary>KM aralıkları</summary>'+r.rows.map(row=>'<div>'+km(row.from)+' – '+km(row.to)+' · '+(row.k==null?'Eksik kot':format(row.k)+' / '+format(row.f)+' m³')+'</div>').join('')+'</details></div>';
+    }).join('');
+  }catch(e){out.textContent=e.message;}
+}
+function ecGroupWire(b){
+  EC.rings=[null,null];EC.roleNames=[];
+  for(let i=0;i<2;i++){
+    const sel=ecEl('ecRing'+i);
+    sel.addEventListener('focus',()=>ecRingOptions(i));
+    sel.addEventListener('change',()=>{
+      if(sel.value==='saved')return;
+      const e=ents.find(e=>String(e.id)===sel.value&&ecIsArea(e));
+      ecSetOwnerRing(i,e);
+    });
+  }
+  ecRoles.forEach((_,i)=>ecEl('ecRole'+i).addEventListener('change',e=>{
+    EC.roleNames[i]=EC.layers[+e.target.value]&&e.target.value!==''?EC.layers[+e.target.value].name:'';
+    EC.outputRevision++;ecClearVolume();ecDrawBands();
+  }));
+  for(const id of ['ecVolFrom','ecVolTo','ecPriority'])ecEl(id).addEventListener('input',()=>{ecClearVolume();if(id==='ecPriority'){EC.outputRevision++;ecDrawBands();}});
+}
+function ecClearVolume(){const x=ecEl('ecVolumeOut');if(x)x.replaceChildren();}
+
+function ecCompareProfileArea(ref,cur){return ecBandArea(ecBand(ref,cur,[[-Infinity,Infinity]]));}
 function ecComparisonRefs(){
   const base=ecEl('ecBaseLayer'),target=ecEl('ecCompareLayer');
   if(!base||!target)return null;
@@ -35732,12 +36003,16 @@ function ecExportCSV(){
 function ecSetProject(raw) {
   const keys=[...Object.keys(enkesitAntetAlanlari),'kesitSablon','kesitImza'];
   EC.project=Object.fromEntries(keys.map(k=>[k,String(raw?.[k]??"").slice(0,240)]));
+  EC.rings=[0,1].map(i=>{const r=raw?.ecRings?.[i];return r&&Array.isArray(r.pts)&&r.pts.length>=3&&r.pts.length<=100000&&r.pts.every(p=>Array.isArray(p)&&p.length>=2&&p.slice(0,2).every(Number.isFinite))?{name:String(r.name||'Alan').slice(0,140),pts:r.pts.map(p=>p.slice(0,2))}:null;});
+  EC.roleNames=Array.isArray(raw?.ecRoleNames)?raw.ecRoleNames.slice(0,4).map(n=>typeof n==='string'?n:undefined):[];
+  ecEl('ecPriority').checked=raw?.ecPriority!==false;
+  ecRingOptions(0);ecRingOptions(1);
   EC.syncAntet?.();
   ecEl("ecShadeAll").checked=raw?.shadeAll===true;
   ecEl("ecPaper").value=raw?.paper==="a3"?"a3":"a4";
   ecEl("ecPrintScale").value=String(raw?.printScale || 150);
 }
-function ecProject() { return {...EC.project,is:EC.project?.is || CDOC?.name || "",shadeAll:!!ecEl("ecShadeAll")?.checked,paper:ecEl("ecPaper")?.value||"a4",printScale:Number(ecEl("ecPrintScale")?.value)||150}; }
+function ecProject() { return {...EC.project,ecRoleNames:EC.roleNames,ecRings:EC.rings,ecPriority:ecEl("ecPriority").checked,is:EC.project?.is || CDOC?.name || "",shadeAll:!!ecEl("ecShadeAll")?.checked,paper:ecEl("ecPaper")?.value||"a4",printScale:Number(ecEl("ecPrintScale")?.value)||150}; }
 function ecPaftaProfilleri(index) {
   return EC.layers.map((layer,i)=>({
     layer:"ENK_PROFIL_"+(i+1),name:layer.name,color:ecHex(layer.color),visible:layer.visible,
@@ -35751,7 +36026,14 @@ function ecPafta(index,project,paper="gercek") {
   const profiles=ecPaftaProfilleri(index);
   profiles.forEach((profile,i)=>{profile.project=project.shadeAll?refs?.b!==i:refs?.c===i;});
   const regions=[];
-  if(refs && profiles[refs.b].visible)for(const [stageIndex,profile] of profiles.entries()){
+  const groups=ecChosenPairs();
+  const assigned=ecAssignedSections(groups,index);
+  for(const [j,pair] of groups.entries()){
+    profiles[pair.c].project=true;
+    if(!profiles[pair.b].visible||!profiles[pair.c].visible)continue;
+    for(const [l,r,a,b,c,d] of assigned[j].strips)for(const q of ortakKesisimBolgesi([l,a],[r,b],c,d))regions.push({...q,l:pair.owner===0?'T_YOL':'T_GB'});
+  }
+  if(!groups.length && refs && profiles[refs.b].visible)for(const [stageIndex,profile] of profiles.entries()){
     if(!profile.visible || stageIndex===refs.b || (!project.shadeAll && stageIndex!==refs.c))continue;
     const base=profiles[refs.b].segments,top=profile.segments;
     let i=0,j=0;
@@ -35765,7 +36047,7 @@ function ecPafta(index,project,paper="gercek") {
       if(b[1]<=a[1])j++;
     }
   }
-  return ortakEnkesitPaftasi({km:sec.station,center:sec.p,displayProfiles:profiles.filter(p=>p.visible),regions,
+  return ortakEnkesitPaftasi({km:sec.station,center:sec.p,displayProfiles:profiles.filter(p=>p.visible),regions,ownerFills:groups.length?[['Yol imalatı','T_YOL'],['Parsel imalatı','T_GB']]:null,
     showOffset:ecEl("ecOffsetTags")?.checked!==false,showKot:ecEl("ecKotTags")?.checked!==false,
     digits:ecEl("ecLabelDigits")?.value==="2"?2:3},project,paper);
 }
