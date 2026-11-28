@@ -5360,7 +5360,7 @@ window.__DY=window.__DY||function(n){var v=Math.round(n*100)/100;return &#x27;1D
         <label class="full" id="iEiL">Kenar<span style="display:flex;gap:6px"><select id="iEi" style="flex:1"></select><button type="button" id="iEiNx" title="Sonraki kenar">Kenarı değiştir ↻</button></span></label>
         <label id="iPiL">Köşe<select id="iPi"></select></label>
         <label id="iAlL">İstenen alan (m²)<input id="iAl" inputmode="decimal" placeholder="örn. 500"></label>
-        <label id="iNL">Parça sayısı<span style="display:flex;gap:6px"><button type="button" id="iNm" style="min-width:44px">−</button><input id="iN" inputmode="numeric" value="2" style="text-align:center"><button type="button" id="iNp" style="min-width:44px">+</button></span></label><button type="button" id="iKac" title="En küçük alan ve yol cephesi şartına göre bu kenardan en çok kaç eşit parsel çıktığını bulur" style="align-self:flex-end">✨ Kaç parsel çıkar?</button>
+        <label id="iNL">Parça sayısı<span style="display:flex;gap:6px"><button type="button" id="iNm" style="min-width:44px">−</button><input id="iN" inputmode="numeric" value="2" style="text-align:center"><button type="button" id="iNp" style="min-width:44px">+</button></span></label><button type="button" id="iKac" title="Asgari alan ve yol cephesini kontrol eder, uygun parçaları çizime işler" style="align-self:flex-end">Kaç Parsel Çıkar?</button><div id="iAutoStatus" class="full msg" role="status" aria-live="polite" hidden></div>
         <label class="full" id="iSeriL">Alanlar (m², sırayla; son parça kalan)<input id="iSeri" placeholder="örn. 500, 450, 600"></label>
         <label id="iYonL">Kesim yönü<select id="iYon"><option value="dik">Kenara dik (kenar boyunca dilimle)</option><option value="paralel">Kenara paralel (kenardan içeri)</option></select></label>
         <label id="iWL">Cephe genişliği (m)<input id="iW" inputmode="decimal" placeholder="örn. 15"></label>
@@ -5370,8 +5370,8 @@ window.__DY=window.__DY||function(n){var v=Math.round(n*100)/100;return &#x27;1D
         <div class="full grid" id="iCz" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))"><label>1. nokta Y<input id="iP1y" inputmode="decimal"></label><label>1. nokta X<input id="iP1x" inputmode="decimal"></label><label>2. nokta Y<input id="iP2y" inputmode="decimal"></label><label>2. nokta X<input id="iP2x" inputmode="decimal"></label></div>
         <label>Yeni nokta numarası (başlangıç)<input id="iOn" placeholder="örn. 3150"></label>
         <div class="full" style="border-top:1px dashed var(--line);padding-top:10px"><b style="font-size:.9rem">İfraz şartları</b></div>
-        <label>En küçük parsel alanı (m²)<input id="iMinA" inputmode="decimal"></label>
-        <label>En küçük yol cephesi (m)<input id="iMinC" inputmode="decimal"></label>
+        <label>En küçük parsel alanı (m²)<input id="iMinA" inputmode="decimal" placeholder="Örn. 500"></label>
+        <label>En küçük yol cephesi (m)<input id="iMinC" inputmode="decimal" placeholder="Örn. 15"></label>
         <div class="full note" id="iYolNot" role="status" aria-live="polite">Yol cephesini parsel kenarlarından seç veya “Yol ara” düğmesine bas. Otomatik sonuç doğrulanmalıdır.</div>
         <details class="full" id="iRoadDetails" style="border:1px solid var(--line,#46566b);border-radius:10px;padding:8px 10px;background:var(--card,#172837)">
           <summary style="cursor:pointer;font-weight:700;min-height:30px">Yol cephesini seç / düzelt <span id="iRoadCount" class="note"></span></summary>
@@ -17371,6 +17371,10 @@ function ifzReadParcelHeader(a,drawing,pts,no){
 function setParsel(pts, ad, src, no, strictCad, verifiedNames, exactCad=false) { const a = S(); if(MOD==="ifz"&&src==="dosya"&&FD?.meta?.length){ifzReadParcelHeader(a,FD,pts,no);fillAntet();} if (no) { if (no.ada) a.antet.ada = no.ada; a.antet.parselNo = no.no; fillAntet(); } pts = exactCad ? pts.map(p=>p.slice(0,2)) : A.clean(pts.map(p => [p[0], p[1]]), 0.002, true); const nm0 = strictCad ? pts.map((p,i) => verifiedNames && verifiedNames[i] ? String(verifiedNames[i]) : "") : pts.map(p => nameOf(p)); if (!strictCad) { tableNames(pts, nm0); textNames(pts, nm0); }
   const raw = pts.map(p => [p[0], p[1]]); if (!strictCad && !exactCad) { const NP = named(); pts = pts.map((p, i) => { let b = null, bd = 0.03; for (const q of NP) { const d = Math.hypot(q.e - p[0], q.y - p[1]); if (d < bd) { bd = d; b = q; } } return b ? [b.e, b.y] : p; }); } /* köşe, adlı ölçü noktasının kendi koordinatına oturur */ let k = 0; const names = nm0.map(n => n || ("K" + (++k)));
   const autoNames = nm0.map(n => !n); /* kadastro koordinatı 2 hane: köşeler cm'ye yuvarlanır, alanlar yuvarlanmış koordinattan hesaplanır (kontrol mühendisi çizelgeden aynı alanı bulur); kaynak değer raw'da kalır */ if(!exactCad)pts = pts.map(p => K.cm(p));
+  if (MOD === "ifz") {
+    ifzResetRoadMark();
+    ifzAutomaticStatus("");
+  }
   a.parsel = { pts, names, autoNames, ad, src, raw }; a.kom = []; a.res = null; a.ifz.parts = null; a.ifz.cuts = []; a.ifz.yeni = []; a.ifz.yol = []; a.ifz.roadSpan=null;a.ifz.roadMarks=null; a.ifz.yolSource = "none"; PLACED = null; const usedRoad=!!FD?.ifzNetwork?.length&&useIfzRoadNetwork(); save(); renderAll(); fitA(); if (MOD === "ifz"&&!usedRoad) { const note=$("iYolNot"); if(note)note.textContent="Parsel seçildi. Yol kenarını aşağıdan işaretle veya Yol ara komutunu kullan."; } if (MOD === "akr") setTimeout(() => { try { akRender(); akPrev(); } catch (e) {} }, 0); }
 function renderPar() { const a = S(), c = parcelCands(); const sel = $("aPar"); const cur = a.parsel;
   const ring=cur?.raw||cur?.pts;
@@ -18359,24 +18363,53 @@ function applyMarkedRoad(reverse=false){const one=IFZ_ROAD_PICK.one,two=IFZ_ROAD
  if(!take.length)return false;
  const f=S().ifz;f.yol=[...new Set(take.map(x=>x.i))];f.yolSource='manual';f.roadSpan=take.map(q=>q.seg);f.roadMarks=[one.p,two.p];f.ei=take[0].i;IFZ_ROAD_PICK.opposite=reverse;
  save();renderIfz();drawA();
- $('iRoadMarkStatus').textContent=`✓ ${length(take).toFixed(2)} m cephe işaretlendi · ${f.yol.length} kenar · ${reverse?'alternatif':'kısa'} yön. Turuncu bölüm gerçek işaretli cephedir; özel asgari cephe koşulunu ayrıca kontrol et.`;
+ ifzRoadMarkMessage(`✓ ${trc(length(take))} m yol cephesi işaretlendi · ${f.yol.length} kenar. Cephe planda turuncu gösteriliyor.`);
  return true;
 }
-function ifzPickPoint(p){const s=nearestRoadBoundary(p);if(!s)return false;
- const maxDist=Math.min(20,Math.max(0.5,55/Math.max(.01,V.s)));if(s.gap>maxDist){$('iRoadMarkStatus').textContent='Cephe noktasını parsel sınırına daha yakın işaretle ('+s.gap.toFixed(2)+' m uzaklık).';return false;}
- if(!IFZ_ROAD_PICK.one){IFZ_ROAD_PICK.one=s;$('iRoadMarkStatus').textContent='Başlangıç kaydedildi · şimdi aynı yol cephesinin BİTİŞ noktasını seç.';drawA();return true;}
- if(Math.hypot(IFZ_ROAD_PICK.one.p[0]-s.p[0],IFZ_ROAD_PICK.one.p[1]-s.p[1])<.01){$('iRoadMarkStatus').textContent='Başlangıç ve bitiş farklı noktalar olmalı.';return false;}
+function ifzResetRoadMark() {
+  Object.assign(IFZ_ROAD_PICK, { active:false, one:null, two:null, opposite:false });
+  $("iRoadMark").textContent = "✎ Cephe başı / sonu işaretle";
+}
+function ifzRoadMarkMessage(text) {
+  $("iRoadMarkStatus").textContent = text;
+  $("aCoord").textContent = text;
+}
+function ifzPickPoint(p, touch = false){const s=nearestRoadBoundary(p);if(!s)return false;
+ const maxDist = (touch ? 24 : 14) / Math.max(1e-6, V.s);
+ if (s.gap > maxDist) {
+   ifzRoadMarkMessage("Parsel sınırına yaklaş ve cephe noktasına dokun.");
+   return false;
+ }
+ if (!IFZ_ROAD_PICK.one) {
+   IFZ_ROAD_PICK.one = s;
+   ifzRoadMarkMessage("Başlangıç kaydedildi. Planı kaydırabilir ve yakınlaştırabilirsin. Bitişe dokun.");
+   scheduleAplDraw();
+   return true;
+ }
+ if (Math.hypot(IFZ_ROAD_PICK.one.p[0] - s.p[0], IFZ_ROAD_PICK.one.p[1] - s.p[1]) < .01) {
+   ifzRoadMarkMessage("Bitiş için başlangıçtan farklı bir nokta seç.");
+   return false;
+ }
  IFZ_ROAD_PICK.two=s;IFZ_ROAD_PICK.active=false;$('iRoadMark').textContent='✎ Cephe başı / sonu işaretle';
  return applyMarkedRoad(false);
 }
 $('iRoadMark').addEventListener('click',()=>{if(!S().parsel)return msg('iMsg','Önce parsel seç.',true);
-  IFZ_ROAD_PICK.active=!IFZ_ROAD_PICK.active;IFZ_ROAD_PICK.one=null;IFZ_ROAD_PICK.two=null;
-  $('iRoadDetails').open=true;$('iRoadMark').textContent=IFZ_ROAD_PICK.active?'✕ İşaretlemeyi iptal et':'✎ Cephe başı / sonu işaretle';
-  $('iRoadMarkStatus').textContent=IFZ_ROAD_PICK.active?'Parsel üzerinde yol cephesinin BAŞLANGIÇ ve BİTİŞ noktalarını sırayla tıkla.':'İşaretleme iptal edildi.';drawA();});
+  const activate = !IFZ_ROAD_PICK.active;
+  ifzResetRoadMark();
+  IFZ_ROAD_PICK.active = activate;
+  $("iRoadDetails").open = true;
+  if (activate) $("iRoadMark").textContent = "✕ İşaretlemeyi iptal et";
+  if (IFZ_ROAD_PICK.active) {
+    if (MODEA === "ciz") $("aDrX").click();
+    if (MODEA === "pick") { MODEA = null; $("aPick").classList.remove("on"); }
+    $("aplBox").scrollIntoView({ block: "nearest" });
+  }
+  ifzRoadMarkMessage(IFZ_ROAD_PICK.active
+    ? "Yol cephesinin başlangıcına dokun. Kaydırma ve yakınlaştırma kullanabilirsin."
+    : "Yol cephesi işaretleme iptal edildi.");
+  scheduleAplDraw();
+});
 $('iRoadReverse').addEventListener('click',()=>{if(!applyMarkedRoad(!IFZ_ROAD_PICK.opposite))msg('iMsg','Önce cephe başlangıç ve bitişini işaretle.',true);});
-$('aCv').addEventListener('pointerdown',ev=>{if(listPicker||MOD!=='ifz'||!IFZ_ROAD_PICK.active)return;
- ev.preventDefault();ev.stopImmediatePropagation();const r=cv.getBoundingClientRect();ifzPickPoint([WX(ev.clientX-r.left),WY(ev.clientY-r.top)]);
-},true);
 $('iContextFit').addEventListener('click',()=>fitA(true));
 window.ACAD_IFZ_ROAD_GUIDE={version:'7.1.15.62',suggest:ifzRoadSuggestions,pick:ifzPickPoint,applyMarkedRoad,get state(){return {marking:IFZ_ROAD_PICK.active,one:IFZ_ROAD_PICK.one,two:IFZ_ROAD_PICK.two,span:S().ifz.roadSpan,roads:S().ifz.yol}}};
 $('iYolAuto').addEventListener('click',()=>{
@@ -18416,7 +18449,7 @@ function ifzCoordinateParts(list, parsel) {
   // Birleştirilmiş CAD sınırındaki ortak köşelerin tam hassasiyeti korunur.
   return parsel.kaynakParseller?.length ? staged : cmOpt(staged, parsel.pts);
 }
-function applySplit(res) { const a = S(), f = a.ifz; const P = parts(); const i = Math.max(0, Math.min(f.part, P.length - 1)); const base = P[i];
+function applySplit(res, prepared) { const a = S(), f = a.ifz; const P = parts(); const i = Math.max(0, Math.min(f.part, P.length - 1)); const base = P[i];
   const np = res.parts.filter(p => p && p.length >= 3 && A.area(p) > 0.005); if (np.length < 2) return msg("iMsg", "Bölme çizgisi parçayı kesmiyor.", true);
   const anaAlan=A.area(base.pts), parcalarToplami=np.reduce((z,p)=>z+A.area(p),0);
   const alanFarki=parcalarToplami-anaAlan, izin=Math.max(0.02,anaAlan*1e-7);
@@ -18433,20 +18466,22 @@ function applySplit(res) { const a = S(), f = a.ifz; const P = parts(); const i 
     return "P" + nextNumber++;
   };
   const repl = np.map((pts, k) => { const ad = k === 0 && base.ad ? base.ad : nextL(); used.add(ad); return { ad, pts }; }); if (list.length) list.splice(i, 1, ...repl); else list.push(...repl);
-  const staged = ifzCoordinateParts(list, a.parsel);
+  const staged = prepared
+    ? list.map((p, k) => k >= i && k < i + repl.length ? { ...p, pts: prepared[k - i].pts } : p)
+    : ifzCoordinateParts(list, a.parsel);
   const areas = staged.map(p => A.area(p.pts));
   if (staged.some((p, k) => p.pts.length < 3 || !Number.isFinite(areas[k]) || areas[k] <= 0.005))
     return msg("iMsg", "İfraz yapılmadı. Koordinat hassasiyeti nedeniyle bir parça geçersiz oldu.", true);
   const failed = [];
   staged.forEach((p, k) => {
-    if (f.yolSource !== "network" && (k < i || k >= i + repl.length)) return;
+    if ((prepared || f.yolSource !== "network") && (k < i || k >= i + repl.length)) return;
     const issues = kural(p.pts);
     if (issues.length) failed.push(`${k + 1}. parça ${issues.join(", ")}`);
   });
   if (failed.length) return msg("iMsg", "İfraz yapılmadı. Son koordinatlarla " + failed.join(" · "), true);
   const finalDifference = areas.reduce((sum, area) => sum + area, 0) - A.area(a.parsel.pts);
   const finalPieces = staged.slice(i, i + repl.length);
-  f.parts = staged; if (!f.cuts) f.cuts = []; if (res.line) f.cuts.push(res.line); if (res.lines && res.lines.length) f.cuts.push(...res.lines); if (!res.line && !(res.lines && res.lines.length)) { try { f.cuts.push(...kesimCikar(base.pts, np)); } catch (e) {} } nameNew(); f.lastQ = QB ? { before: QB, after: JSON.stringify(f.parts) } : null; QB = null; save(); renderIfz(); drawA(); prevA(); try { $("aplBox").scrollIntoView({ block: "start", behavior: "smooth" }); } catch (e) {} msg("iMsg", `✓ Bölündü · toplam alan farkı ${tra(finalDifference)} m² — ${np.length} parça: ${finalPieces.map(p => `${p.ad} ${tra(A.area(p.pts))} m²${(f.yol || []).length ? ` (cephe ${trc(cephe(p.pts))} m)` : ""}`).join(" · ")}${(f.yol || []).length ? "" : " · Çizimde yol bulunamadı, yol cephesi şartı uygulanmadı."}`); }
+  f.parts = staged; if (!f.cuts) f.cuts = []; if (res.line) f.cuts.push(res.line); if (res.lines && res.lines.length) f.cuts.push(...res.lines); if (!res.line && !(res.lines && res.lines.length)) { try { f.cuts.push(...kesimCikar(base.pts, np)); } catch (e) {} } nameNew(); f.lastQ = QB ? { before: QB, after: JSON.stringify(f.parts) } : null; QB = null; save(); renderIfz(); drawA(); prevA(); try { $("aplBox").scrollIntoView({ block: "start", behavior: "smooth" }); } catch (e) {} msg("iMsg", `✓ Bölündü · toplam alan farkı ${tra(finalDifference)} m² — ${np.length} parça: ${finalPieces.map(p => `${p.ad} ${tra(A.area(p.pts))} m²${(f.yol || []).length ? ` (cephe ${trc(cephe(p.pts))} m)` : ""}`).join(" · ")}${(f.yol || []).length ? "" : " · Çizimde yol bulunamadı, yol cephesi şartı uygulanmadı."}`); return true; }
 $("iGo").addEventListener("click", async () => { if (ifzWork?.()) return; readIfz(); const a = S(), f = a.ifz; if (!a.parsel) return msg("iMsg", "Önce parseli seç.", true); if (!(f.yol || []).length && f.minC > 0) { const d=$("iRoadDetails");if(d)d.open=true;
     return msg("iMsg", "Asgari yol cephesi şartı var. Önce Yol cephesini seç / düzelt bölümünde gerçek yol kenarını işaretle ya da Yol ara önerisini kontrol et. Bölme yapılmadı.",true);
   } /* Otomatik yol arama ağır projede böl düğmesini kilitlemesin; işlem yalnız kullanıcının isteğiyle çalışır. */ if (["esit", "esitDik", "alanCephe", "seri", "cephe", "ada", "paralel"].includes(f.y)) QB = JSON.stringify({ parts: f.parts, cuts: f.cuts, yeni: f.yeni, part: f.part }); else QB = null;
@@ -18488,10 +18523,7 @@ $("iGo").addEventListener("click", async () => { if (ifzWork?.()) return; readIf
     el.querySelectorAll("[data-ao]").forEach(b => b.addEventListener("click", () => { const o = ADAO.R.out[+b.dataset.ao]; ADAV = null; const cl = (P_, l) => { const cp = A.cutPts(P_, l); return cp.length >= 2 ? [cp[0], cp[cp.length - 1]] : null; }; applySplit({ parts: o.parts, lines: o.lines.map(x => cl(x.P, x.l)).filter(Boolean) }); $("iAlt").innerHTML = ""; }));
     ADAV = R.out[0]; drawA(); msg("iMsg", `${R.out.length} yerleşim bulundu${R.out[0].ok ? "; ilki bütün şartları sağlıyor" : ""}. Birini seçip "Bu yerleşimi uygula"ya bas.`); return; }
   else if (f.y === "esitDik" || f.y === "alanCephe" || f.y === "seri" || f.y === "cephe" || f.y === "ada") { let r; const cl = (P_, l) => { const cp = A.cutPts(P_, l); return cp.length >= 2 ? [cp[0], cp[cp.length - 1]] : null; };
-    const proposal = ifzProposal;
-    if (proposal?.poly === poly && proposal.method === f.y && proposal.n === f.n &&
-        proposal.edge === f.ei && proposal.conditions === ifzConditions(f)) r = proposal.result;
-    else if (f.y === "esitDik") r = A.ifrazEsitDik(poly, f.ei, f.n);
+    if (f.y === "esitDik") r = A.ifrazEsitDik(poly, f.ei, f.n);
     else if (f.y === "alanCephe") { r = A.ifrazAlanCephe(poly, yolZincir(poly, f.ei), Math.max(2, Math.round(K.num(f.n) || 2))); if (!r) return msg("iMsg", "Bu yol kenarından alan ve cephe birlikte eşit bölünemiyor (kesimler parselin içinde kesişiyor). Parça sayısını azalt ya da başka kenar seç.", true); }
     else if (f.y === "seri") { const L = A.alanListe(f.seri); if (!L.length) return msg("iMsg", "Alanları yaz (örn. 500, 450, 600).", true); const sum = L.reduce((x, y) => x + y, 0); if (sum >= tot - 0.01) return msg("iMsg", `Yazılan alanların toplamı (${tra(sum)} m²) parselden (${tra(tot)} m²) küçük olmalı; son parça kalan alandır.`, true); r = A.ifrazSeri(poly, f.ei, L, f.yon !== "paralel"); }
     else if (f.y === "cephe") { const W = K.num(f.w); const E = A.edge(poly, f.ei); if (!(W > 0) || W >= E.L) return msg("iMsg", `Cephe genişliği 0 ile ${trc(E.L)} m arasında olmalı.`, true); r = A.ifrazCephe(poly, f.ei, W); }
@@ -18510,16 +18542,18 @@ $("iGo").addEventListener("click", async () => { if (ifzWork?.()) return; readIf
     }
     applySplit({ parts: r.parts, lines: r.lines.map(l => A.cutPts(poly, l)).filter(l => l.length >= 2).map(l => [l[0], l[l.length - 1]]) }); }
   else { const v = [f.p1y, f.p1x, f.p2y, f.p2x].map(K.num); if (v.some(x => !isFinite(x))) return msg("iMsg", "İki noktanın Y ve X değerlerini yaz.", true); const r = A.ifrazCizgi(poly, [v[0], v[1]], [v[2], v[3]]); const cp = A.cutPts(poly, r.line); applySplit({ parts: r.parts, line: cp.length >= 2 ? [cp[0], cp[cp.length - 1]] : r.line }); } });
-/* seçili kenarı içeren, yol olarak işaretli ardışık kenar zinciri (alan + cephe eşit bölmede cephe bütün yol boyunca paylaşılır) */
-function yolZincir(poly, ei) {
-  const a = S(), f = a.ifz, n = poly.length;
-  if (!f.yol?.length) return [ei];
+// Ana parseldeki onaylı yol sınırını aktif parçanın kenarlarına kırp.
+function ifzRoadSections(poly) {
+  const a = S(), f = a.ifz;
   const roads = f.roadSpan?.length ? f.roadSpan
-    : f.yol.map(i => [a.parsel.pts[i], a.parsel.pts[(i + 1) % a.parsel.pts.length]]).filter(([p, q]) => p && q);
-  const overlaps = new Map();
-  const byEdge = i => {
-    if (overlaps.has(i)) return overlaps.get(i);
-    const edge = A.edge(poly, i);
+    : (f.yol || []).map(i => [a.parsel.pts[i], a.parsel.pts[(i + 1) % a.parsel.pts.length]]).filter(([p, q]) => p && q);
+  if (!roads.length) return poly.map(() => []);
+  const orientation = A.sArea(poly) > 0 ? 1 : -1;
+  return poly.map((a, i) => {
+    const b = poly[(i + 1) % poly.length], L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    if (L <= .005) return [];
+    const u = [(b[0] - a[0]) / L, (b[1] - a[1]) / L];
+    const edge = { a, L, u, n: [-u[1] * orientation, u[0] * orientation] };
     const intervals = [];
     for (const [p, q] of roads) {
       const [ux, uy] = edge.u;
@@ -18536,23 +18570,24 @@ function yolZincir(poly, ei) {
       if (last && interval[0] <= last[1] + .000001) last[1] = Math.max(last[1], interval[1]);
       else merged.push(interval);
     }
-    const sections = merged.map(([start, end]) => ({
+    return merged.map(([start, end]) => ({
       a: [edge.a[0] + edge.u[0] * start, edge.a[1] + edge.u[1] * start],
       u: edge.u, n: edge.n, L: end - start
     }));
-    overlaps.set(i, sections);
-    return sections;
-  };
-  if (!byEdge(ei).length) return [ei];
+  });
+}
+function yolZincir(poly, ei, sections = ifzRoadSections(poly)) {
+  if (!sections[ei]?.length) return [ei];
+  const n = poly.length;
   let start = ei;
-  while ((start + n - 1) % n !== ei && byEdge((start + n - 1) % n).length) start = (start + n - 1) % n;
+  while ((start + n - 1) % n !== ei && sections[(start + n - 1) % n].length) start = (start + n - 1) % n;
   const chain = [];
-  for (let i = start, seen = 0; seen < n && byEdge(i).length; i = (i + 1) % n, seen++) chain.push(...byEdge(i));
+  for (let i = start, seen = 0; seen < n && sections[i].length; i = (i + 1) % n, seen++) chain.push(...sections[i]);
   return chain;
 }
-/* Kaç parsel çıkar: bulunabilen en büyük eşit bölmeyi Böl komutuna aktar. */
+
 const IFZ_COUNT_LIMIT = 60;
-let ifzProposal = null, ifzWork = null;
+let ifzWork = null;
 const ifzYield = () => new Promise(resolve => setTimeout(resolve, 0));
 function ifzConditions(f) {
   return JSON.stringify([f.minA, f.minC, f.yolSource, f.yol, f.roadSpan, K.H.k]);
@@ -18569,98 +18604,183 @@ function ifzJob(a, poly) {
   ifzWork = current;
   return current;
 }
-function ifzSelectedFrontage(P, edge) {
-  let length = 0;
-  for (let i = 0; i < P.length; i++) {
-    const p = P[i], q = P[(i + 1) % P.length];
-    const px = p[0] - edge.a[0], py = p[1] - edge.a[1];
-    const qx = q[0] - edge.a[0], qy = q[1] - edge.a[1];
-    const [ux, uy] = edge.u;
-    if (Math.abs(px * uy - py * ux) > .02 || Math.abs(qx * uy - qy * ux) > .02) continue;
-    const from = px * ux + py * uy, to = qx * ux + qy * uy;
-    length += Math.max(0, Math.min(edge.L, Math.max(from, to)) - Math.max(0, Math.min(from, to)));
+
+function ifzAutomaticStatus(text, error = false) {
+  const status = $("iAutoStatus");
+  status.hidden = !text;
+  msg("iAutoStatus", text, error);
+  status.classList.add("full");
+}
+
+// İki şartı aynı kesimde karşıla. Eşit alanlı dilimler yanlış yerde
+// daralırsa, kesimleri yol boyunca ilerletip kalan alanı son parçaya bırak.
+function ifzMinimumStrips(poly, direction, sections, n, minA, minC) {
+  const normal = direction.map(x => -x);
+  const project = p => p[0] * direction[0] + p[1] * direction[1];
+  const stations = poly.map(project);
+  let low = Math.min(...stations);
+  const high = Math.max(...stations);
+  const roads = sections.map(({ a, u, L }) => {
+    const start = project(a);
+    const end = start + L * (u[0] * direction[0] + u[1] * direction[1]);
+    return [Math.min(start, end), Math.abs(end - start), L];
+  });
+  const areaAt = cut => A.area(A.clipHalf(poly, normal, -cut));
+  const roadAt = cut => roads.reduce((sum, [start, width, length]) => {
+    const fraction = width > 1e-7 ? Math.max(0, Math.min(1, (cut - start) / width)) : Number(cut > start + 1e-7);
+    return sum + length * fraction;
+  }, 0);
+  const totalArea = A.area(poly), totalFrontage = sections.reduce((sum, road) => sum + road.L, 0);
+  const area = minA + Math.min(.05, Math.max(0, (totalArea / n - minA) / 2));
+  const frontage = Math.max(minC, .02) + Math.min(.02, Math.max(0, (totalFrontage / n - minC) / 2));
+  const cuts = [];
+  let usedArea = 0, usedFrontage = 0;
+  for (let i = 1; i < n; i++) {
+    const targetArea = usedArea + area, targetFrontage = usedFrontage + frontage;
+    if (targetArea + (n - i) * minA > totalArea + .005 ||
+        targetFrontage + (n - i) * minC > totalFrontage + .005) return null;
+    const cut = Math.max(A.bisect(areaAt, low, high, targetArea, 60), A.bisect(roadAt, low, high, targetFrontage, 60));
+    if (cut <= low + 1e-7 || cut >= high - 1e-7) return null;
+    cuts.push(cut);
+    low = cut;
+    usedArea = areaAt(cut);
+    usedFrontage = roadAt(cut);
   }
-  return length;
+  const result = A.strips(poly, direction, cuts);
+  result.lines = cuts.map(cut => {
+    const p = direction.map(x => x * cut);
+    return [p, [p[0] - direction[1], p[1] + direction[0]]];
+  });
+  return result;
+}
+function* ifzLayouts(poly, n, roads, preferred, minA, minC) {
+  const roadSections = roads.flat(), chains = new Set(), directions = new Set();
+  const edges = roads.map((sections, i) => ({
+    i, length: sections.reduce((sum, section) => sum + section.L, 0)
+  })).filter(edge => edge.length > .005);
+  edges.sort((a, b) => Number(b.i === preferred.edge) - Number(a.i === preferred.edge) || b.length - a.length);
+  function* byMethod(method) {
+    for (const { i } of edges) {
+      if (method === "alanCephe") {
+        const chain = yolZincir(poly, i, roads);
+        if (chains.has(chain[0])) continue;
+        chains.add(chain[0]);
+        yield () => A.ifrazAlanCephe(poly, chain, n);
+      } else {
+        const u = roads[i][0].u;
+        const key = (u[0] < 0 || (u[0] === 0 && u[1] < 0) ? u.map(v => -v) : u).map(v => v.toFixed(7)).join(",");
+        if (directions.has(key)) continue;
+        directions.add(key);
+        yield () => A.ifrazEsitDik(poly, i, n);
+        yield () => ifzMinimumStrips(poly, u, roadSections, n, minA, minC);
+        if (edges.some(edge => {
+          const v = roads[edge.i][0].u;
+          return u[0] * v[0] + u[1] * v[1] < -.85;
+        })) yield () => A.ifrazAda(poly, i, n, 2);
+      }
+    }
+  }
+  if (preferred.method === "alanCephe") {
+    yield* byMethod("alanCephe");
+    yield* byMethod("esitDik");
+  } else {
+    yield* byMethod("esitDik");
+    yield* byMethod("alanCephe");
+  }
+}
+function ifzLayoutCuts(result, poly) {
+  const segments = [];
+  const lines = result.rowLine ? [result.rowLine, ...result.lines] : result.lines;
+  for (const line of lines) {
+    const points = A.cutPts(line.P || poly, line.l || line);
+    if (points.length !== 2) return null;
+    segments.push(points);
+  }
+  return segments;
 }
 $("iKac").addEventListener("click", async () => {
-  if (ifzWork?.()) return;
+  const button = $("iKac");
+  if (button.disabled || ifzWork?.()) return;
   readIfz();
   const a = S(), f = a.ifz;
-  ifzProposal = null;
-  if (!a.parsel) return msg("iMsg", "Önce parseli seç.", true);
-  const { minA, minC } = f, hasRoad = !!f.yol?.length;
-  if (![minA, minC].every(v => Number.isFinite(v) && v >= 0))
-    return msg("iMsg", "Alan ve cephe şartlarını sıfır veya pozitif sayıyla yaz.", true);
-  if (!minA && !minC)
-    return msg("iMsg", "En küçük parsel alanını veya yol cephesini yaz.", true);
-  if (minC && !hasRoad) {
-    $("iRoadDetails").open = true;
-    return msg("iMsg", "Asgari yol cephesi için önce parselin gerçek yol cephesini işaretle.", true);
-  }
+  if (!a.parsel) return ifzAutomaticStatus("Önce parseli seç.", true);
+  const { minA, minC } = f;
+  if (!Number.isFinite(minA) || minA <= 0)
+    return ifzAutomaticStatus("En küçük parsel alanını m² olarak gir.", true);
+  if (!Number.isFinite(minC) || minC < 0)
+    return ifzAutomaticStatus("En küçük yol cephesini metre olarak gir.", true);
+  if (IFZ_ROAD_PICK.active)
+    return ifzAutomaticStatus("Önce yol cephesinin başlangıç ve bitişini işaretlemeyi tamamla.", true);
 
-  const poly = parts()[f.part].pts, edge = A.edge(poly, f.ei), total = A.area(poly);
-  if (!Number.isFinite(total) || total <= .01 || edge.L <= .005)
-    return msg("iMsg", "Bölünecek parseli ve geçerli bir kenarı seç.", true);
-  const method = f.y === "alanCephe" ? "alanCephe" : "esitDik";
-  const chain = method === "alanCephe" ? yolZincir(poly, f.ei) : null;
-  const frontage = hasRoad ? cephe : p => ifzSelectedFrontage(p, edge);
-  const frontageTotal = hasRoad ? cephe(poly) : edge.L;
-  const upper = Math.min(
-    minA > .005 ? Math.floor(total / (minA - .005) + 1e-9) : Infinity,
-    minC > .005 ? Math.floor(frontageTotal / (minC - .005) + 1e-9) : Infinity
-  );
-  const limit = Math.min(IFZ_COUNT_LIMIT, upper);
-  const current = ifzJob(a, poly);
-  $("iKac").disabled = true;
-  msg("iMsg", "Parsel seçenekleri hesaplanıyor…");
+  const selected = parts()[f.part], poly = selected.pts, total = A.area(poly);
+  if (!Number.isFinite(total) || total <= .01)
+    return ifzAutomaticStatus("Bölünecek parselin sınırını kontrol et.", true);
+  const preferred = { edge: f.ei, method: f.y };
+  let current = ifzJob(a, poly);
+  const progress = "Alan ve yol cephesi şartlarına göre yerleşim aranıyor…";
+  button.disabled = true;
+  ifzAutomaticStatus(progress);
   try {
     await ifzYield();
-    let frame = performance.now();
-    for (let n = limit; current() && n >= 2; n--) {
-      if (performance.now() - frame > 12) {
-        await ifzYield();
-        if (!current()) return;
-        frame = performance.now();
+    if (!current()) return;
+    if (!f.yol?.length) {
+      $("iYolAuto").click();
+      if (!f.yol?.length) {
+        $("iRoadDetails").open = true;
+        return ifzAutomaticStatus("Planda yol cephesi doğrulanamadı. Cephe başını ve sonunu işaretle.", true);
       }
-      const result = method === "alanCephe"
-        ? A.ifrazAlanCephe(poly, chain, n)
-        : A.ifrazEsitDik(poly, f.ei, n);
-      if (!result || result.parts.length !== n || result.kopuk?.length ||
-          result.parts.some(p => !p || p.length < 3 || Math.abs(A.area(p) - total / n) > .01))
-        continue;
-      const sum = result.parts.reduce((area, p) => area + A.area(p), 0);
-      const rawFrontages = result.parts.map(frontage);
-      if (Math.abs(sum - total) > .01 || result.parts.some((p, i) => kural(p).length || rawFrontages[i] <= .005)) continue;
-      if (method === "alanCephe" && Math.max(...rawFrontages) - Math.min(...rawFrontages) > .02) continue;
-
-      const staged = f.parts?.length ? f.parts.slice() : [];
-      staged.splice(f.part, staged.length ? 1 : 0, ...result.parts.map(pts => ({ pts })));
-      const normalized = ifzCoordinateParts(staged, a.parsel);
-      if (f.yolSource === "network" && normalized.some(p => kural(p.pts).length)) continue;
-      const rounded = normalized.slice(f.part, f.part + n);
-      const lengths = rounded.map(p => frontage(p.pts));
-      if (rounded.some((p, i) => p.pts.length < 3 || A.area(p.pts) <= .005 ||
-        kural(p.pts).length || lengths[i] <= .005)) continue;
-
-      $("iY").value = method;
-      $("iN").value = n;
-      readIfz();
-      ifzProposal = { poly, method, n, edge: f.ei, conditions: ifzConditions(f), result };
-      if (ADAV) { ADAV = null; scheduleAplDraw(); }
-      renderIfz();
-      const range = `${trc(Math.min(...lengths))}–${trc(Math.max(...lengths))} m`;
-      const count = n === IFZ_COUNT_LIMIT && upper > n ? `Tarama sınırında ${n}` : `En çok ${n}`;
-      msg("iMsg", `${count} parsel · ${method === "alanCephe" ? "alan + cephe eşit" : "kenara dik eşit alan"} · hedef alan ${tra(total / n)} m² · ${hasRoad ? "yol cephesi" : "seçili kenar payı"} ${range}. Uygulamak için Böl’e bas.`);
-      return;
+      current = ifzJob(a, poly);
     }
-    if (current()) msg("iMsg", `Bu kenardan şartları sağlayan en az iki parsel çıkmadı. Alan ${tra(total)} m² · ${hasRoad ? "yol cephesi" : "seçili kenar"} ${trc(frontageTotal)} m.`, true);
+
+    const roads = ifzRoadSections(poly);
+    const frontageTotal = roads.flat().reduce((sum, road) => sum + road.L, 0);
+    if (frontageTotal <= .005)
+      return ifzAutomaticStatus("Seçili parça işaretli yola cephe almıyor. Yol seçimini kontrol et.", true);
+    const upper = Math.min(
+      Math.floor(total / Math.max(.005, minA - .005) + 1e-9),
+      minC > .005 ? Math.floor(frontageTotal / (minC - .005) + 1e-9) : Infinity
+    );
+    let frame = performance.now();
+    const valid = p => p?.length >= 3 && A.area(p) > .005 && cephe(p) > .005 && !kural(p).length;
+    for (let n = Math.min(IFZ_COUNT_LIMIT, upper); n >= 2; n--) {
+      for (const calculate of ifzLayouts(poly, n, roads, preferred, minA, minC)) {
+        if (performance.now() - frame > 12) {
+          await ifzYield();
+          if (!current()) return;
+          frame = performance.now();
+        }
+        const result = calculate();
+        if (!result || result.parts.length !== n || result.kopuk?.length || !result.parts.every(valid)) continue;
+        const sum = result.parts.reduce((area, p) => area + A.area(p), 0);
+        if (Math.abs(sum - total) > .01) continue;
+        const lines = ifzLayoutCuts(result, poly);
+        if (!lines) continue;
+        const rounded = ifzCoordinateParts(result.parts.map(pts => ({ pts })), { ...a.parsel, pts: poly });
+        if (rounded.some(p => !valid(p.pts))) continue;
+        const areas = rounded.map(p => A.area(p.pts)), lengths = rounded.map(p => cephe(p.pts));
+        if (Math.abs(areas.reduce((sum, area) => sum + area, 0) - total) > Math.max(.02, total * 1e-7)) continue;
+
+        f.n = n;
+        QB = null;
+        ADAV = null;
+        if (MODEA === "ciz") $("aDrX").click();
+        if (!applySplit({ parts: result.parts, lines }, rounded)) {
+          return ifzAutomaticStatus($("iMsg").textContent, true);
+        }
+        const name = selected.ad ? `Parça ${selected.ad} üzerinden ` : "";
+        const limit = n === IFZ_COUNT_LIMIT && upper > n ? " · Tarama sınırına ulaşıldı." : "";
+        $("aCoord").textContent = `${name}${n} parsel oluşturuldu.`;
+        return ifzAutomaticStatus(`${name}${n} parsel oluşturuldu. Alan ${tra(Math.min(...areas))}–${tra(Math.max(...areas))} m² · yol cephesi ${trc(Math.min(...lengths))}–${trc(Math.max(...lengths))} m${limit}`);
+      }
+    }
+    ifzAutomaticStatus(`Uygun bir bölme bulunamadı. Seçili alan ${tra(total)} m² · yol cephesi ${trc(frontageTotal)} m.`, true);
   } catch (error) {
-    if (current()) msg("iMsg", "Parsel sayısı hesaplanamadı. Parsel sınırını ve seçili kenarı kontrol et.", true);
+    if (current()) ifzAutomaticStatus("Hesap tamamlanamadı. Parsel sınırını ve yol cephesini kontrol et.", true);
     console.warn("İfraz parsel sayısı", error);
   } finally {
-    $("iKac").disabled = false;
+    button.disabled = false;
     if (ifzWork === current) ifzWork = null;
-    if ($("iMsg").textContent === "Parsel seçenekleri hesaplanıyor…") msg("iMsg", "Seçimler değişti. Parsel sayısını tekrar hesapla.");
+    if ($("iAutoStatus").textContent === progress) ifzAutomaticStatus("Seçim değişti. Hesabı yeniden başlat.");
   }
 });
 document.querySelectorAll("#iChips [data-iy]").forEach(b => b.addEventListener("click", () => { $("iY").value = b.dataset.iy; ADAV = null; readIfz(); renderIfz(); drawA(); }));
@@ -18847,14 +18967,14 @@ function ifzDragBit() { const D_ = DRG; DRG = null; if (D_.raf) cancelAnimationF
 let listPicker=null;
 const ptr = new Map(); let pan = null, pin = null, mv = false;
 cv.addEventListener("contextmenu", e => { e.preventDefault(); if (MODEA === "ciz") { if (DR.length >= 2) $("aDrOk").click(); else $("aDrX").click(); } else if (MODEA === "pick") { MODEA = null; $("aPick").classList.remove("on"); drawA(); } });
-cv.addEventListener("pointerdown", e => { if (e.button === 2) return; cv.setPointerCapture(e.pointerId); ptr.set(e.pointerId, [e.offsetX, e.offsetY]); mv = false; if (ptr.size === 1 && !listPicker && ifzDragBas(e.offsetX, e.offsetY)) { pan = null; return; } if (DRG && ptr.size > 1) ifzDragBit(); if (ptr.size === 1) pan = { x: e.offsetX, y: e.offsetY, cx: V.cx, cy: V.cy };
+cv.addEventListener("pointerdown", e => { if (e.button === 2) return; cv.setPointerCapture(e.pointerId); ptr.set(e.pointerId, [e.offsetX, e.offsetY]); mv = false; if (ptr.size === 1 && !listPicker && !(MOD === "ifz" && IFZ_ROAD_PICK.active) && ifzDragBas(e.offsetX, e.offsetY)) { pan = null; return; } if (DRG && ptr.size > 1) ifzDragBit(); if (ptr.size === 1) pan = { x: e.offsetX, y: e.offsetY, cx: V.cx, cy: V.cy };
   if (ptr.size === 2) { const [p, q] = [...ptr.values()]; pin = { d: Math.hypot(p[0] - q[0], p[1] - q[1]), s: V.s, w: [WX((p[0] + q[0]) / 2), WY((p[1] + q[1]) / 2)] }; pan = null; } });
 let aplCoordTimer=0, aplCoordLatest=null;
 function requestAplCoord(sx,sy){
   aplCoordLatest=[sx,sy]; if(aplCoordTimer)return;
   aplCoordTimer=setTimeout(()=>{
     aplCoordTimer=0;const p=aplCoordLatest;aplCoordLatest=null;
-    if(!p||document.getElementById("v-apl")?.hidden||(MOD==="ifz"&&ptr.size))return;
+    if(!p||document.getElementById("v-apl")?.hidden||(MOD==="ifz"&&(ptr.size||IFZ_ROAD_PICK.active)))return;
     const x=WX(p[0]),y=WY(p[1]),z=zAt(x,y);
     $("aCoord").textContent=`Y ${K.fk(x)}  X ${K.fk(y)}${isFinite(z)?"  · Z "+K.fz(z):""}`;
   },70);
@@ -18863,7 +18983,7 @@ ACAD_PLAN.controls(cv,drawA,$("aplBox").querySelector(".tool"));
 let aplDrawFrame=0;
 function scheduleAplDraw(){if(aplDrawFrame)return;aplDrawFrame=requestAnimationFrame(()=>{aplDrawFrame=0;drawA();});}
 cv.addEventListener("pointermove", e => { const r = [e.offsetX, e.offsetY]; requestAplCoord(r[0], r[1]);
-  if (!ptr.has(e.pointerId)) { if (MOD === "ifz" && !DRG && S().ifz.parts && (S().ifz.cuts || []).length && !MODEA) { const near = S().ifz.cuts.some(c => [c[0], c[c.length - 1]].some(p => Math.hypot(X(p[0]) / dpr - r[0], Y(p[1]) / dpr - r[1]) < 16) || (c.length === 2 && onLine(r[0], r[1], c))); cv.style.cursor = near ? "grab" : ""; } return; } ptr.set(e.pointerId, r);
+  if (!ptr.has(e.pointerId)) { if (MOD === "ifz" && !IFZ_ROAD_PICK.active && !DRG && S().ifz.parts && (S().ifz.cuts || []).length && !MODEA) { const near = S().ifz.cuts.some(c => [c[0], c[c.length - 1]].some(p => Math.hypot(X(p[0]) / dpr - r[0], Y(p[1]) / dpr - r[1]) < 16) || (c.length === 2 && onLine(r[0], r[1], c))); cv.style.cursor = near ? "grab" : ""; } return; } ptr.set(e.pointerId, r);
   if (DRG && ptr.size === 1) { mv = true; if (!DRG.raf) DRG.raf = requestAnimationFrame(() => { if (DRG) { DRG.raf = 0; ifzDragGit(DRG.sx, DRG.sy); } }); DRG.sx = r[0]; DRG.sy = r[1]; return; }
   if (ptr.size === 2 && pin) { const [p, q] = [...ptr.values()]; V.s = Math.min(1e6,Math.max(1e-6,pin.s * Math.hypot(p[0] - q[0], p[1] - q[1]) / Math.max(1,pin.d))); const m = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2]; V.cx = pin.w[0] - (m[0] * dpr - cv.width / 2) / (V.s * dpr); V.cy = pin.w[1] + (m[1] * dpr - cv.height / 2) / (V.s * dpr); mv = true; scheduleAplDraw(); return; }
   if (pan) { const dx = r[0] - pan.x, dy = r[1] - pan.y; if (Math.abs(dx) + Math.abs(dy) > (e.pointerType === "touch" ? 8 : 4)) mv = true; if (mv) { V.cx = pan.cx - dx / V.s; V.cy = pan.cy + dy / V.s; scheduleAplDraw(); } } });
@@ -18880,7 +19000,12 @@ function snap(sx, sy) { const g = geomNow(); let best = null, bd = 16 * 16;
   return best; }
 function onLine(sx, sy, P) { for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length]; const ax = X(a[0]) / dpr, ay = Y(a[1]) / dpr, bx = X(b[0]) / dpr, by = Y(b[1]) / dpr, vx = bx - ax, vy = by - ay, L = vx * vx + vy * vy; if (!L) continue;
     const t = Math.max(0, Math.min(1, ((sx - ax) * vx + (sy - ay) * vy) / L)); if (Math.hypot(ax + t * vx - sx, ay + t * vy - sy) < 12) return true; } return false; }
-const upA = e => { const was = ptr.has(e.pointerId); ptr.delete(e.pointerId); if (ptr.size < 2) pin = null; if (DRG && !ptr.size) { if (DRG.sx != null) ifzDragGit(DRG.sx, DRG.sy); ifzDragBit(); return; } if (!was || ptr.size) return; pan = null; if (mv) return; if(MOD==="kam"&&KMODE){kmTap(e);return;}if(listPicker){listPicker.pick(WX(e.offsetX),WY(e.offsetY));return;} { const t = Date.now(), q = [e.offsetX, e.offsetY]; if (window.__dtA && t - __dtA.t < 380 && Math.hypot(q[0] - __dtA.q[0], q[1] - __dtA.q[1]) < 30) { window.__dtA = null; fitA(); return; } window.__dtA = { t, q }; }
+const upA = e => { const was = ptr.has(e.pointerId); ptr.delete(e.pointerId); if (ptr.size < 2) pin = null; if (DRG && !ptr.size) { if (DRG.sx != null) ifzDragGit(DRG.sx, DRG.sy); ifzDragBit(); return; } if (!was || ptr.size) return; pan = null; if (mv) return;
+  if (MOD === "ifz" && IFZ_ROAD_PICK.active) {
+    ifzPickPoint([WX(e.offsetX), WY(e.offsetY)], e.pointerType === "touch");
+    return;
+  }
+  if(MOD==="kam"&&KMODE){kmTap(e);return;}if(listPicker){listPicker.pick(WX(e.offsetX),WY(e.offsetY));return;} { const t = Date.now(), q = [e.offsetX, e.offsetY]; if (window.__dtA && t - __dtA.t < 380 && Math.hypot(q[0] - __dtA.q[0], q[1] - __dtA.q[1]) < 30) { window.__dtA = null; fitA(); return; } window.__dtA = { t, q }; }
   if (MODEA === "ciz") { const sp = snap(e.offsetX, e.offsetY); if (!sp) { $("aDrawTxt").textContent = "Boşluk tutulmaz — bir noktaya ya da çizgiye dokun"; return; } DR.push(sp); drawA(); $("aDrawTxt").textContent = `${DR.length} nokta tutuldu — parsel sınırının üstünden başla, sınırda bitir`; return; }
   if (MODEA === "pick") { // V7.1.15.31: interior OR boundary hit, prefer smallest actual parcel
     const x = WX(e.offsetX), y = WY(e.offsetY);
@@ -18939,7 +19064,11 @@ $("iGo2").addEventListener("click", () => $("iGo").click());
 $("iRoadOpenTop").addEventListener("click",()=>{const d=$("iRoadDetails");if(d){d.open=true;d.scrollIntoView({block:"nearest",behavior:"smooth"});}}); $("iClr2").addEventListener("click", () => $("iClr").click()); $("iPdf2").addEventListener("click", () => $("aoI").click());
 $("aPick").addEventListener("click", e => { MODEA = MODEA === "pick" ? null : "pick"; e.target.classList.toggle("on", MODEA === "pick");
    if(MODEA==="pick"){$("aCoord").textContent="Parsel seçimi: sınırına veya içine tıklayın · ESC ile iptal";fitA(true);} });
-cv.addEventListener("keydown",e=>{if(e.key==="Escape"&&MODEA==="pick"){MODEA=null;$("aPick").classList.remove("on");}});
+cv.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  if (MOD === "ifz" && IFZ_ROAD_PICK.active) $("iRoadMark").click();
+  else if (MODEA === "pick") { MODEA = null; $("aPick").classList.remove("on"); }
+});
 cv.tabIndex=0;
 // bölme çizgisi çizme çubuğu
 $("aplBox").insertAdjacentHTML("beforeend", `<div class="drawbar" id="aDraw" hidden><b id="aDrawTxt">Bölme çizgisi</b><span style="flex:1"></span><button type="button" id="aDrU">Geri al</button><button type="button" class="primary" id="aDrOk">Böl</button><button type="button" id="aDrX">İptal</button></div>`);
