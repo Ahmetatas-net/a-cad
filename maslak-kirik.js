@@ -71,12 +71,23 @@ const MaslakKirik = (() => {
     return found;
   }
 
-  function choose(segments, toPaper, first, last) {
+  function choose(segments, toPaper, first, last, measureStep = 0, roles) {
     const profiles = segments.map(paths), candidates = [];
     for (const [slot, collection] of profiles.entries()) {
       for (const p of collection) {
-        for (const [i, score] of corners(p, slot === 2 || slot === 3, slot >= 4)) {
+        for (const [i, score] of corners(p, roles ? roles[slot].project : slot === 2 || slot === 3, roles ? roles[slot].strip : slot >= 4)) {
           candidates.push({x:p[i][0], z:p[i][1], slot, score});
+        }
+      }
+    }
+    if (measureStep > 0) {
+      const bounds = profiles[0] || [];
+      const step = Math.max(measureStep, (bounds.at(-1)?.at(-1)?.[0] - bounds[0]?.[0]?.[0]) / 4000 || 0);
+      for (const path of bounds) {
+        for (let n = Math.ceil(path[0][0]/step); n*step < path.at(-1)[0]-epsilon; n++) {
+          const x = n*step;
+          const z = level(path,x);
+          if (z !== null) candidates.push({x,z,slot:0,score:1});
         }
       }
     }
