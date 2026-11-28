@@ -2082,9 +2082,23 @@ body.kub-focus.kub-tools-open #v-plan #kubPlanTools{top:var(--plan-tools-top,66p
   </section>
   <!-- CAD ÇİZİM -->
   <section id="v-cad" class="view" hidden style="flex-direction:column;gap:10px">
-    <div class="cadnav" id="cadNav"><button data-m="ciz" class="on">Çiz</button><button data-m="duz">Düzenle</button><button data-m="alan">▱ Alan İşlemleri</button><button data-m="det">Detaylar</button><button data-m="mim">Mimari oturt</button><button data-m="hes">Hesap</button><button data-m="olc">Ölç</button><button data-m="gor">Seç / Görünüm</button><button data-m="tab">Tabakalar</button><button data-m="dos">Dosya</button><button data-m="yaz">Yazdır</button><button data-m="arz">⛰ Arazi</button><button data-m="ucg">◬ Üçgen</button><button data-m="hhz">🗺 Halihazır</button><button data-m="yar">Yardım</button></div>
+    <div class="cadnav" id="cadNav"><button data-m="ciz" class="on">Çiz</button><button data-m="duz">Düzenle</button><button data-m="dik">⊥ Dik İşlemler</button><button data-m="alan">▱ Alan İşlemleri</button><button data-m="det">Detaylar</button><button data-m="mim">Mimari oturt</button><button data-m="hes">Hesap</button><button data-m="olc">Ölç</button><button data-m="gor">Seç / Görünüm</button><button data-m="tab">Tabakalar</button><button data-m="dos">Dosya</button><button data-m="yaz">Yazdır</button><button data-m="arz">⛰ Arazi</button><button data-m="ucg">◬ Üçgen</button><button data-m="hhz">🗺 Halihazır</button><button data-m="yar">Yardım</button></div>
     <div id="cadTools" class="cadbar">
       <div class="grp" data-g="ciz" data-cap="Çizim"><button data-c="CIZGI" data-n="Çizgi">╱ Çizgi <kbd>L</kbd></button><button data-c="CIZGITIPI" data-n="Çizgi tipi">┅ Çizgi tipi <kbd>LT</kbd></button><button data-c="CCIZGI" data-n="Çoklu çizgi">⌇ Çoklu <kbd>PL</kbd></button></div>
+      <div class="grp" data-g="dik" data-cap="Eksen">
+        <button type="button" data-c="DIKEKSEN" data-n="Dik eksen" title="Bir çizgiye dokun veya iki nokta göster">⊥ Eksen seç</button>
+        <button type="button" data-c="DUNYAEKSENI" title="Orto ve dik işlemlerde dünya Y/X eksenlerini kullan">Dünya eksenleri</button>
+        <span id="cadAxisLabel" class="note" role="status">Y/X</span>
+      </div>
+      <div class="grp" data-g="dik" data-cap="Dik işlemler">
+        <button type="button" data-c="DIKCIZ" data-n="Dik çiz">⊥ Dik Çizim</button>
+        <button type="button" data-c="DIKOFSET" data-n="Ötele (paralel)">∥ Dik Ofset</button>
+        <button type="button" data-c="DIKTASI" data-n="Dik kaydır">↕ Dik Kaydır</button>
+        <button type="button" data-c="DIKHIZALA" data-n="Dik hizala">∟ Dik Hizala</button>
+        <button type="button" data-c="DIKAYNA" data-n="Dik aynala">⇋ Dik Aynala</button>
+        <button type="button" data-c="DIKDONDUR" data-n="Dik döndür">↺ Sola 90°</button>
+        <button type="button" data-c="DIKDONDURSAG" data-n="Sağa 90° döndür">↻ Sağa 90°</button>
+      </div>
       <div class="grp" data-g="duz" data-cap="Sorgu"><button data-c="SORGU" data-n="Sorgula">🔍 Sorgula <kbd>SO</kbd></button><button data-c="UCSORGU" data-n="Üçgen sorgula">△ Üçgen sorgula <kbd>USOR</kbd></button><button data-c="TOPLUSORGU" data-n="Toplu sorgu">▤ Toplu sorgu / değiştir <kbd>TS</kbd></button><button data-c="BULDEGISTIR" data-n="Bul / Değiştir">⇄ Bul / Değiştir <kbd>BD</kbd></button><button data-c="KOORDINAT" data-n="Koordinat">⌖ XYZ sor <kbd>ID</kbd></button><button data-c="XYZYAZ" data-n="XYZ yaz">xyz XYZ yaz <kbd>XYZ</kbd></button><button data-c="MESAFE" data-n="Mesafe">↔ Mesafe <kbd>DI</kbd></button><button data-c="SIL" data-n="Sil" class="dangerb">✕ Sil <kbd>E</kbd></button></div>
       <div class="grp" data-g="alan" data-cap="Alan İşlemleri · sıralı komutlar">
 <button data-c="ALAN" data-n="Alan Çevir" title="Köşelere dokunarak kapalı alan çiz ve adlandır">1 · Alan Çevir</button>
@@ -2171,7 +2185,7 @@ body.kub-focus.kub-tools-open #v-plan #kubPlanTools{top:var(--plan-tools-top,66p
     </div>
     <div class="cadstat"><strong id="cadCursor77" style="font:600 12px monospace;white-space:pre">Y —   X —   Z —</strong><span id="cadMsg" class="note"></span><span style="flex:1"></span>
       <span id="cadSnaps" class="row" style="gap:8px">Yakala: <label><input type="checkbox" data-s="end">Uç</label><label><input type="checkbox" data-s="mid">Orta</label><label><input type="checkbox" data-s="int">Kesişim</label><label><input type="checkbox" data-s="per">Dik</label><label><input type="checkbox" data-s="cen">Merkez</label><label><input type="checkbox" data-s="nod">Nokta</label><label><input type="checkbox" data-s="nea">Üzerinde</label></span>
-      <span class="row masaonly" style="gap:3px;align-items:center"><button type="button" data-dar="sol" title="Tabaka panelini gizle / göster">◧ Tabaka</button><button type="button" data-dar="ust" title="Araç şeridini gizle / göster">▭ Şerit</button><button type="button" data-dar="sag" title="Sağ paneli gizle / göster">◨ Panel</button><button type="button" data-dar="tam" title="Tam ekran çizim (F11 gibi): bütün panelleri gizle / göster">⛶ Tam ekran</button><button type="button" id="cadGrid" title="Izgara (kareli zemin)">▦ Izgara</button><button type="button" id="cadTema" title="Koyu / açık menü">◐ Tema</button><button type="button" id="cadYum" class="tg" title="Parlak, göz yoran saf renkleri ekran rengine uygun yumuşak tonlarla gösterir (çizimdeki renkler değişmez)">🎨 Yumuşak renk</button></span><span class="row" style="gap:3px;align-items:center" title="Ekran rengi">Ekran: <button type="button" data-bgc="#000000" title="Siyah" style="width:22px;height:22px;padding:0;border-radius:5px;background:#000000;border:1px solid #889"></button><button type="button" data-bgc="#252b33" title="Göz dostu (koyu mavi-gri)" style="width:22px;height:22px;padding:0;border-radius:5px;background:#252b33;border:1px solid #889"></button><button type="button" data-bgc="#1c2127" title="Koyu" style="width:22px;height:22px;padding:0;border-radius:5px;background:#1c2127;border:1px solid #889"></button><button type="button" data-bgc="#5b6168" title="Gri" style="width:22px;height:22px;padding:0;border-radius:5px;background:#5b6168;border:1px solid #889"></button><button type="button" data-bgc="#f3ecd9" title="Bej" style="width:22px;height:22px;padding:0;border-radius:5px;background:#f3ecd9;border:1px solid #889"></button><button type="button" data-bgc="#ffffff" aria-label="Bembeyaz çizim zemini" title="Bembeyaz çizim zemini" style="width:22px;height:22px;padding:0;border-radius:5px;background:#fff!important;opacity:1!important;filter:none!important;box-shadow:none!important;border:1px solid #8294a1;color-scheme:only light"></button></span><button id="cadOrtho" type="button">Orto <kbd>F8</kbd></button><button id="cadGrad" type="button">Açı: grad</button></div>
+      <span class="row masaonly" style="gap:3px;align-items:center"><button type="button" data-dar="sol" title="Tabaka panelini gizle / göster">◧ Tabaka</button><button type="button" data-dar="ust" title="Araç şeridini gizle / göster">▭ Şerit</button><button type="button" data-dar="sag" title="Sağ paneli gizle / göster">◨ Panel</button><button type="button" data-dar="tam" title="Tam ekran çizim (F11 gibi): bütün panelleri gizle / göster">⛶ Tam ekran</button><button type="button" id="cadGrid" title="Izgara (kareli zemin)">▦ Izgara</button><button type="button" id="cadTema" title="Koyu / açık menü">◐ Tema</button><button type="button" id="cadYum" class="tg" title="Parlak, göz yoran saf renkleri ekran rengine uygun yumuşak tonlarla gösterir (çizimdeki renkler değişmez)">🎨 Yumuşak renk</button></span><span class="row" style="gap:3px;align-items:center" title="Ekran rengi">Ekran: <button type="button" data-bgc="#000000" title="Siyah" style="width:22px;height:22px;padding:0;border-radius:5px;background:#000000;border:1px solid #889"></button><button type="button" data-bgc="#252b33" title="Göz dostu (koyu mavi-gri)" style="width:22px;height:22px;padding:0;border-radius:5px;background:#252b33;border:1px solid #889"></button><button type="button" data-bgc="#1c2127" title="Koyu" style="width:22px;height:22px;padding:0;border-radius:5px;background:#1c2127;border:1px solid #889"></button><button type="button" data-bgc="#5b6168" title="Gri" style="width:22px;height:22px;padding:0;border-radius:5px;background:#5b6168;border:1px solid #889"></button><button type="button" data-bgc="#f3ecd9" title="Bej" style="width:22px;height:22px;padding:0;border-radius:5px;background:#f3ecd9;border:1px solid #889"></button><button type="button" data-bgc="#ffffff" aria-label="Bembeyaz çizim zemini" title="Bembeyaz çizim zemini" style="width:22px;height:22px;padding:0;border-radius:5px;background:#fff!important;opacity:1!important;filter:none!important;box-shadow:none!important;border:1px solid #8294a1;color-scheme:only light"></button></span><button id="cadOrtho" type="button" aria-pressed="false" title="Çizgiyi ve taşıma yönünü seçili eksene paralel veya dik tut">Orto <kbd>F8</kbd></button><button id="cadGrad" type="button">Açı: grad</button></div>
     <div class="card" data-g="dos">
       <h2>Dosya</h2><div id="cadDwgStatus" class="note" role="status" aria-live="polite">V98 · Kaynak DWG/NCZ/DXF birebir koruma + desteklenen geometri geri-okuma kontrolü. DWG cihazda yazılır; NCZ özel kayıtları native kopyada kaybolabilir, kaynak korunur.</div>
       <div class="grid">
@@ -24377,7 +24391,9 @@ function cadSelectAllFiltered(){if(cadSelectionType==="triangle"){for(const f of
 
 let OFD = 0; let cmd = null, last = null, ortho = false, grad = true, hover = null, snapMk = null, winSel = false, rub = null;
 const SN = { end: true, mid: true, int: true, cen: true, nod: true, per: true, nea: false };
-let RUNKEY = null, CXL = false; const XFK = new Set(["TASI", "KOPYALA", "DONDUR", "OLCEKLE", "AYNA"]);
+let RUNKEY = null, CXL = false; const XFK = new Set(["TASI", "KOPYALA", "DONDUR", "OLCEKLE", "AYNA", "DIKTASI", "DIKHIZALA", "DIKAYNA", "DIKEKSEN"]);
+const cadAxes = new WeakMap();
+let cadAxis = null;
 const cv = $("cadCv"); let cx = cv.getContext("2d"); /* cx: üst katman çizilirken geçici olarak üst tuvalin bağlamına döner */
 let CAD_RENDER_SCALE = (() => { try { const v=Number(localStorage.getItem('acad-render-scale')); return [1,1.25,1.5,2].includes(v)?v:window.ACAD_DISPLAY.defaultScale(); } catch(e){return 1.25;} })();
 window.ACAD_RENDER_QUALITY = {
@@ -25289,6 +25305,17 @@ function ovHazir() { if (!OV) { OV = document.createElement("canvas"); OV.id = "
 function ustler(D, W, H) { ovHazir(); const g = cx; ovx.setTransform(1, 0, 0, 1, 0, 0); ovx.clearRect(0, 0, OV.width, OV.height); cx = ovx; try { ustler0(D, W, H); } finally { cx = g; } }
 function ustler0(D, W, H) {
   // lastik çizgi
+  if (cadAxis) {
+    cx.save();
+    cx.strokeStyle = "#32afd9";
+    cx.lineWidth = 1.5 * D;
+    cx.setLineDash([6 * D, 4 * D]);
+    cx.beginPath();
+    cx.moveTo(X(cadAxis.a[0]), Y(cadAxis.a[1]));
+    cx.lineTo(X(cadAxis.b[0]), Y(cadAxis.b[1]));
+    cx.stroke();
+    cx.restore();
+  }
   if (rub && last && hover) { cx.strokeStyle = "#ffd800"; cx.lineWidth = 1 * D; cx.setLineDash([4 * D, 4 * D]); cx.beginPath(); cx.moveTo(X(last[0]), Y(last[1])); cx.lineTo(X(hover[0]), Y(hover[1])); cx.stroke(); cx.setLineDash([]); }
   drawAnn(D); try { araCiz(D); } catch (e) {} try { peCiz(D); } catch (e) {} try { if (MIM_ADAY) MIM_ADAY.forEach((c, i) => { const P = c.o.c.e.pts; cx.save(); cx.strokeStyle = '#ff9a3c'; cx.lineWidth = 3 * D; cx.setLineDash([10 * D, 6 * D]); cx.beginPath(); P.forEach((q, k) => k ? cx.lineTo(X(q[0]), Y(q[1])) : cx.moveTo(X(q[0]), Y(q[1]))); cx.closePath(); cx.fillStyle = 'rgba(255,154,60,.14)'; cx.fill(); cx.stroke(); cx.setLineDash([]); const x = X((c.bb[0] + c.bb[2]) / 2), y = Y((c.bb[1] + c.bb[3]) / 2); cx.fillStyle = '#ff9a3c'; cx.beginPath(); cx.arc(x, y, 16 * D, 0, 7); cx.fill(); cx.fillStyle = '#000'; cx.font = `bold ${16 * D}px Arial`; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText(String(i + 1), x, y); cx.restore(); }); } catch (e) {} if (cmd && cmd.prev) cmd.prev(cx, X, Y, D); if (cmd && cmd.live && hover) cmd.live(cx, X, Y, D);
   if (winBox) { const [a, b] = winBox; cx.strokeStyle = b[0] >= a[0] ? "#36c3ff" : "#40e040"; cx.fillStyle = b[0] >= a[0] ? "rgba(54,195,255,.12)" : "rgba(64,224,64,.12)"; cx.lineWidth = 1 * D; if (b[0] < a[0]) cx.setLineDash([5 * D, 4 * D]); cx.fillRect(a[0] * D, a[1] * D, (b[0] - a[0]) * D, (b[1] - a[1]) * D); cx.strokeRect(a[0] * D, a[1] * D, (b[0] - a[0]) * D, (b[1] - a[1]) * D); cx.setLineDash([]); }
@@ -25323,7 +25350,34 @@ function findSnap(sx, sy) { const p = [WX(sx), WY(sy)], r = 14 / V.s; const cand
   if (cmd && cmd.tut) { const G_ = [cmd.up, cmd.pts].filter(q => q && q.length); for (const P of G_) { for (const q of P) put(q, "end", 0); for (let i = 0; i + 1 < P.length; i++) segs.push([P[i], P[i + 1]]); } }
   if (!best && (SN.nea || (cmd && cmd.tut))) for (const s of segs) { const [d, q] = segD(p, s[0], s[1]); if (d * V.s < 10) put(q, "nea", 2); }
   return best; }
-function pickPt(sx, sy) { if (cmd && cmd.raw) { snapMk = null; return [WX(sx), WY(sy)]; } /* yön/yan seçiminde yakalama yok: dokunulan yer olduğu gibi */ const sn = findSnap(sx, sy); let p = sn ? sn.p.slice(0, 2) : [WX(sx), WY(sy)]; if (!sn && ortho && last) { const dx = p[0] - last[0], dy = p[1] - last[1]; p = Math.abs(dx) > Math.abs(dy) ? [p[0], last[1]] : [last[0], p[1]]; } snapMk = sn; return p; }
+function cadAxisProjection(origin, point, axis) {
+  const d = (point[0] - origin[0]) * axis[0] + (point[1] - origin[1]) * axis[1];
+  return [origin[0] + d * axis[0], origin[1] + d * axis[1]];
+}
+function cadDikDistance(text) {
+  const value = String(text).trim();
+  // Y,X written as two large projected coordinates remains a point input.
+  if (/^[+-]?\d{5,},\d{5,}$/.test(value) || !/^[+-]?(?:\d+(?:[.,]\d+)?|[.,]\d+)$/.test(value)) return NaN;
+  return Number(value.replace(",", "."));
+}
+function cadNormal(u = cadAxis?.u || [1, 0]) {
+  return [-u[1], u[0]];
+}
+function cadConstrainPoint(point, snapped) {
+  if (cmd?.pointAxis && last) return cadAxisProjection(last, point, cmd.pointAxis);
+  if (snapped || !ortho || !last || cmd?.noOrtho || cmd?.raw) return point;
+  const u = cadAxis?.u || [1, 0], n = cadNormal(u);
+  const along = cadAxisProjection(last, point, u), across = cadAxisProjection(last, point, n);
+  return dist(point, along) <= dist(point, across) ? along : across;
+}
+function pickPt(sx, sy) {
+  if (cmd?.raw) { snapMk = null; return [WX(sx), WY(sy)]; }
+  const snap = findSnap(sx, sy);
+  const raw = snap ? snap.p.slice(0, 2) : [WX(sx), WY(sy)];
+  const point = cadConstrainPoint(raw, !!snap);
+  snapMk = snap && dist(raw, point) <= 1e-7 ? snap : null;
+  return point;
+}
 /* V7.1.15.49: Nokta işaretine tıklandığında nokta; yazının gövdesine tıklandığında
  * yazı; çizgiye tıklandığında çizgi seçilir. Alt+tık = üst üste nesneleri sırala.
  * Mesafe toleransı yalnız ekran pikselidir; Y/X/Z hesapları aynıdır.
@@ -25414,7 +25468,8 @@ let PEND = null; // seçim bekleyen komut
 const needSel = n => { if (sel.size) return true; const k = Object.keys(CMDS).find(k => CMDS[k].label === n) || null; PEND = n;
   cmd = { name: n + " · seç", pick: true, win(){prompt_(`${n}: ${sel.size} nesne seçildi · Tamam`);}, ent(e) { if (sel.has(e.id)) sel.delete(e.id); else sel.add(e.id); prompt_(`${n}: ${sel.size} nesne seçildi — dokunmaya devam et, bitince ✓ Tamam`); ctxBar(); draw(); }, done() { const c = PEND; cmd = null; PEND = null; if (!sel.size) return idle(); const f = CMDS[LABEL[c]]; f && f(); markTools(); ctxBar(); draw(); } };
   prompt_(`${n}: nesnelere dokunarak seç (Pencere de kullanılabilir), bitince ✓ Tamam`); ctxBar(); return false; };
-const LABEL = { "Taşı": "TASI", "Kopyala": "KOPYALA", "Döndür": "DONDUR", "Ölçekle": "OLCEKLE", "Ayna": "AYNA", "Sil": "SIL", "Patlat": "PATLAT", "Birleştir": "BIRLESTIR", "Tabakaya taşı": null };
+const LABEL = { "Taşı": "TASI", "Kopyala": "KOPYALA", "Döndür": "DONDUR", "Ölçekle": "OLCEKLE", "Ayna": "AYNA", "Dik aynala": "DIKAYNA", "Dik kaydır": "DIKTASI", "Dik hizala": "DIKHIZALA",
+  "Dik döndür": "DIKDONDUR", "Sağa 90° döndür": "DIKDONDURSAG", "Sil": "SIL", "Patlat": "PATLAT", "Birleştir": "BIRLESTIR", "Tabakaya taşı": null };
 const selEnts = () => ents.filter(e => sel.has(e.id));
 /* V7.1.02 — CAD yüzey sorgulama. Kübaj hesabına / veri modeline müdahale edilmez. */
 function cadTriangleAt(q) {
@@ -26497,15 +26552,11 @@ const CMDS = {
       val(t){const v=Number(String(t).trim().replace(",","."));if(!this.b||!Number.isFinite(v)||v<=0)return false;this.go(this.r?v/this.r:v);return true;},
       prev(g,X_,Y_,D){if(this.b&&this.r&&hover){const k=dist(this.b,hover)/this.r;if(k>0)ghost(cadScaleTransform(this.b,k),D);}},
       go(k){if(!Number.isFinite(k)||k<=0)return say("Pozitif ölçek katsayısı gir",true);snap0();const f=cadScaleTransform(this.b,k);selEnts().forEach(e=>xf(e,f));IDX=null;persist();say(`Ölçeklendi: ×${k.toFixed(4)} · Geri al: U`);idle();}};prompt_("Ölçekle: baz noktası");},
-  AYNA: () => {if(!needSel("Ayna"))return;
-    cmd={name:"Ayna",pt(p){if(!this.a){this.a=p;last=p;rub=true;prompt_("Ayna çizgisinin ikinci noktası");}else{if(dist(this.a,p)<1e-8)return say("Ayna ekseni için farklı iki nokta seç",true);this.b=p;rub=false;this.ask={ph:"E: kaynak sil / H: koru",w:140,chips:["H","E"]};prompt_("Kaynak korunsun mu? H=koru, E=sil");}},
-      val(t){if(!this.b||!/^[eh]$/i.test(t.trim()))return false;this.go(/^e/i.test(t));return true;},done(){if(this.b)this.go(false);else idle();},
-      prev(g,X_,Y_,D){const p=this.b||hover;if(this.a&&p&&dist(this.a,p)>1e-8)ghost(cadMirrorTransform(this.a,p),D);},
-      go(del){const f=cadMirrorTransform(this.a,this.b);if(!f)return;const src=selEnts();snap0();const nw=src.map(e=>{const c=clone(e);xf(c,f);return c;});if(del)ents=ents.filter(e=>!sel.has(e.id));sel.clear();nw.forEach(e=>sel.add(cadAddTransformed(e).id));IDX=null;persist();say("Ayna tamamlandı · Geri al: U");idle();}};prompt_("Ayna: eksenin ilk noktası");},
+  AYNA: () => cadMirrorCommand(),
   OTELE: () => {
     const chosen=selEnts().filter(e=>e.t==="line"||e.t==="pline");
     cmd={name:"Ötele (paralel)",d:OFD,e:chosen.length===1?chosen[0]:null,raw:true,ask:{ph:"Mesafe (m)",w:90,chips:[.1,.5,1,5]},
-      val(t){const v=Number(String(t).trim().replace(",","."));if(!Number.isFinite(v)||v<=0)return false;this.d=OFD=v;this.ask=null;prompt_(this.e?"Ötele: hangi yana?":`Mesafe ${v} m — çizgiye dokun`);return true;},
+      val(t){const v=cadDikDistance(t);if(!Number.isFinite(v)||v<=0)return false;this.d=OFD=v;this.ask=null;prompt_(this.e?"Ötele: hangi yana?":`Mesafe ${v} m — çizgiye dokun`);return true;},
       ent(e){if(!(e.t==="line"||e.t==="pline"))return say("Çizgi veya çoklu doğru seç",true);this.e=e;if(!this.d){prompt_("Öteleme mesafesini gir");return;}this.ask=null;prompt_("Ötele: hangi yana? O tarafa dokun");},
       side(p){let best=null;for(const [a,b] of segsOf(this.e)){if(dist(a,b)<1e-8)continue;const d=segD(p,a,b)[0];if(!best||d<best.d)best={d,a,b};}if(!best)return 0;const {a,b}=best;return Math.sign((b[0]-a[0])*(p[1]-a[1])-(b[1]-a[1])*(p[0]-a[0]))||1;},
       prev(g,X_,Y_,D){if(!this.e||!this.d||!hover)return;try{const points=cadOffsetGeometry(this.e,this.d*this.side(hover));g.save();g.strokeStyle="#36c3ff";g.setLineDash([5*D,3*D]);g.beginPath();points.forEach((q,i)=>i?g.lineTo(X_(q[0]),Y_(q[1])):g.moveTo(X_(q[0]),Y_(q[1])));if(this.e.closed)g.closePath();g.stroke();g.restore();}catch(_){}},
@@ -27476,9 +27527,35 @@ function arzDock(e) {
 function cadRotateTransform(b,th){const c=Math.cos(th),s=Math.sin(th),f=p=>[b[0]+(p[0]-b[0])*c-(p[1]-b[1])*s,b[1]+(p[0]-b[0])*s+(p[1]-b[1])*c];f.rot=th;return f;}
 function cadScaleTransform(b,k){const f=p=>[b[0]+(p[0]-b[0])*k,b[1]+(p[1]-b[1])*k];f.k=k;return f;}
 function cadMirrorTransform(a,b){const dx=b[0]-a[0],dy=b[1]-a[1],ll=dx*dx+dy*dy;if(ll<1e-16)return null;const f=p=>{const t=((p[0]-a[0])*dx+(p[1]-a[1])*dy)/ll;return [2*(a[0]+t*dx)-p[0],2*(a[1]+t*dy)-p[1]];};f.mirror=Math.atan2(dy,dx);return f;}
-function xform(name,copy){cmd={name,baseDefault:true,
-  prev(g,X_,Y_,D){if(this.b&&hover){const d=[hover[0]-this.b[0],hover[1]-this.b[1]];ghost(q=>[q[0]+d[0],q[1]+d[1]],D);}},
-  pt(p){if(!this.b){this.b=p;last=p;rub=true;this.ask={ph:"@ΔY,ΔX veya hedef",w:160};prompt_(`${name}: hedef noktası ya da @ΔY,ΔX / @mesafe<semt${copy?" · çoklu kopya, Esc bitir":""}`);return;}
+function cadMirrorCommand(axis = null) {
+    const name = axis ? "Dik aynala" : "Ayna";
+    if (!needSel(name)) return;
+    cmd={name,pt(p){
+        if (!this.a) {
+          this.a = p;
+          if (!axis) { last = p; rub = true; prompt_("Ayna çizgisinin ikinci noktası"); return; }
+          p = [p[0] + axis[0], p[1] + axis[1]];
+        }
+        if (dist(this.a,p) < 1e-8) return say("Ayna ekseni için farklı iki nokta seç",true);
+        this.b=p;rub=false;this.ask={ph:"H: koru / E: kaynak sil",w:150,chips:["H","E"]};
+        prompt_("Ayna kopyası hazır. H = kaynağı koru, E = kaynağı sil. Enter = koru.");
+      },
+      val(t){if(!this.b||!/^[eh]$/i.test(t.trim()))return false;this.go(/^e/i.test(t));return true;},done(){if(this.b)this.go(false);else idle();},
+      prev(g,X_,Y_,D){const p=this.b||hover;if(this.a&&p&&dist(this.a,p)>1e-8)ghost(cadMirrorTransform(this.a,p),D);},
+      go(del){const f=cadMirrorTransform(this.a,this.b);if(!f)return;const src=selEnts();snap0();const nw=src.map(e=>{const c=clone(e);xf(c,f);return c;});if(del)ents=ents.filter(e=>!sel.has(e.id));sel.clear();nw.forEach(e=>sel.add(cadAddTransformed(e).id));IDX=null;persist();say("Ayna tamamlandı · Geri al: U");idle();}};prompt_(axis ? "Dik aynala: ayna ekseninin geçeceği noktayı göster" : "Ayna: eksenin ilk noktası");
+}
+function xform(name,copy,axis=null){cmd={name,baseDefault:true,
+  noOrtho: !!axis,
+  val(text) {
+    if (!axis || !this.b) return false;
+    const length = cadDikDistance(text);
+    if (!Number.isFinite(length)) return false;
+    this.pt([this.b[0] + length * axis[0], this.b[1] + length * axis[1]]);
+    return true;
+  },
+  prev(g,X_,Y_,D){if(this.b&&hover){const p=axis ? cadAxisProjection(this.b,hover,axis) : hover;const d=[p[0]-this.b[0],p[1]-this.b[1]];ghost(q=>[q[0]+d[0],q[1]+d[1]],D);}},
+  pt(p){if(!this.b){this.b=p;last=p;rub=true;this.pointAxis=axis;this.ask={ph:axis?"Dik mesafe (m)":"@ΔY,ΔX veya hedef",w:160,num:!!axis};prompt_(axis?"Dik kaydır: hedef yönü göster veya işaretli metre gir":`${name}: hedef noktası ya da @ΔY,ΔX / @mesafe<semt${copy?" · çoklu kopya, Esc bitir":""}`);return;}
+    if (axis) p = cadAxisProjection(this.b,p,axis);
     const d=[p[0]-this.b[0],p[1]-this.b[1]];if(!d.every(Number.isFinite)||Math.hypot(...d)<1e-12)return say("Baz noktasından farklı hedef göster",true);const f=q=>[q[0]+d[0],q[1]+d[1]];snap0();const src=selEnts();if(copy){for(const e of src){const c=clone(e);xf(c,f);cadAddTransformed(c);}say(`${src.length} nesne kopyalandı · ΔY ${fmt(d[0])}, ΔX ${fmt(d[1])}`);IDX=null;persist();draw();}else{src.forEach(e=>xf(e,f));IDX=null;persist();say(`Taşındı · ΔY ${fmt(d[0])}, ΔX ${fmt(d[1])}`);idle();}}};prompt_(`${name}: baz noktası`);}
 function cadOffsetGeometry(e,d){const P=e.pts;if(!Number.isFinite(d)||d===0||!P?.length||P.length<2)throw Error("Geçerli öteleme mesafesi ve çizgi gerekli");for(const [a,b] of segsOf(e))if(dist(a,b)<1e-9)throw Error("Çizgide sıfır uzunluklu kenar var");const q=offsetPts(P,!!e.closed,d);if(q.length!==P.length||q.some((p,i)=>!p.every(Number.isFinite)||dist(p,P[i])>Math.abs(d)*1000))throw Error("Öteleme bu köşelerde güvenli oluşturulamadı");if(e.closed&&q.length>=3&&window.ACAD_AREA_EDIT?.validate)window.ACAD_AREA_EDIT.validate(q);return q.map((p,i)=>[p[0],p[1],...P[i].slice(2)]);}
 function offsetPts(P, closed, d) { const n = P.length, L = []; for (let i = 0; i + 1 < n + (closed ? 1 : 0); i++) { const a = P[i], b = P[(i + 1) % n], l = dist(a, b) || 1, nx = -(b[1] - a[1]) / l * d, ny = (b[0] - a[0]) / l * d; L.push([[a[0] + nx, a[1] + ny], [b[0] + nx, b[1] + ny]]); }
@@ -27567,7 +27644,11 @@ function cadSelectRegion(P,crossing){
 function run(name, rep) { const k = name.toUpperCase().replace(/[İI]/g, "I").replace(/Ç/g, "C").replace(/Ğ/g, "G").replace(/Ö/g, "O").replace(/Ş/g, "S").replace(/Ü/g, "U").replace(/\s+/g, ""); const c = CMDS[k] || CMDS[ALIAS[k]];
   if (!c) return false; if(c!==CMDS.BULDEGISTIR && c!==CMDS.GERI && c!==CMDS.ILERI) $("cadBulkFind")?.remove(); if (c!==CMDS.TOPLUSORGU && c!==CMDS.GERI && c!==CMDS.ILERI && c!==CMDS.PENCERE && c!==CMDS.ALANLASEC && c!==selectByPolygon && c!==CMDS.HEPSI) { const panel=$("tsDeg"); if(panel){panel.hidden=true;panel.style.display="none";} } if(c===selectByPolygon){selectByPolygon();return true;} if (AREA_EDIT_SESSION && k!=="ALANDUZELT") document.getElementById("acadAreaEdit")?.__close?.(); if (!rep && !/^(TUMU|GERI|ILERI|ARZTIN|ARZEGRI|PENCERE)$/.test(CMDS[k] ? k : ALIAS[k])) ANN = []; if (cmd && cmd.done && cmd.pts && cmd.pts.length >= 2 && !cmd.pick && cmd.name !== "Pencere") { const old = cmd; RUNKEY = null; CXL = true; try { old.done(); } catch (e) { } CXL = false; } cmd = null; rub = null; last = null; RUNKEY = null; if (!rep) { const bx = document.getElementById("arzBox"); if (bx) bx.hidden = true; /* yeni komut: bilgi kutusu tuvali örtmesin (bilgi durum satırında kalır) */ } c(); if (cmd && (cmd.pt || cmd.ent || cmd.pick)) RUNKEY = CMDS[k] ? k : ALIAS[k]; markTools(); draw(); return true; }
 /* komut tekrarı: biten çizim/düzenleme komutu, başka komut seçilene ya da Esc / boşta sağ tuşa basılana kadar kendiliğinden yeniden başlar */
-function markTools() { setTimeout(ctxBar, 0); pvMark(); document.querySelectorAll("#cadTools [data-c]").forEach(b => /^NG(SYM|AD|KOT)$/.test(b.dataset.c) || b.classList.toggle("on", (cmd && b.dataset.n === cmd.name) || (b.dataset.c === "PENCERE" && winSel) || (b.dataset.c === "ARZTIN" && !!CARZ.tin) || (b.dataset.c === "ARZEGRI" && !!CARZ.egri))); $("cadOrtho").classList.toggle("on", ortho); $("cadGrad").textContent = grad ? "Açı: grad" : "Açı: derece"; }
+function markTools() { setTimeout(ctxBar, 0); pvMark(); document.querySelectorAll("#cadTools [data-c]").forEach(b => /^NG(SYM|AD|KOT)$/.test(b.dataset.c) || b.classList.toggle("on", (cmd && b.dataset.n === cmd.name) || (b.dataset.c === "PENCERE" && winSel) || (b.dataset.c === "ARZTIN" && !!CARZ.tin) || (b.dataset.c === "ARZEGRI" && !!CARZ.egri))); $("cadOrtho").classList.toggle("on", ortho); $("cadOrtho").setAttribute("aria-pressed",String(ortho));
+  const axisLabel = $("cadAxisLabel");
+  const axisText = cadAxis ? `Eksen ${(Math.atan2(cadAxis.u[1],cadAxis.u[0])*180/Math.PI).toFixed(2)}°` : "Y/X";
+  if (axisLabel.textContent !== axisText) axisLabel.textContent=axisText;
+  $("cadGrad").textContent = grad ? "Açı: grad" : "Açı: derece"; }
 $("cadIn").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); enter(); } else if (e.key === "Escape") { esc(); } });
 $("cadGo").addEventListener("click", enter);
 function enter() { const t = $("cadIn").value.trim(); $("cadIn").value = "";
@@ -27577,13 +27658,17 @@ function enter() { const t = $("cadIn").value.trim(); $("cadIn").value = "";
 let lastCmd = null; function esc() { if (AREA_EDIT_SESSION) document.getElementById("acadAreaEdit")?.__close?.(); CXL = true; RUNKEY = null; setTimeout(() => { CXL = false; }, 0); if (cmd && cmd.done && /^(Çoklu çizgi|Alan)$/.test(cmd.name)) { cmd.done(); return; } if (cmd) { cmd.cancel?.();idle(); say("İptal"); return; } if (ANN.length) { annClr(); return; } if (sel.size||cadSelectedFaces().size) { cadClearSelection(); idle(); } if (winSel) { winSel = false; markTools(); } }
 document.querySelectorAll("#cadTools [data-c]").forEach(b => b.addEventListener("click", () => { const c = b.dataset.c; if (c === "ESC") return esc(); if (c === "ENTER") return enter(); if (run(c)) lastCmd = c; }));
 $("cadEsc").addEventListener("click", () => esc());
-$("cadOrtho").addEventListener("click", () => { ortho = !ortho; markTools(); say(ortho ? "Orto açık (yatay/dikey)" : "Orto kapalı"); });
+function toggleCadOrtho() {
+  ortho = !ortho; markTools();
+  say(ortho ? (cadAxis ? "Orto açık · seçili eksene paralel ve dik" : "Orto açık · dünya Y/X eksenleri") : "Orto kapalı");
+}
+$("cadOrtho").addEventListener("click", toggleCadOrtho);
 $("cadGrad").addEventListener("click", () => { grad = !grad; markTools(); persist(); });
 document.querySelectorAll("#cadSnaps input").forEach(i => { i.checked = !!SN[i.dataset.s]; i.addEventListener("change", () => SN[i.dataset.s] = i.checked); });
 document.addEventListener("keydown", e => { if ($("v-cad").hidden||document.getElementById("acadBackupTools")?.matches(":popover-open")) return; const tg = e.target.tagName; if (tg === "INPUT" && e.target.id !== "cadIn" || tg === "TEXTAREA" || tg === "SELECT") return;
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); undo(); return; } if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") { e.preventDefault(); redo(); return; }
   const inEmpty = e.target.id !== "cadIn" || !e.target.value; if (inEmpty && (e.ctrlKey || e.metaKey) && (e.key === "a" || e.key === "A")) { e.preventDefault(); run("HEPSI"); return; } if (inEmpty && (e.key === "Delete" || e.key === "Backspace") && !cmd && sel.size) { e.preventDefault(); run("SIL"); return; }
-  if (e.key === "Delete" && !cmd) { run("SIL"); return; } if (e.key === "Escape") { esc(); return; } if (e.key === "Enter" && e.target.id !== "cadIn" && !(tg === "BUTTON" || tg === "A")) { e.preventDefault(); enter(); return; } /* Enter: komut satırına odak gerekmeden bitir / son komutu tekrarla */ if (e.key === "F8") { e.preventDefault(); ortho = !ortho; markTools(); return; }
+  if (e.key === "Delete" && !cmd) { run("SIL"); return; } if (e.key === "Escape") { esc(); return; } if (e.key === "Enter" && e.target.id !== "cadIn" && !(tg === "BUTTON" || tg === "A")) { e.preventDefault(); enter(); return; } /* Enter: komut satırına odak gerekmeden bitir / son komutu tekrarla */ if (e.key === "F8") { e.preventDefault(); toggleCadOrtho(); return; }
   if (e.target.id !== "cadIn" && e.key.length === 1 && !e.ctrlKey && !e.metaKey) $("cadIn").focus(); });
 
 /* ---------- dokunma / fare ---------- */
@@ -27632,7 +27717,7 @@ const cadRasterForSave=()=>CAD_RASTER?{...CAD_RASTER,pts:(CAD_RASTER.pts||[null,
 
 const cadSheetData=()=>({ents,lays,cur,nid,V:{...V},faces:FACES,doc:CDOC,dirty:DIRTY,raster:cadRasterForSave()});
 const cadSheetSnap=()=>clone(cadSheetData());
-const cadSheetRestore = (d,owned=false) => { const panel=$("tsDeg");if(panel){panel.hidden=true;panel.style.display="none";}$("cadBulkFind")?.remove();
+const cadSheetRestore = (d,owned=false) => { cadAxis = cadAxes.get(cadSheets[cadSheetIndex]) || null; markTools(); const panel=$("tsDeg");if(panel){panel.hidden=true;panel.style.display="none";}$("cadBulkFind")?.remove();
  const snapshot=owned?d:clone(d);
  ({ents,lays,cur,nid}=snapshot);
  Object.assign(V,snapshot.V);
@@ -28478,7 +28563,12 @@ let CAD_XY_FRAME=0,CAD_XY_PENDING='';
 function cadSetPointerLabel(v){CAD_XY_PENDING=v;if(CAD_XY_FRAME)return;
   CAD_XY_FRAME=requestAnimationFrame(()=>{CAD_XY_FRAME=0;const el=$('cadXY');if(el&&el.textContent!==CAD_XY_PENDING)el.textContent=CAD_XY_PENDING;});}
 cv.addEventListener("pointermove", e => { const r = [e.offsetX, e.offsetY];
-  if (e.pointerType === "mouse" && !ptr.size) { const sn = ((cmd && cmd.pt) || grip) ? findSnap(r[0], r[1]) : null; snapMk = (cmd && cmd.pt) || grip ? sn : null; hover = sn ? sn.p : [WX(r[0]), WY(r[1])]; if (ortho && last && !sn) { const dx = hover[0] - last[0], dy = hover[1] - last[1]; hover = Math.abs(dx) > Math.abs(dy) ? [hover[0], last[1]] : [last[0], hover[1]]; } }
+  if (!ptr.size) {
+    const snap = e.pointerType === "mouse" && !cmd?.raw && (cmd?.pt || grip) ? findSnap(r[0], r[1]) : null;
+    const point = snap?.p || [WX(r[0]), WY(r[1])];
+    hover = cadConstrainPoint(point, !!snap);
+    snapMk = snap && dist(point, hover) <= 1e-7 ? snap : null;
+  }
   const wx = WX(r[0]), wy = WY(r[1]); cadSetPointerLabel(`Y ${wx.toFixed(3)}  X ${wy.toFixed(3)}${last ? `  ·  ${dist(last, [wx, wy]).toFixed(3)} m` : ""}`);
   if (!ptr.has(e.pointerId)) {
     if ((cmd || grip) && !ACAD_HOVER_FRAME) ACAD_HOVER_FRAME=requestAnimationFrame(()=>{ACAD_HOVER_FRAME=0;ustHizli();});
@@ -30871,16 +30961,128 @@ CMDS.IKINOKTA = () => { if (!needSel("2 noktadan dönüşüm")) return; cmd = { 
     val(t) { if (this.P.length < 4) return false; this.go(!/^h/i.test(String(t).trim())); return true; }, done() { if (this.P.length >= 4) this.go(true); else idle(); },
     go(olcekli) { const [s1, d1, s2, d2] = this.P; const k = olcekli ? this.k : 1, th = Math.atan2(d2[1] - d1[1], d2[0] - d1[0]) - Math.atan2(s2[1] - s1[1], s2[0] - s1[0]); const c = Math.cos(th) * k, s_ = Math.sin(th) * k; const f = benz(k, th, d1[0] - (s1[0] * c - s1[1] * s_), d1[1] - (s1[0] * s_ + s1[1] * c)); snap0(); selEnts().forEach(e => xf(e, f)); IDX = null; BBK.m = new Map(); const q2 = f(s2), kal = dist(q2, d2); const dn = ((th * 200 / Math.PI) % 400 + 400) % 400; persist(); say(`Dönüşüm uygulandı: ${sel.size} nesne · ölçek ×${(+k.toPrecision(7))} · dönüklük ${dn.toFixed(4)}ᵍ${olcekli ? "" : ` · 2. noktada kalan fark ${(kal * 100).toFixed(1)} cm`} — Geri al: U`); idle(); zoomAll(); } };
   prompt_("2 noktadan dönüşüm: 1. kaynak nokta (çizimdeki yeri)"); };
-CMDS.DIKCIZ = () => { const segOf = (e, p) => { const P = e.t === "line" ? e.pts : e.t === "pline" ? (e.closed ? e.pts.concat([e.pts[0]]) : e.pts) : null; if (!P) return null; let b = null, bd = 1 / 0; for (let i = 0; i + 1 < P.length; i++) { const a = P[i], c = P[i + 1], dx = c[0] - a[0], dy = c[1] - a[1], L2 = dx * dx + dy * dy; if (!L2) continue; let t = ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L2; t = Math.max(0, Math.min(1, t)); const d = Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy); if (d < bd) { bd = d; b = [a, c]; } } return b; };
-  cmd = { name: "Dik çiz", rcExit: true, ask: { ph: "uzunluk m", num: true, w: 80 }, ent(e, p) { if (!this.sg) { const g = segOf(e, p); if (!g) return say("Bir çizgiye dokun", true); this.sg = g; const L = dist(g[0], g[1]); this.n = [-(g[1][1] - g[0][1]) / L, (g[1][0] - g[0][0]) / L]; prompt_("Dik çiz: dikin başlayacağı nokta (çizgi üstünde ya da dışında)"); return; } this.pt(pickPt(X(p[0]) / dpr, Y(p[1]) / dpr)); },
-    pt(p) { if (!this.sg) return say("Önce dik çizilecek çizgiye dokun", true); if (!this.a) { this.a = p; last = p; rub = true; prompt_("Dik çiz: uzunluğu yaz ya da yönü/ucu göster"); return; } const t = (p[0] - this.a[0]) * this.n[0] + (p[1] - this.a[1]) * this.n[1]; this.ciz(t); },
-    val(t) { const v = +String(t).replace(",", "."); if (!this.a || !isFinite(v) || !v) return false; const yon = hover ? Math.sign((hover[0] - this.a[0]) * this.n[0] + (hover[1] - this.a[1]) * this.n[1]) || 1 : 1; this.ciz(v * yon); return true; },
-    ciz(t) { if (Math.abs(t) < 1e-6) return; snap0(); const a = this.a, b = [a[0] + this.n[0] * t, a[1] + this.n[1] * t, 0]; add(Object.assign({ t: "line", pts: [[a[0], a[1], a[2] || 0], b] }, ltA())); persist(); say(`Dik çizildi: ${fmt(Math.abs(t))} m`); this.a = null; last = null; rub = null; draw(); prompt_("Dik çiz: aynı çizgiye yeni dik için başlangıç noktası · Esc bitir"); } };
-  prompt_("Dik çiz: dik çizilecek çizgiye dokun"); };
-CMDS.DIKDONDUR = () => { if (!needSel("Dik döndür")) return; cmd = { name: "Dik döndür", rcExit: true, pt(p) { this.b = p; this.don(1); }, val(t) { if (!this.b) return false; const v = String(t).trim().toLowerCase(); this.don(/^s|^-/.test(v) ? -1 : /^180|^2/.test(v) ? 2 : 1); return true; },
-    don(n) { const b = this.b, th = n * Math.PI / 2, c = Math.cos(th), s_ = Math.sin(th); const f = benz(1, th, b[0] - (b[0] * c - b[1] * s_), b[1] - (b[0] * s_ + b[1] * c)); f.k = 0; snap0(); selEnts().forEach(e => xf(e, f)); IDX = null; BBK.m = new Map(); persist(); draw(); say(`${n === 2 ? "180°" : n < 0 ? "Sağa 90°" : "Sola 90°"} döndürüldü`); prompt_("Dik döndür: Enter = bir daha sola 90° · S = sağa 90° · 180 · başka baz noktası göster · Esc bitir"); }, done() { if (this.b) this.don(1); else idle(); } };
-  prompt_("Dik döndür: baz noktası göster (seçililer sola 90° döner)"); };
-Object.assign(ALIAS, { MIM: "MIMARIEKLE", "2N": "IKINOKTA", IKN: "IKINOKTA", DC: "DIKCIZ", DD: "DIKDONDUR" });
+function cadAxisFrom(a,b) {
+  const length = dist(a,b);
+  if (!Number.isFinite(length) || length < 1e-8) return null;
+  return {a:a.slice(0,2),b:b.slice(0,2),u:[(b[0]-a[0])/length,(b[1]-a[1])/length]};
+}
+function cadNearestAxis(e,p) {
+  if (e.t !== "line" && e.t !== "pline") return null;
+  let closest = null, best = Infinity;
+  for (const [a,b] of segsOf(e)) {
+    if (dist(a,b) < 1e-8) continue;
+    const d = segD(p,a,b)[0];
+    if (d < best) { best = d; closest = [a,b]; }
+  }
+  return closest;
+}
+function cadSetAxis(axis) {
+  cadAxis = axis;
+  const sheet = cadSheets[cadSheetIndex];
+  if (sheet) cadAxes.set(sheet,axis);
+  if (axis) ortho = true;
+  idle();
+  say(axis ? "Çizim ekseni seçildi. Orto, paralel ve dik yönleri bu eksenden alıyor." : "Dünya Y/X eksenleri seçildi.");
+}
+CMDS.DIKEKSEN = () => {
+  cmd = { name:"Dik eksen", noOrtho:true, rcExit:true,
+    onlyPoint() { return !!this.first; },
+    ent(e,p) {
+      const line = cadNearestAxis(e,p);
+      if (line) cadSetAxis(cadAxisFrom(line[0],line[1]));
+      else this.pt(p);
+    },
+    pt(p) {
+      if (!this.first) { this.first = last = p; rub = true; prompt_("Eksenin ikinci noktasını göster."); return; }
+      const axis = cadAxisFrom(this.first,p);
+      if (axis) cadSetAxis(axis);
+      else say("Eksen için farklı iki nokta seç.",true);
+    }
+  };
+  prompt_("Eksen seç: çizgiye dokun veya iki nokta göster.");
+};
+CMDS.DUNYAEKSENI = () => cadSetAxis(null);
+CMDS.DIKCIZ = () => {
+  cmd = { name: "Dik çiz", rcExit: true, noOrtho:true, n:cadAxis ? cadNormal() : null,
+    onlyPoint() { return !!this.n; },
+    ent(e,p) {
+      const line = cadNearestAxis(e,p);
+      if (!line) return say("Çizgi veya çoklu çizgi seç.", true);
+      this.n = cadNormal(cadAxisFrom(line[0],line[1]).u);
+      prompt_("Dik çiz: başlayacağı noktayı göster.");
+    },
+    pt(p) { if (!this.n) return say("Önce dik çizilecek çizgiye dokun", true); if (!this.a) { this.a = p; last = p; this.pointAxis = this.n; rub = true; this.ask = { ph:"Uzunluk (m)",num:true,w:115 }; prompt_("Dik çiz: uzunluğu yaz ya da yönü/ucu göster"); return; } const t = (p[0] - this.a[0]) * this.n[0] + (p[1] - this.a[1]) * this.n[1]; this.ciz(t); },
+    val(t) { const v = cadDikDistance(t); if (!this.a || !Number.isFinite(v) || !v) return false; const yon = hover ? Math.sign((hover[0] - this.a[0]) * this.n[0] + (hover[1] - this.a[1]) * this.n[1]) || 1 : 1; this.ciz(v * yon); return true; },
+    ciz(t) { if (Math.abs(t) < 1e-6) return; snap0(); const a = this.a, b = [a[0] + this.n[0] * t, a[1] + this.n[1] * t, 0]; add(Object.assign({ t: "line", pts: [[a[0], a[1], a[2] || 0], b] }, ltA())); persist(); say(`Dik çizildi: ${fmt(Math.abs(t))} m`); this.a = null; this.ask = null; this.pointAxis = null; last = null; rub = null; draw(); prompt_("Dik çiz: aynı çizgiye yeni dik için başlangıç noktası · Esc bitir"); } };
+  prompt_(cadAxis ? "Dik çiz: seçili eksene dik çizginin başlangıç noktası" : "Dik çiz: referans çizgiye dokun"); };
+CMDS.DIKTASI = () => { if (needSel("Dik kaydır")) xform("Dik kaydır",false,cadNormal()); };
+CMDS.DIKAYNA = () => cadMirrorCommand(cadNormal());
+CMDS.DIKHIZALA = () => {
+  if (!needSel("Dik hizala")) return;
+  const normal = cadNormal();
+  function angle(a,b) {
+    const u = cadAxisFrom(a,b).u;
+    const sign = u[0]*normal[0] + u[1]*normal[1] < 0 ? -1 : 1;
+    return Math.atan2(sign*normal[1],sign*normal[0]) - Math.atan2(u[1],u[0]);
+  }
+  cmd = { name:"Dik hizala",noOrtho:true,baseDefault:true,
+    pt(p) {
+      if (!this.b) { this.b = p; last = p; rub = true; prompt_("Dik hizala: nesnenin yönünü belirleyen ikinci noktayı göster."); return; }
+      if (this.turn == null) {
+        if (!cadAxisFrom(this.b,p)) return say("Farklı bir ikinci nokta göster.",true);
+        this.turn = angle(this.b,p);
+        last = null; rub = false;
+        prompt_("Dik hizala: taşıyacağın baz noktasının hedefini göster.");
+        return;
+      }
+      const transform = this.transform(p);
+      snap0();
+      selEnts().forEach(e=>xf(e,transform));
+      IDX = null; BBK.m = new Map(); persist(); idle();
+      say("Seçili nesneler eksene dik hizalandı. Uzunluklar ve kotlar korundu.");
+    },
+    transform(target) {
+      const rotate = cadRotateTransform(this.b,this.turn);
+      const dx = target[0]-this.b[0], dy = target[1]-this.b[1];
+      const f = p => { const q = rotate(p); return [q[0]+dx,q[1]+dy]; };
+      f.rot = this.turn;
+      return f;
+    },
+    prev(g,X_,Y_,D) { if (this.turn != null && hover) ghost(this.transform(hover),D); }
+  };
+  prompt_("Dik hizala: nesne üzerinde baz noktası göster.");
+};
+function cadQuarterTurn(direction) {
+  const name = direction > 0 ? "Dik döndür" : "Sağa 90° döndür";
+  if (!needSel(name)) return;
+  cmd = { name, rcExit:true, pt(p) { this.b=p; this.apply(direction); },
+    val(text) {
+      if (!this.b) return false;
+      const t = text.trim().toLocaleLowerCase("tr");
+      const n = /^(s|sağ|-90°?)$/.test(t) ? -1 : /^(180°?|2)$/.test(t) ? 2 : /^(sol|90°?|1)$/.test(t) ? 1 : 0;
+      if (!n) return false;
+      this.apply(n); return true;
+    },
+    apply(n) {
+      const b = this.b;
+      const f = p => {
+        const x=p[0]-b[0], y=p[1]-b[1];
+        if (n === 2) return [b[0]-x,b[1]-y];
+        return [b[0]-n*y,b[1]+n*x];
+      };
+      f.rot = n*Math.PI/2;
+      snap0(); selEnts().forEach(e=>xf(e,f)); IDX=null; BBK.m=new Map(); persist(); draw();
+      say(`${n===2?"180°":n<0?"Sağa 90°":"Sola 90°"} döndürüldü · Geri al: U`);
+      this.ask = {ph:"Sol, S veya 180",w:130,chips:["Sol","S",180]};
+      prompt_("Dik döndür: aynı bazdan Sol / S (sağ) / 180° · Yeni baz için çizime dokun.");
+    },
+    done() { if (this.b) this.apply(direction); else idle(); }
+  };
+  prompt_(direction > 0 ? "Sola 90°: dönme merkezini göster." : "Sağa 90°: dönme merkezini göster.");
+}
+CMDS.DIKDONDUR = () => cadQuarterTurn(1);
+CMDS.DIKDONDURSAG = () => cadQuarterTurn(-1);
+Object.assign(ALIAS, {MIM:"MIMARIEKLE","2N":"IKINOKTA",IKN:"IKINOKTA",DC:"DIKCIZ",DD:"DIKDONDUR",DIKOFSET:"OTELE"});
 
 /* ===== Kazı planı (palyeli / kademeli): taban + çalışma payı + şev + palye, araziyle kesişim (sıfır hattı), 3B yüzey, hacim ===== */
 let KZSON = null, V3K = null;
