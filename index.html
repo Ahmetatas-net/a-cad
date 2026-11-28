@@ -1521,7 +1521,47 @@ body.kub-focus.kub-tools-open #v-plan #kubPlanTools{top:var(--plan-tools-top,66p
 #v-apl[data-active-module=kam]:not(.kgm-advanced)>#kgmWorkspace{display:block!important;width:100%;min-width:0;border-radius:12px;overflow:hidden}
 #kgmWorkspace,#kgmBack{scroll-margin-top:65px}#kgmProjectFrame{display:block;width:100%;border:0}#kgmProjectFrame:not([height]){height:360px}
 #v-apl[data-active-module=kam].kgm-advanced>#kgmBack{display:block;grid-column:1/-1;width:fit-content}
-</style><link rel="stylesheet" href="kgm-arayuz.css"></head>
+</style><link rel="stylesheet" href="kgm-arayuz.css">
+<style id="enkesit-panel-duzeni">
+#acadEnkesitBox .ec-actions{display:grid;grid-template-columns:1.2fr .85fr 1fr;gap:6px;margin:0 0 6px}
+#acadEnkesitBox .ec-actions button{min-width:0;min-height:42px}
+#acadEnkesitBox .ec-actions [data-ec=pdf]:disabled{background:transparent;border-color:var(--ecborder);color:var(--ecmuted)}
+#acadEnkesitBox .ec-head{background:#203447}
+#acadEnkesitBox .ec-body{scrollbar-width:thin}
+#acadEnkesitBox #ecStatus{border:0;padding:4px 0 9px;color:#c2d4de}
+#acadEnkesitBox #ecStatus.ec-error{color:#ffb8ae}
+#acadEnkesitBox summary,.kub-section-preview summary{cursor:pointer}
+#acadEnkesitBox .ec-input-head,#acadEnkesitBox .ec-export-tools,#acadEnkesitBox .ec-file-group,#acadEnkesitBox .ec-editor,#acadEnkesitBox .ec-compare-controls{background:transparent;border:0;border-radius:0;border-top:1px solid var(--ecborder);padding:0;margin:0}
+#acadEnkesitBox .ec-body summary{font-size:14px;font-weight:600;line-height:1.35;color:var(--ectxt);padding:11px 2px}
+#acadEnkesitBox .ec-input-head{list-style-position:outside;margin-left:1em}
+#acadEnkesitBox .ec-help{font-size:12px;color:var(--ecmuted)}
+#acadEnkesitBox .ec-file-actions{display:flex;flex-wrap:wrap;gap:7px;padding:4px 0 12px}
+#acadEnkesitBox .ec-export-tools>.kesit-sablon{border:0;border-top:1px solid var(--ecborder);border-radius:0;margin:0;padding:0}
+#acadEnkesitBox .ec-axis{display:grid;grid-template-columns:minmax(0,1fr);justify-content:stretch;gap:6px;background:transparent;border:0;padding:0}
+#acadEnkesitBox .ec-axis>div:first-child{display:flex;align-items:baseline;gap:9px}
+#acadEnkesitBox .ec-axis .ec-buttons{display:flex;max-width:100%;justify-content:flex-start;gap:6px}
+#acadEnkesitBox #ecChart{background:#f1f5f6;border-color:#84969c;padding:4px}
+#acadEnkesitBox .ec-legend{color:#243d48;background:#f1f5f6}
+#acadEnkesitBox #ecChart .ec-no-data{color:#445d67}
+#acadEnkesitBox:has(#ecResults:not([hidden])) [data-ec=generate]{background:#344b60;border-color:#536b7d}
+#acadEnkesitBox .ec-export-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+#acadEnkesitBox .ec-export-fields select{width:100%;min-width:0}
+#acadEnkesitBox .ec-check{flex-direction:row;justify-content:flex-start}
+#acadEnkesitBox .ec-summary{background:transparent;padding:4px 0;color:var(--ecmuted)}
+#acadEnkesitBox :is(button,summary,select,input):focus-visible,.kub-section-preview :is(button,summary,select):focus-visible{outline:2px solid #47afcf;outline-offset:2px}
+.kub-section-preview .kub-preview-nav{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:5px;margin-bottom:8px}
+.kub-section-preview .kub-preview-nav span{justify-self:center;text-align:center;font-variant-numeric:tabular-nums}
+.kub-section-preview #sheetPrev{display:block;width:100%;height:auto}
+.kub-section-preview .kub-preview-download,.kub-section-preview .kub-preview-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0}
+.kub-section-preview .kub-preview-options,.kub-section-preview .kesit-sablon{padding:0;margin:0;border:0;border-radius:0;border-top:1px solid #78899760}
+.kub-section-preview summary{padding:10px 1px;font-weight:600}
+@media(max-width:600px){
+ #acadEnkesitBox .ec-inputs{padding:3px 0}
+ #acadEnkesitBox .ec-actions button,#acadEnkesitBox .ec-pager button{min-height:44px}
+ #acadEnkesitBox .ec-compare-picks{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+}
+</style>
+</head>
 <body>
 <script>/* ===== A-CAD kullanıcı girişi (telefon uygulaması sürümü) =====
    Hesaplar sunucudaki users.json dosyasındadır. Dosya yöneticinin özel anahtarıyla imzalıdır;
@@ -2032,11 +2072,14 @@ body.kub-focus.kub-tools-open #v-plan #kubPlanTools{top:var(--plan-tools-top,66p
     </div>
     <div class="card kub-section-preview">
       <h2>Kesit önizleme</h2>
-      <details class="kesit-sablon"><summary>Pafta şablonu ve imzalar</summary><p>Buradaki değişiklikler bu projenin tüm enkesitlerine uygulanır.</p><div class="kesit-antet-alanlari" id="kubKesitAntet"></div></details>
-      <div class="row" style="margin-bottom:8px;gap:8px;flex-wrap:wrap;align-items:center;background:#fff7e6;border:1px solid #e8c98a;border-radius:8px;padding:8px"><b>Kesitteki kot yazıları:</b><label style="flex-direction:row;align-items:center;gap:6px"><select id="hKm" style="width:auto"><option value="degisim">Kot değişimi</option><option value="aralik">Sabit aralık</option></select></label><label id="hKsL" style="flex-direction:row;align-items:center;gap:6px">Aralık (m)<input id="hKs" inputmode="decimal" style="width:60px"></label></div>
-      <div class="row" style="margin-bottom:8px"><button id="pv" type="button">‹ Önceki</button><span id="pvTxt" class="pill"></span><button id="nx" type="button">Sonraki ›</button></div>
-      <div class="row" style="margin-bottom:8px"><button id="kubKesitOlc" type="button" aria-pressed="false" disabled>İki nokta ölç · 1/150</button><span id="kubKesitOlcSonuc" role="status"></span></div>
+
+
+      <div class="kub-preview-nav"><button id="pv" type="button">‹ Önceki</button><span id="pvTxt" class="pill"></span><button id="nx" type="button">Sonraki ›</button></div>
+
       <canvas id="sheetPrev" width="1188" height="840"></canvas>
+      <div class="kub-preview-download"><button type="button" id="kubPreviewPdf">Kesitleri PDF al</button><span class="msg" id="kubPreviewPdfMsg" role="status"></span></div>
+      <details class="kub-preview-options"><summary>Kot yazıları ve ölçüm</summary><div class="kub-preview-controls"><label>Kot yazıları <select id="hKm" style="width:auto"><option value="degisim">Kot değişimi</option><option value="aralik">Sabit aralık</option></select></label><label id="hKsL" style="flex-direction:row;align-items:center;gap:6px">Aralık (m)<input id="hKs" inputmode="decimal" style="width:60px"></label><div class="row" style="margin-bottom:8px"><button id="kubKesitOlc" type="button" aria-pressed="false" disabled>İki nokta ölç · 1/150</button><span id="kubKesitOlcSonuc" role="status"></span></div></div></details>
+      <details class="kesit-sablon"><summary>Pafta şablonu ve imzalar</summary><p>Buradaki değişiklikler bu projenin tüm enkesitlerine uygulanır.</p><div class="kesit-antet-alanlari" id="kubKesitAntet"></div></details>
     </div>
     <div class="card kub-section-list">
       <h2>Kesit listesi</h2>
@@ -13930,25 +13973,32 @@ function buildXlsx() {
 }
 // Sayfa sırası: cetveller önce
 $("oX").addEventListener("click", async () => { if (terrainPending || (!SECS.length && !SD)) { needSecs(); return; } oMsg("Excel hazırlanıyor…"); try { const b = buildXlsx(); await saveFile(fname("xlsx"), b, $("oMsg")); } catch (e) { oMsg("Excel oluşturulamadı: " + e.message, true); } });
-$("oP").addEventListener("click", async () => {
-  if (!needSecs()) return;
+async function kubKesitPdfAl(status){
+  const message=(value,error=false)=>{status.className=error?"msg err":"msg";status.textContent=value;};
+  if(terrainPending || !SECS.length){
+    message(terrainPending?"Enkesitler hesaplanıyor.":"Önce kesitleri hesapla.",!terrainPending);
+    return;
+  }
   const button=$("oP"), sections=SECS, paper=ST.set.kesitKagit==="a3"?"a3":"a4", printScale=ST.set.kesitBaskiOlcek, pages=[];
   const projectSnapshot=JSON.stringify(ST.proj);
   if(button.disabled)return;
   button.disabled=true;
+  $("kubPreviewPdf").disabled=true;
   try {
     for(const [i,section] of sections.entries()){
       if(SECS!==sections || terrainPending) throw Error("Hesap değişti. Yeni sonuç için PDF’yi tekrar al.");
       const page=kubajEnkesitPaftasi(section,paper,printScale);
       if(page)pages.push(page);
-      if(i%8===0){oMsg(`PDF sayfası ${i+1}/${sections.length} hazırlanıyor…`);await new Promise(r=>setTimeout(r,0));}
+      if(i%8===0){message(`PDF sayfası ${i+1}/${sections.length} hazırlanıyor…`);await new Promise(r=>setTimeout(r,0));}
     }
     if(SECS!==sections || terrainPending || projectSnapshot!==JSON.stringify(ST.proj))throw Error("Hesap veya antet değişti. Yeni sonuç için PDF’yi tekrar al.");
     if(!pages.length)throw Error("Yazdırılabilir kesit bulunamadı.");
-    await saveFile(fname("pdf"),window.APLGEO.vectorPdf(pages),$("oMsg"));
-  } catch(e) { oMsg("PDF oluşturulamadı: "+e.message,true); }
-  finally {button.disabled=false;}
-});
+    await saveFile(fname("pdf"),window.APLGEO.vectorPdf(pages),status);
+  } catch(e) { message("PDF oluşturulamadı: "+e.message,true); }
+  finally {button.disabled=false;$("kubPreviewPdf").disabled=false;}
+}
+$("oP").addEventListener("click",()=>kubKesitPdfAl($("oMsg")));
+$("kubPreviewPdf").addEventListener("click",()=>kubKesitPdfAl($("kubPreviewPdfMsg")));
 $("kubCakistirma").addEventListener("click",async()=>{
   if(!needSecs())return;
   const section=SECS[SEL]||SECS[0];
@@ -35030,7 +35080,7 @@ const ACAD_ENKESIT_GEOM = (() => {
 window.ACAD_ENKESIT_GEOM=ACAD_ENKESIT_GEOM;
 
 /* A-CAD V7.1.15.34 — Enkesit Çiz, CAD commands and engineering data preserved. */
-const EC={outputRevision:0,axis:null,axisTransient:false,area:null,mode:'width',sections:[],surfaces:[],page:0,serial:0,busy:false,layers:[],activeLayer:0,editorOpen:true,axisDrawing:false};
+const EC={outputRevision:0,axis:null,axisTransient:false,area:null,mode:'width',sections:[],surfaces:[],page:0,serial:0,busy:false,layers:[],activeLayer:0,axisDrawing:false};
 const EG=window.ACAD_ENKESIT_GEOM;
 const ecEl=id=>document.getElementById(id);
 const ecHtml=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -35045,29 +35095,25 @@ function ecOpen(){
   let b=ecEl('acadEnkesitBox');
   if(!b){
     b=document.createElement('section');b.id='acadEnkesitBox';b.setAttribute('role','dialog');b.setAttribute('aria-label','Enkesit çiz');
-    b.innerHTML=`<header class="ec-head"><div><strong>📐 Enkesit Çiz</strong><small>CAD üçgen yüzeyinden gerçek kotlar</small></div><div class="ec-hbtn"><button type="button" class="ec-axis-ctl" data-ec="undo-point" title="Son eksen noktasını geri al">↶</button><button type="button" class="ec-axis-ctl ec-finish" data-ec="finish" title="Ekseni tamamla">✓ Bitir</button><button type="button" data-ec="mini" aria-label="Küçült">▁</button><button type="button" data-ec="close" aria-label="Kapat">✕</button></div></header>
+    b.innerHTML=`<header class="ec-head"><div><strong>Enkesit Çiz</strong><small>CAD üçgen yüzeyinden gerçek kotlar</small></div><div class="ec-hbtn"><button type="button" class="ec-axis-ctl" data-ec="undo-point" title="Son eksen noktasını geri al">↶</button><button type="button" class="ec-axis-ctl ec-finish" data-ec="finish" title="Ekseni tamamla">✓ Bitir</button><button type="button" data-ec="mini" aria-label="Küçült">▁</button><button type="button" data-ec="close" aria-label="Kapat">✕</button></div></header>
     <div class="ec-body">
-      <details id="ecInputs" open><summary class="ec-input-head">① Eksen · Sağ / sol genişlik · Enkesit aralığı <span>Göster / gizle</span></summary><div class="ec-inputs"><div class="ec-row ec-axis"><div><b>Eksen</b><small id="ecAxisText">Henüz seçilmedi</small></div><div class="ec-buttons"><button type="button" data-ec="poly" class="ec-primary">✎ Eksen çiz</button><button type="button" data-ec="axis">Çizgi seç</button><button type="button" data-ec="two">2 nokta</button></div></div>
+      <div class="ec-row ec-actions"><button type="button" class="ec-primary" data-ec="generate">Enkesitleri çiz</button><button type="button" class="ec-primary" data-ec="pdf" disabled>PDF al</button><button type="button" data-ec="open-json">Proje aç</button></div>
+      <div id="ecStatus" role="status" aria-live="polite">Önce ekseni seç, ardından genişlik veya alan sınırını belirle.</div>
+      <details id="ecInputs" open><summary class="ec-input-head">Eksen ve kesit ölçüleri</summary><div class="ec-inputs"><div class="ec-row ec-axis"><div><b>Eksen</b><small id="ecAxisText">Henüz seçilmedi</small></div><div class="ec-buttons"><button type="button" data-ec="poly" class="ec-primary">Eksen çiz</button><button type="button" data-ec="axis">Çizgi seç</button><button type="button" data-ec="two">2 nokta</button></div></div>
       <div class="ec-row ec-modes"><label><input type="radio" name="ecMode" value="width" checked> Sağ / sol genişlik</label><label><input type="radio" name="ecMode" value="area"> Alan sınırı seç</label></div>
       <div id="ecWidthControls" class="ec-fields"><label>Sol (m)<input id="ecLeft" inputmode="decimal" value="10" autocomplete="off"></label><label>Sağ (m)<input id="ecRight" inputmode="decimal" value="10" autocomplete="off"></label></div>
       <div id="ecAreaControls" class="ec-row" hidden><div><b>Kapalı alan</b><small id="ecAreaText">Bir kapalı alan seç</small></div><button type="button" data-ec="area">Alan seç</button></div>
-      <div class="ec-fields"><label>Enkesit aralığı (m)<input id="ecStep" inputmode="decimal" value="5" autocomplete="off"></label><label>Başlangıç km (m)<input id="ecStart" inputmode="decimal" value="0" autocomplete="off"></label></div><label class="ec-single">Ara kesit kilometreleri (m, başlangıçtan itibaren)<input id="ecExtra" placeholder="Örn. 12.5; 35; 78.4" autocomplete="off"></label><label class="ec-check"><input type="checkbox" id="ecVertices" checked> Eksenin köşe noktalarında da kesit al</label>
-      <div class="ec-note">Eksen çiziminde istediğin sayıda köşe seç; ✓ Bitir veya Enter ile tamamla. Sağ/sol, eksen çizgisinin <b>çizim yönüne</b> göre belirlenir. Alan modunda eksen içinden geçen kapalı alan sınırı kullanılır. Kotlar yalnız mevcut üçgen yüzeylerden okunur.</div>
-      </div></details><div class="ec-row ec-actions"><button type="button" class="ec-primary" data-ec="generate">Enkesitleri çiz</button><button type="button" class="ec-primary" data-ec="pdf" disabled>PDF al</button><select id="ecPaper" aria-label="PDF kâğıdı"><option value="a4">A4 yatay</option><option value="a3">A3 yatay</option></select><select id="ecPrintScale" aria-label="PDF ölçeği"><option value="100">1/100</option><option value="150" selected>1/150 · Paftaya sığdır</option><option value="200">1/200</option><option value="250">1/250</option><option value="300">1/300</option><option value="400">1/400</option><option value="500">1/500</option><option value="750">1/750</option><option value="1000">1/1000</option><option value="1500">1/1500</option><option value="2000">1/2000</option></select><button type="button" data-ec="csv" disabled>CSV al</button><button type="button" data-ec="dxf" disabled>DXF pafta al</button><button type="button" data-ec="overlay" disabled title="Seçili kilometre · koordinatlar ofset ve mutlak kot">Çakıştırma DXF</button><button type="button" data-ec="place" disabled>📌 Ekrana yapıştır</button><button type="button" data-ec="save-json" disabled>💾 Kesit projesi</button><button type="button" data-ec="open-json">📂 Proje aç</button><button type="button" class="ec-primary" data-ec="merge-json" title="Aynı eksenin farklı tarihlerdeki JSON/CSV kesitlerini birleştir">📥 Kesitleri Ekle</button><input id="ecJsonFile" type="file" accept=".json,application/json" hidden></div>
-      <div class="ec-export-tools"><details><summary>③ Çizim / Rapor seçenekleri</summary><div class="ec-export-fields">
-         <label>KM başlangıcı (boş = tümü)<input id="ecKmFrom" placeholder="0+000.00 veya metre" inputmode="text"></label>
-         <label>KM bitişi (boş = tümü)<input id="ecKmTo" placeholder="0+120.00 veya metre" inputmode="text"></label><label>KM katı (boş = hepsi)<input id="ecKmMultiple" placeholder="Örn. 20" inputmode="decimal"></label><label>Yazı hane sayısı<select id="ecLabelDigits"><option value="2">2 hane</option><option value="3" selected>3 hane</option></select></label>
-         <label class="ec-check"><input type="checkbox" id="ecOffsetTags" checked> Mesafe değerlerini çiz</label>
-         <label class="ec-check"><input type="checkbox" id="ecKotTags" checked> Kot tablolarını çiz</label>
-         <label class="ec-check"><input type="checkbox" id="ecShadeAll"> Tüm görünür aşamaları referansa göre tara</label>
-       </div></details><details class="kesit-sablon"><summary>Pafta şablonu ve imzalar</summary><p>Buradaki değişiklikler bu projenin tüm enkesitlerine uygulanır.</p><div class="kesit-antet-alanlari" id="ecAntet"></div></details></div>
-      <div id="ecStatus" role="status" aria-live="polite">Önce ekseni seç, ardından genişlik veya alan sınırını belirle.</div>
+      <div class="ec-fields"><label>Enkesit aralığı (m)<input id="ecStep" inputmode="decimal" value="5" autocomplete="off"></label><label>Başlangıç km (m)<input id="ecStart" inputmode="decimal" value="0" autocomplete="off"></label></div><details class="ec-extra"><summary>Ara kilometre ve köşe noktaları</summary><label class="ec-single">Ara kesit kilometreleri (m, başlangıçtan itibaren)<input id="ecExtra" placeholder="Örn. 12.5; 35; 78.4" autocomplete="off"></label><label class="ec-check"><input type="checkbox" id="ecVertices" checked> Eksenin köşe noktalarında da kesit al</label>
+      <p class="ec-help">Sağ ve sol, eksenin çizim yönüne göredir. Ekseni Bitir veya Enter ile tamamlayabilirsin.</p></details>
+      </div></details>
+
+
       <div id="ecResults" class="ec-results" hidden><div id="ecSummary" class="ec-summary"></div><div class="ec-pager"><button type="button" data-ec="prev">‹ Önceki</button><span id="ecPage"></span><button type="button" data-ec="next">Sonraki ›</button></div><div id="ecChart"></div><details id="ecPaftaGorunum"><summary>Kesit paftası · 1/150</summary><div class="ec-row" style="margin-top:8px"><button id="ecPaftaOlc" type="button" aria-pressed="false" disabled>İki nokta ölç</button><small id="ecPaftaOlcumSonuc" role="status"></small></div><canvas id="ecPaftaKanvas" aria-label="1/150 enkesit paftası"></canvas><div id="ecPaftaDurum" class="ec-note" role="status"></div></details><div id="ecSectionTable"></div>
-       <div class="ec-compare-controls"><b>④ Aşama farkı · kesit alanı</b>
+       <details class="ec-compare-controls"><summary>Aşama farkı ve kesit alanı</summary>
          <div class="ec-compare-picks"><label>Referans / ilk ölçüm<select id="ecBaseLayer"></select></label><label>Karşılaştırılacak aşama<select id="ecCompareLayer"></select></label><button type="button" data-ec="diff-csv">📊 Fark raporu CSV</button></div>
          <div id="ecDiffSummary" role="status" aria-live="polite"></div><small>Üst/alt fark, iki yüzeyin ortak kotlu aralığından hesaplanır. Kesit alanıdır (m²); tek başına kübaj (m³) değildir. Eksik kot bulunan bölüm tahmin edilmez.</small>
-       </div>
-      <details id="ecEditorWrap" class="ec-editor" open><summary>⚙️ Enkesit Editörü · siyah / kırmızı / ara kot ve aşamalar</summary>
+       </details>
+      <details id="ecEditorWrap" class="ec-editor"><summary>Yüzey ve kot düzenleme</summary>
        <div class="ec-stages"><div id="ecLayerList" class="ec-layer-list"></div>
        <div class="ec-stage-actions"><select id="ecSource" aria-label="Aşama için üçgen yüzeyi"></select><button type="button" data-ec="refresh-models">↻ Yüzeyleri yenile</button><button type="button" data-ec="add-stage">+ Güncel yüzeyden aşama ekle</button><button type="button" data-ec="copy-stage">+ Seçili aşamayı kopyala</button></div>
        <div class="ec-stage-actions"><label class="ec-check"><input type="checkbox" id="ecAllPaste"> Bütün kesitleri çizime yerleştir (en fazla 25)</label><span class="ec-note">DXF ve çizime yerleştirme 1/150</span></div>
@@ -35076,8 +35122,25 @@ function ecOpen(){
        <div class="ec-editor-head">Seçili aşamanın bu kilometredeki kotlarını düzenle (yüzey modelini değiştirmez)</div><div id="ecPointTable" class="ec-point-table"></div>
        <div class="ec-stage-actions"><label>Ara mesafe (m)<input id="ecNewOff" placeholder="-5.00" inputmode="decimal"></label><label>Yeni kot (m)<input id="ecNewZ" placeholder="912.350" inputmode="decimal"></label><button type="button" data-ec="add-point">+ Ara kot noktası</button></div>
        </div></details></div>
+      <div class="ec-export-tools"><details><summary>PDF ve ölçü ayarları</summary><div class="ec-export-fields"><label>Kâğıt<select id="ecPaper" aria-label="PDF kâğıdı"><option value="a4">A4 yatay</option><option value="a3">A3 yatay</option></select></label><label>Baskı ölçeği<select id="ecPrintScale" aria-label="PDF ölçeği"><option value="100">1/100</option><option value="150" selected>1/150 · Paftaya sığdır</option><option value="200">1/200</option><option value="250">1/250</option><option value="300">1/300</option><option value="400">1/400</option><option value="500">1/500</option><option value="750">1/750</option><option value="1000">1/1000</option><option value="1500">1/1500</option><option value="2000">1/2000</option></select></label>
+         <label>KM başlangıcı (boş = tümü)<input id="ecKmFrom" placeholder="0+000.00 veya metre" inputmode="text"></label>
+         <label>KM bitişi (boş = tümü)<input id="ecKmTo" placeholder="0+120.00 veya metre" inputmode="text"></label><label>KM katı (boş = hepsi)<input id="ecKmMultiple" placeholder="Örn. 20" inputmode="decimal"></label><label>Yazı hane sayısı<select id="ecLabelDigits"><option value="2">2 hane</option><option value="3" selected>3 hane</option></select></label>
+         <label class="ec-check"><input type="checkbox" id="ecOffsetTags" checked> Mesafe değerlerini çiz</label>
+         <label class="ec-check"><input type="checkbox" id="ecKotTags" checked> Kot tablolarını çiz</label>
+         <label class="ec-check"><input type="checkbox" id="ecShadeAll"> Tüm görünür aşamaları referansa göre tara</label>
+       </div></details><details class="kesit-sablon"><summary>Pafta şablonu ve imzalar</summary><p>Buradaki değişiklikler bu projenin tüm enkesitlerine uygulanır.</p><div class="kesit-antet-alanlari" id="ecAntet"></div></details></div>
+      <details class="ec-file-group"><summary>Proje ve dosya aktarımı</summary><div class="ec-file-actions"><button type="button" class="ec-primary" data-ec="merge-json" title="Aynı eksenin farklı tarihlerdeki JSON/CSV kesitlerini birleştir">Kesitleri ekle</button><button type="button" data-ec="save-json" disabled>Projeyi kaydet</button><button type="button" data-ec="dxf" disabled>DXF pafta al</button><button type="button" data-ec="overlay" disabled title="Seçili kilometre · koordinatlar ofset ve mutlak kot">Çakıştırma DXF</button><button type="button" data-ec="csv" disabled>CSV al</button><button type="button" data-ec="place" disabled>Çizime yerleştir</button><input id="ecJsonFile" type="file" accept=".json,application/json" hidden></div></details>
     </div>`;
     document.body.appendChild(b);
+    if(typeof ResizeObserver==='function'){
+      const chart=ecEl('ecChart');
+      new ResizeObserver(()=>{
+        const svg=chart.querySelector('svg'),width=chart.clientWidth;
+        if(width && svg && EC.sections[EC.page] && svg.viewBox.baseVal.width!==Math.max(290,Math.min(1020,width))){
+          chart.innerHTML=ecSvg(EC.sections[EC.page]);
+        }
+      }).observe(chart);
+    }
     ortakEnkesitOlcumBagla(ecEl("ecPaftaKanvas"),ecEl("ecPaftaOlc"),ecEl("ecPaftaOlcumSonuc"));
     ecEl("ecPaftaGorunum").addEventListener("toggle",ecPaftaOnizleme);
     b.querySelector(".ec-export-tools").addEventListener("change",()=>{EC.outputRevision++;ecPaftaOnizleme();});
@@ -35098,7 +35161,7 @@ function ecOpen(){
     const planLink=document.createElement("button");
     planLink.type="button";
     planLink.textContent="Plan ve Sınır’da aç";
-    b.querySelector(".ec-actions").appendChild(planLink);
+    b.querySelector(".ec-file-actions").appendChild(planLink);
     planLink.addEventListener("click", async () => {
       await window.openKubajPlanSections();
       if (!document.getElementById("v-plan").hidden) ecClose();
@@ -35240,7 +35303,7 @@ async function ecGenerate(){
   ecEl('ecSummary').textContent=`${out.length} kesit · ${valid} kotlu · ${withoutKot} kot verisi yok · ${skipped} alan dışında${failed?' · '+failed+' hesap hatası':''}`;
   document.querySelector('#acadEnkesitBox [data-ec="csv"]').disabled=!valid;
   document.querySelector('#acadEnkesitBox [data-ec="dxf"]').disabled=!valid;for(const a of ['overlay','pdf','place','save-json'])document.querySelector(`#acadEnkesitBox [data-ec="${a}"]`).disabled=!valid;
-  ecStatus(valid?`Kesitler çizildi. ${valid} kesitte gerçek yüzey kotu var. Paftayı incele veya PDF, DXF ve CSV al.`:'Kesit çizgileri hazır ancak yüzey kotu yok; model kapsamını kontrol et.',!valid);
+  ecStatus(valid?`Kesitler çizildi. ${valid} kesitte yüzey kotu var.`:'Kesit çizgileri hazır ancak yüzey kotu yok; model kapsamını kontrol et.',!valid);
   ecPage(0);if(valid)ecEl('ecInputs').open=false;return valid>0;
 }
 function ecPage(i){
@@ -35248,7 +35311,7 @@ function ecPage(i){
   EC.page=Math.max(0,Math.min(EC.sections.length-1,i));
   const s=EC.sections[EC.page];ecEl('ecPage').textContent=`KM ${EG.km(s.station)} · ${EC.page+1}/${EC.sections.length}`;
   ecEl('ecChart').innerHTML=ecSvg(s,EC.surfaces);
-  ecEl('ecSectionTable').innerHTML=`<div class="ec-info">Sol ${s.left.toFixed(2)} m · Sağ ${s.right.toFixed(2)} m · ${s.rows.length} hesap noktası ${s.data?'':'· kot verisi yok'}</div>`;ecRenderEditor();ecUpdateDifference();ecPaftaOnizleme();
+  ecEl('ecSectionTable').innerHTML=`<div class="ec-info">Sol ${s.left.toFixed(2)} m · Sağ ${s.right.toFixed(2)} m${s.rows.length?' · '+s.rows.length+' hesap noktası':''} ${s.data?'':'· kot verisi yok'}</div>`;ecRenderEditor();ecUpdateDifference();ecPaftaOnizleme();
   // Show the matching section as a temporary annotation; do not mutate survey entities.
   ANN=[{t:'hl',e:{t:'line',pts:[[s.a[0],s.a[1],0],[s.b[0],s.b[1],0]]}}];draw();
 }
@@ -35312,31 +35375,29 @@ function ecAllZ(index,showOnly=true){return EC.layers.filter(l=>!showOnly||l.vis
 function ecSvg(section){
   const active=EC.layers.filter(l=>l.visible),zs=ecAllZ(EC.page);
   if(!zs.length)return '<div class="ec-no-data">Görünür kesitlerde kot yok. Yüzey ekle veya aşamaları görünür yap.</div>';
-  const W=1020,H=355,x0=86,x1=988,yt=55,yb=256,span=section.left+section.right||1;
+  const W=Math.max(290,Math.min(1020,ecEl("ecChart").clientWidth||360)),H=280,x0=78,x1=W-28,yt=30,yb=197,span=section.left+section.right||1;
   const x=off=>x0+(off+section.left)/span*(x1-x0);
-  let zmin=Math.min(...zs),zmax=Math.max(...zs);const pad=Math.max(.35,(zmax-zmin)*.16);zmin-=pad;zmax+=pad;
+  let zmin=Infinity,zmax=-Infinity;for(const z of zs){zmin=Math.min(zmin,z);zmax=Math.max(zmax,z);}const pad=Math.max(.35,(zmax-zmin)*.16);zmin-=pad;zmax+=pad;
   const y=z=>yb-(z-zmin)/(zmax-zmin)*(yb-yt);
-  const activeName=EC.layers[EC.activeLayer]?.name||active[0]?.name||'Kesit';
   let out=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="KM ${EG.km(section.station)} çoklu enkesit karşılaştırma">`;
-  out+=`<rect x="0" y="0" width="${W}" height="${H}" rx="12" fill="#182938"/>`;
-  out+=`<text x="${x0}" y="27" fill="#f1f8ff" font-size="19" font-weight="700">KM ${EG.km(section.station)} · ENKESİT</text>`;
-  out+=`<text x="${x1}" y="27" fill="#bbd2e3" text-anchor="end" font-size="13">${active.length} aşama · SOL ${section.left.toFixed(2)} m / SAĞ ${section.right.toFixed(2)} m</text>`;
-  for(let k=0;k<=5;k++){const z=zmin+(zmax-zmin)*k/5,py=y(z);out+=`<line x1="${x0}" y1="${py}" x2="${x1}" y2="${py}" stroke="#334a5f" stroke-dasharray="3 6"/><text x="${x0-8}" y="${py+4}" text-anchor="end" fill="#c2d4e4" font-size="12">${z.toFixed(2)}</text>`;}
-  for(const off of [-section.left,0,section.right]){const xx=x(off);out+=`<line x1="${xx}" y1="${yt}" x2="${xx}" y2="${yb}" stroke="${off===0?'#f4cb78':'#4e647a'}" stroke-dasharray="${off===0?'':'4 5'}"/>`;}
+  out+=`<rect x="0" y="0" width="${W}" height="${H}" rx="12" fill="#f1f5f6"/>`;
+  out+=`<text x="8" y="18" fill="#4a636f" font-size="12">Kot (m)</text>`;
+  for(let k=0;k<=5;k++){const z=zmin+(zmax-zmin)*k/5,py=y(z);out+=`<line x1="${x0}" y1="${py}" x2="${x1}" y2="${py}" stroke="#cbd6d9" stroke-dasharray="3 6"/><text x="${x0-8}" y="${py+4}" text-anchor="end" fill="#435963" font-size="12">${z.toFixed(2)}</text>`;}
+  for(const off of [-section.left,0,section.right]){const xx=x(off);out+=`<line x1="${xx}" y1="${yt}" x2="${xx}" y2="${yb}" stroke="${off===0?'#758a92':'#bdcbd1'}" stroke-dasharray="${off===0?'':'4 5'}"/>`;}
   for(const l of active){const points=ecGetProfile(l,EC.page);let d='',open=false;
     for(const q of points){if(!Number.isFinite(q.z)){open=false;continue;}d+=(open?' L':' M')+`${x(q.off).toFixed(2)} ${y(q.z).toFixed(2)}`;open=true;}
-    if(!d)continue;const stroke=ecHex(l.color);
-    out+=`<path d="${d}" fill="none" stroke="${stroke}" stroke-width="${EC.layers[EC.activeLayer]===l?3.6:2.6}" stroke-linejoin="round" stroke-linecap="round"><title>${ecHtml(l.name)}</title></path>`;
-    if(EC.layers[EC.activeLayer]===l){const visible=points.filter(q=>Number.isFinite(q.z)),stride=Math.max(1,Math.ceil(visible.length/18));visible.forEach((q,i)=>{if(i%stride&&i!==visible.length-1)return;out+=`<circle cx="${x(q.off).toFixed(2)}" cy="${y(q.z).toFixed(2)}" r="3.5" fill="${stroke}"><title>Ofset ${q.off.toFixed(3)} m · Kot ${q.z.toFixed(3)} m</title></circle>`;});}
+    if(!d)continue;const stroke=ortakPaftaProfilRengi(ecHex(l.color));
+    out+=`<path d="${d}" fill="none" stroke="${stroke}" stroke-width="${EC.layers[EC.activeLayer]===l?2.4:1.8}" stroke-linejoin="round" stroke-linecap="round"><title>${ecHtml(l.name)}</title></path>`;
+    if(EC.layers[EC.activeLayer]===l){const visible=points.filter(q=>Number.isFinite(q.z)),stride=Math.max(1,Math.ceil(visible.length/18));visible.forEach((q,i)=>{if(i%stride&&i!==visible.length-1)return;out+=`<circle cx="${x(q.off).toFixed(2)}" cy="${y(q.z).toFixed(2)}" r="2.5" fill="${stroke}"><title>Ofset ${q.off.toFixed(3)} m · Kot ${q.z.toFixed(3)} m</title></circle>`;});}
   }
-  out+=`<rect x="${x0}" y="271" width="${x1-x0}" height="66" rx="5" fill="#20384b"/>`;
-  const primary=EC.layers[EC.activeLayer]||active[0],p=ecGetProfile(primary,EC.page);
+  out+=`<rect x="${x0}" y="211" width="${x1-x0}" height="60" rx="5" fill="#e6edef"/>`;
+  const primary=active.find(l=>l===EC.layers[EC.activeLayer])||active[0],p=ecGetProfile(primary,EC.page);
   const candidates=[-section.left,0,section.right,...p.filter(q=>Number.isFinite(q.z)).map(q=>q.off)];
   const offs=ecThinLabels(candidates,Math.max(.01,span*62/(x1-x0)),14);
-  out+=`<text x="14" y="292" fill="#9bcde8" font-size="12" font-weight="700">MESAFE</text><text x="14" y="324" fill="#9bcde8" font-size="12" font-weight="700">KOT</text>`;
-  for(const off of offs){const xx=x(off),val=ecProfileVal(p,off);out+=`<line x1="${xx}" y1="271" x2="${xx}" y2="337" stroke="#38566b"/><text x="${xx}" y="293" text-anchor="middle" fill="#d9e9f3" font-size="12">${off>0?'+':''}${off.toFixed(2)}</text>`;if(Number.isFinite(val))out+=`<text x="${xx}" y="325" text-anchor="middle" fill="${ecHex(primary.color)}" font-weight="700" font-size="12">${val.toFixed(2)}</text>`;}
-  out+=`<text x="${x0}" y="350" fill="#9eb8cc" font-size="11">SOL (−) · SAĞ (+) · Etiketler seçilidir; tüm kırık noktalar CSV/JSON içinde korunur.</text></svg>`;
-  out+='<div class="ec-legend">'+active.map(l=>`<span><i style="background:${ecHex(l.color)}"></i>${ecHtml(l.name)}${l.edited?' ✎':''}</span>`).join('')+'</div>';
+  out+=`<text x="4" y="233" fill="#3c5866" font-size="12" font-weight="700">Ofset (m)</text><text x="4" y="258" fill="#3c5866" font-size="12" font-weight="700">Kot (m)</text>`;
+  for(const off of offs){const xx=x(off),val=ecProfileVal(p,off);out+=`<line x1="${xx}" y1="211" x2="${xx}" y2="271" stroke="#c4d2d8"/><text x="${xx}" y="233" text-anchor="middle" fill="#233d48" font-size="12">${off>0?'+':''}${off.toFixed(2)}</text>`;if(Number.isFinite(val))out+=`<text x="${xx}" y="258" text-anchor="middle" fill="${ortakPaftaProfilRengi(ecHex(primary.color))}" font-weight="700" font-size="12">${val.toFixed(2)}</text>`;}
+  out+='</svg>';
+  out+='<div class="ec-legend">'+active.map(l=>`<span><i style="background:${ortakPaftaProfilRengi(ecHex(l.color))}"></i>${ecHtml(l.name)}${l.edited?' ✎':''}</span>`).join('')+'</div>';
   return out;
 }
 function ecThinLabels(offsets,spacing=1.2,maximum=70){
@@ -35377,18 +35438,17 @@ function ecWireEditor(b){
     if(t.hasAttribute('data-layer-delete'))ecRemoveLayer(+t.dataset.layerDelete);
     if(t.hasAttribute('data-point-delete'))ecRemovePoint(+t.dataset.pointDelete);
   });
-  b.querySelector('#ecEditorWrap').addEventListener('toggle',e=>EC.editorOpen=e.target.open);
+  b.querySelector('#ecEditorWrap').addEventListener('toggle',e=>{if(e.target.open)ecRenderEditor();});
 }
 function ecRefreshPlot(){EC.outputRevision++;if(!EC.sections.length)return;const s=EC.sections[EC.page];ecEl('ecChart').innerHTML=ecSvg(s);ecRenderEditor();ecUpdateDifference();ecPaftaOnizleme();}
 function ecRenderEditor(){
-  if(!EC.sections.length)return;
+  if(!EC.sections.length || !ecEl('ecEditorWrap').open)return;
   const list=ecEl('ecLayerList');if(!list)return;
   list.innerHTML=EC.layers.map((l,i)=>`<div class="ec-layer-row ${i===EC.activeLayer?'ec-selected':''}"><label title="Düzenlenecek aşama"><input type="radio" name="ecActive" data-layer-active="${i}" ${i===EC.activeLayer?'checked':''}></label><input type="text" data-layer-name="${i}" value="${ecHtml(l.name)}" maxlength="70" title="Kesit adı"><input type="color" data-layer-color="${i}" value="${ecHex(l.color)}" title="Çizgi rengi"><label class="ec-check" title="Göster/gizle"><input type="checkbox" data-layer-visible="${i}" ${l.visible?'checked':''}>Göster</label><span class="ec-origin" title="${ecHtml(l.origin)}">${l.edited?'✎ Düzenlenmiş':'● Kaydedilmiş'}</span><button type="button" data-layer-delete="${i}" title="Aşamayı sil" ${EC.layers.length<=1?'disabled':''}>✕</button></div>`).join('');
   const src=ecEl('ecSource'),models=ecRealModels();const current=src.value;
   src.innerHTML=models.map((s,i)=>`<option value="${i}">${ecHtml(s.ad)}</option>`).join('')||'<option value="">Önce üçgen yüzeyi oluştur</option>';
   if([...src.options].some(o=>o.value===current))src.value=current;
-  ecEl('ecEditorWrap').open=EC.editorOpen;
-  ecRenderPointTable();ecUpdateDifference();
+  ecRenderPointTable();
 }
 function ecRenderPointTable(){
   const box=ecEl('ecPointTable');if(!box)return;
