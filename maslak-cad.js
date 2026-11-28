@@ -65,12 +65,12 @@ function maslakPaftalar(job,calc,part=0,standard=false){
     const paperSizes=[['A4',297,210],['A3',420,297],['A2',594,420],['A1',841,594],['A0',1189,841]];
     const needW=(hi-lo+.85)*1000/150+minWidth,needH=(top-bot+.45)*1000/150+210-plotLimit+tableTop+2.8;
     const paper=standard?(paperSizes.find(([,w,h])=>w>=needW&&h>=needH)||
-      ['Özel',Math.ceil(needW/10)*10,Math.ceil(needH/10)*10]):paperSizes[job.paper==='a3'?1:0];
+      ['Özel',Math.ceil(needW/10)*10,Math.ceil(needH/10)*10]):paperSizes[job.terrain&&job.paper==='a3'?1:0];
     const [paperName,W,H]=paper;
     if(W>5000||H>5000)throw Error('Kesit 1/150 için PDF kâğıt sınırını aşıyor: '+km(st.km));
     const shift=H-210, plotBottom=tableTop+2.8, plotTop=Math.max(plotBottom+20,plotLimit+shift);
     const denom=(d,mm)=>Math.max(150,Math.ceil(d*1000/mm/5)*5);
-    const fit=Math.max(1000,denom(hi-lo+.85,W-minWidth),denom(top-bot+.45,plotTop-plotBottom));
+    const fit=Math.max(job.project.printScale===1500?1500:1000,denom(hi-lo+.85,W-minWidth),denom(top-bot+.45,plotTop-plotBottom));
     const dx=standard?150:job.terrain?fit:denom(hi-lo+.85,W-minWidth);
     const dy=standard?150:job.terrain?fit:denom(top-bot+.45,plotTop-plotBottom);
     const leftEdge=job.terrain ? 32 : 18;
@@ -176,7 +176,7 @@ function maslakPaftalar(job,calc,part=0,standard=false){
       }
     }
     if(job.terrain)for(const {layer,segments} of st.displayProfiles)for(const [l,r,a,b] of segments)
-      line(layer,[[X(l),Y(a)],[X(r),Y(b)]],layer==='YOL_SIYAH'?.32:.27);
+      line(layer,[[X(l),Y(a)],[X(r),Y(b)]],.34);
     dash('EKSEN',[X(0),plotBottom],[X(0),plotTop],1.9,1);
     const axisY=X(0)>(W-18)/5+16&&X(0)<(W-18)/5+60?plotTop-3:plotTop+1.3;
     text(X(0),axisY,'Eksen',2,'c',true);
@@ -413,6 +413,13 @@ const ortakPaftaRenkleri = Object.freeze({
   YOL_SIYAH:'#111111', YOL_KIRMIZI:'#ae2428', SIYIRMA_TABANI:'#25814a',
   T_KAZI:'#f5cfd1', T_DOLGU:'#c4e8e7', T_SIYIRMA:'#bad8c3'
 });
+function ortakPaftaProfilRengi(color) {
+  if(!/^#[0-9a-f]{6}$/i.test(color))return '#111111';
+  const rgb=[1,3,5].map(i=>parseInt(color.slice(i,i+2),16));
+  const brightness=.2126*rgb[0]+.7152*rgb[1]+.0722*rgb[2];
+  const scale=Math.min(1,135/brightness);
+  return '#'+rgb.map(x=>Math.round(x*scale).toString(16).padStart(2,'0')).join('');
+}
 function ortakEnkesitPaftasi(st, project, paper = "gercek", measureStep = 0) {
   if (!st.displayProfiles.some(p=>p.segments.length)) return null;
   const yol = project.yolDeger || project.yolNo || '', parsel = project.parselDeger || project.parsel || '';
@@ -423,7 +430,7 @@ function ortakEnkesitPaftasi(st, project, paper = "gercek", measureStep = 0) {
     stations:[{...st,earth:[[],[]],strip:[[],[]]}]
   },null,0,paper==="gercek");
   const palette = {...ortakPaftaRenkleri};
-  for (const p of st.displayProfiles) if (p.color) palette[p.layer] = p.color;
+  for (const p of st.displayProfiles) if (p.color) palette[p.layer] = ortakPaftaProfilRengi(p.color);
   const G = page.shapes.map(shape=>({
     ...shape,t:shape.p?(shape.fill?'f':'l'):'x', color:palette[shape.l]||'#111111',
     ...(shape.p ? {kot86:true} : {size:shape.size/1.32})
@@ -518,4 +525,21 @@ function ortakPaftalariDiz(pages,origin,up=true) {
     }
     return fills.concat(entities);
   });
+}
+
+function ortakEnkesitCakistirmaDxf(profiles) {
+  const drawing=O.dxf();
+  drawing.setSourceHeader({insunits:6,insbase:[0,0,0]});
+  let count=0;
+  for(const profile of profiles){
+    if(!profile.segments.length)continue;
+    const color=profile.color||ortakPaftaRenkleri[profile.layer];
+    const layer=drawing.lay(profile.layer,!color||color==='#111111'?7:K.hexAci(color));
+    for(const [left,right,zLeft,zRight] of profile.segments){
+      drawing.line(layer,[left,zLeft,0],[right,zRight,0]);
+      count++;
+    }
+  }
+  if(!count)throw Error('Bu kilometrede çizilebilen kot profili yok.');
+  return drawing.build();
 }

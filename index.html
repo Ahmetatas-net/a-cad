@@ -2010,7 +2010,7 @@ body.kub-focus.kub-tools-open #v-plan #kubPlanTools{top:var(--plan-tools-top,66p
         <label>Dolgu eşiği (m)<input id="sEsik" inputmode="decimal"></label>
         <label>Kazı eşiği (m)<input id="sKesik" inputmode="decimal"></label>
         <input id="sOl" type="hidden">
-        <p class="note full" style="margin:0">Kesit görünümü 1/150. PDF, seçilen A4 veya A3 kâğıda 1/1000 ölçekten başlayarak sığdırılır.</p><input type="checkbox" id="sEsit" hidden>
+        <p class="note full" style="margin:0">Kesit görünümü 1/150. PDF, seçilen ölçekten başlayarak A4 veya A3 kâğıda sığdırılır.</p><input type="checkbox" id="sEsit" hidden>
         <label>Sol genişlik (m)<input id="sWL" inputmode="decimal"></label>
         <label>Sağ genişlik (m)<input id="sWR" inputmode="decimal"></label>
       </div>
@@ -2044,10 +2044,12 @@ body.kub-focus.kub-tools-open #v-plan #kubPlanTools{top:var(--plan-tools-top,66p
       <div class="row">
         <button class="primary" id="oX" type="button">Excel (hakediş formatı)</button>
         <label style="flex-direction:row;align-items:center;gap:6px">Kesit sayfası<select id="oSig" style="width:auto"><option value="a4">A4 yatay</option><option value="a3">A3 yatay</option></select></label>
+        <label style="flex-direction:row;align-items:center;gap:6px">PDF ölçeği<select id="oPrintScale" style="width:auto"><option value="1000">1/1000</option><option value="1500">1/1500</option></select></label>
         <label style="flex-direction:row;align-items:center;gap:6px">Kot yazıları<select id="oKm" style="width:auto"><option value="degisim">Kot değişimi</option><option value="aralik">Sabit aralık</option></select></label>
         <label id="oKsL" style="flex-direction:row;align-items:center;gap:6px">Aralık (m)<input id="oKs" inputmode="decimal" style="width:60px"></label>
         <button class="primary" id="oP" type="button">PDF (kesitler)</button>
         <button class="primary" id="oD" type="button">Çizim kaydet (plan + kesitler)</button>
+        <button id="kubCakistirma" type="button">Seçili KM · Çakıştırma DXF</button>
       </div>
       <div class="msg" id="oMsg" style="margin-top:8px"></div>
       <p class="note" style="margin-top:6px">DXF, indirme kısıtı nedeniyle .zip içinde gelir. İçinde üç dosya var: tümü (plan + kesitler), yalnızca siyah üçgen model ve yalnızca kırmızı üçgen model. DXF uyumlu CAD yazılımlarında açılabilir.</p>
@@ -10430,8 +10432,8 @@ window.V3D = window.V3Dmake();
 
 
 </script>
-<script src="maslak-kirik.js?v=ortak-pafta-13"></script>
-<script src="maslak-cad.js?v=ortak-pafta-13"></script>
+<script src="maslak-kirik.js?v=ortak-pafta-14"></script>
+<script src="maslak-cad.js?v=ortak-pafta-14"></script>
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
@@ -10449,7 +10451,7 @@ const DEF_POZ = [ // kaynak: 116-3.HAKEDIS_TOPRAK_ISLERI_guncel.xlsx
   { kod: "PAÇAL K", ac: "Her Cins ve Zeminde ve Her Derinlikte Serbest Tesviye ve Derin Temel Kazısı Yapılması" },
   { kod: "DOLGU 1", ac: "Her cins ve klasdaki zeminde dolguda kullanılan kazı malzemesinin sulama ve sıkıştırılmasının yapılması" }];
 const OLD_POZ = ["2200/Ö - KGM2206", "KGM/2200"];
-const DEF_SET = { siyMod: "yok", kaynak: "aralik", cm: 33, kesik: 0.10, olcek: 150, esit: true, kesitKagit: "a4", step: 10, kurp: 5, ang: 2, km0: 0, siy: 0.25, esik: 0.10, wL: 10, wR: 10, maxE: 50, maxEK: 50 };
+const DEF_SET = { siyMod: "yok", kaynak: "aralik", cm: 33, kesik: 0.10, olcek: 150, esit: true, kesitKagit: "a4", kesitBaskiOlcek: 1000, step: 10, kurp: 5, ang: 2, km0: 0, siy: 0.25, esik: 0.10, wL: 10, wR: 10, maxE: 50, maxEK: 50 };
 let ST; // {proj,set,S:{pts,tri,src},R:{mode,pts,tri,flat},alanlar:[{ad,pts,kubaj}],eksen:[[e,n]]}
 let MS = null, MR = null, SECS = [], SEL = 0;
 
@@ -10563,6 +10565,7 @@ async function showTab(t) {
 }
 const shellTitle=document.title;
 function showTabCommit(t) {
+  if(t==="cikti")kubBaskiAyarlariniGoster();
   if(t!=="plan"){if(document.body.classList.contains("kub-focus"))togglePlanFocus(false);if(MODE==="cad-boundary")startMode(null);}
   if(t!=="plan" && typeof KUB_BOUNDARY!=="undefined" && KUB_BOUNDARY)startMode(null);
   if (t !== "plan") window.cancelPlanSectionPick?.();
@@ -12921,7 +12924,12 @@ $("vKm0").addEventListener("change", e => { const v = K.kmNum(e.target.value); S
 { const syncK = () => { for (const [m, k, l] of [["oKm", "oKs", "oKsL"], ["hKm", "hKs", "hKsL"]]) { $(m).value = ST.set.kotMod || "degisim"; $(k).value = ST.set.kotStep || 5; $(l).hidden = $(m).value !== "aralik"; } }; setTimeout(syncK, 0);
   for (const [m, k] of [["oKm", "oKs"], ["hKm", "hKs"]]) { $(m).addEventListener("change", e => { ST.set.kotMod = e.target.value; syncK(); save(); preview(); }); $(k).addEventListener("change", e => { const v = K.num(e.target.value); ST.set.kotStep = v > 0 ? v : 5; syncK(); save(); preview(); }); } }
 $("oSig").addEventListener("change", e => { ST.set.kesitKagit=e.target.value; save(); });
-setTimeout(() => { $("oSig").value=ST.set.kesitKagit==="a3"?"a3":"a4"; }, 0);
+$("oPrintScale").addEventListener("change", e=>{ST.set.kesitBaskiOlcek=Number(e.target.value);save();});
+function kubBaskiAyarlariniGoster(){
+  $("oSig").value=ST.set.kesitKagit==="a3"?"a3":"a4";
+  $("oPrintScale").value=ST.set.kesitBaskiOlcek===1500?"1500":"1000";
+}
+setTimeout(kubBaskiAyarlariniGoster,0);
 $("vOl").addEventListener("change", e => { const v = K.num(e.target.value); ST.set.olcek = v > 0 ? v : 150; $("vOl").value = $("sOl").value = ST.set.olcek; save(); preview(); });
 $("sEsit").addEventListener("change", e => { ST.set.esit = e.target.checked; save(); preview(); });
 $("eKm0").addEventListener("change", e => { const v = K.kmNum(e.target.value); ST.set.km0 = isFinite(v) ? v : 0; e.target.value = K.kmtxt(ST.set.km0); $("sKm0").value = $("vKm0").value = e.target.value; save(); renderAlanlar(); recalcIfReady(); });
@@ -13647,7 +13655,7 @@ function renderTable() { const d = anyDol();
     `</tbody><tfoot><tr><td><b>Toplam</b></td><td></td>${d ? "<td></td><td></td>" : ""}<td></td><td><b>${K.tr(TOT.kazi)}</b></td>${d ? `<td><b>${K.tr(TOT.dolgu)}</b></td><td><b>${K.tr(TOT.siy)}</b></td>` : ""}</tr></tfoot>`;
   const table=$("kTable");table.onclick=e=>{const tr=e.target.closest("tbody tr[data-i]");if(!tr||!table.contains(tr))return;SEL=+tr.dataset.i;markSectionRow();preview();}; }
 function markSectionRow(){const table=$("kTable");if(SECS[SEL]&&!table.querySelector('tbody tr[data-i="'+SEL+'"]')){renderTable();return;}table.querySelector("tbody tr.sel")?.classList.remove("sel");table.querySelector('tbody tr[data-i="'+SEL+'"]')?.classList.add("sel");}
-function kubajEnkesitPaftasi(section, paper = "gercek") {
+function kubajEnkesitPaftaVerisi(section) {
   if(!section?.full?.length)return null;
   const displayProfiles = [
     { name:"Siyah kot", layer:"YOL_SIYAH", segments:[] },
@@ -13666,8 +13674,13 @@ function kubajEnkesitPaftasi(section, paper = "gercek") {
     if(kind==="strip") stripping.segments.push([p[0][0],p[1][0],p[0][1],p[1][1]]);
   });
   if(stripping.segments.length) displayProfiles.push(stripping);
-  const project=projFor(section);
-  const page=ortakEnkesitPaftasi({km:section.km,center:section.center,displayProfiles,regions,stamp:true},project,paper,
+  return {km:section.km,center:section.center,displayProfiles,regions,stamp:true};
+}
+function kubajEnkesitPaftasi(section, paper = "gercek", printScale=1000) {
+  const data=kubajEnkesitPaftaVerisi(section);
+  if(!data)return null;
+  const project={...projFor(section),printScale};
+  const page=ortakEnkesitPaftasi(data,project,paper,
     ST.set.kotMod==="aralik" ? +ST.set.kotStep || 5 : 0);
   if(page){
     const warning=thresholdText("section")+(section.gapBefore?" · "+gapLabel(section.gapBefore):"");
@@ -13900,13 +13913,13 @@ function buildXlsx() {
 $("oX").addEventListener("click", async () => { if (terrainPending || (!SECS.length && !SD)) { needSecs(); return; } oMsg("Excel hazırlanıyor…"); try { const b = buildXlsx(); await saveFile(fname("xlsx"), b, $("oMsg")); } catch (e) { oMsg("Excel oluşturulamadı: " + e.message, true); } });
 $("oP").addEventListener("click", async () => {
   if (!needSecs()) return;
-  const button=$("oP"), sections=SECS, paper=ST.set.kesitKagit==="a3"?"a3":"a4", pages=[];
+  const button=$("oP"), sections=SECS, paper=ST.set.kesitKagit==="a3"?"a3":"a4", printScale=ST.set.kesitBaskiOlcek, pages=[];
   if(button.disabled)return;
   button.disabled=true;
   try {
     for(const [i,section] of sections.entries()){
       if(SECS!==sections || terrainPending) throw Error("Hesap değişti. Yeni sonuç için PDF’yi tekrar al.");
-      const page=kubajEnkesitPaftasi(section,paper);
+      const page=kubajEnkesitPaftasi(section,paper,printScale);
       if(page)pages.push(page);
       if(i%8===0){oMsg(`PDF sayfası ${i+1}/${sections.length} hazırlanıyor…`);await new Promise(r=>setTimeout(r,0));}
     }
@@ -13915,6 +13928,16 @@ $("oP").addEventListener("click", async () => {
     await saveFile(fname("pdf"),window.APLGEO.vectorPdf(pages),$("oMsg"));
   } catch(e) { oMsg("PDF oluşturulamadı: "+e.message,true); }
   finally {button.disabled=false;}
+});
+$("kubCakistirma").addEventListener("click",async()=>{
+  if(!needSecs())return;
+  const section=SECS[SEL]||SECS[0];
+  try{
+    const data=kubajEnkesitPaftaVerisi(section);
+    const dxf=ortakEnkesitCakistirmaDxf(data?.displayProfiles||[]);
+    const name="Cakistirma_KM_"+K.kmtxt(section.km).replace(".","_")+".dxf";
+    await saveFile(name,dxf,$("oMsg"));
+  }catch(e){oMsg(e.message,true);}
 });
 $("oD").addEventListener("click", async () => { if (!needSecs()) return; oMsg("DXF hazırlanıyor…"); await new Promise(r => setTimeout(r, 0));
   try { const D = O.dxf(); const lp = D.lay("NOKTA", 7), ln = D.lay("NOKTA_ADI", 7), ls = D.lay("SIYAH_UCGEN", 8), lk = D.lay("KIRMIZI_UCGEN", 1), la = D.lay("ALAN", 30), lat = D.lay("ALAN_YAZI", 30), le = D.lay("EKSEN", 5), lx = D.lay("ENK_PLAN", 4), lxt = D.lay("ENK_PLAN_YAZI", 4);
@@ -35005,7 +35028,7 @@ function ecOpen(){
       <div id="ecAreaControls" class="ec-row" hidden><div><b>Kapalı alan</b><small id="ecAreaText">Bir kapalı alan seç</small></div><button type="button" data-ec="area">Alan seç</button></div>
       <div class="ec-fields"><label>Enkesit aralığı (m)<input id="ecStep" inputmode="decimal" value="5" autocomplete="off"></label><label>Başlangıç km (m)<input id="ecStart" inputmode="decimal" value="0" autocomplete="off"></label></div><label class="ec-single">Ara kesit kilometreleri (m, başlangıçtan itibaren)<input id="ecExtra" placeholder="Örn. 12.5; 35; 78.4" autocomplete="off"></label><label class="ec-check"><input type="checkbox" id="ecVertices" checked> Eksenin köşe noktalarında da kesit al</label>
       <div class="ec-note">Eksen çiziminde istediğin sayıda köşe seç; ✓ Bitir veya Enter ile tamamla. Sağ/sol, eksen çizgisinin <b>çizim yönüne</b> göre belirlenir. Alan modunda eksen içinden geçen kapalı alan sınırı kullanılır. Kotlar yalnız mevcut üçgen yüzeylerden okunur.</div>
-      </div></details><div class="ec-row ec-actions"><button type="button" class="ec-primary" data-ec="generate">Enkesitleri çiz</button><button type="button" class="ec-primary" data-ec="pdf" disabled>PDF al</button><select id="ecPaper" aria-label="PDF kâğıdı"><option value="a4">A4 yatay</option><option value="a3">A3 yatay</option></select><button type="button" data-ec="csv" disabled>CSV al</button><button type="button" data-ec="dxf" disabled>DXF çizim al</button><button type="button" data-ec="place" disabled>📌 Ekrana yapıştır</button><button type="button" data-ec="save-json" disabled>💾 Kesit projesi</button><button type="button" data-ec="open-json">📂 Proje aç</button><button type="button" class="ec-primary" data-ec="merge-json" title="Aynı eksenin farklı tarihlerdeki JSON/CSV kesitlerini birleştir">📥 Kesitleri Ekle</button><input id="ecJsonFile" type="file" accept=".json,application/json" hidden></div>
+      </div></details><div class="ec-row ec-actions"><button type="button" class="ec-primary" data-ec="generate">Enkesitleri çiz</button><button type="button" class="ec-primary" data-ec="pdf" disabled>PDF al</button><select id="ecPaper" aria-label="PDF kâğıdı"><option value="a4">A4 yatay</option><option value="a3">A3 yatay</option></select><select id="ecPrintScale" aria-label="PDF ölçeği"><option value="1000">1/1000</option><option value="1500">1/1500</option></select><button type="button" data-ec="csv" disabled>CSV al</button><button type="button" data-ec="dxf" disabled>DXF pafta al</button><button type="button" data-ec="overlay" disabled title="Seçili kilometre · koordinatlar ofset ve mutlak kot">Çakıştırma DXF</button><button type="button" data-ec="place" disabled>📌 Ekrana yapıştır</button><button type="button" data-ec="save-json" disabled>💾 Kesit projesi</button><button type="button" data-ec="open-json">📂 Proje aç</button><button type="button" class="ec-primary" data-ec="merge-json" title="Aynı eksenin farklı tarihlerdeki JSON/CSV kesitlerini birleştir">📥 Kesitleri Ekle</button><input id="ecJsonFile" type="file" accept=".json,application/json" hidden></div>
       <div class="ec-export-tools"><details><summary>③ Çizim / Rapor seçenekleri</summary><div class="ec-export-fields">
          <label>KM başlangıcı (boş = tümü)<input id="ecKmFrom" placeholder="0+000.00 veya metre" inputmode="text"></label>
          <label>KM bitişi (boş = tümü)<input id="ecKmTo" placeholder="0+120.00 veya metre" inputmode="text"></label><label>KM katı (boş = hepsi)<input id="ecKmMultiple" placeholder="Örn. 20" inputmode="decimal"></label><label>Yazı hane sayısı<select id="ecLabelDigits"><option value="2">2 hane</option><option value="3" selected>3 hane</option></select></label>
@@ -35049,7 +35072,7 @@ function ecOpen(){
       const action=btn.dataset.ec;
       if(action==='close')ecClose();if(action==='mini')ecCompact(!b.classList.contains('ec-mini'));
       if(action==='axis')ecSelect('axis');if(action==='two')ecSelect('two');if(action==='poly')ecSelect('poly');if(action==='area')ecSelect('area');if(action==='finish')ecFinishAxis();if(action==='undo-point')ecUndoAxisPoint();
-      if(action==='generate')ecGenerate();if(action==='pdf')ecExportPDF();if(action==='csv')ecExportCSV();if(action==='dxf')ecExportDXF();if(action==='diff-csv')ecExportDiffCSV();
+      if(action==='generate')ecGenerate();if(action==='pdf')ecExportPDF();if(action==='csv')ecExportCSV();if(action==='dxf')ecExportDXF();if(action==='overlay')ecExportOverlay();if(action==='diff-csv')ecExportDiffCSV();
       if(action==='prev')ecPage(EC.page-1);if(action==='next')ecPage(EC.page+1);if(action==='place')ecPlace();if(action==='save-json')ecExportJSON();if(action==='open-json')ecEl('ecJsonFile').click();if(action==='merge-json')ecEl('ecMergeFile').click();if(action==='add-stage')ecAddStage();if(action==='refresh-models'){ecRefreshSource();ecStatus('Güncel yüzey listesi yenilendi.');}if(action==='copy-stage')ecCopyStage();if(action==='add-point')ecAddPoint();
     }));
     const planLink=document.createElement("button");
@@ -35074,7 +35097,7 @@ function ecIsArea(e){return e&&e.t==='pline'&&e.closed&&e.pts?.length>=3;}
 function ecInputsChanged(){if(EC.busy){EC.serial++;EC.busy=false;ecEl('ecResults').hidden=!EC.sections.length;}if(EC.sections.length){EC.inputsDirty=true;ecStatus('Ayar değişti. Kaydedilmiş kesitler ve aşamalar korunuyor; yeni ayarla hesaplamak için Enkesitleri çiz düğmesine bas.',true);}}
 function ecInvalidate(){EC.serial++;EC.sections=[];EC.surfaces=[];EC.layers=[];EC.busy=false;
   const r=ecEl('ecResults');if(r)r.hidden=true;
-  for(const a of ['csv','dxf','pdf','place','save-json']){const b=document.querySelector(`#acadEnkesitBox [data-ec="${a}"]`);if(b)b.disabled=true;}
+  for(const a of ['csv','dxf','overlay','pdf','place','save-json']){const b=document.querySelector(`#acadEnkesitBox [data-ec="${a}"]`);if(b)b.disabled=true;}
 }
 function ecSetAxis(e,transient){
   try{EG.axisPoints(e.pts);}catch(err){ecStatus(err.message,true);return false;}
@@ -35196,7 +35219,7 @@ async function ecGenerate(){
   ecEl('ecResults').hidden=false;
   ecEl('ecSummary').textContent=`${out.length} kesit · ${valid} kotlu · ${withoutKot} kot verisi yok · ${skipped} alan dışında${failed?' · '+failed+' hesap hatası':''}`;
   document.querySelector('#acadEnkesitBox [data-ec="csv"]').disabled=!valid;
-  document.querySelector('#acadEnkesitBox [data-ec="dxf"]').disabled=!valid;for(const a of ['pdf','place','save-json'])document.querySelector(`#acadEnkesitBox [data-ec="${a}"]`).disabled=!valid;
+  document.querySelector('#acadEnkesitBox [data-ec="dxf"]').disabled=!valid;for(const a of ['overlay','pdf','place','save-json'])document.querySelector(`#acadEnkesitBox [data-ec="${a}"]`).disabled=!valid;
   ecStatus(valid?`Kesitler çizildi. ${valid} kesitte gerçek yüzey kotu var. Paftayı incele veya PDF, DXF ve CSV al.`:'Kesit çizgileri hazır ancak yüzey kotu yok; model kapsamını kontrol et.',!valid);
   ecPage(0);if(valid)ecEl('ecInputs').open=false;return valid>0;
 }
@@ -35442,7 +35465,7 @@ async function ecReadProject(file,merge){
     }
     EC.sections.forEach((s,i)=>s.data=EC.layers.some(l=>ecGetProfile(l,i).some(q=>Number.isFinite(q.z))));
     ecEl('ecResults').hidden=false;ecEl('ecSummary').textContent=`${EC.sections.length} kesit · ${EC.layers.length} karşılaştırma aşaması`;
-    for(const k of ['csv','dxf','pdf','place','save-json'])ecEl('acadEnkesitBox').querySelector(`[data-ec="${k}"]`).disabled=false;
+    for(const k of ['csv','dxf','overlay','pdf','place','save-json'])ecEl('acadEnkesitBox').querySelector(`[data-ec="${k}"]`).disabled=false;
     ecPage(0);if(!merge){ecEl('ecInputs').open=false;ecStatus('Kesit projesi açıldı. Kaynak arazi üçgenlemesi değiştirilmedi.');}
   }catch(e){ecStatus('Kesit dosyası açılamadı: '+e.message,true);}
 }
@@ -35632,17 +35655,21 @@ function ecSetProject(raw) {
   for(const input of document.querySelectorAll("#ecAntet [data-antet]"))input.value=EC.project[input.dataset.antet]||"";
   ecEl("ecShadeAll").checked=raw?.shadeAll===true;
   ecEl("ecPaper").value=raw?.paper==="a3"?"a3":"a4";
+  ecEl("ecPrintScale").value=raw?.printScale===1500?"1500":"1000";
 }
-function ecProject() { return {...EC.project,is:EC.project?.is || CDOC?.name || "",shadeAll:!!ecEl("ecShadeAll")?.checked,paper:ecEl("ecPaper")?.value||"a4"}; }
+function ecProject() { return {...EC.project,is:EC.project?.is || CDOC?.name || "",shadeAll:!!ecEl("ecShadeAll")?.checked,paper:ecEl("ecPaper")?.value||"a4",printScale:Number(ecEl("ecPrintScale")?.value)||1000}; }
+function ecPaftaProfilleri(index) {
+  return EC.layers.map((layer,i)=>({
+    layer:"ENK_PROFIL_"+(i+1),name:layer.name,color:ecHex(layer.color),visible:layer.visible,
+    segments:ecProfileSegments(ecGetProfile(layer,index)).map(([a,b])=>[a.off,b.off,a.z,b.z])
+  }));
+}
 function ecPafta(index,project,paper="gercek") {
   const sec=EC.sections[index];
   if(!sec)return null;
   const refs=ecComparisonRefs();
-  const profiles = EC.layers.map((layer,i)=>({
-    layer:"ENK_PROFIL_"+(i+1),name:layer.name,color:ecHex(layer.color),
-    project:project.shadeAll?refs?.b!==i:refs?.c===i,visible:layer.visible,
-    segments:ecProfileSegments(ecGetProfile(layer,index)).map(([a,b])=>[a.off,b.off,a.z,b.z])
-  }));
+  const profiles=ecPaftaProfilleri(index);
+  profiles.forEach((profile,i)=>{profile.project=project.shadeAll?refs?.b!==i:refs?.c===i;});
   const regions=[];
   if(refs && profiles[refs.b].visible)for(const [stageIndex,profile] of profiles.entries()){
     if(!profile.visible || stageIndex===refs.b || (!project.shadeAll && stageIndex!==refs.c))continue;
@@ -35755,6 +35782,16 @@ function ecDxfEncode(entities){
       out+='0\nLINE\n'+pair(8,e.lay)+pair(10,n(a[0]))+pair(20,n(a[1]))+pair(30,0)+pair(11,n(b[0]))+pair(21,n(b[1]))+pair(31,0);
     }
   }}return out+'0\nENDSEC\n0\nEOF\n';
+}
+function ecExportOverlay(){
+  const section=EC.sections[EC.page];
+  if(!section)return;
+  try{
+    const profiles=ecPaftaProfilleri(EC.page).filter(p=>p.visible);
+    for(const profile of profiles)profile.layer=profile.name.slice(0,45)+"_"+profile.layer.slice(11);
+    const name="Cakistirma_KM_"+EG.km(section.station).replace(".","_")+".dxf";
+    ecDownload(name,ortakEnkesitCakistirmaDxf(profiles),"application/dxf;charset=utf-8");
+  }catch(e){ecFilterWarning(e);}
 }
 function ecExportDXF(){
   if(!EC.sections.length)return;
