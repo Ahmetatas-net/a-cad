@@ -2044,7 +2044,7 @@ body.kub-focus.kub-tools-open #v-plan #kubPlanTools{top:var(--plan-tools-top,66p
       <div class="row">
         <button class="primary" id="oX" type="button">Excel (hakediş formatı)</button>
         <label style="flex-direction:row;align-items:center;gap:6px">Kesit sayfası<select id="oSig" style="width:auto"><option value="a4">A4 yatay</option><option value="a3">A3 yatay</option></select></label>
-        <label style="flex-direction:row;align-items:center;gap:6px">PDF ölçeği<select id="oPrintScale" style="width:auto"><option value="1000">1/1000</option><option value="1500">1/1500</option></select></label>
+        <label style="flex-direction:row;align-items:center;gap:6px">PDF ölçeği<select id="oPrintScale" style="width:auto"><option value="100">1/100</option><option value="150" selected>1/150 · Paftaya sığdır</option><option value="200">1/200</option><option value="250">1/250</option><option value="300">1/300</option><option value="400">1/400</option><option value="500">1/500</option><option value="750">1/750</option><option value="1000">1/1000</option><option value="1500">1/1500</option><option value="2000">1/2000</option></select></label>
         <label style="flex-direction:row;align-items:center;gap:6px">Kot yazıları<select id="oKm" style="width:auto"><option value="degisim">Kot değişimi</option><option value="aralik">Sabit aralık</option></select></label>
         <label id="oKsL" style="flex-direction:row;align-items:center;gap:6px">Aralık (m)<input id="oKs" inputmode="decimal" style="width:60px"></label>
         <button class="primary" id="oP" type="button">PDF (kesitler)</button>
@@ -6971,7 +6971,7 @@ O.paint = (ctx, G, pxmm, W = 297, H = 210) => {
     else{ctx.strokeStyle=g.color;ctx.lineWidth=g.w*pxmm;ctx.stroke();}
   }
   for (const g of G) if (g.t === "x" && !g._acadOmit) { ctx.save(); ctx.translate(X(g.x), Y(g.y)); if (g.rot) ctx.rotate(-g.rot * Math.PI / 180);
-    ctx.fillStyle = g.color; ctx.font = `${g.it ? "italic " : ""}${g.bold ? "700 " : ""}${g.size * 1.32 * pxmm}px ${g.kroki84?'AcadArial89,Arial,Kroki84,':''}Arial, "Liberation Sans", Arimo, "Helvetica Neue", sans-serif`;
+    ctx.fillStyle = g.color; ctx.font = `${g.it ? "italic " : ""}${g.bold ? "700 " : ""}${g.size * 1.32 * pxmm}px ${g.kotRakam?'KesitRakam,':''}${g.kroki84?'AcadArial89,Arial,Kroki84,':''}Arial, "Liberation Sans", Arimo, "Helvetica Neue", sans-serif`;
     ctx.textAlign = g.al === "c" ? "center" : g.al === "r" ? "right" : "left"; ctx.textBaseline = "middle";
     ctx.fillText(g.s, 0, 0); ctx.restore(); }
   for (const g of G) if (g.t === "i") { const im = O.IMG[g.k]; if (!im) continue; ctx.save(); try { ctx.globalCompositeOperation = "multiply"; } catch (e) {} ctx.drawImage(im, X(g.x), Y(g.y + g.h), g.w * pxmm, g.h * pxmm); ctx.restore(); }
@@ -10432,8 +10432,8 @@ window.V3D = window.V3Dmake();
 
 
 </script>
-<script src="maslak-kirik.js?v=ortak-pafta-14"></script>
-<script src="maslak-cad.js?v=ortak-pafta-14"></script>
+<script src="maslak-kirik.js?v=ortak-pafta-15"></script>
+<script src="maslak-cad.js?v=ortak-pafta-15"></script>
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
@@ -10451,7 +10451,7 @@ const DEF_POZ = [ // kaynak: 116-3.HAKEDIS_TOPRAK_ISLERI_guncel.xlsx
   { kod: "PAÇAL K", ac: "Her Cins ve Zeminde ve Her Derinlikte Serbest Tesviye ve Derin Temel Kazısı Yapılması" },
   { kod: "DOLGU 1", ac: "Her cins ve klasdaki zeminde dolguda kullanılan kazı malzemesinin sulama ve sıkıştırılmasının yapılması" }];
 const OLD_POZ = ["2200/Ö - KGM2206", "KGM/2200"];
-const DEF_SET = { siyMod: "yok", kaynak: "aralik", cm: 33, kesik: 0.10, olcek: 150, esit: true, kesitKagit: "a4", kesitBaskiOlcek: 1000, step: 10, kurp: 5, ang: 2, km0: 0, siy: 0.25, esik: 0.10, wL: 10, wR: 10, maxE: 50, maxEK: 50 };
+const DEF_SET = { siyMod: "yok", kaynak: "aralik", cm: 33, kesik: 0.10, olcek: 150, esit: true, kesitKagit: "a4", kesitBaskiOlcek: 150, step: 10, kurp: 5, ang: 2, km0: 0, siy: 0.25, esik: 0.10, wL: 10, wR: 10, maxE: 50, maxEK: 50 };
 let ST; // {proj,set,S:{pts,tri,src},R:{mode,pts,tri,flat},alanlar:[{ad,pts,kubaj}],eksen:[[e,n]]}
 let MS = null, MR = null, SECS = [], SEL = 0;
 
@@ -12927,7 +12927,7 @@ $("oSig").addEventListener("change", e => { ST.set.kesitKagit=e.target.value; sa
 $("oPrintScale").addEventListener("change", e=>{ST.set.kesitBaskiOlcek=Number(e.target.value);save();});
 function kubBaskiAyarlariniGoster(){
   $("oSig").value=ST.set.kesitKagit==="a3"?"a3":"a4";
-  $("oPrintScale").value=ST.set.kesitBaskiOlcek===1500?"1500":"1000";
+  $("oPrintScale").value=String(ST.set.kesitBaskiOlcek || 150);
 }
 setTimeout(kubBaskiAyarlariniGoster,0);
 $("vOl").addEventListener("change", e => { const v = K.num(e.target.value); ST.set.olcek = v > 0 ? v : 150; $("vOl").value = $("sOl").value = ST.set.olcek; save(); preview(); });
@@ -13676,7 +13676,7 @@ function kubajEnkesitPaftaVerisi(section) {
   if(stripping.segments.length) displayProfiles.push(stripping);
   return {km:section.km,center:section.center,displayProfiles,regions,stamp:true};
 }
-function kubajEnkesitPaftasi(section, paper = "gercek", printScale=1000) {
+function kubajEnkesitPaftasi(section, paper = "gercek", printScale=150) {
   const data=kubajEnkesitPaftaVerisi(section);
   if(!data)return null;
   const project={...projFor(section),printScale};
@@ -22874,6 +22874,10 @@ A.vectorPdf = function(pages) {
   for(const [style,face] of Object.entries(A.pdfFonts)){
     doc.addFileToVFS(style+'.ttf',face);doc.addFont(style+'.ttf','Acad',style);
   }
+  if(typeof ortakKotRakamFontu==='string' && pages.some(pg=>pg.G.some(g=>g.kotRakam))){
+    doc.addFileToVFS('KesitRakam.ttf',ortakKotRakamFontu);
+    doc.addFont('KesitRakam.ttf','KesitRakam','normal');
+  }
   const arial=window.acadSketchFont89?.data;
   const sketchFamily=arial?'ArialMT':'LiberationSans';
   if(pages.some(p=>p.ifraz||p.ad==='Yapı aplikasyon paftası'||p.ad?.startsWith('Ek-1 koordinat')||p.ad?.startsWith('İstinat koordinatları'))){
@@ -22891,7 +22895,7 @@ A.vectorPdf = function(pages) {
     }
     for(const g of G){
       if(g.t==='x'&&!g._acadOmit){
-        doc.setFont(kroki?sketchFamily:'Acad',kroki?'normal':g.bold?'bold':'normal');doc.setTextColor(g.color||'#000000');doc.setFontSize(g.size*1.32*72/25.4);
+        doc.setFont(g.kotRakam?'KesitRakam':kroki?sketchFamily:'Acad',kroki?'normal':g.bold?'bold':'normal');doc.setTextColor(g.color||'#000000');doc.setFontSize(g.size*1.32*72/25.4);
         if(g.rot){
           const theta=g.rot*Math.PI/180,offset=doc.getTextWidth(String(g.s??''))*(g.al==='c'?.5:g.al==='r'?1:0);
           const base=g.size*1.32*.32;
@@ -35028,7 +35032,7 @@ function ecOpen(){
       <div id="ecAreaControls" class="ec-row" hidden><div><b>Kapalı alan</b><small id="ecAreaText">Bir kapalı alan seç</small></div><button type="button" data-ec="area">Alan seç</button></div>
       <div class="ec-fields"><label>Enkesit aralığı (m)<input id="ecStep" inputmode="decimal" value="5" autocomplete="off"></label><label>Başlangıç km (m)<input id="ecStart" inputmode="decimal" value="0" autocomplete="off"></label></div><label class="ec-single">Ara kesit kilometreleri (m, başlangıçtan itibaren)<input id="ecExtra" placeholder="Örn. 12.5; 35; 78.4" autocomplete="off"></label><label class="ec-check"><input type="checkbox" id="ecVertices" checked> Eksenin köşe noktalarında da kesit al</label>
       <div class="ec-note">Eksen çiziminde istediğin sayıda köşe seç; ✓ Bitir veya Enter ile tamamla. Sağ/sol, eksen çizgisinin <b>çizim yönüne</b> göre belirlenir. Alan modunda eksen içinden geçen kapalı alan sınırı kullanılır. Kotlar yalnız mevcut üçgen yüzeylerden okunur.</div>
-      </div></details><div class="ec-row ec-actions"><button type="button" class="ec-primary" data-ec="generate">Enkesitleri çiz</button><button type="button" class="ec-primary" data-ec="pdf" disabled>PDF al</button><select id="ecPaper" aria-label="PDF kâğıdı"><option value="a4">A4 yatay</option><option value="a3">A3 yatay</option></select><select id="ecPrintScale" aria-label="PDF ölçeği"><option value="1000">1/1000</option><option value="1500">1/1500</option></select><button type="button" data-ec="csv" disabled>CSV al</button><button type="button" data-ec="dxf" disabled>DXF pafta al</button><button type="button" data-ec="overlay" disabled title="Seçili kilometre · koordinatlar ofset ve mutlak kot">Çakıştırma DXF</button><button type="button" data-ec="place" disabled>📌 Ekrana yapıştır</button><button type="button" data-ec="save-json" disabled>💾 Kesit projesi</button><button type="button" data-ec="open-json">📂 Proje aç</button><button type="button" class="ec-primary" data-ec="merge-json" title="Aynı eksenin farklı tarihlerdeki JSON/CSV kesitlerini birleştir">📥 Kesitleri Ekle</button><input id="ecJsonFile" type="file" accept=".json,application/json" hidden></div>
+      </div></details><div class="ec-row ec-actions"><button type="button" class="ec-primary" data-ec="generate">Enkesitleri çiz</button><button type="button" class="ec-primary" data-ec="pdf" disabled>PDF al</button><select id="ecPaper" aria-label="PDF kâğıdı"><option value="a4">A4 yatay</option><option value="a3">A3 yatay</option></select><select id="ecPrintScale" aria-label="PDF ölçeği"><option value="100">1/100</option><option value="150" selected>1/150 · Paftaya sığdır</option><option value="200">1/200</option><option value="250">1/250</option><option value="300">1/300</option><option value="400">1/400</option><option value="500">1/500</option><option value="750">1/750</option><option value="1000">1/1000</option><option value="1500">1/1500</option><option value="2000">1/2000</option></select><button type="button" data-ec="csv" disabled>CSV al</button><button type="button" data-ec="dxf" disabled>DXF pafta al</button><button type="button" data-ec="overlay" disabled title="Seçili kilometre · koordinatlar ofset ve mutlak kot">Çakıştırma DXF</button><button type="button" data-ec="place" disabled>📌 Ekrana yapıştır</button><button type="button" data-ec="save-json" disabled>💾 Kesit projesi</button><button type="button" data-ec="open-json">📂 Proje aç</button><button type="button" class="ec-primary" data-ec="merge-json" title="Aynı eksenin farklı tarihlerdeki JSON/CSV kesitlerini birleştir">📥 Kesitleri Ekle</button><input id="ecJsonFile" type="file" accept=".json,application/json" hidden></div>
       <div class="ec-export-tools"><details><summary>③ Çizim / Rapor seçenekleri</summary><div class="ec-export-fields">
          <label>KM başlangıcı (boş = tümü)<input id="ecKmFrom" placeholder="0+000.00 veya metre" inputmode="text"></label>
          <label>KM bitişi (boş = tümü)<input id="ecKmTo" placeholder="0+120.00 veya metre" inputmode="text"></label><label>KM katı (boş = hepsi)<input id="ecKmMultiple" placeholder="Örn. 20" inputmode="decimal"></label><label>Yazı hane sayısı<select id="ecLabelDigits"><option value="2">2 hane</option><option value="3" selected>3 hane</option></select></label>
@@ -35655,9 +35659,9 @@ function ecSetProject(raw) {
   for(const input of document.querySelectorAll("#ecAntet [data-antet]"))input.value=EC.project[input.dataset.antet]||"";
   ecEl("ecShadeAll").checked=raw?.shadeAll===true;
   ecEl("ecPaper").value=raw?.paper==="a3"?"a3":"a4";
-  ecEl("ecPrintScale").value=raw?.printScale===1500?"1500":"1000";
+  ecEl("ecPrintScale").value=String(raw?.printScale || 150);
 }
-function ecProject() { return {...EC.project,is:EC.project?.is || CDOC?.name || "",shadeAll:!!ecEl("ecShadeAll")?.checked,paper:ecEl("ecPaper")?.value||"a4",printScale:Number(ecEl("ecPrintScale")?.value)||1000}; }
+function ecProject() { return {...EC.project,is:EC.project?.is || CDOC?.name || "",shadeAll:!!ecEl("ecShadeAll")?.checked,paper:ecEl("ecPaper")?.value||"a4",printScale:Number(ecEl("ecPrintScale")?.value)||150}; }
 function ecPaftaProfilleri(index) {
   return EC.layers.map((layer,i)=>({
     layer:"ENK_PROFIL_"+(i+1),name:layer.name,color:ecHex(layer.color),visible:layer.visible,
