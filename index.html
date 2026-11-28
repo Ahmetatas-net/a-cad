@@ -10485,7 +10485,7 @@ window.V3D = window.V3Dmake();
 
 </script>
 <script src="maslak-kirik.js?v=ortak-pafta-16"></script>
-<script src="maslak-cad.js?v=ortak-pafta-18"></script>
+<script src="maslak-cad.js?v=ortak-pafta-19"></script>
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
@@ -35118,7 +35118,7 @@ function ecOpen(){
 
       <details id="ecAreas"><summary>Yol ve parsel sınırları</summary><div class="ec-fields"><label>Yol alanı<select id="ecRing0"></select></label><label>Parsel alanı<select id="ecRing1"></select></label></div><div class="ec-row"><button type="button" data-ec="pick-road">Yol sınırını planda seç</button><button type="button" data-ec="pick-parcel">Parsel sınırını planda seç</button></div><small>CAD’deki kapalı alanları tabaka ve alan büyüklüğüyle seç. Enkesitleri çizdiğinde ölçü genişliği seçilen iki alanı kapsar.</small></details>
       <div id="ecResults" class="ec-results" hidden><div id="ecSummary" class="ec-summary"></div><div class="ec-pager"><button type="button" data-ec="prev">‹ Önceki</button><span id="ecPage"></span><button type="button" data-ec="next">Sonraki ›</button></div><div id="ecChart"></div><details id="ecPaftaGorunum"><summary>Kesit paftası · 1/150</summary><div class="ec-row" style="margin-top:8px"><button id="ecPaftaOlc" type="button" aria-pressed="false" disabled>İki nokta ölç</button><small id="ecPaftaOlcumSonuc" role="status"></small></div><canvas id="ecPaftaKanvas" aria-label="1/150 enkesit paftası"></canvas><div id="ecPaftaDurum" class="ec-note" role="status"></div></details><div id="ecSectionTable"></div><section class="ec-vol"><div class="ec-row"><b>Enkesit kübajı</b><button type="button" class="ec-primary" data-ec="volume">Hesapla</button></div>
-      <details id="ecVolumeSettings"><summary>Yüzey eşleştirme ve KM aralığı</summary><div class="ec-fields">${ecRoles.map((r,i)=>'<label>'+r+'<select id="ecRole'+i+'"></select></label>').join('')}<label>Başlangıç KM<input id="ecVolFrom" placeholder="İlk kesit"></label><label>Bitiş KM<input id="ecVolTo" placeholder="Son kesit"></label></div><label class="ec-check"><input id="ecPriority" type="checkbox" checked> Aynı kazı veya dolgu iki imalata giriyorsa yol önce</label></details><div id="ecVolumeOut" aria-live="polite"></div></section>
+      <details id="ecVolumeSettings"><summary>Yüzey eşleştirme ve KM aralığı</summary><div class="ec-fields">${ecRoles.map((r,i)=>'<label>'+r+'<select id="ecRole'+i+'"></select></label>').join('')}<label>Başlangıç KM<input id="ecVolFrom" placeholder="İlk kesit"></label><label>Bitiş KM<input id="ecVolTo" placeholder="Son kesit"></label></div><label class="ec-single">Kesişen imalatın payı<select id="ecPriority">${Object.entries(ecPriorityLabels).map(([value,label])=>'<option value="'+value+'">'+label+'</option>').join('')}</select></label><small>Ortak kazı veya dolgu bir kez hesaplanır. Kot önceliği kırmızı proje kotlarına bakar. Eşitlikte ortak miktar yol imalatına yazılır.</small></details><div id="ecVolumeOut" aria-live="polite"></div></section>
        <details class="ec-compare-controls"><summary>Aşama farkı ve kesit alanı</summary>
          <div class="ec-compare-picks"><label>Referans / ilk ölçüm<select id="ecBaseLayer"></select></label><label>Karşılaştırılacak aşama<select id="ecCompareLayer"></select></label><button type="button" data-ec="diff-csv">📊 Fark raporu CSV</button></div>
          <div id="ecDiffSummary" role="status" aria-live="polite"></div><small>Üst/alt fark, iki yüzeyin ortak kotlu aralığından hesaplanır. Kesit alanıdır (m²); tek başına kübaj (m³) değildir. Eksik kot bulunan bölüm tahmin edilmez.</small>
@@ -35409,13 +35409,13 @@ function ecSvg(section){
   out+=`<text x="8" y="18" fill="#4a636f" font-size="12">Kot (m)</text>`;
   for(let k=0;k<=5;k++){const z=zmin+(zmax-zmin)*k/5,py=y(z);out+=`<line x1="${x0}" y1="${py}" x2="${x1}" y2="${py}" stroke="#cbd6d9" stroke-dasharray="3 6"/><text x="${x0-8}" y="${py+4}" text-anchor="end" fill="#435963" font-size="12">${z.toFixed(2)}</text>`;}
   for(const off of [-section.left,0,section.right]){const xx=x(off);out+=`<line x1="${xx}" y1="${yt}" x2="${xx}" y2="${yb}" stroke="${off===0?'#758a92':'#bdcbd1'}" stroke-dasharray="${off===0?'':'4 5'}"/>`;}
-  const pairs=ecChosenPairs(),assigned=ecAssignedSections(pairs,EC.page);
-  for(const [j,pair] of pairs.entries()){
-    if(!EC.layers[pair.b]?.visible||!EC.layers[pair.c]?.visible)continue;
+  const pairs=ecChosenPairs(),assigned=ecAssignedSections(pairs,EC.page),volumePairs=ecVolumePairs(pairs);
+  for(const [j,pair] of volumePairs.entries()){
+    if(!ecPairVisible(pair,i=>EC.layers[i]?.visible,pairs))continue;
     for(const [l,r,a,b,c,d] of assigned[j].strips){
       for(const region of ortakKesisimBolgesi([l,a],[r,b],c,d)){
         const points=region.p.map(([off,z])=>x(off).toFixed(2)+','+y(z).toFixed(2)).join(' ');
-        out+='<polygon points="'+points+'" fill="'+(pair.owner===0?'#dc937f':'#74b7bb')+'" opacity=".35"><title>'+pair.label+'</title></polygon>';
+        out+='<polygon points="'+points+'" fill="'+ecOwnerFills[pair.owner][2]+'" opacity=".35"><title>'+pair.label+'</title></polygon>';
       }
     }
   }
@@ -35434,7 +35434,7 @@ function ecSvg(section){
   out+='</svg>';
   out+='<div class="ec-legend">'+active.map(l=>`<span><i style="background:${ortakPaftaProfilRengi(ecHex(l.color))}"></i>${ecHtml(l.name)}${l.edited?' ✎':''}</span>`).join('')+'</div>';
   if(pairs.length){
-    out+='<div class="ec-note">'+pairs.map((r,i)=>{const v=assigned[i];
+    out+='<div class="ec-note">'+volumePairs.map((r,i)=>{const v=assigned[i];
       return '<div><b>'+r.label+'</b> · '+(v.valid?'Kazı '+v.negative.toLocaleString('tr-TR',{maximumFractionDigits:2})+' m² · Dolgu '+v.positive.toLocaleString('tr-TR',{maximumFractionDigits:2})+' m²':'Seçili alan içinde eksik kot')+'</div>';
     }).join('')+'</div>';
   }
@@ -35753,7 +35753,18 @@ function ecProfileSegments(profile){
   for(let i=1;i<profile.length;i++)if(ecValidSegment(profile[i-1],profile[i]))segments.push([profile[i-1],profile[i]]);
   return segments;
 }
-const ecOwners=['Yol','Parsel'];
+const ecOwners=['Yol','Parsel','Ortak imalat'];
+const ecPriorityLabels={road:'Yol öncelikli',parcel:'Parsel öncelikli',low:'Düşük proje kotu öncelikli',high:'Yüksek proje kotu öncelikli',shared:'Ortak imalatı ayrı göster'};
+const ecOwnerFills=[['Yol imalatı','T_YOL','#dc937f'],['Parsel imalatı','T_GB','#74b7bb'],['Ortak imalat','T_ORTAK','#9775ca']];
+function ecPriority(){return ecEl('ecPriority').value||'road';}
+function ecVolumePairs(pairs){
+  return pairs.length===2&&ecPriority()==='shared'
+    ? [...pairs,{owner:2,label:ecOwners[2]}]
+    : pairs;
+}
+function ecPairVisible(pair,isVisible,pairs){
+  return pair.owner===2?pairs.every(p=>isVisible(p.b)&&isVisible(p.c)):isVisible(pair.b)&&isVisible(pair.c);
+}
 const ecRoles=['Yol siyah','Yol kırmızı','Parsel siyah','Parsel kırmızı'];
 function ecGuessRole(name){
   const n=name.toLocaleLowerCase('tr').replace(/ı/g,'i').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
@@ -35837,19 +35848,19 @@ function ecBandArea(strips){
   }
   return {positive,negative,covered};
 }
-// Clip parcel bands only where the road occupies the same offset, elevation and earthwork direction.
-function ecParcelRemainder(road,parcel){
+// Remove duplicate material in the same offset, elevation and earthwork direction.
+function ecSplitBand(otherBands,ownBands,ownsCommon,common){
   const result=[];
   const line=(s,i)=>x=>s[i]+(s[i+1]-s[i])*(x-s[0])/(s[1]-s[0]);
-  const put=(l,r,a,b)=>{
-    if(r-l>1e-9)result.push([l,r,a(l),a(r),b(l),b(r)]);
+  const put=(l,r,a,b,target=result)=>{
+    if(r-l>1e-9)target.push([l,r,a(l),a(r),b(l),b(r)]);
   };
   let start=0;
-  for(const p of parcel){
+  for(const p of ownBands){
     const base=line(p,2),top=line(p,4);let cursor=p[0];
-    while(start<road.length&&road[start][1]<=cursor)start++;
-    for(let j=start;j<road.length&&road[j][0]<p[1];j++){
-      const s=road[j],lo=Math.max(cursor,s[0]),hi=Math.min(p[1],s[1]);
+    while(start<otherBands.length&&otherBands[start][1]<=cursor)start++;
+    for(let j=start;j<otherBands.length&&otherBands[j][0]<p[1];j++){
+      const s=otherBands[j],lo=Math.max(cursor,s[0]),hi=Math.min(p[1],s[1]);
       if(hi<=lo)continue;
       put(cursor,lo,base,top);
       const rb=line(s,2),rt=line(s,4),lines=[base,top,rb,rt],xs=[lo,hi];
@@ -35860,7 +35871,10 @@ function ecParcelRemainder(road,parcel){
       xs.sort((a,b)=>a-b);
       for(let k=1;k<xs.length;k++){
         const l=xs[k-1],r=xs[k],x=(l+r)/2,sign=Math.sign(top(x)-base(x));
-        if(!sign||sign!==Math.sign(rt(x)-rb(x))||sign*(rt(x)-base(x))<=0||sign*(top(x)-rb(x))<=0){put(l,r,base,top);continue;}
+        if(!sign||sign!==Math.sign(rt(x)-rb(x))||sign*(rt(x)-base(x))<=0||sign*(top(x)-rb(x))<=0||ownsCommon(top(x)-rt(x))){
+          put(l,r,base,top);continue;
+        }
+        if(common)put(l,r,sign*(rb(x)-base(x))>0?rb:base,sign*(top(x)-rt(x))>0?rt:top,common);
         if(sign*(rb(x)-base(x))>0)put(l,r,base,rb);
         if(sign*(top(x)-rt(x))>0)put(l,r,rt,top);
       }
@@ -35878,20 +35892,33 @@ function ecPairSection(pair,i){
   // A selected polygon outside a station has a genuine zero area. Missing observations inside it are unknown.
   return {...area,strips,ranges,valid:ring?area.covered>=width-.0001:area.covered>1e-8,partial:area.covered<width-.0001};
 }
+function ecOwnsCommon(priority,owner,projectDifference){
+  if(priority==='shared')return false;
+  if(priority==='parcel')return owner===1;
+  if(priority==='road'||Math.abs(projectDifference)<1e-9)return owner===0;
+  return priority==='low'?projectDifference<0:projectDifference>0;
+}
 function ecAssignedSections(pairs,i){
   const samples=pairs.map(p=>ecPairSection(p,i));
-  if(pairs.length===2 && ecEl('ecPriority').checked){
-    const [road,parcel]=samples;
-    const strips=ecParcelRemainder(road.strips,parcel.strips),net=ecBandArea(strips);
-    parcel.shared={positive:Math.max(0,parcel.positive-net.positive),negative:Math.max(0,parcel.negative-net.negative)};
-    if(!road.valid&&road.partial&&parcel.strips.some(([l,r])=>road.ranges.some(([a,b])=>Math.min(b,r)>Math.max(a,l))))parcel.valid=false;
-    Object.assign(parcel,{strips,positive:net.positive,negative:net.negative});
-  }
-  return samples;
+  if(samples.length!==2)return samples;
+  const priority=ecPriority(),common=priority==='shared'?[]:null;
+  const overlap=samples[0].ranges.some(([l,r])=>samples[1].ranges.some(([a,b])=>Math.min(b,r)-Math.max(a,l)>1e-8));
+  const first=samples.map((sample,j)=>{
+    const other=samples[1-j],owner=pairs[j].owner;
+    // A missing section over an overlapping footprint can make the assigned share unknowable.
+    const valid=sample.valid&&(!overlap||other.valid||ecOwnsCommon(priority,owner,0)&&['road','parcel'].includes(priority));
+    const strips=ecSplitBand(other.strips,sample.strips,d=>ecOwnsCommon(priority,owner,d),j===0?common:null);
+    const net=ecBandArea(strips);
+    return {...sample,valid,strips,positive:net.positive,negative:net.negative,
+      shared:{positive:Math.max(0,sample.positive-net.positive),negative:Math.max(0,sample.negative-net.negative)}};
+  });
+  if(common)first.push({...ecBandArea(common),strips:common,
+    valid:!overlap||samples.every(s=>s.valid),partial:overlap&&samples.some(s=>s.partial)});
+  return first;
 }
 function ecVolumeRows(pairs,indices){
   const stations=indices.map(i=>ecAssignedSections(pairs,i));
-  const results=pairs.map((p,k)=>({label:p.label,rows:[],samples:stations.map(s=>s[k])}));
+  const results=ecVolumePairs(pairs).map((p,k)=>({label:p.label,rows:[],samples:stations.map(s=>s[k])}));
   for(const result of results){
     let cut=0,fill=0,used=0,partial=0,sharedCut=0,sharedFill=0;
     for(let n=1;n<indices.length;n++){
@@ -35916,12 +35943,14 @@ function ecCalculateVolumes(){
     const picks=ecRoles.map((_,i)=>ecEl('ecRole'+i).value);
     for(let i=0;i<4;i+=2)if((picks[i]||picks[i+1])&&(picks[i]===''||picks[i+1]===''||picks[i]===picks[i+1]))throw Error(ecRoles[i].split(' ')[0]+' için iki farklı siyah ve kırmızı yüzey seç.');
     if(!pairs.length){const r=ecComparisonRefs();if(!r)throw Error('Hesap için iki yüzey seç.');pairs=[{...r,label:'Seçili yüzey çifti',owner:-1}];}
-    const results=ecVolumeRows(pairs,indices);
+    const results=ecVolumeRows(pairs,indices),volumePairs=ecVolumePairs(pairs);
     const km=x=>EG.km(x).replace('.',',');
-    out.innerHTML=results.map((r,j)=>{
-      const header='<b>'+ecHtml(r.label)+'</b> · '+ecHtml(EC.layers[pairs[j].b].name)+' → '+ecHtml(EC.layers[pairs[j].c].name);
+    const priority=pairs.length===2?'<small>Ortak miktarın payı · '+ecPriorityLabels[ecPriority()]+'</small>':'';
+    out.innerHTML=priority+results.map((r,j)=>{
+      const p=volumePairs[j];
+      const header='<b>'+ecHtml(r.label)+'</b>'+(p.owner===2?'':' · '+ecHtml(EC.layers[p.b].name)+' → '+ecHtml(EC.layers[p.c].name));
       if(indices.length===1){const s=r.samples[0];return '<p>'+header+'<br>KM '+km(EC.sections[indices[0]].station)+' · '+(s.valid?'Kazı '+format(s.negative)+' m² · Dolgu '+format(s.positive)+' m²':'Eksik kot')+'<br>Hacim için ikinci bir KM gerekir.</p>';}
-      const shared=r.sharedCut+r.sharedFill>1e-6?'<br><small>Yola yazılan ortak imalat · Kazı '+format(r.sharedCut)+' m³ · Dolgu '+format(r.sharedFill)+' m³</small>':'';
+      const shared=r.sharedCut+r.sharedFill>1e-6?'<br><small>Bu imalatın payından düşülen ortak miktar · Kazı '+format(r.sharedCut)+' m³ · Dolgu '+format(r.sharedFill)+' m³</small>':'';
       const summary=r.used?'Kazı <b>'+format(r.cut)+' m³</b> · Dolgu <b>'+format(r.fill)+' m³</b>':'Hesaplanabilir aralık yok.';
       return '<div style="margin:10px 0">'+header+'<br>'+summary+shared+'<br><small>'+r.used+'/'+r.rows.length+' KM aralığı'+(r.partial?' · '+r.partial+' aralıkta yalnız ölçülü genişlik':'')+'</small><details><summary>KM aralıkları</summary>'+r.rows.map(row=>'<div>'+km(row.from)+' – '+km(row.to)+' · '+(row.k==null?'Eksik kot':format(row.k)+' / '+format(row.f)+' m³')+'</div>').join('')+'</details></div>';
     }).join('');
@@ -36005,14 +36034,15 @@ function ecSetProject(raw) {
   EC.project=Object.fromEntries(keys.map(k=>[k,String(raw?.[k]??"").slice(0,240)]));
   EC.rings=[0,1].map(i=>{const r=raw?.ecRings?.[i];return r&&Array.isArray(r.pts)&&r.pts.length>=3&&r.pts.length<=100000&&r.pts.every(p=>Array.isArray(p)&&p.length>=2&&p.slice(0,2).every(Number.isFinite))?{name:String(r.name||'Alan').slice(0,140),pts:r.pts.map(p=>p.slice(0,2))}:null;});
   EC.roleNames=Array.isArray(raw?.ecRoleNames)?raw.ecRoleNames.slice(0,4).map(n=>typeof n==='string'?n:undefined):[];
-  ecEl('ecPriority').checked=raw?.ecPriority!==false;
+  // Old projects only stored a checkbox. Keep road as the default for either old setting.
+  ecEl('ecPriority').value=Object.hasOwn(ecPriorityLabels,raw?.ecPriority)?raw.ecPriority:'road';
   ecRingOptions(0);ecRingOptions(1);
   EC.syncAntet?.();
   ecEl("ecShadeAll").checked=raw?.shadeAll===true;
   ecEl("ecPaper").value=raw?.paper==="a3"?"a3":"a4";
   ecEl("ecPrintScale").value=String(raw?.printScale || 150);
 }
-function ecProject() { return {...EC.project,ecRoleNames:EC.roleNames,ecRings:EC.rings,ecPriority:ecEl("ecPriority").checked,is:EC.project?.is || CDOC?.name || "",shadeAll:!!ecEl("ecShadeAll")?.checked,paper:ecEl("ecPaper")?.value||"a4",printScale:Number(ecEl("ecPrintScale")?.value)||150}; }
+function ecProject() { return {...EC.project,ecRoleNames:EC.roleNames,ecRings:EC.rings,ecPriority:ecPriority(),is:EC.project?.is || CDOC?.name || "",shadeAll:!!ecEl("ecShadeAll")?.checked,paper:ecEl("ecPaper")?.value||"a4",printScale:Number(ecEl("ecPrintScale")?.value)||150}; }
 function ecPaftaProfilleri(index) {
   return EC.layers.map((layer,i)=>({
     layer:"ENK_PROFIL_"+(i+1),name:layer.name,color:ecHex(layer.color),visible:layer.visible,
@@ -36028,10 +36058,11 @@ function ecPafta(index,project,paper="gercek") {
   const regions=[];
   const groups=ecChosenPairs();
   const assigned=ecAssignedSections(groups,index);
-  for(const [j,pair] of groups.entries()){
-    profiles[pair.c].project=true;
-    if(!profiles[pair.b].visible||!profiles[pair.c].visible)continue;
-    for(const [l,r,a,b,c,d] of assigned[j].strips)for(const q of ortakKesisimBolgesi([l,a],[r,b],c,d))regions.push({...q,l:pair.owner===0?'T_YOL':'T_GB'});
+  for(const pair of groups)profiles[pair.c].project=true;
+  for(const [j,pair] of ecVolumePairs(groups).entries()){
+    if(!ecPairVisible(pair,i=>profiles[i]?.visible,groups))continue;
+    const layer=ecOwnerFills[pair.owner][1];
+    for(const [l,r,a,b,c,d] of assigned[j].strips)for(const q of ortakKesisimBolgesi([l,a],[r,b],c,d))regions.push({...q,l:layer});
   }
   if(!groups.length && refs && profiles[refs.b].visible)for(const [stageIndex,profile] of profiles.entries()){
     if(!profile.visible || stageIndex===refs.b || (!project.shadeAll && stageIndex!==refs.c))continue;
@@ -36047,7 +36078,7 @@ function ecPafta(index,project,paper="gercek") {
       if(b[1]<=a[1])j++;
     }
   }
-  return ortakEnkesitPaftasi({km:sec.station,center:sec.p,displayProfiles:profiles.filter(p=>p.visible),regions,ownerFills:groups.length?[['Yol imalatı','T_YOL'],['Parsel imalatı','T_GB']]:null,
+  return ortakEnkesitPaftasi({km:sec.station,center:sec.p,displayProfiles:profiles.filter(p=>p.visible),regions,ownerFills:groups.length?ecOwnerFills:null,
     showOffset:ecEl("ecOffsetTags")?.checked!==false,showKot:ecEl("ecKotTags")?.checked!==false,
     digits:ecEl("ecLabelDigits")?.value==="2"?2:3},project,paper);
 }

@@ -533,7 +533,7 @@ async function maslakTeslimPaketi(job,calc){
 const ortakPaftaRenkleri = Object.freeze({
   PAFTA:'#a9b1b3', YAZI:'#111111', OFSET:'#666d70', EKSEN:'#485d6c',
   YOL_SIYAH:'#111111', YOL_KIRMIZI:'#ae2428', SIYIRMA_TABANI:'#25814a',
-  T_YOL:'#f5cfd1', T_GB:'#c4e8e7', T_KAZI:'#f5cfd1', T_DOLGU:'#c4e8e7', T_SIYIRMA:'#bad8c3'
+  T_YOL:'#f5cfd1', T_GB:'#c4e8e7', T_ORTAK:'#e0d1f1', T_KAZI:'#f5cfd1', T_DOLGU:'#c4e8e7', T_SIYIRMA:'#bad8c3'
 });
 function ortakPaftaProfilRengi(color) {
   if(!/^#[0-9a-f]{6}$/i.test(color))return '#111111';
