@@ -850,6 +850,13 @@ body.cadmasa #v-cad.acad-complete.acad-wide-canvas #cadBox{grid-column:2!importa
 #acadEnkesitBox .ec-input-head{padding:11px 12px;background:#294259;color:#e7f5ff;font-weight:750;border:1px solid #4b718f;border-radius:9px;cursor:pointer;list-style-position:inside}
 #acadEnkesitBox .ec-input-head span{float:right;color:#98bdcf;font-size:12px;font-weight:400}
 #acadEnkesitBox .ec-inputs{padding:10px 0 1px}
+.kesit-sablon{margin:.6rem 0;padding:.55rem .75rem;border:1px solid #78899770;border-radius:8px}
+.kesit-sablon summary{cursor:pointer;font-weight:650}
+.kesit-sablon p{font-size:.86rem;margin:.55rem 0}
+.kesit-antet-alanlari{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,155px),1fr));gap:.55rem .8rem}
+.kesit-antet-alanlari label{display:flex;flex-direction:column;gap:3px;min-width:0}
+.kesit-antet-alanlari label[hidden]{display:none!important}
+.kesit-antet-alanlari input,.kesit-antet-alanlari select{box-sizing:border-box;width:100%;min-width:0}
 #acadEnkesitBox .ec-export-tools{margin:9px 0;background:#1e364a;border:1px solid #3f6076;border-radius:10px;padding:7px 11px}
 #acadEnkesitBox .ec-export-tools summary{cursor:pointer;font-weight:650;font-size:13px;color:#e2edf6;padding:4px}
 #acadEnkesitBox .ec-export-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:8px 0}
@@ -2025,6 +2032,7 @@ body.kub-focus.kub-tools-open #v-plan #kubPlanTools{top:var(--plan-tools-top,66p
     </div>
     <div class="card kub-section-preview">
       <h2>Kesit önizleme</h2>
+      <details class="kesit-sablon"><summary>Pafta şablonu ve imzalar</summary><p>Buradaki değişiklikler bu projenin tüm enkesitlerine uygulanır.</p><div class="kesit-antet-alanlari" id="kubKesitAntet"></div></details>
       <div class="row" style="margin-bottom:8px;gap:8px;flex-wrap:wrap;align-items:center;background:#fff7e6;border:1px solid #e8c98a;border-radius:8px;padding:8px"><b>Kesitteki kot yazıları:</b><label style="flex-direction:row;align-items:center;gap:6px"><select id="hKm" style="width:auto"><option value="degisim">Kot değişimi</option><option value="aralik">Sabit aralık</option></select></label><label id="hKsL" style="flex-direction:row;align-items:center;gap:6px">Aralık (m)<input id="hKs" inputmode="decimal" style="width:60px"></label></div>
       <div class="row" style="margin-bottom:8px"><button id="pv" type="button">‹ Önceki</button><span id="pvTxt" class="pill"></span><button id="nx" type="button">Sonraki ›</button></div>
       <div class="row" style="margin-bottom:8px"><button id="kubKesitOlc" type="button" aria-pressed="false" disabled>İki nokta ölç · 1/150</button><span id="kubKesitOlcSonuc" role="status"></span></div>
@@ -2051,6 +2059,7 @@ body.kub-focus.kub-tools-open #v-plan #kubPlanTools{top:var(--plan-tools-top,66p
         <button class="primary" id="oD" type="button">Çizim kaydet (plan + kesitler)</button>
         <button id="kubCakistirma" type="button">Seçili KM · Çakıştırma DXF</button>
       </div>
+      <details class="kesit-sablon"><summary>Pafta şablonu ve imzalar</summary><p>Buradaki değişiklikler bu projenin tüm enkesitlerine uygulanır.</p><div class="kesit-antet-alanlari" id="kubCiktiAntet"></div></details>
       <div class="msg" id="oMsg" style="margin-top:8px"></div>
       <p class="note" style="margin-top:6px">DXF, indirme kısıtı nedeniyle .zip içinde gelir. İçinde üç dosya var: tümü (plan + kesitler), yalnızca siyah üçgen model ve yalnızca kırmızı üçgen model. DXF uyumlu CAD yazılımlarında açılabilir.</p>
     </div>
@@ -10432,8 +10441,8 @@ window.V3D = window.V3Dmake();
 
 
 </script>
-<script src="maslak-kirik.js?v=ortak-pafta-15"></script>
-<script src="maslak-cad.js?v=ortak-pafta-15"></script>
+<script src="maslak-kirik.js?v=ortak-pafta-16"></script>
+<script src="maslak-cad.js?v=ortak-pafta-16"></script>
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
@@ -12925,6 +12934,16 @@ $("vKm0").addEventListener("change", e => { const v = K.kmNum(e.target.value); S
   for (const [m, k] of [["oKm", "oKs"], ["hKm", "hKs"]]) { $(m).addEventListener("change", e => { ST.set.kotMod = e.target.value; syncK(); save(); preview(); }); $(k).addEventListener("change", e => { const v = K.num(e.target.value); ST.set.kotStep = v > 0 ? v : 5; syncK(); save(); preview(); }); } }
 $("oSig").addEventListener("change", e => { ST.set.kesitKagit=e.target.value; save(); });
 $("oPrintScale").addEventListener("change", e=>{ST.set.kesitBaskiOlcek=Number(e.target.value);save();});
+let kubAntetFrame=0;
+const kubAntetGoster=['kubKesitAntet','kubCiktiAntet'].map(id=>enkesitAntetEditor($(id),()=>ST?.proj,(key,value)=>{
+  ST.proj[key]=value;
+  if($('p_'+key))$('p_'+key).value=value;
+  if(['pozYK','pozYD','pozK','pozD'].includes(key))renderPoz();
+  kubAntetGoster.forEach(sync=>sync());
+  save();
+  cancelAnimationFrame(kubAntetFrame);
+  kubAntetFrame=requestAnimationFrame(preview);
+}));
 function kubBaskiAyarlariniGoster(){
   $("oSig").value=ST.set.kesitKagit==="a3"?"a3":"a4";
   $("oPrintScale").value=String(ST.set.kesitBaskiOlcek || 150);
@@ -13739,11 +13758,11 @@ const projFor = sec => { const sp = splitOf(sec); if (sec) sec.split = sp; const
     pozParselKod: pozKod(ST.proj.pozK, ST.proj.pozD, has(pp && pp.length ? pp : null, "kazi"), has(pp && pp.length ? pp : null, "dolgu")) }, y); };
 function renderPoz() { const L = pozList(); for (const [id, key] of [["pzYK", "pozYK"], ["pzYD", "pozYD"], ["pzK", "pozK"], ["pzD", "pozD"], ["pzS", "pozS"]]) { const el = $(id); if (!el) continue;
     el.innerHTML = `<option value="">— seçilmedi —</option>` + L.map(p => `<option value="${esc(p.kod)}" ${ST.proj[key] === p.kod ? "selected" : ""}>${esc(p.kod)}${p.ac ? " · " + esc(p.ac.slice(0, 70)) + (p.ac.length > 70 ? "…" : "") : ""}</option>`).join(""); } }
-[["pzYK", "pozYK"], ["pzYD", "pozYD"], ["pzK", "pozK"], ["pzD", "pozD"], ["pzS", "pozS"]].forEach(([id, key]) => $(id).addEventListener("change", e => { ST.proj[key] = e.target.value; save(); preview(); }));
+[["pzYK", "pozYK"], ["pzYD", "pozYD"], ["pzK", "pozK"], ["pzD", "pozD"], ["pzS", "pozS"]].forEach(([id, key]) => $(id).addEventListener("change", e => { ST.proj[key] = e.target.value; kubAntetGoster.forEach(sync=>sync()); save(); preview(); }));
 $("pzEkle").addEventListener("click", () => { const kod = $("pzKod").value.trim(), ac = $("pzAc").value.trim(); if (!kod) { $("pzMsg").className = "msg err"; $("pzMsg").textContent = "Poz kodu yaz."; return; }
   const L = pozList(), ex = L.find(p => p.kod === kod); if (ex) ex.ac = ac; else L.push({ kod, ac }); save(); renderPoz(); preview(); $("pzMsg").className = "msg"; $("pzMsg").textContent = ex ? `${kod} güncellendi.` : `${kod} eklendi.`; $("pzKod").value = $("pzAc").value = ""; });
 const PF = ["cetvel", "is", "isveren", "muteahhit", "tarih", "no", "parsel", "yolNo", "yerTur", "s1", "s2", "s3", "dosya"];
-PF.forEach(k => $("p_" + k).addEventListener(k === "yerTur" ? "change" : "input", e => { ST.proj[k] = e.target.value; save(); preview(); }));
+PF.forEach(k => $("p_" + k).addEventListener(k === "yerTur" ? "change" : "input", e => { ST.proj[k] = e.target.value; kubAntetGoster.forEach(sync=>sync()); save(); preview(); }));
 const oMsg = (t, err) => { $("oMsg").className = "msg" + (err ? " err" : ""); $("oMsg").textContent = t; };
 const fname = ext => `${(ST.proj.dosya || "KUBAJ").replace(/[^\w\-ÇĞİÖŞÜçğıöşü]/g, "_")}.${ext}`;
 function needSecs() { if(terrainPending){oMsg("Enkesitler hesaplanıyor. Sonuç hazır olduğunda çıktı alabilirsin.");return false;} if (!SECS.length) { oMsg("Önce Kesitler sekmesinde kesitleri hesapla.", true); return false; } return true; }
@@ -13914,6 +13933,7 @@ $("oX").addEventListener("click", async () => { if (terrainPending || (!SECS.len
 $("oP").addEventListener("click", async () => {
   if (!needSecs()) return;
   const button=$("oP"), sections=SECS, paper=ST.set.kesitKagit==="a3"?"a3":"a4", printScale=ST.set.kesitBaskiOlcek, pages=[];
+  const projectSnapshot=JSON.stringify(ST.proj);
   if(button.disabled)return;
   button.disabled=true;
   try {
@@ -13923,7 +13943,7 @@ $("oP").addEventListener("click", async () => {
       if(page)pages.push(page);
       if(i%8===0){oMsg(`PDF sayfası ${i+1}/${sections.length} hazırlanıyor…`);await new Promise(r=>setTimeout(r,0));}
     }
-    if(SECS!==sections || terrainPending)throw Error("Hesap değişti. Yeni sonuç için PDF’yi tekrar al.");
+    if(SECS!==sections || terrainPending || projectSnapshot!==JSON.stringify(ST.proj))throw Error("Hesap veya antet değişti. Yeni sonuç için PDF’yi tekrar al.");
     if(!pages.length)throw Error("Yazdırılabilir kesit bulunamadı.");
     await saveFile(fname("pdf"),window.APLGEO.vectorPdf(pages),$("oMsg"));
   } catch(e) { oMsg("PDF oluşturulamadı: "+e.message,true); }
@@ -14088,6 +14108,7 @@ function kaInit(){
 
 if(document.readyState==="loading")window.addEventListener("DOMContentLoaded",kaInit,{once:true});else queueMicrotask(kaInit);
 function boot() {
+  kubAntetGoster.forEach(sync=>sync());
   PKUB0 = null; QMARK = null; SNAP = null; autoLayerChoice=null;$("autoLayerBox").hidden=true;
   ++bazGeneration; bazPending = false; lastBazRequest = null; window.BZR = null;
   $("bzRes").replaceChildren(); $("bzNote").textContent = ""; $("coord").textContent = "";
@@ -35039,14 +35060,7 @@ function ecOpen(){
          <label class="ec-check"><input type="checkbox" id="ecOffsetTags" checked> Mesafe değerlerini çiz</label>
          <label class="ec-check"><input type="checkbox" id="ecKotTags" checked> Kot tablolarını çiz</label>
          <label class="ec-check"><input type="checkbox" id="ecShadeAll"> Tüm görünür aşamaları referansa göre tara</label>
-       </div></details><details><summary>Pafta anteti</summary><div class="ec-export-fields" id="ecAntet">
-         <label>İşin adı<input data-antet="is"></label><label>İşveren<input data-antet="isveren"></label>
-         <label>Müteahhit<input data-antet="muteahhit"></label><label>Tarih<input data-antet="tarih"></label>
-         <label>Hakediş no<input data-antet="no"></label><label>Yol no<input data-antet="yolNo"></label>
-         <label>Ada / parsel<input data-antet="parsel"></label><label>Yol pozu<input data-antet="pozYK"></label>
-         <label>Parsel pozu<input data-antet="pozK"></label><label>Müteahhit imza adı<input data-antet="s1"></label>
-         <label>Harita mühendisi<input data-antet="s2"></label><label>Kontrol mühendisi<input data-antet="s3"></label>
-       </div></details></div>
+       </div></details><details class="kesit-sablon"><summary>Pafta şablonu ve imzalar</summary><p>Buradaki değişiklikler bu projenin tüm enkesitlerine uygulanır.</p><div class="kesit-antet-alanlari" id="ecAntet"></div></details></div>
       <div id="ecStatus" role="status" aria-live="polite">Önce ekseni seç, ardından genişlik veya alan sınırını belirle.</div>
       <div id="ecResults" class="ec-results" hidden><div id="ecSummary" class="ec-summary"></div><div class="ec-pager"><button type="button" data-ec="prev">‹ Önceki</button><span id="ecPage"></span><button type="button" data-ec="next">Sonraki ›</button></div><div id="ecChart"></div><details id="ecPaftaGorunum"><summary>Kesit paftası · 1/150</summary><div class="ec-row" style="margin-top:8px"><button id="ecPaftaOlc" type="button" aria-pressed="false" disabled>İki nokta ölç</button><small id="ecPaftaOlcumSonuc" role="status"></small></div><canvas id="ecPaftaKanvas" aria-label="1/150 enkesit paftası"></canvas><div id="ecPaftaDurum" class="ec-note" role="status"></div></details><div id="ecSectionTable"></div>
        <div class="ec-compare-controls"><b>④ Aşama farkı · kesit alanı</b>
@@ -35068,9 +35082,11 @@ function ecOpen(){
     ecEl("ecPaftaGorunum").addEventListener("toggle",ecPaftaOnizleme);
     b.querySelector(".ec-export-tools").addEventListener("change",()=>{EC.outputRevision++;ecPaftaOnizleme();});
     if(!EC.project)ecSetProject({});
-    b.querySelectorAll('#ecAntet [data-antet]').forEach(input=>{
-      input.value=EC.project[input.dataset.antet]||"";
-      input.addEventListener("input",()=>{EC.project[input.dataset.antet]=input.value;ecPaftaOnizleme();});
+    EC.syncAntet=enkesitAntetEditor(ecEl('ecAntet'),()=>EC.project,(key,value)=>{
+      EC.project[key]=value;
+      EC.outputRevision++;
+      cancelAnimationFrame(EC.antetFrame);
+      EC.antetFrame=requestAnimationFrame(ecPaftaOnizleme);
     });
     b.querySelectorAll('[data-ec]').forEach(btn=>btn.addEventListener('click',()=>{
       const action=btn.dataset.ec;
@@ -35654,9 +35670,9 @@ function ecExportCSV(){
   ecDownload('Enkesit_AraKot_Karsilastirma.csv','\ufeff'+rows.join('\r\n'),'text/csv;charset=utf-8');
 }
 function ecSetProject(raw) {
-  const keys=["is","isveren","muteahhit","tarih","no","yolNo","parsel","pozYK","pozK","s1","s2","s3"];
+  const keys=[...Object.keys(enkesitAntetAlanlari),'kesitSablon','kesitImza'];
   EC.project=Object.fromEntries(keys.map(k=>[k,String(raw?.[k]??"").slice(0,240)]));
-  for(const input of document.querySelectorAll("#ecAntet [data-antet]"))input.value=EC.project[input.dataset.antet]||"";
+  EC.syncAntet?.();
   ecEl("ecShadeAll").checked=raw?.shadeAll===true;
   ecEl("ecPaper").value=raw?.paper==="a3"?"a3":"a4";
   ecEl("ecPrintScale").value=String(raw?.printScale || 150);

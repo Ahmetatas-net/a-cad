@@ -42,6 +42,64 @@ function enkesitBaskiPaydasi(required, preferred = 150) {
   const step = [1, 1.5, 2, 2.5, 3, 4, 5, 7.5, 10].find(n => n * decade >= target - 1e-9);
   return Math.round(step * decade);
 }
+const enkesitSablonlari = [
+  ['maslak','Maslak · ayrıntılı'], ['konum','İl / ilçe / ada / parsel'],
+  ['is','İş adı'], ['isKonum','İş adı ve konum']
+];
+const enkesitAntetAlanlari = {
+  is:'İşin adı', kesitIl:'İl', kesitIlce:'İlçe', kesitAda:'Ada', kesitParsel:'Parsel',
+  isveren:'İşveren', muteahhit:'Müteahhit', no:'Hakediş no', yolNo:'Yol no',
+  parsel:'Ada / parsel', pozYK:'Yol kazı pozu', pozYD:'Yol dolgu pozu',
+  pozK:'Parsel kazı pozu', pozD:'Parsel dolgu pozu',
+  tarih:'Tarih', s1:'Müteahhit imza adı', s2:'Harita mühendisi', s3:'Kontrol mühendisi'
+};
+function enkesitSablonu(project) {
+  return enkesitSablonlari.find(([key])=>key===project.kesitSablon)?.[0] || 'maslak';
+}
+function enkesitIkiImza(project) {
+  return project.kesitImza==='iki' || (project.kesitImza!=='uc' && enkesitSablonu(project)!=='maslak');
+}
+function enkesitAntetEditor(host,read,write) {
+  function field(key,title,options) {
+    const label=document.createElement('label');
+    label.textContent=title;
+    const control=document.createElement(options?'select':'input');
+    control.dataset.antet=key;
+    if(options)for(const [value,name] of options)control.add(new Option(name,value));
+    else control.maxLength=240;
+    control.addEventListener(options?'change':'input',()=>{
+      write(key,control.value);
+      if(options)sync();
+    });
+    label.append(control);
+    host.append(label);
+    return [key,control];
+  }
+  const inputs=new Map([
+    field('kesitSablon','Antet şablonu',enkesitSablonlari),
+    field('kesitImza','İmza düzeni',[['auto','Şablona göre'],['iki','Harita ve kontrol mühendisi'],['uc','Müteahhit ve iki mühendis']]),
+    ...Object.entries(enkesitAntetAlanlari).map(([key,name])=>field(key,name))
+  ]);
+  function sync(){
+    const project=read() || {}, mode=enkesitSablonu(project);
+    const visible=new Set(['kesitSablon','kesitImza','tarih','s2','s3']);
+    if(!enkesitIkiImza(project))visible.add('s1');
+    if(mode!=='konum')visible.add('is');
+    if(mode==='konum'||mode==='isKonum')for(const key of ['kesitIl','kesitIlce','kesitAda','kesitParsel'])visible.add(key);
+    if(mode==='maslak')for(const key of ['isveren','muteahhit','no','yolNo','parsel','pozYK','pozYD','pozK','pozD'])visible.add(key);
+    for(const [key,input] of inputs){
+      input.parentElement.hidden=!visible.has(key);
+      const value=key==='kesitSablon'?mode:key==='kesitImza'?(project[key]||'auto'):(project[key]??'');
+      if(input.value!==value)input.value=value;
+    }
+    const parts=String(project.parsel||'').split('/');
+    inputs.get('kesitAda').placeholder=parts.length===2?parts[0]:'';
+    inputs.get('kesitParsel').placeholder=parts.at(-1)||'';
+  }
+  host.closest('details').addEventListener('toggle',sync);
+  sync();
+  return sync;
+}
 function maslakPaftalar(job,calc,part=0,standard=false){
   const pages=[],km=n=>Math.floor(n/1000)+'+'+(n%1000).toFixed(2).padStart(6,'0').replace('.',','),f=(n,d=2)=>n.toLocaleString('tr-TR',{minimumFractionDigits:d,maximumFractionDigits:d});
   let pageNo=0;
@@ -102,19 +160,43 @@ function maslakPaftalar(job,calc,part=0,standard=false){
     const Y=z=>(plotTop+plotBottom)/2+(z-(top+bot)/2)*1000/dy;
     frame(6,174+shift,W-6,204+shift);text(W/2,201+shift,'ENKESİT',3.4,'c',true);
     const project=job.project, cut=W-80;
-    const leftFields=[['İŞİN ADI',project.is],['İŞVEREN',project.isveren],['MÜTEAHHİT',project.muteahhit],
-      ['HAKEDİŞ',[project.no,project.tarih].filter(Boolean).join('    /    ')]];
-    const rightFields=[['YOL NO',job.owners[0]],['ADA / PARSEL',job.owners[1]],
-      ['YOL POZU',[project.pozYK,project.pozYD].filter(Boolean).join(' · ')],
-      ['PARSEL POZU',[project.pozK,project.pozD].filter(Boolean).join(' · ')]];
-    line('PAFTA',[[cut,174+shift],[cut,198.5+shift]],.15);
-    line('PAFTA',[[cut+27,174+shift],[cut+27,198.5+shift]],.15);
-    for(const [n,[name,value]] of leftFields.entries()){
-      const y=196+shift-5.5*n;
-      line('PAFTA',[[6,y+2.5],[W-6,y+2.5]],.15);
-      text(8,y,name,1.85);text(38,y,value||'',Math.min(2,(cut-41)/Math.max(1,String(value||'').length*.63)));
-      const [rightName,rightValue]=rightFields[n];
-      text(cut+2,y,rightName,1.82);text(cut+29,y,rightValue||'',Math.min(2,43/Math.max(1,String(rightValue||'').length*.62)));
+    const sheetMode=job.terrain?enkesitSablonu(project):'maslak';
+    if(sheetMode==='maslak'){
+      const leftFields=[['İŞİN ADI',project.is],['İŞVEREN',project.isveren],['MÜTEAHHİT',project.muteahhit],
+        ['HAKEDİŞ',[project.no,project.tarih].filter(Boolean).join('    /    ')]];
+      const rightFields=[['YOL NO',job.owners[0]],['ADA / PARSEL',job.owners[1]],
+        ['YOL POZU',[project.pozYK,project.pozYD].filter(Boolean).join(' · ')],
+        ['PARSEL POZU',[project.pozK,project.pozD].filter(Boolean).join(' · ')]];
+      line('PAFTA',[[cut,174+shift],[cut,198.5+shift]],.15);
+      line('PAFTA',[[cut+27,174+shift],[cut+27,198.5+shift]],.15);
+      for(const [n,[name,value]] of leftFields.entries()){
+        const y=196+shift-5.5*n;
+        line('PAFTA',[[6,y+2.5],[W-6,y+2.5]],.15);
+        text(8,y,name,1.85);text(38,y,value||'',Math.min(2,(cut-41)/Math.max(1,String(value||'').length*.63)));
+        const [rightName,rightValue]=rightFields[n];
+        text(cut+2,y,rightName,1.82);text(cut+29,y,rightValue||'',Math.min(2,43/Math.max(1,String(rightValue||'').length*.62)));
+      }
+    }else{
+      const rows=[];
+      if(sheetMode!=='konum')rows.push([['İŞİN ADI',project.is]]);
+      if(sheetMode!=='is'){
+        const parcel=String(job.owners[1]||'').split('/');
+        const ada=project.kesitAda || (parcel.length===2?parcel[0]:'');
+        const no=project.kesitParsel || (parcel.length===2?parcel[1]:job.owners[1]);
+        rows.push([['İL',project.kesitIl],['İLÇE',project.kesitIlce]],[['ADA',ada],['PARSEL',no]]);
+      }
+      const height=24.5/rows.length;
+      rows.forEach((cells,i)=>{
+        const top=198.5+shift-i*height, y=top-height/2;
+        line('PAFTA',[[6,top],[W-6,top]],.15);
+        const width=(W-12)/cells.length;
+        cells.forEach(([label,value],j)=>{
+          const x=6+j*width;
+          if(j)line('PAFTA',[[x,top],[x,top-height]],.15);
+          text(x+2,y,label,2);
+          text(x+25,y,value||'',Math.min(2.6,(width-28)/Math.max(1,String(value||'').length*.65)));
+        });
+      });
     }
     const title = job.terrain ? job.title : job.owners.join(' VE ')+' BİRLEŞİK ENKESİTİ';
     text(7,169+shift,'KM '+km(st.km),3.2,'l',true);
@@ -242,16 +324,17 @@ function maslakPaftalar(job,calc,part=0,standard=false){
       const footerStart=shapes.length;
       frame(7,4,W-7,23);
       const labels = ['ADI SOYADI','TARİH','İMZA'];
-      const w=(W-36)/3;
+      const signers=enkesitIkiImza(project)?[1,2]:[0,1,2];
+      const w=(W-36)/signers.length;
       for (let i=0;i<4;i++) line('PAFTA',[[7,4+i*4.7],[W-7,4+i*4.7]],.13);
-      for (let i=0;i<3;i++) {
+      for(const [i,signer] of signers.entries()){
         const x=29+i*w, mid=x+w/2;
         line('PAFTA',[[x,4],[x,23]],.13);
-        text(mid,20.75,['MÜTEAHHİT','HARİTA MÜHENDİSİ','KONTROL MÜHENDİSİ'][i],2.05,'c',true);
-        text(mid,16.1,project['s'+(i+1)]||'',2,'c');
+        text(mid,20.75,['MÜTEAHHİT','HARİTA MÜHENDİSİ','KONTROL MÜHENDİSİ'][signer],2.05,'c',true);
+        text(mid,16.1,project['s'+(signer+1)]||'',Math.min(2,(w-5)/Math.max(1,String(project['s'+(signer+1)]||'').length*.65)),'c');
         text(mid,11.4,project.tarih||'',1.95,'c');
-        text(8,16.1-i*4.7,labels[i],1.9,'l',false);
       }
+      labels.forEach((label,i)=>text(8,16.1-i*4.7,label,1.9,'l',false));
       if(compactA3)mapVertical(shapes.slice(footerStart),y=>4+(y-4)*.55);
       pages.push({shapes,dx,dy,W,H,km:st.km,plot:[leftEdge,plotBottom,rightEdge,plotTop]});
       continue;
@@ -463,7 +546,7 @@ function ortakEnkesitPaftasi(st, project, paper = "gercek", measureStep = 0) {
   if (!st.displayProfiles.some(p=>p.segments.length)) return null;
   const yol = project.yolDeger || project.yolNo || '', parsel = project.parselDeger || project.parsel || '';
   const location = [yol && ('YOL '+String(yol).replace(/^YOL\s*/i,'')),parsel].filter(Boolean);
-  const title = location.length ? location.join(' VE ')+' ENKESİTİ' : 'ARAZİ ENKESİTİ';
+  const title = enkesitSablonu(project)==='maslak' && location.length ? location.join(' VE ')+' ENKESİTİ' : 'ARAZİ ENKESİTİ';
   const [page] = maslakPaftalar({
     terrain:true,project,paper,measureStep,title,owners:[yol,parsel],
     stations:[{...st,earth:[[],[]],strip:[[],[]]}]
@@ -476,7 +559,11 @@ function ortakEnkesitPaftasi(st, project, paper = "gercek", measureStep = 0) {
   }));
   G.coz = false;
   const image = st.stamp && O.IMG.kase;
-  if (image?.height && image.width) O.kase(G,29+(page.W-36)/2,6.2,Math.min(32,4.15*image.width/image.height));
+  if(image?.height && image.width){
+    const compact=paper==='a3';
+    const x=29+(page.W-36)*(enkesitIkiImza(project)?.25:.5);
+    O.kase(G,x,compact?5.21:6.2,Math.min(32,(compact?2.28:4.15)*image.width/image.height));
+  }
   return {...page,G,palette};
 }
 function ortakKesisimBolgesi(a,b,c,d) {
